@@ -1,0 +1,52 @@
+#!/usr/bin/env bash
+# Plantry pre-commit hook.
+#
+# Refuses commits from the MAIN coordination directory if any staged file
+# touches code paths (engine/, app/, data/, or docs/engine.md). EM coordination
+# edits to CLAUDE.md, MAINTENANCE.md, DECISIONS.md, docs/*.md (except engine.md),
+# features/*, and the structural changelog are allowed from main. All commits
+# from any worktree are allowed.
+#
+# Cross-machine: detects "in main" by checking that .git at the worktree top
+# is a directory (worktrees have .git as a file pointing into the main repo).
+
+set -e
+
+toplevel=$(git rev-parse --show-toplevel)
+
+# Worktrees: .git is a file. Main repo: .git is a directory.
+if [ ! -d "$toplevel/.git" ]; then
+  # We are in a worktree; allow all commits.
+  exit 0
+fi
+
+# We are in the main repo. Inspect staged files for code-path touches.
+staged=$(git diff --cached --name-only)
+
+if [ -z "$staged" ]; then
+  exit 0
+fi
+
+forbidden=$(echo "$staged" | grep -E '^(engine|app|data)/|^docs/engine\.md$' || true)
+
+if [ -n "$forbidden" ]; then
+  cat <<EOF
+Pre-commit: commits to code paths from the main coordination directory are disabled.
+
+Code-path edits (engine/, app/, data/, docs/engine.md) must happen in a git worktree.
+See docs/development.md §2 for the worktree workflow.
+
+Blocked files in this commit:
+$forbidden
+
+To proceed, either:
+  1. Open a worktree (recommended):
+     git worktree add ../plantry-<branch> -b feat/<stream>-<branch>
+     cd ../plantry-<branch>
+  2. Or, if this is a coordination-only edit and the hook is wrong, restage
+     only the non-code files and try again.
+EOF
+  exit 1
+fi
+
+exit 0

@@ -1,0 +1,8 @@
+{
+  "files": [],
+  "references": [
+    { "path": "./engine" },
+    { "path": "./app/web" },
+    { "path": "./app/convex" }
+  ]
+}

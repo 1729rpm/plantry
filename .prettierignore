@@ -1,0 +1,6 @@
+dist/
+node_modules/
+.convex/
+coverage/
+data/menu_images/
+package-lock.json

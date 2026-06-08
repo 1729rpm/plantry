@@ -6,27 +6,17 @@ on:
   push:
     branches: [main]
 
-# Placeholder workflow. Real gates land with the streams:
-#   - Stream A: round-trip parser tests for data/dishes.md and data/ingredients.md.
-#   - Stream B: engine type-check, unit tests, simulation harness, property tests.
-#   - Stream C: Convex schema codegen + typecheck.
-#   - Stream D: Vite build + service worker bundle.
-#   - Stream E: spec/code parity check (docs/engine.md must be touched alongside engine/).
-#   - Repo structure consistency check (per docs/engineering.md §14).
-#
-# Until those streams land, this workflow runs only the structure check stub
-# so we have a working CI surface to attach gates to.
-
 jobs:
-  structure:
-    name: Repo structure consistency (stub)
+  ci:
+    name: Lint, typecheck, build, test
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Check root inventory
+
+      - name: Repo structure check
         run: |
           set -e
-          allowed='^(\.git|\.gitignore|\.maintenance-state|CLAUDE\.md|MAINTENANCE\.md|DECISIONS\.md|\.github|\.claude|docs|data|features|engine|app|archive)$'
+          allowed='^(\.git|\.gitignore|\.githooks|\.maintenance-state|\.prettierrc|\.prettierignore|CLAUDE\.md|MAINTENANCE\.md|DECISIONS\.md|\.github|\.claude|docs|data|features|engine|app|archive|scripts|package\.json|package-lock\.json|tsconfig\.json|tsconfig\.base\.json|eslint\.config\.js|node_modules)$'
           fail=0
           for entry in $(ls -A); do
             if ! echo "$entry" | grep -E "$allowed" > /dev/null; then
@@ -35,3 +25,24 @@ jobs:
             fi
           done
           exit $fail
+
+      - name: Setup Node 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Install
+        run: npm ci
+
+      - name: Typecheck
+        run: npm run typecheck
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Build frontend
+        run: npm run build --workspace @plantry/web
+
+      - name: Test engine
+        run: npm test --workspace @plantry/engine
