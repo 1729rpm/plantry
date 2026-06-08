@@ -11,3 +11,5 @@ export {
   validateMenuHistoryAgainstLibrary,
   validatePackSizesUsed,
 } from "./data/validators.js";
+export { eligibleDishes } from "./eligibility.js";
+export type { EligibleDishesArgs, Slot, Day, Meal } from "./eligibility.js";
