@@ -124,11 +124,11 @@ Continuous. Maintains:
 | 0.5 Convex + Vercel project init | shipped | EM | PR #2 merged. Convex prod + dev deployments live; Vercel prod deploy live; domains added to Vercel project (DNS verification pending). |
 | 0.6 Deploy CI step | shipped | EM | GH-Vercel integration handles frontend on push-to-main. New `Deploy Convex` workflow handles schema/functions via `CONVEX_DEPLOY_KEY`. Path-filtered to `app/convex/`, `engine/`, `data/`. |
 | 0.7 DNS for custom domains | shipped | Vercel-Cloudflare integration | `plantry.mudgal.xyz` and `plantry-dev.mudgal.xyz` both serve 200 OK over HTTPS. Vercel auto-configured via the Cloudflare integration (no manual records added). |
-| A Data layer | in progress | TBD | Slice 1 (dish + ingredient parsers + Zod schemas + round-trip tests) shipped 2026-06-08 in PR #3. Next slice: `data/menu_history.md` parser + cross-file validators. Subsequent slice: build-pipeline emit of `library.ts` / `history.ts`. |
-| B Engine | not started | TBD | Starts after A's first PR. |
-| C Convex backend | not started | TBD | Starts after Convex project exists + A's first PR. |
+| A Data layer | in progress | `../plantry-stream-A` on `feat/A-data-history` | Slice 1 (dish + ingredient parsers + Zod schemas + round-trip tests) shipped 2026-06-08 in PR #3. Slice 2 (menu_history parser + cross-file validators) spawned 2026-06-08. Subsequent slice: build-pipeline emit of `library.ts` / `history.ts`. |
+| B Engine | in progress | `../plantry-stream-B` on `feat/B-eligibility` | Slice 1: `eligibility.ts` mirroring `docs/engine.md` §1 + unit tests. Spawned 2026-06-08 in parallel with A slice 2. Schedule, composition, priority, cap, consolidation queued for later slices. |
+| C Convex backend | in progress | `../plantry-stream-C` on `feat/C-schema-currentweek` | Slice 1: schema audit against `docs/engineering.md` §3 + read-only queries (`getCurrentWeek`, `listQueuedComments`, `listIncidents`) + seed script. Spawned 2026-06-08 in parallel with A slice 2 and B. Mutations and auto-recovery middleware queued. |
 | D Frontend | not started | TBD | Starts after Convex client codegen lands (early in C). |
-| E Slow-loop session | not started | TBD | Starts after A is live; can stub with fixtures meanwhile. |
+| E Slow-loop session | in progress | `../plantry-stream-E` on `feat/E-slow-loop-skill` | Slice 1: `.claude/commands/slow-loop.md` + synthetic queued-comments and incidents fixtures. Spawned 2026-06-08 in parallel with A slice 2, B, and C. GitHub Action for marking consumed comments deferred. |
 | F Identity + concurrency + deploy | not started | TBD | Integrates near end. Includes automated hook test (followup from PR #1). |
 | G EM scaffolding | continuous | EM | Initial scaffolding shipped with the restructure. |
 

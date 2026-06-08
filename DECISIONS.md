@@ -203,3 +203,16 @@ Per Rajat's instruction this turn ("if not present in all-keys but inside the fo
 **Right-size check:** problem is "spawn the right first slice of Stream A"; fix level is process (engineer brief + worktree); generality: the slice pattern (Zod schema + parse + serialize + round-trip test) is reused for `menu_history.md` in slice 2 and as the load-bearing shape for any future markdown source in `data/`.
 
 Worktree: `../plantry-stream-A`. Branch: `feat/A-data-parsers`. Brief at `../plantry-stream-A/.engineer-brief.md`. Zod pre-authorized as a dependency add for this slice (it is the natural runtime-validation library for the TS engine and is the Pydantic-equivalent originally implicit in the stack memory).
+
+---
+
+## 2026-06-08 16:15 IST — Spawn A slice 2, B, C, E in parallel
+
+**Stream:** cross-stream
+**Context:** Stream A slice 1 shipped (PR #3); `Dish` and `Ingredient` types are now in main. Per `features/phase2.md` §2 dependency graph, B (engine) was gated on "A's first PR", C (Convex backend) was gated on "Convex project exists + A's first PR", and E (slow-loop session) was gated on "A is live; can stub with fixtures meanwhile". All three gates now open. Rajat asked which streams to spawn alongside A slice 2.
+**Options considered:** (a) serial: spawn A slice 2 alone, queue B and C and E for after merge; (b) two parallel: spawn A slice 2 + B (the path that unblocks the engine fastest, defers Convex queries until library types stabilize); (c) all four in parallel: A slice 2 + B + C + E. Rajat picked (c) after multi-select.
+**Chosen:** (c). Conflict surface is essentially zero: A slice 2 touches `engine/src/data/`, B touches a new `engine/src/eligibility.ts`, C touches `app/convex/`, E touches `.claude/commands/` and `data/test-fixtures/`. The only file two engineers will both touch is `engine/src/index.ts` (re-exports), and conflicts there are additive lines, trivial at merge. Sub-agent cost is bounded; each engineer is independent and a failure in one does not affect the others.
+**Reversibility:** easy. Worktrees and branches are disposable; no PR has been opened yet.
+**Right-size check:** problem is "spawn the unblocked streams now or stagger"; fix level is process (parallel-spawn vs serial-spawn); generality: this becomes the pattern for "fan out when the dependency graph opens", reused at every fan-out point in Phase 2.
+
+Worktrees: `../plantry-stream-A` (`feat/A-data-history`), `../plantry-stream-B` (`feat/B-eligibility`), `../plantry-stream-C` (`feat/C-schema-currentweek`), `../plantry-stream-E` (`feat/E-slow-loop-skill`). Briefs in each `.engineer-brief.md`. Settings widened to grant subagent Read/Write/Edit on all four worktree paths, and to allow `git push origin:*` (origin-only) so any engineer-created branch can be pushed without per-branch settings churn. Authorization for the settings widening obtained from Rajat at the same checkpoint as the spawn decision.
