@@ -26,7 +26,7 @@ jobs:
       - name: Check root inventory
         run: |
           set -e
-          allowed='^(\.gitignore|\.maintenance-state|CLAUDE\.md|MAINTENANCE\.md|DECISIONS\.md|\.github|\.claude|docs|data|features|engine|app|archive)$'
+          allowed='^(\.git|\.gitignore|\.maintenance-state|CLAUDE\.md|MAINTENANCE\.md|DECISIONS\.md|\.github|\.claude|docs|data|features|engine|app|archive)$'
           fail=0
           for entry in $(ls -A); do
             if ! echo "$entry" | grep -E "$allowed" > /dev/null; then
