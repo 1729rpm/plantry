@@ -12,6 +12,14 @@ Brief description in present tense, one to three sentences. Reference the PR.
 
 ---
 
+## 2026-06-08  Stream A slice 3: bake typed library and history from data/*.md
+
+New build step that closes Stream A. `engine/scripts/bake.ts` reads `data/dishes.md`, `data/ingredients.md`, `data/menu_history.md`, runs the existing parsers and cross-file validators, and emits typed runtime modules `engine/src/data/library.ts` (exports `dishes`, `packSizes`, `ingredients`, plus a `library` bundle) and `engine/src/data/history.ts` (exports `history`). Both modules carry a generated-by header and stay gitignored. Wired into npm scripts (`npm run bake` from root, `prebuild` in the engine workspace) and into CI as a step before typecheck, so any data or schema drift fails CI loudly. Encodes one temporary exception via `KNOWN_MISSING_DISH_IDS = new Set([7])` for the open Rajma drift (open item 13); removable in one line once the dish lands in `data/dishes.md`. 4 new bake tests; engine suite now 33 tests across 7 files. Stream A's three-slice arc is complete. (#10)
+
+## 2026-06-08  Stream E slice 2: mutations and GH Action to mark consumed slow-loop rows
+
+Three `internalMutation`s in `app/convex/comments.ts`: `markCommentsApplied`, `markCommentsReviewedNoChange`, `markIncidentsResolved`. Each is best-effort, never throws, and writes a `warn`-severity `incidents` row when a target id is missing or already resolved. New GitHub workflow `.github/workflows/slow-loop-applied.yml` triggers on `pull_request` closed when `merged === true` and `head_ref` starts with `slow-loop/`, then runs `scripts/slow-loop-mark-applied.mjs` against the merged PR body, parsing a `## Consumed comments by cluster` section with per-cluster `outcome`, `comment_ids`, `incident_ids`, falling back to flat consumed-IDs lines when the per-cluster section is absent. Calls the three mutations via `npx convex run --prod` using the existing `CONVEX_DEPLOY_KEY` secret. Closes the slow-loop feedback cycle. One-sentence edit to `.claude/commands/slow-loop.md` requires the per-cluster section in real slow-loop PRs. New §3 in `MAINTENANCE.md` documents the action's contract. (#9)
+
 ## 2026-06-08  Stream B slice 2: weekly schedule per docs/engine.md §2
 
 `engine/src/schedule.ts` exports `weekSchedule({ weekStart, lastSaturdayMenu?, rng? }): SlotPlan[]`. SlotPlan carries `day`, `meal`, `itemCount`, and `lunchMenu` (1 to 4, lunch only). Mon/Wed/Fri are 5-item days (Menu 1, 3-item lunch); Tue/Thu are 5-item days (Menu 2, 4-item lunch); Saturday has no breakfast and lunch is 3 items of Menu 3 or 4 alternating with the previous Saturday (random fallback when history is empty). Sunday emits no slots. Pure: no I/O, no library coupling. The caller resolves `lastSaturdayMenu` from history and library tags so schedule.ts stays library-free. ISO Monday calendar validation on `weekStart`. 18 unit tests (47 total engine tests now). §3.2 weekday substitution is deferred to composition. (#8)
