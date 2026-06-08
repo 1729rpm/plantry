@@ -113,7 +113,6 @@
 | 2026-05-04 | Wednesday | Lunch | Lemon rice | 17 |
 | 2026-05-04 | Thursday | Breakfast | Vegetable upma | 82 |
 | 2026-05-04 | Thursday | Lunch | Fish tikka | 118 |
-| 2026-05-04 | Thursday | Lunch | Rajma | 7 |
 | 2026-05-04 | Thursday | Lunch | Mix veg sabzi | 135 |
 | 2026-05-04 | Thursday | Lunch | Roti | 103 |
 | 2026-05-04 | Friday | Breakfast | Anda bhurji | 57 |

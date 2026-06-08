@@ -55,7 +55,12 @@ currentWeek
 weekArchive
   weekStart: string
   finalizedAt: number
-  rows: array of { day, meal, dishName, dishId }   # mirrors menu_history.md row format
+  rows: array of {
+    day: "Monday" | "Tuesday" | "Wednesday" | "Thursday" | "Friday" | "Saturday" | "Sunday"
+    meal: "Breakfast" | "Lunch"
+    dishName: string
+    dishId: number
+  }                                    # mirrors menu_history.md row format exactly
 
 comments
   id: string

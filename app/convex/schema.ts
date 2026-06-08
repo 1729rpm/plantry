@@ -42,14 +42,22 @@ export default defineSchema({
   }).index("by_weekStart", ["weekStart"]),
 
   // Finalized past weeks. Append-only. Mirrors the menu_history.md row format
-  // so the engine's recency rule can query against it.
+  // exactly, so the engine's recency rule can query against it without translation.
   weekArchive: defineTable({
     weekStart: v.string(),
     finalizedAt: v.number(),
     rows: v.array(
       v.object({
-        day: v.string(),
-        meal: v.union(v.literal("breakfast"), v.literal("lunch")),
+        day: v.union(
+          v.literal("Monday"),
+          v.literal("Tuesday"),
+          v.literal("Wednesday"),
+          v.literal("Thursday"),
+          v.literal("Friday"),
+          v.literal("Saturday"),
+          v.literal("Sunday"),
+        ),
+        meal: v.union(v.literal("Breakfast"), v.literal("Lunch")),
         dishName: v.string(),
         dishId: v.number(),
       }),

@@ -58,6 +58,6 @@ Full ground rules (session model, branch naming, commit style, definition of don
 
 ## Project-specific style
 
-- No em dashes or long dashes in any prose Rajat reads (spec, decision log, PR descriptions, EM status updates). Use commas, parentheses, semicolons, or sentence breaks.
+- No em dashes or long dashes in user-facing content: PWA UI strings, generated menu images, grocery lists, share images. Em dashes are fine in internal docs (specs, CHANGELOG, DECISIONS, briefs, PR descriptions, code comments, commit messages); use them sparingly there too.
 - Canonical docs in `docs/` read as present-tense steady-state specs. No "added in", no "previously", no historical seams. The CHANGELOG holds the chronology.
 - Explain non-obvious software, infra, data, finance, or business-strategy concepts inline; Rajat prefers more information, never less, on terms an experienced PM would not already know. Skip explanations for PM-craft and Indian quick-commerce knowledge.
