@@ -8,6 +8,9 @@
     ".": "./src/index.ts"
   },
   "scripts": {
+    "bake": "tsc -b && node dist/scripts/bake.js",
+    "prebuild": "npm run bake",
+    "build": "tsc -b",
     "typecheck": "tsc -b",
     "test": "vitest run",
     "test:watch": "vitest"
