@@ -23,9 +23,6 @@ yarn-error.log*
 .env.local
 .env.*.local
 
-# Convex generated
-app/convex/_generated/
-
 # Test output
 coverage/
 .nyc_output/
