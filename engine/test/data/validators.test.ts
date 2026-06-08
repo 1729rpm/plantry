@@ -29,24 +29,9 @@ function loadLive() {
 }
 
 describe("validateMenuHistoryAgainstLibrary", () => {
-  // Live data has one known drift (dish id 7, "Rajma", referenced by the
-  // 2026-05-04 week but absent from data/dishes.md). Flagged in the PR body
-  // under "EM check needed" for slow-loop reconciliation. The positive test
-  // below filters that single row out so the rest of the live data continues
-  // to gate against future drift.
-  const KNOWN_MISSING_DISH_IDS = new Set<number>([7]);
-
-  it("passes on live data once the known missing dish ids are excluded", () => {
+  it("passes on live data with no drift between menu_history and dishes", () => {
     const { dishes, history } = loadLive();
-    const filtered = history.filter((r) => !KNOWN_MISSING_DISH_IDS.has(r.dishId));
-    expect(() => validateMenuHistoryAgainstLibrary(filtered, dishes)).not.toThrow();
-  });
-
-  it("flags the current known-missing dish id on live data", () => {
-    const { dishes, history } = loadLive();
-    expect(() => validateMenuHistoryAgainstLibrary(history, dishes)).toThrow(
-      /dish id 7/,
-    );
+    expect(() => validateMenuHistoryAgainstLibrary(history, dishes)).not.toThrow();
   });
 
   it("throws and names every missing dish id with referencing rows", () => {

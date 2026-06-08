@@ -77,7 +77,7 @@ describe("bake against live data", () => {
 
 });
 
-describe("bake KNOWN_MISSING_DISH_IDS exception", () => {
+describe("bake validator integration", () => {
   const fixtureRoot = resolve(tmpdir(), `plantry-bake-test-${process.pid}`);
 
   function writeFixture(dir: string, dishesMd: string, historyExtra: string): void {
@@ -131,20 +131,7 @@ describe("bake KNOWN_MISSING_DISH_IDS exception", () => {
     }
   });
 
-  it("succeeds when only known-missing dish id 7 is referenced from history", () => {
-    writeFixture(
-      "allowed",
-      dishesMd,
-      "| 2026-06-08 | Monday | Breakfast | Rajma | 7 |",
-    );
-    const dataDir = resolve(fixtureRoot, "allowed/data");
-    const outDir = resolve(fixtureRoot, "allowed/out");
-    expect(() => bake({ dataDir, outDir })).not.toThrow();
-    expect(existsSync(resolve(outDir, "library.ts"))).toBe(true);
-    expect(existsSync(resolve(outDir, "history.ts"))).toBe(true);
-  });
-
-  it("fails when an unknown missing dish id is referenced from history", () => {
+  it("fails when a history row references a dish id missing from the library", () => {
     writeFixture(
       "rejected",
       dishesMd,

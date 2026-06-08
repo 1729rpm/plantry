@@ -17,12 +17,6 @@ import type {
   PackSizeHeader,
 } from "../src/data/schemas.js";
 
-// Dish ids referenced by data/menu_history.md but not yet present in
-// data/dishes.md. Tracked as open item 13 in features/phase2.md §5 (Rajma,
-// dish id 7). Remove an id once the corresponding row lands in the dish
-// library; remove the whole set when the open item is resolved.
-const KNOWN_MISSING_DISH_IDS = new Set<number>([7]);
-
 interface BakeOutput {
   libraryPath: string;
   historyPath: string;
@@ -96,11 +90,7 @@ export function bake(options: BakeOptions): BakeOutput {
   const history = parseMenuHistory(historyMd);
 
   validatePackSizesUsed(packSizes, ingredients);
-
-  const filteredHistory = history.filter(
-    (r) => !KNOWN_MISSING_DISH_IDS.has(r.dishId),
-  );
-  validateMenuHistoryAgainstLibrary(filteredHistory, dishes);
+  validateMenuHistoryAgainstLibrary(history, dishes);
 
   const libraryPath = resolve(outDir, "library.ts");
   const historyPath = resolve(outDir, "history.ts");
