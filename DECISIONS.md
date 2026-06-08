@@ -63,6 +63,21 @@ Decisions Rajat must approve go in the "Open items" list in `features/phase2.md`
 
 ---
 
+## 2026-06-08 19:50 IST — Convex and Vercel projects linked
+
+**Stream:** 0.5
+**Context:** Rajat asked if the EM could do the Convex + Vercel + settings steps itself. CLIs were already authenticated locally (`~/.convex/config.json` has an access token; `vercel whoami` returns `mudgal1729`).
+**Options considered:** (a) ask Rajat to do each step in the browser dashboard, (b) drive both CLIs from the EM session.
+**Chosen:** (b) for everything the auth allowed. Created Convex project `plantry` under team `rajatmudgaliitr` (dev deployment `lovely-curlew-631.convex.cloud`); deployed schema; linked Vercel project `mudgal1729s-projects/plantry` from monorepo root; set `VITE_CONVEX_URL` in all three Vercel envs; preview-deployed and verified the build succeeded.
+**Reversibility:** medium. The Convex project can be deleted from the dashboard; the Vercel project can be unlinked and deleted. Both are scoped to Rajat's accounts.
+**Right-size check:** problem size, infrastructure (one-time); fix level, CLI commands + config files; generality: the layout (`convex.json` with `functions: "./"`, `vercel.json` at root) supports every future deploy without rework.
+
+**Open walls (escalating to Rajat):**
+- `.claude/settings.local.json` write blocked by the auto-mode classifier regardless of user authorization. Rajat must paste the additionalDirectories block himself. Without it, every engineer subagent for Streams A-F will fail to read its worktree.
+- `vercel domains add plantry.mudgal.xyz` and `plantry-dev.mudgal.xyz` blocked by the classifier as production hosting changes. Rajat to run these two commands or click through in the Vercel dashboard.
+
+---
+
 ## 2026-06-08 19:00 IST — Stream 0 done by EM (one-time bootstrap exception)
 
 **Stream:** 0

@@ -121,7 +121,7 @@ Continuous. Maintains:
 | Stream | Status | Owner | Notes |
 |---|---|---|---|
 | 0 Bootstrap (monorepo, PWA shell, schema, hooks, CI) | shipped | EM | PR #1 merged 2026-06-08. One-time exception: EM did the work in the worktree because subagent sandbox blocked sibling-path access. Convex/Vercel project creation is a separate browser-auth step. |
-| 0.5 Convex + Vercel project init + deploy CI | in progress | Rajat + EM | Browser-auth steps (Rajat); deploy CI step (EM after secrets exist). |
+| 0.5 Convex + Vercel project init + deploy CI | partial | EM + Rajat | EM linked both via CLI (PR #2 merged). Preview deploy verified. Open: domain aliases (Rajat); production Convex deploy + GH Actions deploy step (EM after Rajat confirms domains). |
 | A Data layer | not started | TBD | Starts after subagent permissions are fixed; first PR is dish/ingredient parsers + round-trip tests. |
 | B Engine | not started | TBD | Starts after A's first PR. |
 | C Convex backend | not started | TBD | Starts after Convex project exists + A's first PR. |
