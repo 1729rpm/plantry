@@ -1,0 +1,46 @@
+# Fires when a slow-loop/* pull request merges into main. The job parses the
+# merged PR body for the per-cluster "Consumed comments by cluster" section
+# produced by .claude/commands/slow-loop.md, then calls the internal Convex
+# mutations in app/convex/comments.ts to mark each consumed comment either
+# `applied` or `reviewed_no_change` (and each consumed incident resolved). This
+# closes the slow-loop feedback cycle so the next /slow-loop run does not
+# reprocess already-handled comments. The action exits clean when the PR body
+# lacks parseable sections; the mark-applied step is best-effort and should
+# never block a merge.
+name: Slow-loop mark applied
+
+on:
+  pull_request:
+    types: [closed]
+
+concurrency:
+  group: slow-loop-applied-${{ github.event.pull_request.number }}
+  cancel-in-progress: false
+
+jobs:
+  mark-applied:
+    name: Mark consumed Convex rows on slow-loop merge
+    if: github.event.pull_request.merged == true && startsWith(github.event.pull_request.head.ref, 'slow-loop/')
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout PR head
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.merge_commit_sha }}
+
+      - name: Setup Node 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Install
+        run: npm ci
+
+      - name: Parse PR body and mark consumed rows
+        working-directory: app/convex
+        env:
+          CONVEX_DEPLOY_KEY: ${{ secrets.CONVEX_DEPLOY_KEY }}
+          PR_BODY: ${{ github.event.pull_request.body }}
+          PR_URL: ${{ github.event.pull_request.html_url }}
+        run: node ../../scripts/slow-loop-mark-applied.mjs
