@@ -122,9 +122,9 @@ Continuous. Maintains:
 |---|---|---|---|
 | 0 Bootstrap (monorepo, PWA shell, schema, hooks, CI) | shipped | EM | PR #1 merged 2026-06-08. |
 | 0.5 Convex + Vercel project init | shipped | EM | PR #2 merged. Convex prod + dev deployments live; Vercel prod deploy live; domains added to Vercel project (DNS verification pending). |
-| 0.6 Deploy CI step | blocked | EM | Needs Vercel token (Rajat) before wiring `convex deploy` + `vercel deploy --prod` into the workflow on push-to-main. |
-| 0.7 DNS verification | blocked | Rajat | Two Cloudflare CNAMEs (`plantry` -> `cname.vercel-dns.com` proxied off; `plantry-dev` -> same). Rajat to add via dashboard or hand EM a CF API token. |
-| A Data layer | ready to spawn | TBD | Subagent permissions enabled. First PR is dish/ingredient round-trip parsers + Zod schemas. Brief to be drafted at next session start. |
+| 0.6 Deploy CI step | shipped | EM | GH-Vercel integration handles frontend on push-to-main. New `Deploy Convex` workflow handles schema/functions via `CONVEX_DEPLOY_KEY`. Path-filtered to `app/convex/`, `engine/`, `data/`. |
+| 0.7 DNS for custom domains | shipped | Vercel-Cloudflare integration | `plantry.mudgal.xyz` and `plantry-dev.mudgal.xyz` both serve 200 OK over HTTPS. Vercel auto-configured via the Cloudflare integration (no manual records added). |
+| A Data layer | ready to spawn | TBD | Subagent permissions enabled. First PR is dish/ingredient round-trip parsers + Zod schemas. |
 | B Engine | not started | TBD | Starts after A's first PR. |
 | C Convex backend | not started | TBD | Starts after Convex project exists + A's first PR. |
 | D Frontend | not started | TBD | Starts after Convex client codegen lands (early in C). |

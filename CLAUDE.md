@@ -28,7 +28,7 @@ Read order by task:
 
 ## Currently building
 
-> Active feature: `features/phase2.md`. Stream 0 (bootstrap) and 0.5 (Convex + Vercel link) shipped; 0.6 (deploy CI step) and 0.7 (DNS) blocked on external credentials. Stream A (data layer parsers) is ready to spawn. Read the last entry in `DECISIONS.md` ("Session end; resume notes") before doing anything.
+> Active feature: `features/phase2.md`. Streams 0 (bootstrap), 0.5 (Convex + Vercel link), 0.6 (deploy CI), 0.7 (DNS) shipped. PWA serves at https://plantry.mudgal.xyz over HTTPS with auto-deploy on push to main. Stream A (data layer parsers) is the next to spawn.
 
 When no feature is active, this line reads "_none_".
 
