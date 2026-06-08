@@ -1,21 +1,293 @@
 :root {
   font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
   color-scheme: light;
+  --green: #2f5d3a;
+  --green-soft: #e6efe7;
+  --bg: #fefcf6;
+  --ink: #1f2a1f;
+  --ink-soft: #5b6a5b;
+  --grey: #8a8e88;
+  --grey-line: #e3dfd2;
+  --error: #a23b2c;
+}
+
+* {
+  box-sizing: border-box;
 }
 
 body {
   margin: 0;
-  background: #fefcf6;
-  color: #1f2a1f;
+  background: var(--bg);
+  color: var(--ink);
+  -webkit-font-smoothing: antialiased;
 }
 
-main {
-  max-width: 600px;
+button {
+  font-family: inherit;
+}
+
+a {
+  color: var(--green);
+}
+
+.app {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+.app__main {
+  flex: 1;
+  padding: 16px;
+  max-width: 720px;
   margin: 0 auto;
+  width: 100%;
+}
+
+.app__footer {
+  padding: 16px;
+  text-align: center;
+  font-size: 12px;
+  color: var(--grey);
+}
+
+.app-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 14px 16px;
+  background: var(--green);
+  color: #fefcf6;
+}
+
+.app-header__title {
+  font-weight: 600;
+  font-size: 18px;
+  letter-spacing: -0.01em;
+}
+
+.app-header__identity {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 13px;
+}
+
+.app-header__identity-name {
+  opacity: 0.9;
+}
+
+.app-header__not-me {
+  background: rgba(255, 255, 255, 0.15);
+  border: 0;
+  color: inherit;
+  padding: 4px 10px;
+  border-radius: 999px;
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.app-header__not-me:active {
+  background: rgba(255, 255, 255, 0.3);
+}
+
+.splash {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   padding: 24px;
 }
 
-h1 {
+.splash__card {
+  background: white;
+  border: 1px solid var(--grey-line);
+  border-radius: 14px;
+  padding: 28px 24px;
+  width: 100%;
+  max-width: 360px;
+}
+
+.splash__title {
+  margin: 0 0 8px;
   font-weight: 600;
   letter-spacing: -0.01em;
+}
+
+.splash__hint {
+  color: var(--ink-soft);
+  margin: 0 0 18px;
+  font-size: 14px;
+}
+
+.splash__form {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.splash__input {
+  padding: 12px 14px;
+  font-size: 16px;
+  border: 1px solid var(--grey-line);
+  border-radius: 10px;
+  background: var(--bg);
+  color: var(--ink);
+}
+
+.splash__input:focus {
+  outline: 2px solid var(--green);
+  outline-offset: 1px;
+}
+
+.splash__submit {
+  background: var(--green);
+  color: white;
+  border: 0;
+  border-radius: 10px;
+  padding: 12px 16px;
+  font-size: 15px;
+  font-weight: 500;
+  cursor: pointer;
+}
+
+.splash__submit:active {
+  background: #244a2e;
+}
+
+.splash__error {
+  color: var(--error);
+  font-size: 13px;
+  margin: 4px 0 0;
+}
+
+.identity-picker {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-top: 6px;
+}
+
+.identity-picker__button {
+  padding: 18px 16px;
+  font-size: 17px;
+  font-weight: 500;
+  border-radius: 12px;
+  border: 1px solid var(--green);
+  background: var(--green-soft);
+  color: var(--green);
+  cursor: pointer;
+}
+
+.identity-picker__button:active {
+  background: var(--green);
+  color: white;
+}
+
+.week__header {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  padding: 4px 4px 12px;
+}
+
+.week__title {
+  font-size: 16px;
+  font-weight: 600;
+  margin: 0;
+  color: var(--ink-soft);
+}
+
+.week__status {
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: var(--grey-line);
+  color: var(--ink-soft);
+}
+
+.week__status--final {
+  background: var(--green-soft);
+  color: var(--green);
+}
+
+.week--loading,
+.week--empty {
+  padding: 32px 16px;
+  text-align: center;
+  color: var(--ink-soft);
+}
+
+.offline-banner {
+  background: #f4efd8;
+  color: #5b4e1c;
+  padding: 8px 12px;
+  border-radius: 8px;
+  font-size: 13px;
+  margin-bottom: 12px;
+}
+
+.week__days {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.day-card {
+  background: white;
+  border: 1px solid var(--grey-line);
+  border-radius: 12px;
+  padding: 14px 16px;
+}
+
+.day-card__title {
+  margin: 0 0 8px;
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--green);
+}
+
+.day-card__slots {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.slot {
+  display: grid;
+  grid-template-columns: 90px 1fr auto;
+  align-items: baseline;
+  gap: 8px;
+  padding: 6px 0;
+  border-top: 1px solid var(--grey-line);
+}
+
+.slot:first-child {
+  border-top: 0;
+}
+
+.slot__meal {
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--ink-soft);
+}
+
+.slot__dish {
+  font-size: 15px;
+  color: var(--ink);
+}
+
+.slot__source {
+  font-size: 11px;
+  color: var(--grey);
+  text-transform: lowercase;
 }
