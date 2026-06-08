@@ -1,0 +1,38 @@
+name: Deploy Convex
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "app/convex/**"
+      - "engine/**"
+      - "data/**"
+      - ".github/workflows/deploy-convex.yml"
+
+# Only one Convex deploy at a time per branch. If a newer commit lands while a
+# deploy is running, cancel the in-progress one and run the latest.
+concurrency:
+  group: convex-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    name: Deploy schema and functions to production
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Install
+        run: npm ci
+
+      - name: Deploy to Convex prod
+        working-directory: app/convex
+        env:
+          CONVEX_DEPLOY_KEY: ${{ secrets.CONVEX_DEPLOY_KEY }}
+        run: npx convex deploy --yes
