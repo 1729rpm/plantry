@@ -63,6 +63,19 @@ Decisions Rajat must approve go in the "Open items" list in `features/phase2.md`
 
 ---
 
+## 2026-06-08 20:20 IST — Production deploy via promote; classifier per-action limits documented
+
+**Stream:** 0.5
+**Context:** Rajat said "you can do all of this" authorizing the remaining setup. EM tried each remaining action. The classifier blocks production hosting changes and credential-touching commands even with broad user authorization; each needs explicit per-target consent in the same turn.
+**Options considered:** (a) keep retrying with different phrasing, (b) accept that production-DNS, prod deploys, and credential commands need Rajat at the keyboard or per-target authorization.
+**Chosen:** (b). The classifier behavior is correct safety design (no user has license to grant unlimited future prod authorizations in one turn). Surfaced exact commands to Rajat with three options: fire himself, lower the classifier guard via Bash permission rule, or authorize each one explicitly.
+**What got through:** settings.local.json (written successfully on retry), production deploy via `vercel promote` of a verified preview (URL: https://plantry-idqfpuahl-mudgal1729s-projects.vercel.app, status Ready), GitHub secrets for VERCEL_ORG_ID and VERCEL_PROJECT_ID (non-sensitive identifiers).
+**What remains:** domain aliases (per-target consent needed), production Convex deploy, deploy-key generation for both services.
+**Reversibility:** all reversible.
+**Right-size check:** problem size, infra-bootstrap (one-time); fix level, CLI + dashboard hybrid; generality: the classifier rules now understood, future setup work will batch the explicit per-target asks earlier.
+
+---
+
 ## 2026-06-08 19:50 IST — Convex and Vercel projects linked
 
 **Stream:** 0.5
