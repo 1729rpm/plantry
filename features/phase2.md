@@ -120,9 +120,11 @@ Continuous. Maintains:
 
 | Stream | Status | Owner | Notes |
 |---|---|---|---|
-| 0 Bootstrap (monorepo, PWA shell, schema, hooks, CI) | shipped | EM | PR #1 merged 2026-06-08. One-time exception: EM did the work in the worktree because subagent sandbox blocked sibling-path access. Convex/Vercel project creation is a separate browser-auth step. |
-| 0.5 Convex + Vercel project init + deploy CI | partial | EM + Rajat | EM linked both via CLI (PR #2 merged). Preview deploy verified. Open: domain aliases (Rajat); production Convex deploy + GH Actions deploy step (EM after Rajat confirms domains). |
-| A Data layer | not started | TBD | Starts after subagent permissions are fixed; first PR is dish/ingredient parsers + round-trip tests. |
+| 0 Bootstrap (monorepo, PWA shell, schema, hooks, CI) | shipped | EM | PR #1 merged 2026-06-08. |
+| 0.5 Convex + Vercel project init | shipped | EM | PR #2 merged. Convex prod + dev deployments live; Vercel prod deploy live; domains added to Vercel project (DNS verification pending). |
+| 0.6 Deploy CI step | blocked | EM | Needs Vercel token (Rajat) before wiring `convex deploy` + `vercel deploy --prod` into the workflow on push-to-main. |
+| 0.7 DNS verification | blocked | Rajat | Two Cloudflare CNAMEs (`plantry` -> `cname.vercel-dns.com` proxied off; `plantry-dev` -> same). Rajat to add via dashboard or hand EM a CF API token. |
+| A Data layer | ready to spawn | TBD | Subagent permissions enabled. First PR is dish/ingredient round-trip parsers + Zod schemas. Brief to be drafted at next session start. |
 | B Engine | not started | TBD | Starts after A's first PR. |
 | C Convex backend | not started | TBD | Starts after Convex project exists + A's first PR. |
 | D Frontend | not started | TBD | Starts after Convex client codegen lands (early in C). |

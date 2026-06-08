@@ -63,6 +63,55 @@ Decisions Rajat must approve go in the "Open items" list in `features/phase2.md`
 
 ---
 
+## 2026-06-08 21:15 IST — Session end; resume notes for next session
+
+**Stream:** G
+**Context:** Rajat is wrapping the session and will continue in a fresh one. This entry captures everything the next session needs to pick up without re-deriving state.
+
+### What is live
+
+- **GitHub:** https://github.com/mudgal1729/plantry (public), main at `aa6a864`.
+- **Convex dev:** https://lovely-curlew-631.convex.cloud (team `rajatmudgaliitr`, project `plantry`).
+- **Convex prod:** https://disciplined-chameleon-263.convex.cloud (schema deployed with all six indexes).
+- **Vercel project:** `mudgal1729s-projects/plantry` (orgId `team_oPvhrZBFH8xXQJqAkRrPWawS`, projectId `prj_p9Wa8AIWysruCJ8ghsjunHqEQ3nq`).
+- **Vercel prod deploy:** https://plantry-idqfpuahl-mudgal1729s-projects.vercel.app (Hello Plantry shell, status Ready).
+- **Vercel domains added to project:** `plantry.mudgal.xyz`, `plantry-dev.mudgal.xyz` (pending DNS verification).
+- **GH secrets set:** `VERCEL_ORG_ID`, `VERCEL_PROJECT_ID`, `CONVEX_DEPLOY_KEY` (prod key, never rotated).
+- **Settings:** `.claude/settings.local.json` written with `additionalDirectories` for stream-A through stream-F worktrees. Subagent worktree access enabled.
+
+### What is blocked
+
+Two genuine external blockers; neither resolvable from inside Claude Code:
+
+1. **Cloudflare DNS records** for `plantry.mudgal.xyz` and `plantry-dev.mudgal.xyz`. Verified empty via `dig +trace`. Need two CNAMEs in Cloudflare under `mudgal.xyz`, both pointing at `cname.vercel-dns.com` with proxy disabled. Confirmed via `ALL_KEYS.md` and shell that no Cloudflare API token exists in the filesystem; Rajat must mint one (https://dash.cloudflare.com/profile/api-tokens, "Edit zone DNS" template) and either drop it to a future session OR add the records via dashboard.
+
+2. **Vercel token** for the GH Actions deploy step. No CLI to generate; must come from https://vercel.com/account/tokens, scoped to `mudgal1729s-projects`. After Rajat mints it, `gh secret set VERCEL_TOKEN`.
+
+### What to do first in the next session
+
+1. Read `CLAUDE.md`, then `features/phase2.md` for current stream state.
+2. Read this entry and the four preceding entries to understand the deploy state.
+3. Ask Rajat the status of the two blockers (DNS records added? Vercel token set?). Both are independent of each other; either can resolve first.
+4. **Once both are resolved:** wire the GH Actions deploy step (`convex deploy --yes` on push to main + `vercel deploy --prod --token $VERCEL_TOKEN`). Add the env var `VITE_CONVEX_URL` for the preview environment as part of the deploy command (workaround for the CLI quirk where `vercel env add VITE_CONVEX_URL preview` won't accept `--value --yes` without a branch arg).
+5. **Independent of the blockers:** spawn Stream A engineer in `../plantry-stream-A` on branch `feat/A-data-layer-parsers`. Brief is queued mentally but not yet written; first PR is the dish/ingredient round-trip parsers + Pydantic-equivalent TypeScript types (Zod schemas).
+6. Update this log and `features/phase2.md` stream state.
+
+### Critical context the next session must not re-derive
+
+- The hybrid architecture (Convex for runtime, git markdown for structure) was the locked decision; do not propose alternatives.
+- The slow loop is human-triggered via `/slow-loop`; no cron.
+- The EM does not write feature code; engineer subagents work in worktrees. Stream 0 was a one-time exception because the discipline was being installed by it.
+- Convex schema lives in `app/convex/schema.ts` (not `app/convex/convex/` despite Convex CLI default); `convex.json` with `functions: "./"` configures this. Do not let any agent regenerate Convex layout.
+- Build pipeline: TypeScript with strict project references; the markdown parsers (Stream A) emit `engine/src/data/library.ts` and `engine/src/data/history.ts` at build time, gitignored.
+- Engine and `docs/engine.md` must stay in lockstep; CI gate will catch drift.
+- No em dashes in any prose Rajat reads.
+
+### Open ALL_KEYS.md update
+
+Per Rajat's instruction this turn ("if not present in all-keys but inside the folder, add details in all keys"): neither CF nor Vercel tokens are present anywhere in the AI Products folder (ALL_KEYS.md is the aggregated truth, sourced from sibling project .env files). When Rajat mints them, the next session should append a `## Plantry` block to `ALL_KEYS.md` capturing: Convex deploy key (already set as GH secret but not in ALL_KEYS), Cloudflare token (after he creates it), Vercel token (after he creates it). The file is outside Plantry's repo so a chore PR is not appropriate; just edit it locally and let Rajat decide whether to back it up.
+
+---
+
 ## 2026-06-08 20:45 IST — Prod Convex deployed; domains added; DNS still missing
 
 **Stream:** 0.5
