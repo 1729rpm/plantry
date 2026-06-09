@@ -128,7 +128,7 @@ Continuous. Maintains:
 | B Engine | in progress | TBD | Slices 1-8 shipped (eligibility, schedule, composition, priority, consolidation, cap, generateWeek + rankCandidatesForSlot, grocery list aggregator). Only slice 9 (5-week simulation harness replaying the four known bugs from `archive/learnings-v0.md` + property tests) remains. |
 | C Convex backend | in progress | TBD | Slices 1-5 shipped (schema + queries + seed, three mutations, `generateCurrentWeek`, swap, `getGroceryList`). Next: `finalizeWeek` and auto-recovery middleware. |
 | D Frontend | in progress | TBD | Slices 1-4 shipped (read-only week, write affordances, swap UI, grocery list rendering). Menu image (PNG) per `docs/product.md` §3 item 2 still queued as a follow-up. |
-| E Slow-loop session | in progress | TBD | Slice 1 (slash command + fixtures) shipped in PR #4. Slice 2 (GitHub Action + three Convex mutations) shipped 2026-06-08 in PR #9. EM dry-run against the fixtures still queued; first real slow-loop run still pending Rajat. |
+| E Slow-loop session | shipped | — | Slices 1 (slash command + fixtures) and 2 (GitHub Action + mutations) shipped. First end-to-end slow-loop merged 2026-06-09 in PR #25 (fixture-driven dry-run; all clusters `reviewed_no_change`). First real run against live Convex comments is on Rajat's calendar (convention: Sunday around 11am IST). |
 | F Identity + concurrency + deploy | not started | TBD | Integrates near end. Includes automated hook test (followup from PR #1). |
 | G EM scaffolding | continuous | EM | Initial scaffolding shipped with the restructure. |
 
