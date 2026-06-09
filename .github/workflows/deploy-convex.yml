@@ -31,6 +31,12 @@ jobs:
       - name: Install
         run: npm ci
 
+      - name: Bake engine library and history from data/*.md
+        # Convex bundles the deployed code; engine/src/data/library.ts and history.ts
+        # are gitignored generated files imported by app/convex/generateWeek.ts.
+        # Without baking first, the deploy bundler cannot resolve the engine subpath imports.
+        run: npm run bake
+
       - name: Deploy to Convex prod
         working-directory: app/convex
         env:
