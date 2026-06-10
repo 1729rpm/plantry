@@ -19,6 +19,28 @@ Decisions Rajat must approve go in the "Open items" list in `features/phase2.md`
 
 ---
 
+## 2026-06-09 (post-v1, revision) — Stream H swap picker is non-restrictive
+
+**Stream:** H
+**Context:** Initial Stream H brief recommended per-position eligibility filtering (HP slot offers HP dishes, partner slot honours the HP-category coupling, Menu 1 partner constraint flips when HP type changes; breakfast kept at meal-level to avoid Option A/B/C mismatch). Rajat overrode: the swap picker should be non-restrictive — every Active, in-season, meal-time-matching dish should be offered, ranked by likelihood, and rule violations become slow-loop signal rather than fast-loop errors.
+**Options considered:** (a) per-position eligibility filter at swap time, with breakfast at meal-level (initial brief). (b) non-restrictive picker for both breakfast and lunch; engine ranks by §4 priority; no eligibility re-check on `swapDish`; optionally write an `incidents` warn row when the swap violates §3 so the slow loop can see the divergence.
+**Chosen:** (b). Aligns with `docs/product.md` §4 Principle 4 (two loops, never one): fast loop is operational and permissive; structural change comes only through the slow loop. Enforcing §3 at swap time would block the signal the slow loop needs. Also drops engine surface area: no `rankCandidatesForPosition` is needed; the existing `rankCandidatesForSlot` already returns the meal-level ranked list.
+**Reversibility:** easy. Re-adding per-position filtering is a small filter on the picker query if Rajat changes his mind. The `incidents` warn rows are additive; if not needed they get ignored by the slow loop.
+**Right-size check:** problem is "fast-loop should not block user choice"; fix level UI affordance + mutation contract (drop the eligibility re-check); generality: this also lets the slow loop see real-world swap patterns, which is the redesign signal Rajat wants. Time filter (Breakfast vs Lunch dishes) stays as a hard property of the library, not a "rule" — cross-meal swap is a separate future surface.
+
+---
+
+## 2026-06-09 (post-v1) — Stream H scope and slicing for multi-dish slots
+
+**Stream:** H (post-v1; phase 2 archived)
+**Context:** Rajat noticed the dashboard only renders one lunch item per day. Diagnosis: `app/convex/generateWeek.ts:89` drops `slot.dishes[1..]`; `app/convex/schema.ts:15-40` only models one `dishId` per `(day, meal)` row. The engine generates the correct number of dishes per `docs/engine.md` §2-3; persistence flattens N to 1. Side effects: grocery list under-counts; swap UI only ever targets the lead dish. Rajat asked for "all menu items shown with an option to edit/swap them".
+**Options considered:** (a) keep existing schema; render N items by re-running the engine at read time (no swap, no per-item edit possible). (b) single PR that reshapes schema, persistence, render, and per-position swap (lunch only); breakfast keeps meal-level swap because Option A/B/C couples its two items. (c) split (b) into two PRs: schema+render first, per-position swap second.
+**Chosen:** (b) — single cohesive PR; engineer decides whether to slice further. The schema shape and UI render are tightly coupled, so doing them in lockstep keeps the engineer's surface small. Breakfast Option A/B/C coupling is real, so recommend meal-level swap there to avoid engine-rule surgery in this PR.
+**Reversibility:** medium. Schema reshape is structural and ripples to grocery list, swap mutation, custom one-off mutation, frontend types. No production data worth preserving (current week is a draft; can be regenerated via `generateCurrentWeek`).
+**Right-size check (per `docs/product.md` §4):** problem size structural (not one-off, not small pattern); fix level engine surface + schema + UI affordance (smallest level that actually fixes it; the schema flatten is the root cause); generality: this also fixes the grocery under-count silently and unblocks any future per-position rule (e.g., "no two HP dishes in the same meal" enforcement at swap time). Brief at `features/multi-dish-slots.md`; engineer brief at `../plantry-multi-dish-slots/.engineer-brief.md`.
+
+---
+
 ## 2026-06-08 12:30 IST — Plan scaffolding shape
 
 **Stream:** G
