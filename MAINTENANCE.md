@@ -16,8 +16,8 @@ Rajat opens a Claude Code session in the main repo directory and types `/slow-lo
 
 ### 1.3 Inputs the session reads
 
-- All `queued` rows in Convex `comments` (via `npx convex run comments:listQueued`).
-- All open `incidents` from Convex (same period as comments).
+- All `queued` rows in Convex `comments` (via `npx convex run queries/comments:listQueuedComments`).
+- All open `incidents` from Convex (via `npx convex run queries/incidents:listIncidents`).
 - Current `data/dishes.md`, `data/ingredients.md`, `data/menu_history.md`, `data/changelog.md`.
 - Current `docs/engine.md` plus `engine/src/` for the engine state.
 - Recent Convex `weekArchive` rows for context on what was actually cooked.
