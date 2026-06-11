@@ -101,9 +101,9 @@ The slow loop runs only when Rajat invokes it. Convention is Sunday around 11am 
 **To run the slow loop:**
 1. Rajat opens a Claude Code session in the main repo directory.
 2. Types `/slow-loop`. (Definition lives at `.claude/commands/slow-loop.md`.)
-3. The session reads queued comments from Convex (via `npx convex run`), reads `data/dishes.md`, `data/ingredients.md`, `data/menu_history.md`, `docs/engine.md`, and recent `incidents` from Convex.
+3. The session reads queued comments from Convex (via `npx convex run`), reads the dish library under `data/dishes/`, the `data/ingredients.md` catalog, `data/menu_history.md`, `docs/engine.md`, and recent `incidents` from Convex.
 4. The session clusters comments + incidents into themes and applies right-size discipline. For each theme it picks one of: data fix, tag addition, rule edit, no change warranted.
-5. The session opens a PR with a diagnosis card per theme, file diffs across `data/dishes.md`, `data/ingredients.md`, `docs/engine.md`, `engine/src/`, and an appended `data/changelog.md` entry.
+5. The session opens a PR with a diagnosis card per theme, file diffs across `data/dishes/`, `data/ingredients.md`, `docs/engine.md`, `engine/src/`, and an appended `data/changelog.md` entry.
 6. Rajat reviews on GitHub. Merge applies. On merge a GitHub Action posts back to Convex to mark consumed comments `applied` and link the PR.
 
 Full slow-loop spec: `MAINTENANCE.md`.
@@ -122,7 +122,7 @@ The EM surfaces to Rajat before acting:
 - Cross-stream product behavior changes (e.g., changing what the menu image looks like).
 - Cost or hosting changes (Convex paid tier, switching frontend host, buying a domain).
 - Adding a tool, service, or library not named in `docs/engineering.md`.
-- Any structural change to canonical data (`data/dishes.md`, `data/ingredients.md`, `docs/engine.md`) initiated by the EM rather than the slow loop.
+- Any structural change to canonical data (the `data/dishes/` library, the `data/ingredients.md` catalog, `docs/engine.md`) initiated by the EM rather than the slow loop.
 - Genuine judgment ties where the EM has weighed both sides.
 
 EM-without-Rajat decisions go into `DECISIONS.md`. Rajat scans periodically; can override anything by replying in chat or editing the doc.
@@ -144,7 +144,7 @@ The EM rejects PRs that exhibit any of:
 - Generalizing from one or two cases ("we could add a column to handle this and three other hypothetical cases").
 - Adding a Pydantic-style abstraction or helper before two existing call sites need it.
 - Touching `docs/engine.md` without a matching engine code change.
-- Touching canonical dish data (`data/dishes.md`, `data/ingredients.md`) outside the two legitimate paths. Structural rule and library changes go through the slow loop. Content batches (descriptions, recipes, cook fields, photos, new dishes) go through reviewed content-batch PRs on `data/enrichment-*`, `data/photos-*`, or `data/expansion-*` branches, each reviewed by Rajat personally. Any other path is the anti-pattern.
+- Touching canonical dish data (the `data/dishes/` library, the `data/ingredients.md` catalog) outside the two legitimate paths. Structural rule and library changes go through the slow loop. Content batches (descriptions, recipes, cook fields, photos, new dishes) go through reviewed content-batch PRs on `data/enrichment-*`, `data/photos-*`, or `data/expansion-*` branches, each reviewed by Rajat personally. Any other path is the anti-pattern.
 - Past-tense narrative in canonical docs ("we used to do X but now do Y").
 - "Refactor while I'm here" scope creep.
 - New libraries or platform services not in `docs/engineering.md` §1.

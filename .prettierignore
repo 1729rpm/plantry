@@ -2,6 +2,10 @@ dist/
 node_modules/
 .convex/
 coverage/
-data/menu_images/
+# Canonical human-edited data: per-dish files, the ingredient catalog, the
+# history seed, and the structural changelog. Their byte layout is owned by the
+# engine's round-trip serializer (engine/src/data/serialize.ts) and asserted
+# byte-identical in CI, so Prettier must not reflow these markdown tables.
+data/
 design_handoff/
 package-lock.json
