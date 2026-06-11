@@ -7,6 +7,7 @@ How Plantry is built. Stack, data layer split, runtime topology, hosting, deploy
 | Layer | Choice | Notes |
 |---|---|---|
 | Engine (rules in code) | TypeScript module under `engine/` | Pure functions, no I/O. Imported by Convex functions and by tests. |
+| YAML parsing | `yaml` | Reads per-dish file frontmatter (`data/dishes/<slug>.md`) at bake time. |
 | Backend / API | Convex | Managed backend platform: typed schema, server functions, live sync to clients. No self-hosted server. |
 | Frontend | Vite + React + TypeScript | PWA, installable on phones. |
 | Service worker | Workbox | Caches the app shell + last-good week so the app opens on bad network. |
@@ -24,8 +25,8 @@ Plantry has two stores by design. The split is the load-bearing engineering deci
 
 | Stays in git markdown | Stays in Convex tables |
 |---|---|
-| `data/dishes.md`, the dish library | `currentWeek`, the live Mon-Sat plan with overrides |
-| `data/ingredients.md`, per-dish quantities + pack-size header | `weekArchive`, finalized past weeks (queryable for the engine's recency rule) |
+| `data/dishes/<slug>.md`, one file per dish (frontmatter + ingredient rows) | `currentWeek`, the live Mon-Sat plan with overrides |
+| `data/ingredients.md`, the ingredient catalog (one row per ingredient: group, unit, pack size) | `weekArchive`, finalized past weeks (queryable for the engine's recency rule) |
 | `data/menu_history.md`, seed for first deploy (later, a periodic snapshot) | `comments`, queued slow-loop input |
 | `data/changelog.md`, structural changes audit | `incidents`, runtime errors written by the auto-recovery middleware |
 | `docs/engine.md`, the rules spec | `userProfiles`, device identity ("I am Rajat" or "I am Tuhina") |
@@ -113,9 +114,9 @@ The library + rules are not in Convex. Convex functions load them by importing t
 
 ## 4. Build-time bake of library + rules
 
-Convex functions cannot read the markdown files at runtime. The build pipeline emits `engine/src/data/library.ts` (typed export of dishes + ingredients) and `engine/src/data/history.ts` (typed export of `menu_history.md` for first-deploy seeding) at build time. Convex functions import these. The engine module reads the typed objects, never markdown directly.
+Convex functions cannot read the markdown files at runtime. The build pipeline reads every `data/dishes/<slug>.md` file plus the `data/ingredients.md` catalog and emits `engine/src/data/library.ts` (typed export of dishes, the flattened per-dish ingredient rows, the catalog, and the catalog-derived pack-size list) and `engine/src/data/history.ts` (typed export of `menu_history.md` for first-deploy seeding) at build time. Convex functions import these. The engine module reads the typed objects, never markdown directly.
 
-Round-trip discipline: the build's parser is the same parser used by the round-trip tests, so any drift between markdown source and bundled output is caught in CI.
+Round-trip discipline: the build's parser is the same parser used by the round-trip tests, so any drift between markdown source and bundled output is caught in CI. The bake also runs the blocking data validators before emitting (every dish ingredient row resolves to a catalog row, every catalog row has a group, dish ids and slugs are unique, slugs match filenames), so bad data fails the build rather than reaching the bundle.
 
 ## 5. Read paths and write paths
 
@@ -209,9 +210,9 @@ When the integration lands:
 - Convex action `buildSwiggyCart(weekStart)` reads `currentWeek`, asks the engine for the structured grocery list, and calls the Swiggy MCP per line item.
 - The MCP returns Swiggy SKUs and prices. The action stores the resolved cart in `swiggyCarts(weekStart)` and returns a deep link.
 - Three v1 invariants that keep this path open without rework:
-  1. Ingredient names are canonical (one name per ingredient, no qualifiers like "(200g)", no spelling drift). Schema validation in §3 enforces this.
+  1. Ingredient names are canonical (one name per ingredient, no qualifiers like "(200g)", no spelling drift). The ingredient catalog (`data/ingredients.md`) is the single home for each ingredient, and the name-resolution validator blocks any dish ingredient row that does not resolve to a catalog row by exact name, so drift cannot reach the bundle.
   2. The grocery list is a structured Convex query, not a markdown parse. `getGroceryList(weekStart)` returns `{ ingredient, quantity, unit, packSize, packsNeeded }[]`. The markdown render is a view on top.
-  3. Pack sizes live in their own machine-readable header (`ingredients.md` already has this; the parser carries it through).
+  3. Pack sizes live in the ingredient catalog's machine-readable `Pack Size` column; the bake carries them through as the catalog-derived pack-size list.
 - Brand preference and substitution policy are future additive fields on the ingredient row. Designed to slot in without restructuring; not built in v1.
 
 ## 14. Repository structure
@@ -240,6 +241,8 @@ plantry/
   scripts/             # build and bake scripts
   docs/                # canonical specs + CHANGELOG
   data/                # human-edited library, history, structural changelog, menu images
+    dishes/            # one file per dish: data/dishes/<slug>.md (frontmatter + ingredient rows)
+    ingredients.md     # ingredient catalog: one row per ingredient (group, unit, pack size)
   design_handoff/      # the design handoff (contract, screens, primitives, tokens)
   features/            # active feature spec (one at a time)
   engine/              # TS engine module
@@ -261,7 +264,7 @@ Naming:
 
 Every PR runs these checks; any failure blocks merge.
 
-1. **Round-trip parsers.** `data/dishes.md` and `data/ingredients.md` parse and re-serialize byte-identical (modulo declared whitespace policy). `data/menu_history.md` parses cleanly.
+1. **Round-trip parsers.** Each `data/dishes/<slug>.md` file and the `data/ingredients.md` catalog parse and re-serialize byte-identical (modulo declared whitespace policy). `data/menu_history.md` parses cleanly. The data validators (name resolution, group presence, id/slug uniqueness, slug-filename match) also run.
 2. **Engine spec/code parity.** If `docs/engine.md` is modified, the PR must also modify `engine/src/` and `engine/test/`. The check fails with a message naming the missing pair.
 3. **Engine type-check + unit tests.** Standard TS compile + Vitest run.
 4. **Simulation harness.** The 5-week forward simulation runs against the current engine + library. Any newly-invalid menu fails the build.
@@ -273,7 +276,7 @@ Every PR runs these checks; any failure blocks merge.
 ## 16. Anti-patterns
 
 - Reading markdown files inside Convex functions at runtime. Markdown is read at build time; runtime reads typed JS modules.
-- Adding a new column to `dishes.md` or `ingredients.md` for a one-off case (violates Principle 8 in `docs/product.md`).
+- Adding a new frontmatter key to the per-dish files or a new column to the `ingredients.md` catalog for a one-off case (violates Principle 8 in `docs/product.md`).
 - Encoding Swiggy SKUs or any store-specific identifier in canonical data. Integration layer resolves at runtime.
 - Auto-applying any slow-loop suggestion. The PR-merge gate is the only path.
 - Skipping author attribution on any mutation. The middleware rejects unattributed writes; do not patch around it.

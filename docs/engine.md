@@ -5,8 +5,8 @@ The meal-planning rules. This document is the human-readable specification; `eng
 ## 1. Data and Eligibility
 
 Sources:
-- `data/dishes.md`: dish library (one row per dish)
-- `data/ingredients.md`: per-dish ingredient quantities, with a header listing tracked ingredients and their pack sizes
+- `data/dishes/<slug>.md`: dish library, one file per dish (YAML frontmatter for the dish fields, a `## Ingredients` table for its ingredient rows)
+- `data/ingredients.md`: ingredient catalog, one row per canonical ingredient, carrying its grocery group, canonical unit, and pack size (present marks a tracked ingredient)
 - `data/menu_history.md` (seed) and Convex `weekArchive` (runtime): record of past weeks
 
 A dish is eligible for the current week if Active=Yes and its Seasons include the current Bangalore season.
@@ -102,7 +102,7 @@ Repeat until at the cap.
 
 ## 6. Ingredient Consolidation
 
-Tracked: ingredients listed in the pack-size header of `ingredients.md`. By-weight items (curry-cut chicken, fresh fish sold loose, fresh vegetables) and pantry staples are not tracked; buy as needed.
+Tracked: ingredients whose catalog row in `ingredients.md` carries a `Pack Size`. By-weight items (curry-cut chicken, fresh fish sold loose, fresh vegetables) and pantry staples are not tracked (blank `Pack Size`); buy as needed.
 
 Leftover threshold: 50 g.
 
@@ -115,25 +115,29 @@ Soft consolidation: prefer dishes that share fresh produce already on the buy li
 
 ## 7. Field Reference
 
-**`dishes.md` columns:**
-- `ID`, `Name`: identifiers.
-- `Category`: Gravy dish, Dry dish, Complete meal, Rice, Chapati, Paratha, Bread, Chilla, Accompaniment, Dessert, Keto, Fruit.
-- `Time`: Breakfast or Lunch.
-- `Tags` (zero or more, comma-separated):
+**Per-dish file (`data/dishes/<slug>.md`) frontmatter:**
+- `id`, `name`: identifiers. The `<slug>` filename is derived from the name (lowercase, hyphenated, punctuation stripped), is unique and permanent, and must match the name; two dishes that share a name are disambiguated by suffixing the id.
+- `category`: Gravy dish, Dry dish, Complete meal, Rice, Chapati, Paratha, Bread, Chilla, Accompaniment, Dessert, Keto, Fruit.
+- `time`: Breakfast or Lunch.
+- `tags` (a list, possibly empty):
   - `HP`: high-protein (paneer, chicken, egg, fish, prawn, soya).
   - `complete_meal`: standalone dish, no sides needed.
   - `complete_carb`: substantial carb needing only an accompaniment.
   - `fruit`: pairs with breakfast Option A; recency-exempt.
-- `Primary Ingredient`: dominant fresh or packaged ingredient. Drives §4.2 same-day deprioritisation and §6 consolidation. Use `Mixed Veg` when no single vegetable dominates (it never triggers consolidation but does trigger same-day deduplication).
-- `Preferred`: Yes/No. Used as a tiebreaker in §4.4.
-- `Active`: Yes/No. Eligibility filter per §1.
-- `Satiety`: High, Medium, or Low. Used by §5.
-- `Prep Min`: estimated active prep time in minutes. Used by §5 tiebreaker.
-- `Seasons`: comma-separated season list, or `All` for year-round.
+- `primaryIngredient`: dominant fresh or packaged ingredient. Drives §4.2 same-day deprioritisation and §6 consolidation. A free categorization label, not required to match a catalog ingredient name. Use `Mixed Veg` when no single vegetable dominates (it never triggers consolidation but does trigger same-day deduplication).
+- `preferred`: Yes/No. Used as a tiebreaker in §4.4.
+- `active`: Yes/No. Eligibility filter per §1.
+- `satiety`: High, Medium, or Low. Used by §5.
+- `prepMinutes`: estimated active prep time in minutes. Used by §5 tiebreaker.
+- `seasons`: a season list, or `All` for year-round.
 
-**`ingredients.md` columns:**
-- `Dish ID`, `Dish Name`, `Ingredient`, `Quantity`, `Unit`.
-- A separate header table lists tracked ingredients (those with a Pack Size) used by §6.
+**Per-dish file `## Ingredients` table:** `Ingredient`, `Quantity`, `Unit`. Every `Ingredient` value must resolve to a catalog row by exact name (a blocking validator); a dish may have zero ingredient rows.
+
+**Ingredient catalog (`data/ingredients.md`) columns:**
+- `Ingredient`: canonical name, one row per ingredient (the union of all names used across dish ingredient rows plus any tracked ingredient).
+- `Group`: the user-facing grocery-list bucket (Proteins and Dairy, Pantry, Vegetables, Aromatics and Herbs, Other).
+- `Unit`: the canonical measure (g/ml/pcs) observed for that ingredient.
+- `Pack Size`: present marks a tracked ingredient (used by §6); blank marks an untracked staple bought by weight.
 
 ## 8. Spec-code parity
 

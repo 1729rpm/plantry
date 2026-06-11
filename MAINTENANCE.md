@@ -8,7 +8,7 @@ Both jobs run from Claude Code sessions invoked by Rajat. Neither is on a cron. 
 
 ### 1.1 Why
 
-User feedback accumulates in Convex during the week as three signal channels: queued `comments` rows (explicit feedback the user typed), queued `manualChanges` rows (observed behavior, one row per swap or custom one-off with the user's stated reason), and runtime `incidents` from the auto-recovery middleware. None of these can be applied directly: each cluster needs right-size diagnosis before becoming a structural change. The slow loop is the only path by which `data/dishes.md`, `data/ingredients.md`, `docs/engine.md`, `engine/`, or `data/changelog.md` change.
+User feedback accumulates in Convex during the week as three signal channels: queued `comments` rows (explicit feedback the user typed), queued `manualChanges` rows (observed behavior, one row per swap or custom one-off with the user's stated reason), and runtime `incidents` from the auto-recovery middleware. None of these can be applied directly: each cluster needs right-size diagnosis before becoming a structural change. The slow loop is the only path by which the dish library (`data/dishes/<slug>.md`), the ingredient catalog (`data/ingredients.md`), `docs/engine.md`, `engine/`, or `data/changelog.md` change.
 
 ### 1.2 Trigger
 
@@ -19,7 +19,7 @@ Rajat opens a Claude Code session in the main repo directory and types `/slow-lo
 - All `queued` rows in Convex `comments` (via `npx convex run queries/comments:listQueuedComments`).
 - All `queued` rows in Convex `manualChanges` (via `npx convex run queries/manualChanges:listQueuedManualChanges`).
 - All open `incidents` from Convex (via `npx convex run queries/incidents:listIncidents`).
-- Current `data/dishes.md`, `data/ingredients.md`, `data/menu_history.md`, `data/changelog.md`.
+- Current `data/dishes/` (the per-dish files), `data/ingredients.md` (the ingredient catalog), `data/menu_history.md`, `data/changelog.md`.
 - Current `docs/engine.md` plus `engine/src/` for the engine state.
 - Recent Convex `weekArchive` rows for context on what was actually cooked.
 
@@ -32,7 +32,7 @@ Rajat opens a Claude Code session in the main repo directory and types `/slow-lo
    - Generality: does the fix unlock other latent improvements, or is it brittle to this case.
 3. Pick a level. "No change warranted" is a valid output and gets written as an explicit decision, not silence.
 4. Produce concrete edits:
-   - Data fix: edit the row in `data/dishes.md` or `data/ingredients.md`.
+   - Data fix: edit the dish's `data/dishes/<slug>.md` file or the ingredient catalog row in `data/ingredients.md`.
    - Tag addition: add the tag to relevant dishes + edit the rule text in `docs/engine.md` + edit the engine module + add tests.
    - Rule change: edit `docs/engine.md` + the engine module + tests + run the simulation harness.
    - Append the rationale to `data/changelog.md`.
@@ -59,11 +59,11 @@ The action then triggers a redeploy: build emits new typed library/history modul
 
 | Comment pattern                                                                         | Right-sized fix                                                                                                      | Wrong response (rejected)                                               |
 | --------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------- |
-| "We never cook lauki" appearing 3+ weeks running                                        | Set `Active = No` on lauki dishes in `data/dishes.md`.                                                               | Delete the dishes (loses optionality) or wait for more data.            |
+| "We never cook lauki" appearing 3+ weeks running                                        | Set `active: No` in the lauki dishes' `data/dishes/<slug>.md` files.                                                 | Delete the dishes (loses optionality) or wait for more data.            |
 | "Too spicy on a sick day" appearing once                                                | No change. Record reason: "single instance, not a pattern; user can swap via the dish-swap affordance."              | Add a `low_spice` tag.                                                  |
 | "Too spicy" + "want milder dinner when traveling" + "after gym I want light" (5+ weeks) | Add `low_spice` tag to relevant dishes, edit `docs/engine.md` to add the slot rule, update engine module, add tests. | Add a `low_spice` tag to two dishes and ship without updating the rule. |
-| Custom one-off "lemon coriander rice" used 4 weeks running                              | Add as a new row in `data/dishes.md` with `data/ingredients.md` quantities.                                          | Make the engine learn one-off entries automatically.                    |
-| Pack size for Paneer feels wrong                                                        | Edit pack size in the header table of `data/ingredients.md`.                                                         | Add a per-dish override column.                                         |
+| Custom one-off "lemon coriander rice" used 4 weeks running                              | Add a new `data/dishes/<slug>.md` file with its ingredient rows (catalog covers the names).                          | Make the engine learn one-off entries automatically.                    |
+| Pack size for Paneer feels wrong                                                        | Edit the `Pack Size` cell on Paneer's row in the `data/ingredients.md` catalog.                                      | Add a per-dish override column.                                         |
 
 ### 1.8 Anti-patterns the slow loop must not produce
 

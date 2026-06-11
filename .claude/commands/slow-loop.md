@@ -4,7 +4,7 @@ description: Run the slow loop. Reads queued comments, queued manual changes, an
 
 You are running the slow loop for Plantry. This is a thinking exercise, not a script. The full spec lives in `MAINTENANCE.md` §1. Re-read it now. Read `docs/product.md` §4 (principles) and `docs/development.md` §5 (diagnosis card). The right-size discipline below is restated so this command stands on its own, but the canonical wording lives in those docs.
 
-Slow-loop runs only when Rajat invokes them. Comments, manual changes, and incidents accumulate during the week; this session is the only path by which `data/dishes.md`, `data/ingredients.md`, `docs/engine.md`, `engine/src/`, and `data/changelog.md` change.
+Slow-loop runs only when Rajat invokes them. Comments, manual changes, and incidents accumulate during the week; this session is the only path by which the dish library (`data/dishes/<slug>.md`), the ingredient catalog (`data/ingredients.md`), `docs/engine.md`, `engine/src/`, and `data/changelog.md` change.
 
 ## Right-size discipline (inline, canonical in `docs/product.md` §4 Principle 1)
 
@@ -12,7 +12,7 @@ Before any change lands, state:
 
 1. **Problem size.** One-off, small pattern, or structural. One comment is usually one-off; two or three comments touching the same property over different weeks is a small pattern; five-plus comments or a recurring incident is structural.
 2. **Smallest level that fixes it.** In ascending invasiveness:
-   - data row (a single value in `data/dishes.md` or `data/ingredients.md`),
+   - data row (a single value in a dish's `data/dishes/<slug>.md` file or an `data/ingredients.md` catalog row),
    - new tag (one column value added on a handful of rows, with rule wording that consumes it),
    - rule edit (wording in `docs/engine.md` plus the matching engine module change plus tests),
    - engine code (algorithmic or structural change to `engine/src/`),
@@ -54,7 +54,7 @@ For clusters that resolve to no change, the card states problem size, the cluste
 
 ## What to do
 
-1. **Load context.** Read `docs/product.md`, `docs/engine.md`, `docs/engineering.md`, `docs/development.md`, `MAINTENANCE.md`, and `CLAUDE.md`. Read `data/dishes.md`, `data/ingredients.md`, `data/menu_history.md`, `data/changelog.md`, and the last few entries of `docs/CHANGELOG.md` for ship context.
+1. **Load context.** Read `docs/product.md`, `docs/engine.md`, `docs/engineering.md`, `docs/development.md`, `MAINTENANCE.md`, and `CLAUDE.md`. Read the dish library under `data/dishes/`, the `data/ingredients.md` catalog, `data/menu_history.md`, `data/changelog.md`, and the last few entries of `docs/CHANGELOG.md` for ship context.
 
 2. **Read inputs.**
    - If `--fixture <path>` was passed, read comments, manual changes, and incidents from that path. Treat the fixture as authoritative for this run; do not also call Convex. Validate the JSON parses and that each row has the shape declared in `app/convex/schema.ts` for the `comments`, `manualChanges`, and `incidents` tables. If `manual-changes.json` / `manual-changes.example.json` is absent, proceed with zero queued manual changes; older fixtures predate Stream I.
@@ -67,8 +67,8 @@ For clusters that resolve to no change, the card states problem size, the cluste
 5. **Per cluster, diagnose.** Write the diagnosis card above. Be honest: most one-off comments and most one-off manual changes resolve to no change. Some clusters resolve to a single data row edit. A few resolve to a new tag plus rule wording plus engine plus tests. Very few resolve to an engine code change in a single run.
 
 6. **Produce edits.** For each cluster that needs a change:
-   - **Data row fix:** edit the row in `data/dishes.md` or `data/ingredients.md`. No new columns. No name-matching.
-   - **Tag addition:** add the tag value on the handful of relevant rows in `data/dishes.md`, edit the rule text in `docs/engine.md`, edit the engine module in `engine/src/` to consume the tag, add unit tests. Tags are properties, not labels for one dish.
+   - **Data row fix:** edit the dish's `data/dishes/<slug>.md` file (frontmatter field or ingredient row) or the relevant `data/ingredients.md` catalog row. No new frontmatter keys or catalog columns. No name-matching.
+   - **Tag addition:** add the tag value to the `tags` list in the handful of relevant `data/dishes/<slug>.md` files, edit the rule text in `docs/engine.md`, edit the engine module in `engine/src/` to consume the tag, add unit tests. Tags are properties, not labels for one dish.
    - **Rule edit:** edit `docs/engine.md` and the matching engine module and tests. Run the simulation harness locally; rule changes that newly break the harness are not ready to ship.
    - **Engine code:** same as rule edit, but the change is algorithmic rather than wording. Same gates.
    - Append a one-paragraph rationale to `data/changelog.md` (the structural changelog at `data/changelog.md`, not `docs/CHANGELOG.md`). The entry names the cluster, the chosen fix level, and the comment or incident IDs consumed.
