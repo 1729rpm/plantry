@@ -9,5 +9,3 @@ coverage/
 data/
 design_handoff/
 package-lock.json
-# Generated golden-master snapshot (deleted before merge; large, machine-written).
-engine/test/data/golden-master.json
