@@ -12,6 +12,10 @@ Brief description in present tense, one to three sentences. Reference the PR.
 
 ---
 
+## 2026-06-12  Plan: Explore "dislike" signal woven into the design revamp
+
+Planning amendment (no code): incorporates Rajat's requested Explore-tab "dislike" affordance into `features/design-revamp.md` so it ships with the slices that own it. A dislike records a slow-loop signal and does nothing in-session (Principle 5, record do not apply). It is stored in a new additive `dishDislikes` Convex table plus a `dislikeDish` mutation (built in slice 7.1, deliberately not a `manualChanges` kind), read and clustered by the slow loop in slice 9.1 (one dislike is no change; a dish disliked repeatedly or by both household members is a deactivation/down-rank candidate). EM design defaults logged in the §3 decisions table (row 12) and `DECISIONS.md`: reason optional, no in-session effect, no auto-hide; all reversible until 7.1 ships. (#44)
+
 ## 2026-06-12  Slice B1.3: enrichment batch 3 (30 dishes) — recipe coverage complete
 
 The third and final enrichment batch (`data/enrichment-3`, Rajat-reviewed for taste) enriches the last 30 dishes end to end (one-line description, a 3-to-5-step `## Recipe`, `complexity`, and the optional cook fields where they apply). With this batch every dish in the library now carries a description and recipe: per-dish enrichment coverage reaches 100% of active dishes. Macros, tags, ingredient rows, catalog, engine.md, and the engine tests are untouched. This closes the B1 enrichment track (#38, #40, #41). (#41)
