@@ -38,6 +38,7 @@ Grouping judgment calls (institutional memory; do not silently re-bucket):
   visible without forcing a wrong category.
 | Ingredient | Group | Unit | Pack Size | Grams per piece | Protein /100g | Carbs /100g | Special |
 |------------|-------|------|-----------|-----------------|---------------|-------------|---------|
+| Avocado | Vegetables | g | | | 2 | 9 | |
 | Banana | Other | pcs | | 120 | 1.1 | 23 | |
 | Basil | Aromatics and Herbs | g | | | | | |
 | Bean Sprout | Vegetables | g | | | 3 | 6 | |
@@ -46,6 +47,7 @@ Grouping judgment calls (institutional memory; do not silently re-bucket):
 | Black Urad Dal | Pantry | g | | | 25 | 59 | |
 | Bottle Gourd | Vegetables | g | | | 0.6 | 4 | |
 | Bread | Pantry | pcs | | 30 | 9 | 49 | |
+| Brinjal | Vegetables | g | | | 1 | 6 | |
 | Broccoli | Vegetables | g | | | 2.8 | 7 | |
 | Bulgur Wheat | Pantry | g | | | 12 | 76 | Yes |
 | Cabbage | Vegetables | g | | | 1.3 | 6 | |
@@ -78,13 +80,16 @@ Grouping judgment calls (institutional memory; do not silently re-bucket):
 | Gochujang | Pantry | g | | | 6 | 35 | Yes |
 | Green Chilli | Aromatics and Herbs | pcs | | 5 | | | |
 | Green Pea | Pantry | g | | | 5 | 14 | |
+| Honey | Pantry | g | | | 0.3 | 82 | |
 | Kidney Bean | Pantry | g | | | 24 | 60 | |
 | Lemon | Aromatics and Herbs | pcs | | 60 | | | |
+| Lemongrass | Aromatics and Herbs | g | | | | | |
 | Lettuce | Vegetables | g | 100 g | | 1.4 | 3 | |
 | Mango | Other | g | | | 0.8 | 15 | |
 | Masoor Dal | Pantry | g | | | 25 | 60 | |
 | Milk | Proteins and Dairy | ml | | | 3.4 | 5 | |
 | Mint Leaf | Aromatics and Herbs | g | | | | | |
+| Miso Paste | Pantry | g | | | 12 | 26 | Yes |
 | Moong Dal | Pantry | g | | | 24 | 59 | |
 | Mozzarella | Proteins and Dairy | g | 200 g | | 22 | 2.2 | |
 | Mushroom | Vegetables | g | 200 g | | 3.1 | 3.3 | |
@@ -107,6 +112,7 @@ Grouping judgment calls (institutional memory; do not silently re-bucket):
 | Ridge Gourd | Vegetables | g | | | 0.5 | 4 | |
 | Sabudana | Pantry | g | | | 0.2 | 88 | |
 | Semolina | Pantry | g | | | 13 | 73 | |
+| Sesame Oil | Pantry | ml | | | 0 | 0 | |
 | Soy Sauce | Pantry | ml | | | 8 | 5 | |
 | Soyabean Chunk | Pantry | g | | | 52 | 33 | |
 | Spaghetti | Pantry | g | | | 13 | 75 | |
@@ -121,3 +127,4 @@ Grouping judgment calls (institutional memory; do not silently re-bucket):
 | Toor Dal | Pantry | g | | | 22 | 63 | |
 | Tortilla | Pantry | pcs | | 45 | 8 | 50 | |
 | Walnut | Pantry | g | | | 15 | 14 | |
+| Zucchini | Vegetables | g | | | 1.2 | 3 | |
