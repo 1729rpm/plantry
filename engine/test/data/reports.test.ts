@@ -212,16 +212,23 @@ describe("specialSourcingReport", () => {
     expect(report).toEqual([{ dishId: 1, dishName: "Double tahini", ingredients: ["Tahini"] }]);
   });
 
-  it("flags exactly Hummus and Tabbouleh on live data (narrowed special set)", () => {
+  it("flags exactly the special-ingredient dishes on live data (narrow special set)", () => {
     const { library, ingredients, catalog: liveCatalog } = loadLiveData();
     const report = specialSourcingReport(library, ingredients, liveCatalog);
 
-    // The special set is narrowed to exactly three ingredients: Tahini, Parsley
-    // and Bulgur Wheat. Everything else (incl. Olive Oil, Mozzarella, Tofu,
-    // Basil, Pasta, Spaghetti) is regular Bangalore sourcing. This guards the
-    // catalog: if a row is silently re-marked Yes, this set widens and fails.
+    // The special set is kept deliberately narrow: only ingredients a regular
+    // Bangalore sabziwala/kirana does not stock. Tahini, Parsley and Bulgur
+    // Wheat carry over from the Lebanese batch; Gochujang and Pomegranate
+    // Molasses are the world-cuisine batch's additions (Korean chilli paste and
+    // a Levantine pomegranate syrup, both supermarket/specialty-store items).
+    // Everything else (incl. Olive Oil, Mozzarella, Tofu, Basil, Pasta,
+    // Spaghetti, Feta, Couscous, Tortilla, Soy Sauce) is regular Bangalore
+    // sourcing. This guards the catalog: if a row is silently re-marked Yes,
+    // this set widens and fails.
     const specialNames = new Set(liveCatalog.filter((c) => c.special).map((c) => c.ingredient));
-    expect(specialNames).toEqual(new Set(["Tahini", "Parsley", "Bulgur Wheat"]));
+    expect(specialNames).toEqual(
+      new Set(["Tahini", "Parsley", "Bulgur Wheat", "Gochujang", "Pomegranate Molasses"]),
+    );
 
     // Every flagged dish names a non-empty set that all resolve to special rows.
     for (const d of report) {
@@ -229,21 +236,29 @@ describe("specialSourcingReport", () => {
       for (const name of d.ingredients) expect(specialNames.has(name)).toBe(true);
     }
 
-    // Exactly two active dishes need a special trip, with their precise sets:
-    //   Hummus -> Tahini; Tabbouleh -> Bulgur Wheat + Parsley (sorted).
+    // The active dishes needing a special trip, with their precise sets:
+    //   Hummus -> Tahini; Tabbouleh -> Bulgur Wheat + Parsley (sorted);
+    //   Muhammara -> Pomegranate Molasses; Tofu bibimbap + Korean chicken
+    //   stir fry -> Gochujang.
     expect(report).toEqual([
       { dishId: 174, dishName: "Hummus", ingredients: ["Tahini"] },
       { dishId: 176, dishName: "Tabbouleh", ingredients: ["Bulgur Wheat", "Parsley"] },
+      { dishId: 184, dishName: "Muhammara", ingredients: ["Pomegranate Molasses"] },
+      { dishId: 191, dishName: "Tofu bibimbap", ingredients: ["Gochujang"] },
+      { dishId: 192, dishName: "Korean chicken stir fry", ingredients: ["Gochujang"] },
     ]);
 
-    // Staple Indian dishes and the now-regular international dishes (pasta,
-    // caprese/mozzarella, tofu curry, basil) are NOT flagged.
+    // Staple Indian dishes and the regular-sourcing international dishes (pasta,
+    // caprese/mozzarella, tofu curry, basil, the new Mexican/Greek bowls) are
+    // NOT flagged.
     const flaggedNames = new Set(report.map((d) => d.dishName));
     for (const name of [
       "Pesto pasta",
       "Caprese salad",
       "Thai red curry tofu",
       "Thai basil chicken",
+      "Greek salad",
+      "Black bean quesadilla",
     ]) {
       expect(flaggedNames.has(name)).toBe(false);
     }

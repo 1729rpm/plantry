@@ -62,17 +62,20 @@ Grouping judgment calls (institutional memory; do not silently re-bucket):
 | Coconut Milk | Pantry | ml | | | 2.3 | 6 | |
 | Coriander Leaf | Aromatics and Herbs | g | | | | | |
 | Cornflour | Pantry | g | | | 0.3 | 91 | |
+| Couscous | Pantry | g | | | 13 | 77 | |
 | Cucumber | Vegetables | g | | | 0.7 | 4 | |
 | Curd | Proteins and Dairy | g | 500 g | | 3.5 | 5 | |
 | Curry Leaf | Aromatics and Herbs | g | | | | | |
 | Egg | Proteins and Dairy | pcs | | 50 | 13 | 1.1 | |
 | Fenugreek Leaf | Vegetables | g | | | 4.4 | 6 | |
+| Feta | Proteins and Dairy | g | 200 g | | 14 | 4 | |
 | Fish | Proteins and Dairy | g | 500 g | | 20 | 0 | |
 | Flattened Rice | Pantry | g | | | 7 | 77 | |
 | French Bean | Vegetables | g | | | 1.8 | 7 | |
 | Fruit | Other | pcs | | | | | |
 | Garlic | Aromatics and Herbs | g | | | | | |
 | Ginger | Aromatics and Herbs | g | | | | | |
+| Gochujang | Pantry | g | | | 6 | 35 | Yes |
 | Green Chilli | Aromatics and Herbs | pcs | | 5 | | | |
 | Green Pea | Pantry | g | | | 5 | 14 | |
 | Kidney Bean | Pantry | g | | | 24 | 60 | |
@@ -95,6 +98,8 @@ Grouping judgment calls (institutional memory; do not silently re-bucket):
 | Pasta | Pantry | g | | | 13 | 75 | |
 | Pav Bread | Pantry | pcs | | 40 | 8 | 52 | |
 | Peanut | Pantry | g | | | 26 | 16 | |
+| Pineapple | Other | g | | | 0.5 | 13 | |
+| Pomegranate Molasses | Pantry | ml | | | 0 | 70 | Yes |
 | Potato | Vegetables | g | | | 2 | 17 | |
 | Prawn | Proteins and Dairy | g | 500 g | | 20 | 0 | |
 | Raisin | Pantry | g | | | 3.1 | 79 | |
@@ -102,6 +107,7 @@ Grouping judgment calls (institutional memory; do not silently re-bucket):
 | Ridge Gourd | Vegetables | g | | | 0.5 | 4 | |
 | Sabudana | Pantry | g | | | 0.2 | 88 | |
 | Semolina | Pantry | g | | | 13 | 73 | |
+| Soy Sauce | Pantry | ml | | | 8 | 5 | |
 | Soyabean Chunk | Pantry | g | | | 52 | 33 | |
 | Spaghetti | Pantry | g | | | 13 | 75 | |
 | Spinach | Vegetables | g | | | 2.9 | 4 | |
@@ -113,3 +119,5 @@ Grouping judgment calls (institutional memory; do not silently re-bucket):
 | Tofu | Proteins and Dairy | g | 200 g | | 12 | 2 | |
 | Tomato | Aromatics and Herbs | g | | | | | |
 | Toor Dal | Pantry | g | | | 22 | 63 | |
+| Tortilla | Pantry | pcs | | 45 | 8 | 50 | |
+| Walnut | Pantry | g | | | 15 | 14 | |
