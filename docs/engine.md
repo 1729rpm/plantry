@@ -105,18 +105,19 @@ Recency exemptions: dishes with `fruit` tag, and lunch carbs.
 
 The picker does not narrow the pool (Principle 4: a swap may land on any meal-time dish; §3 composition violations are signal for the slow loop, not errors the fast loop blocks). It only orders it. The order is a **head** followed by a **tail**.
 
-**Head ("fits this day").** Every pool dish whose meal-time matches the slot and that is not already placed on that day. Within the head, dishes are ordered by a deterministic score, lower first:
+**Head ("fits this day").** Every pool dish whose meal-time matches the slot and that is not already placed on that day. Within the head, dishes are ordered by a deterministic lexicographic comparison on a tuple, lower first:
 
 ```
-headScore(dish) = recencyRank(dish) + proteinPenalty(dish)
+headOrder(dish) = (recencyTier, proteinBandDistanceForSwaps, id)
 ```
 
-- **recencyRank** is the dish's zero-based position in the longest-unused ordering of the head: never-cooked dishes first, then oldest last-cooked first, dish id ascending as the final tie-break. A dish's last-cooked date is the most recent matching history row. This is the dominant term. Unlike §4, the picker does not exempt fruit or lunch carbs from recency: a swap is a deliberate user choice, so every dish is ranked by recency uniformly.
-- **proteinPenalty** applies to swaps only (a dish is being replaced). It is the protein-band distance between the candidate and the outgoing dish, where a protein band is the per-person derived protein (§9) divided into fixed 5 g buckets. Same band scores zero; each band of distance adds a fraction bounded below 1, so the penalty only ever tie-breaks candidates that share a recencyRank. It can never push a more-recently-cooked dish above a longer-unused one. The effect: among equally fresh options, one in the same protein band as the dish being replaced surfaces first. For adds (no outgoing dish) the penalty is zero and the head is pure recency.
+- **recencyTier** is a coarse longest-unused bucket, not a unique index. All never-cooked dishes share the single best (first) tier; cooked dishes are tiered by last-cooked weekStart, oldest weekStart = better tier, so dishes last cooked the same week share a tier. A dish's last-cooked date is the most recent matching history row. This is the dominant term: a longer-unused dish in a better tier always outranks a closer-protein-band dish in a worse tier. Unlike §4, the picker does not exempt fruit or lunch carbs from recency: a swap is a deliberate user choice, so every dish is ranked by recency uniformly. Because the tier is coarse, genuine ties exist (all never-cooked dishes tie; same-week dishes tie), which is what the next term resolves.
+- **proteinBandDistanceForSwaps** applies to swaps only (a dish is being replaced). It is the protein-band distance between the candidate and the outgoing dish, where a protein band is the per-person derived protein (§9) divided into fixed 5 g buckets. Same band is distance zero. Because it sits second in the tuple, it only ever orders candidates that share a recencyTier; it can never move a dish across tiers, so it can never push a more-recently-cooked dish above a longer-unused one. The effect: among equally fresh options, the one in the same protein band as the dish being replaced surfaces first, then nearer bands before farther. For adds (no outgoing dish) this term is absent and the head is pure recency tier then id.
+- **id** is dish id ascending, the final total tie-break.
 
-**Tail.** Every other pool dish (the same-day repeats the head excluded), ordered by the same score. The tail keeps the pool complete (nothing is dropped) while pushing dishes the day already has below fresh options.
+**Tail.** Every other pool dish (the same-day repeats the head excluded), ordered by the same tuple comparison. The tail keeps the pool complete (nothing is dropped) while pushing dishes the day already has below fresh options.
 
-**Determinism.** No RNG. Every tie resolves through a fixed chain: recencyRank, then proteinPenalty (swaps), then dish id ascending. The same inputs always produce the same order, and input order does not affect output.
+**Determinism.** No RNG. Every tie resolves through the fixed tuple chain: recencyTier, then protein-band distance (swaps), then dish id ascending. The same inputs always produce the same order, and input order does not affect output.
 
 ## 6. Skipped Days
 
