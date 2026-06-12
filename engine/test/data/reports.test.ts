@@ -220,14 +220,23 @@ describe("specialSourcingReport", () => {
     // Bangalore sabziwala/kirana does not stock. Tahini, Parsley and Bulgur
     // Wheat carry over from the Lebanese batch; Gochujang and Pomegranate
     // Molasses are the world-cuisine batch's additions (Korean chilli paste and
-    // a Levantine pomegranate syrup, both supermarket/specialty-store items).
-    // Everything else (incl. Olive Oil, Mozzarella, Tofu, Basil, Pasta,
-    // Spaghetti, Feta, Couscous, Tortilla, Soy Sauce) is regular Bangalore
+    // a Levantine pomegranate syrup, both supermarket/specialty-store items);
+    // Miso Paste is the expansion-3 addition (fermented Japanese soybean paste,
+    // a supermarket/specialty-store item). Everything else (incl. Olive Oil,
+    // Mozzarella, Tofu, Basil, Pasta, Spaghetti, Feta, Couscous, Tortilla, Soy
+    // Sauce, Sesame Oil, Avocado, Honey, Lemongrass) is regular Bangalore
     // sourcing. This guards the catalog: if a row is silently re-marked Yes,
     // this set widens and fails.
     const specialNames = new Set(liveCatalog.filter((c) => c.special).map((c) => c.ingredient));
     expect(specialNames).toEqual(
-      new Set(["Tahini", "Parsley", "Bulgur Wheat", "Gochujang", "Pomegranate Molasses"]),
+      new Set([
+        "Tahini",
+        "Parsley",
+        "Bulgur Wheat",
+        "Gochujang",
+        "Pomegranate Molasses",
+        "Miso Paste",
+      ]),
     );
 
     // Every flagged dish names a non-empty set that all resolve to special rows.
@@ -239,13 +248,16 @@ describe("specialSourcingReport", () => {
     // The active dishes needing a special trip, with their precise sets:
     //   Hummus -> Tahini; Tabbouleh -> Bulgur Wheat + Parsley (sorted);
     //   Muhammara -> Pomegranate Molasses; Tofu bibimbap + Korean chicken
-    //   stir fry -> Gochujang.
+    //   stir fry + Korean tofu soup -> Gochujang; Japanese miso soup ->
+    //   Miso Paste.
     expect(report).toEqual([
       { dishId: 174, dishName: "Hummus", ingredients: ["Tahini"] },
       { dishId: 176, dishName: "Tabbouleh", ingredients: ["Bulgur Wheat", "Parsley"] },
       { dishId: 184, dishName: "Muhammara", ingredients: ["Pomegranate Molasses"] },
       { dishId: 191, dishName: "Tofu bibimbap", ingredients: ["Gochujang"] },
       { dishId: 192, dishName: "Korean chicken stir fry", ingredients: ["Gochujang"] },
+      { dishId: 208, dishName: "Korean tofu soup", ingredients: ["Gochujang"] },
+      { dishId: 210, dishName: "Japanese miso soup", ingredients: ["Miso Paste"] },
     ]);
 
     // Staple Indian dishes and the regular-sourcing international dishes (pasta,
