@@ -56,20 +56,22 @@ describe("coverageReport", () => {
     expect(cov.macroRelevantWithMacros).toBe(1);
   });
 
-  it("reads full macro coverage and a first enrichment pass on live data (post-2.2)", () => {
+  it("reads full macro and enrichment coverage on live data (enrichment complete)", () => {
     const { library, catalog } = loadLiveData();
     const cov = coverageReport(library, catalog);
-    // Slice 2.2 populated every macro-relevant catalog row.
+    // Every macro-relevant catalog row carries macros (slice 2.2 onward).
     expect(cov.macroRelevantCount).toBeGreaterThan(0);
     expect(cov.macroRelevantWithMacros).toBe(cov.macroRelevantCount);
-    // Slice 2.2 enriched a first batch of dishes (description + recipe + complexity),
-    // so coverage is now a positive minority, no longer zero, and still well below
-    // the full active library (later enrichment batches burn the rest down).
-    expect(cov.withDescription).toBeGreaterThan(0);
-    expect(cov.withDescription).toBeLessThan(cov.activeDishCount);
-    expect(cov.withRecipe).toBeGreaterThan(0);
-    expect(cov.withComplexity).toBeGreaterThan(0);
-    // Photos remain a separate (B2) track, untouched by this slice.
+    // The B1 enrichment track is complete: every active dish carries a
+    // description, recipe, and complexity. This now guards that the library
+    // STAYS fully enriched — a new dish shipped without these (expansion dishes
+    // are meant to ship complete) would drop a count below activeDishCount and
+    // fail here.
+    expect(cov.withDescription).toBe(cov.activeDishCount);
+    expect(cov.withRecipe).toBe(cov.activeDishCount);
+    expect(cov.withComplexity).toBe(cov.activeDishCount);
+    // Photos remain a separate (B2) track; no images committed yet, so coverage
+    // is zero. The first photo batch updates this expectation.
     expect(cov.withPhoto).toBe(0);
   });
 });
