@@ -17,41 +17,44 @@ import type { CatalogIngredient, Ingredient } from "./data/schemas.js";
  *
  * HEAD ("fits this day"): dishes whose meal-time matches the slot and that are
  * NOT already placed on that day (so the picker never offers a dish the day
- * already has). Within the head, dishes are ordered by a deterministic score
- * (lower score ranks first):
+ * already has). Within the head, dishes are ordered by a deterministic
+ * LEXICOGRAPHIC comparison on the tuple
  *
- *   headScore(d) = recencyRank(d) + proteinPenalty(d)
+ *   (recencyTier, proteinBandDistanceForSwaps, id)   — lower wins
  *
- *   - recencyRank: the dish's 0-based index in the longest-unused ordering of
- *     the head (never-cooked first, then oldest last-cooked first). This is the
- *     dominant term: a never-cooked dish gets rank 0, the next-oldest rank 1,
- *     and so on. Recency-exempt dishes (the §4 fruit/lunch-carb exemption does
- *     NOT apply here; the picker ranks every dish by recency uniformly, because
- *     a swap is a deliberate user choice, not an automated pick).
+ *   - recencyTier: a COARSE recency bucket, NOT a unique total order. All
+ *     NEVER-COOKED dishes share the single best (first) tier. Cooked dishes are
+ *     tiered by their last-cooked weekStart, oldest weekStart = better tier, so
+ *     dishes last cooked the same week share a tier. Genuine ties therefore
+ *     exist (all never-cooked dishes tie; same-week dishes tie). This is the
+ *     DOMINANT term: a longer-unused dish in a better tier always outranks a
+ *     closer-protein-band dish in a worse tier. The §4 fruit/lunch-carb recency
+ *     exemption does NOT apply here; the picker ranks every dish by recency
+ *     uniformly, because a swap is a deliberate user choice, not an automated
+ *     pick.
  *
- *   - proteinPenalty: for SWAPS ONLY (an `outgoingDish` is supplied), the
- *     absolute difference in protein band between the candidate and the
- *     outgoing dish, scaled so it tie-breaks WITHIN a recency rank but never
- *     overrides it. A candidate in the same protein band as the dish being
+ *   - proteinBandDistanceForSwaps: for SWAPS ONLY (an `outgoingDish` is
+ *     supplied), the absolute distance in protein band between the candidate and
+ *     the outgoing dish. Because it sits SECOND in the tuple, it only ever
+ *     orders dishes that already share a recencyTier; it can never move a dish
+ *     across tiers. A candidate in the same protein band as the dish being
  *     replaced sorts ahead of one a band away. Protein bands are derived from
- *     `nutrition.ts` per-person protein (§7). For ADDS (no `outgoingDish`) the
- *     penalty is zero and the head is pure recency.
+ *     `nutrition.ts` per-person protein (§9), bucketed by
+ *     `PROTEIN_BAND_WIDTH_GRAMS`. For ADDS (no `outgoingDish`) this term is a
+ *     constant 0, so the head is pure recency tier then id.
  *
- * The protein penalty is bounded to [0, 1) so it can only reorder candidates
- * that share a recencyRank — it can never leapfrog a more-recently-cooked dish
- * over a longer-unused one. This keeps recency dominant and the protein signal
- * a pure tie-break, exactly the "recency plus protein-band similarity" the
- * handoff describes.
+ *   - id: dish id ascending, the final total tie-break.
  *
  * TAIL: every other meal-time-matching dish in the pool (i.e. dishes already on
  * the day, which the head excluded). The tail keeps the broad pool complete
  * (Principle 4: the picker is non-restrictive; nothing is dropped) while
  * pushing same-day repeats below fresh options. The tail is ordered by the same
- * recency-then-protein score so it is internally deterministic too.
+ * tuple comparison so it is internally deterministic too.
  *
- * DETERMINISM: no RNG anywhere. Every tie resolves through a fixed chain:
- *   1. recencyRank (longest-unused; never-cooked first)
- *   2. proteinPenalty (swap only; same-band first)
+ * DETERMINISM: no RNG anywhere. Every tie resolves through the fixed tuple
+ * chain:
+ *   1. recencyTier (coarse longest-unused bucket; never-cooked = best tier)
+ *   2. proteinBandDistanceForSwaps (swap only; same-band first)
  *   3. dish id ascending (the final, total tie-break)
  *
  * This module ranks; it does NOT filter the pool. The broad-pool eligibility
@@ -61,13 +64,6 @@ import type { CatalogIngredient, Ingredient } from "./data/schemas.js";
 
 /** Number of grams-per-person that separates one protein band from the next. */
 export const PROTEIN_BAND_WIDTH_GRAMS = 5;
-
-/**
- * Upper bound (exclusive) on the protein tie-break penalty. Keeping it below 1
- * guarantees the penalty only reorders candidates that share a recencyRank: it
- * can never push a candidate past one with a smaller (better) recencyRank.
- */
-const MAX_PROTEIN_PENALTY = 0.999;
 
 export interface PickerRankingArgs {
   /**
@@ -114,23 +110,47 @@ function lastCookedMap(history: MenuHistoryRow[]): Map<number, string> {
 }
 
 /**
- * Order a set of dishes longest-unused first (never-cooked ahead of cooked,
- * then oldest last-cooked first), id ascending as the final tie-break. Returns
- * the ids in that order so callers can read off a 0-based recency rank.
+ * Coarse recency tier for one dish (lower = longer unused = ranks first). This
+ * is deliberately NOT a unique index: dishes that are equally fresh share a
+ * tier, so the protein-band term below can order WITHIN the tier.
+ *
+ *   - Never-cooked dishes share tier 0, the single best tier.
+ *   - Cooked dishes are tiered by their last-cooked weekStart, oldest first.
+ *     Every distinct weekStart maps to a distinct tier (1, 2, 3, ...), and all
+ *     dishes sharing a weekStart share a tier.
+ *
+ * `tierByWeek` is the precomputed weekStart -> tier index map for the group;
+ * see `recencyTierMap`.
  */
-function longestUnusedOrder(dishes: Dish[], lastCooked: Map<number, string>): number[] {
-  return [...dishes]
-    .sort((a, b) => {
-      const aDate = lastCooked.get(a.id);
-      const bDate = lastCooked.get(b.id);
-      if (aDate === undefined && bDate === undefined) return a.id - b.id;
-      if (aDate === undefined) return -1;
-      if (bDate === undefined) return 1;
-      if (aDate < bDate) return -1;
-      if (aDate > bDate) return 1;
-      return a.id - b.id;
-    })
-    .map((d) => d.id);
+function recencyTier(
+  dish: Dish,
+  lastCooked: Map<number, string>,
+  tierByWeek: Map<string, number>,
+): number {
+  const week = lastCooked.get(dish.id);
+  if (week === undefined) return 0;
+  // Cooked tiers start at 1 so every cooked dish ranks below every never-cooked
+  // one (tier 0). The non-null assertion is safe: tierByWeek holds every
+  // weekStart seen across the group.
+  return tierByWeek.get(week)!;
+}
+
+/**
+ * Build the weekStart -> tier map for a group of dishes: sort the distinct
+ * last-cooked weekStarts ascending (oldest = best) and number them from 1, so
+ * tier 0 stays reserved for never-cooked dishes.
+ */
+function recencyTierMap(dishes: Dish[], lastCooked: Map<number, string>): Map<string, number> {
+  const weeks = new Set<string>();
+  for (const dish of dishes) {
+    const week = lastCooked.get(dish.id);
+    if (week !== undefined) weeks.add(week);
+  }
+  const tierByWeek = new Map<string, number>();
+  [...weeks]
+    .sort((a, b) => (a < b ? -1 : a > b ? 1 : 0))
+    .forEach((week, index) => tierByWeek.set(week, index + 1));
+  return tierByWeek;
 }
 
 /** Per-person derived protein for one dish, or 0 when macros are unavailable. */
@@ -169,14 +189,13 @@ export function rankPickerAlternatives(args: PickerRankingArgs): Dish[] {
     else head.push(dish);
   }
 
-  // recencyRank: 0-based index in the longest-unused ordering, computed over
-  // head and tail independently so each group is internally recency-ordered.
-  const headRank = new Map<number, number>();
-  longestUnusedOrder(head, lastCooked).forEach((id, index) => headRank.set(id, index));
-  const tailRank = new Map<number, number>();
-  longestUnusedOrder(tail, lastCooked).forEach((id, index) => tailRank.set(id, index));
+  // recencyTier: a coarse longest-unused bucket (never-cooked = tier 0), built
+  // over head and tail independently so each group is internally tiered. Equally
+  // fresh dishes share a tier so the protein-band term can order within it.
+  const headTierByWeek = recencyTierMap(head, lastCooked);
+  const tailTierByWeek = recencyTierMap(tail, lastCooked);
 
-  // Protein-band penalty: swaps only, and only when macros are available.
+  // Protein-band distance: swaps only, and only when macros are available.
   const ingredientsByDishId = new Map<number, Ingredient[]>();
   if (ingredients) {
     for (const row of ingredients) {
@@ -191,25 +210,31 @@ export function rankPickerAlternatives(args: PickerRankingArgs): Dish[] {
       ? proteinBand(dishProtein(outgoingDish, ingredientsByDishId, catalogRows))
       : undefined;
 
-  function proteinPenalty(dish: Dish): number {
+  /**
+   * Protein-band distance to the outgoing dish (swaps only). Sits SECOND in the
+   * sort tuple, so it only ever orders dishes that already share a recencyTier;
+   * it can never move a dish across tiers. Constant 0 for adds (no outgoing
+   * dish) and when macros are unavailable, making it a no-op there.
+   */
+  function proteinBandDistance(dish: Dish): number {
     if (outgoingBand === undefined) return 0;
     const band = proteinBand(dishProtein(dish, ingredientsByDishId, catalogRows));
-    const bandDistance = Math.abs(band - outgoingBand);
-    // Squash unbounded band distance into [0, MAX_PROTEIN_PENALTY) so it can
-    // only ever tie-break within a recencyRank, never override it. A distance
-    // of 0 (same band) yields 0; larger distances asymptote toward, but never
-    // reach, MAX_PROTEIN_PENALTY.
-    return MAX_PROTEIN_PENALTY * (1 - 1 / (1 + bandDistance));
+    return Math.abs(band - outgoingBand);
   }
 
-  function sortGroup(group: Dish[], rankOf: Map<number, number>): Dish[] {
+  function sortGroup(group: Dish[], tierByWeek: Map<string, number>): Dish[] {
     return [...group].sort((a, b) => {
-      const aScore = (rankOf.get(a.id) ?? 0) + proteinPenalty(a);
-      const bScore = (rankOf.get(b.id) ?? 0) + proteinPenalty(b);
-      if (aScore !== bScore) return aScore - bScore;
+      // Lexicographic on (recencyTier, proteinBandDistance, id). Recency is the
+      // dominant term; protein band only tie-breaks within a shared tier; id is
+      // the final total tie-break.
+      const tierDiff =
+        recencyTier(a, lastCooked, tierByWeek) - recencyTier(b, lastCooked, tierByWeek);
+      if (tierDiff !== 0) return tierDiff;
+      const bandDiff = proteinBandDistance(a) - proteinBandDistance(b);
+      if (bandDiff !== 0) return bandDiff;
       return a.id - b.id;
     });
   }
 
-  return [...sortGroup(head, headRank), ...sortGroup(tail, tailRank)];
+  return [...sortGroup(head, headTierByWeek), ...sortGroup(tail, tailTierByWeek)];
 }

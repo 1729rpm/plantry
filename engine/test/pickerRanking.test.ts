@@ -134,17 +134,19 @@ describe("§5 picker ranking", () => {
       nextId = 1;
       // Outgoing dish is high-protein (Chicken 400g => 50g/person, band 10).
       const outgoing = makeDish();
-      // Two candidates, both never cooked (recency tie): one high-protein (same
-      // band as outgoing), one low-protein (far band). Same-band must win.
-      const sameBand = makeDish();
-      const farBand = makeDish();
+      // Two candidates, both never cooked, so they share the single never-cooked
+      // recency tier (a genuine tie). farBand has the LOWER id and sameBand the
+      // HIGHER id, so the id tie-break alone would order farBand first. The only
+      // thing that can flip them is the protein-band term: sameBand shares the
+      // outgoing dish's band and must therefore rank first DESPITE its higher id.
+      const farBand = makeDish(); // lower id, far protein band
+      const sameBand = makeDish(); // higher id, same protein band as outgoing
+      expect(sameBand.id).toBeGreaterThan(farBand.id);
       const ingredients: Ingredient[] = [
         ...rowsFor(outgoing.id, "Chicken", 400),
         ...rowsFor(sameBand.id, "Chicken", 400),
         ...rowsFor(farBand.id, "Rice", 400),
       ];
-      // Give farBand the LOWER id so it would win the id tie-break absent the
-      // protein term; protein-band similarity must override that.
       const ranked = rankPickerAlternatives({
         pool: [farBand, sameBand],
         meal: "Lunch",
@@ -154,7 +156,70 @@ describe("§5 picker ranking", () => {
         ingredients,
         catalog,
       });
+      // sameBand (higher id) first proves the protein term is load-bearing: with
+      // the term removed, the id tie-break would put farBand (lower id) first.
       expect(ranked.map((d) => d.id)).toEqual([sameBand.id, farBand.id]);
+    });
+
+    it("orders a shared never-cooked tier by protein-band distance, then id", () => {
+      nextId = 1;
+      // Outgoing dish is high-protein (Chicken 400g => 50g/person, band 10).
+      const outgoing = makeDish();
+      // Three never-cooked candidates (one shared recency tier) in DISTINCT
+      // protein bands at increasing distance from the outgoing dish. Their ids
+      // are assigned in the OPPOSITE order to the desired output (far has the
+      // smallest id, near the largest), so a pure-id sort would give far, mid,
+      // near. The expected order (near, mid, far) can ONLY come from the
+      // protein-band term: if it were removed, the id tie-break would reverse it.
+      const far = makeDish(); // smallest id, farthest band
+      const mid = makeDish(); // middle id, one band away
+      const near = makeDish(); // largest id, closest band (same band: distance 0)
+      expect(far.id).toBeLessThan(mid.id);
+      expect(mid.id).toBeLessThan(near.id);
+      const ingredients: Ingredient[] = [
+        ...rowsFor(outgoing.id, "Chicken", 400), // 50 g/person => band 10
+        ...rowsFor(near.id, "Chicken", 400), // 50 g/person => band 10, distance 0
+        // Chicken 50g => 6.25 g/person => band 1; outgoing band 10 => distance 9.
+        ...rowsFor(mid.id, "Chicken", 50),
+        ...rowsFor(far.id, "Rice", 400), // 4 g/person => band 0, distance 10
+      ];
+      const ranked = rankPickerAlternatives({
+        pool: [far, near, mid],
+        meal: "Lunch",
+        dishesOnDay: [],
+        history: [],
+        outgoingDish: outgoing,
+        ingredients,
+        catalog,
+      });
+      // Full ordering by band distance (0, 9, 10), independent of input order.
+      expect(ranked.map((d) => d.id)).toEqual([near.id, mid.id, far.id]);
+    });
+
+    it("breaks a band-distance tie by ascending id within a tier", () => {
+      nextId = 1;
+      // Outgoing dish band 10. Two never-cooked candidates the SAME band-distance
+      // away (one band below, one band above), so the protein term ties and the
+      // id tie-break decides. This proves id is the final, total tie-break even
+      // when the protein term is active.
+      const outgoing = makeDish();
+      const below = makeDish(); // band 9 (one below) => distance 1
+      const above = makeDish(); // band 11 (one above) => distance 1, higher id
+      const ingredients: Ingredient[] = [
+        ...rowsFor(outgoing.id, "Chicken", 400), // band 10
+        ...rowsFor(below.id, "Chicken", 360), // 45 g/person => band 9, distance 1
+        ...rowsFor(above.id, "Chicken", 440), // 55 g/person => band 11, distance 1
+      ];
+      const ranked = rankPickerAlternatives({
+        pool: [above, below],
+        meal: "Lunch",
+        dishesOnDay: [],
+        history: [],
+        outgoingDish: outgoing,
+        ingredients,
+        catalog,
+      });
+      expect(ranked.map((d) => d.id)).toEqual([below.id, above.id]);
     });
 
     it("protein band never overrides recency (recency stays dominant)", () => {
