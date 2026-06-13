@@ -85,12 +85,21 @@ export function Card({
 export function PrimaryButton({
   children,
   onClick,
+  disabled,
+  className,
 }: {
   children: ReactNode;
   onClick?: () => void;
+  disabled?: boolean;
+  className?: string;
 }) {
   return (
-    <button type="button" className="btn-primary" onClick={onClick}>
+    <button
+      type="button"
+      className={`btn-primary${className ? ` ${className}` : ""}`}
+      onClick={onClick}
+      disabled={disabled}
+    >
       {children}
     </button>
   );
@@ -100,16 +109,21 @@ export function QuietButton({
   children,
   onClick,
   danger,
+  disabled,
+  className,
 }: {
   children: ReactNode;
   onClick?: () => void;
   danger?: boolean;
+  disabled?: boolean;
+  className?: string;
 }) {
   return (
     <button
       type="button"
-      className={`btn-quiet${danger ? " btn-quiet--danger" : ""}`}
+      className={`btn-quiet${danger ? " btn-quiet--danger" : ""}${className ? ` ${className}` : ""}`}
       onClick={onClick}
+      disabled={disabled}
     >
       {children}
     </button>
@@ -149,15 +163,59 @@ export function TabBar({ active, onTab }: { active: TabKey; onTab: (tab: TabKey)
   );
 }
 
-/** Bottom sheet with a scrim. Children scroll if tall. */
-export function Sheet({ onClose, children }: { onClose: () => void; children: ReactNode }) {
+/** Bottom sheet with a scrim. Children scroll if tall. `tall` raises the panel's
+ *  max height for the long pickers (swap, add-a-dish) per the handoff's 92%. */
+export function Sheet({
+  onClose,
+  children,
+  tall,
+}: {
+  onClose: () => void;
+  children: ReactNode;
+  tall?: boolean;
+}) {
   return (
     <div className="sheet">
       <button type="button" className="sheet__scrim" aria-label="Close" onClick={onClose} />
-      <div className="sheet__panel" role="dialog" aria-modal="true">
+      <div
+        className={`sheet__panel${tall ? " sheet__panel--tall" : ""}`}
+        role="dialog"
+        aria-modal="true"
+      >
         <div className="sheet__grabber" />
         <div className="sheet__scroll">{children}</div>
       </div>
     </div>
+  );
+}
+
+/** Stat tile used in the dish details sheet header (protein / ratio / time). */
+export function StatChip({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="stat-chip">
+      <div className="stat-chip__label">{label}</div>
+      <div className="stat-chip__value">{value}</div>
+    </div>
+  );
+}
+
+/** Search input used by the swap picker and add-a-dish sheet. */
+export function SearchField({
+  value,
+  onChange,
+  placeholder,
+}: {
+  value: string;
+  onChange: (next: string) => void;
+  placeholder?: string;
+}) {
+  return (
+    <input
+      className="search-field"
+      type="text"
+      value={value}
+      placeholder={placeholder}
+      onChange={(e) => onChange(e.target.value)}
+    />
   );
 }
