@@ -1152,3 +1152,38 @@ input {
   outline: 2px solid var(--pt-accent);
   outline-offset: 1px;
 }
+
+/* ------------------------------------------------------------------ */
+/* Changes screen (slice 6.1): newest-first feed of edits + comments   */
+/* ------------------------------------------------------------------ */
+.change-entry {
+  display: flex;
+  gap: 12px;
+  padding: 14px 16px;
+}
+
+.change-entry__body {
+  flex: 1;
+  min-width: 0;
+}
+
+.change-entry__headline {
+  font-size: 14.5px;
+  font-weight: 600;
+  line-height: 1.35;
+}
+
+.change-entry__meta {
+  font-size: 12.5px;
+  color: var(--pt-sub);
+  margin-top: 3px;
+}
+
+.change-entry__note {
+  font-size: 13px;
+  color: var(--pt-ink);
+  margin-top: 7px;
+  background: var(--pt-bg);
+  border-radius: 10px;
+  padding: 8px 12px;
+}

@@ -13,6 +13,7 @@ import { dayOrderIndex, weekRangeLabel } from "../lib/days.js";
 import { getCachedWeek, setCachedWeek } from "../lib/storage.js";
 import { Avatar, PrimaryButton } from "./primitives.js";
 import { DayCard, type DayCardModel } from "./DayCard.js";
+import { deriveSummaryLine } from "./ChangesScreen.js";
 
 interface MenuScreenProps {
   identity: Identity;
@@ -57,6 +58,13 @@ function MenuBody({
   onEditDay: (day: ShortDay) => void;
 }) {
   const models = useMemo(() => buildDayModels(week), [week]);
+  // The change-summary line reads the same manualChanges feed the Changes tab
+  // does. Offline (no Convex), this stays undefined and the summary degrades to
+  // the no-changes line, which is the honest fallback for a cached menu.
+  const changes = useQuery(anyApi.queries.activity.listManualChangesForWeek, {
+    weekStart: week.weekStart,
+  }) as Parameters<typeof deriveSummaryLine>[0] | undefined;
+  const summaryLine = deriveSummaryLine(changes ?? []);
   return (
     <>
       <div className="screen__scroll">
@@ -75,9 +83,9 @@ function MenuBody({
               </button>
             </div>
           </div>
-          {/* Change-summary placeholder. The real summary (author, time, reason)
-              lands with the Changes tab in slice 6.1. */}
-          <div className="change-summary">No changes this week yet</div>
+          {/* Short, plain summary of the week's menu changes, derived from the
+              same manualChanges feed the Changes tab renders (slice 6.1). */}
+          <div className="change-summary">{summaryLine}</div>
         </div>
         {offline && (
           <div className="offline-banner">Showing the last menu saved on this phone.</div>

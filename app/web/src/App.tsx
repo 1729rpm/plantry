@@ -5,7 +5,8 @@ import { PasscodeGate } from "./components/PasscodeGate.js";
 import { IdentityPicker } from "./components/IdentityPicker.js";
 import { MenuScreen } from "./components/MenuScreen.js";
 import { GroceryScreen } from "./components/GroceryScreen.js";
-import { ExploreScreen, ChangesScreen } from "./components/StubScreens.js";
+import { ExploreScreen } from "./components/StubScreens.js";
+import { ChangesScreen } from "./components/ChangesScreen.js";
 import { DayScreen } from "./components/DayScreen.js";
 import { TabBar, type TabKey } from "./components/primitives.js";
 import {
