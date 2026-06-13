@@ -15,7 +15,7 @@ Two adults: Rajat (product owner) and Tuhina (second user). Cooking style is hig
 | Sat | none | 3 items | 3 |
 | Sun | none | none | 0 |
 
-Each week, the engine reads the dish library, the rules, the season, and the recent history, then produces a complete valid menu plus a grocery list. Either user can swap any dish in the week (the engine offers a ranked picker over the meal-time-matching library), drop in a custom one-off, or leave a comment. Swaps and one-offs apply immediately and are recorded against the week with author, timestamp, and a required reason that feeds the slow loop alongside comments. Comments do nothing immediately; they queue for the slow loop.
+Each week, the engine reads the dish library, the rules, the season, and the recent history, then produces a complete valid menu plus a grocery list. Either user can swap any dish in the week (the engine offers a ranked picker over the meal-time-matching library), drop in a custom one-off, delete a dish, skip a whole day (eating out or away) and restore it later, or leave a comment. Swaps, one-offs, deletes, skips, and restores apply immediately and are recorded against the week with author, timestamp, and a required reason that feeds the slow loop alongside comments. A skipped day keeps its dishes (restore is lossless) but counts no groceries. Comments do nothing immediately; they queue for the slow loop.
 
 ## 3. What Plantry produces
 
@@ -47,12 +47,14 @@ The user-facing output is plain, readable, and uncluttered. No internal jargon, 
 - Six day cards (Mon to Sat) with breakfast and lunch, plus the grocery list.
 - Dish swap with a ranked picker over the meal-time-matching library; required reason.
 - Custom one-off entry for any dish position in any day; required reason.
+- Dish delete from any day (the day may then hold fewer dishes than its usual shape); required reason.
+- Day skip and restore (eating out or away); the day's dishes are kept so restore is lossless; required reason.
 - Comments attached to a dish or day, queued for the slow loop.
 - Identity is light: a device-stored "I am Rajat" or "I am Tuhina" profile attributes edits; a shared passcode keeps the URL private. No accounts.
 
 ## 7. Out of scope (v1)
 
-- Day-level overrides (skip a day, mark eating out, swap two days). Designed for so they slot in cleanly later; not built in v1.
+- Further day-level overrides beyond skip and restore (swap two days, mark a day eating-out ahead of the week). Designed for so they slot in cleanly later; not built in v1. Skipping and restoring a day is in scope.
 - Calendar awareness (read shared calendar; mark days unavailable upfront).
 - Per-user dietary variants.
 - Multi-household support.

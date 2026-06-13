@@ -6,7 +6,7 @@ import { IdentityPicker } from "./components/IdentityPicker.js";
 import { MenuScreen } from "./components/MenuScreen.js";
 import { GroceryScreen } from "./components/GroceryScreen.js";
 import { ExploreScreen, ChangesScreen } from "./components/StubScreens.js";
-import { LegacyEditScreen } from "./components/LegacyEditScreen.js";
+import { DayScreen } from "./components/DayScreen.js";
 import { TabBar, type TabKey } from "./components/primitives.js";
 import {
   clearIdentity,
@@ -24,10 +24,10 @@ export function App() {
   const [authed, setAuthed] = useState<boolean>(() => isAuthValid());
   const [identity, setIdentityState] = useState<Identity | null>(() => getIdentity());
   const [tab, setTab] = useState<TabKey>("Menu");
-  // When set, the legacy editor is shown over the Menu tab (read-only shell this
-  // slice; the redesigned editing family is 5.2). The day is informational only:
-  // the legacy view renders the whole week, so any day's Edit lands here.
-  const [editing, setEditing] = useState<boolean>(false);
+  // The day currently open in the editing family (the Day screen and its sheets),
+  // shown over the Menu tab. Null when the Menu list is showing. Set from a day
+  // card's Edit; cleared by the Day screen's back affordance or a tab switch.
+  const [editingDay, setEditingDay] = useState<ShortDay | null>(null);
   const setUserProfile = useMutation(anyApi.users.setUserProfile);
 
   function handlePass() {
@@ -49,16 +49,12 @@ export function App() {
   function handleSwitchIdentity() {
     clearIdentity();
     setIdentityState(null);
-    setEditing(false);
+    setEditingDay(null);
     setTab("Menu");
   }
 
   function handleEditDay(day: ShortDay) {
-    // The legacy editor renders the whole week, so the chosen day is not needed
-    // to route there yet. Slice 5.2 introduces the per-day Day screen that uses
-    // it; accepting the argument now keeps the Menu callback stable.
-    void day;
-    setEditing(true);
+    setEditingDay(day);
   }
 
   if (!authed) {
@@ -71,8 +67,10 @@ export function App() {
 
   function renderActive() {
     if (tab === "Menu") {
-      if (editing) {
-        return <LegacyEditScreen identity={identity!} onBack={() => setEditing(false)} />;
+      if (editingDay) {
+        return (
+          <DayScreen day={editingDay} identity={identity!} onBack={() => setEditingDay(null)} />
+        );
       }
       return (
         <MenuScreen
@@ -88,7 +86,7 @@ export function App() {
   }
 
   function handleTab(next: TabKey) {
-    setEditing(false);
+    setEditingDay(null);
     setTab(next);
   }
 

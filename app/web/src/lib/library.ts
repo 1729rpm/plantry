@@ -6,13 +6,61 @@
 // dish-row meta line. Keeping that mapping here honours Principle 7 (display
 // decoupled from structure): internal enum values never reach a screen.
 
-import { dishes } from "@plantry/engine/library";
-import type { Dish } from "@plantry/engine";
+import { dishes, ingredients } from "@plantry/engine/library";
+import type { Dish, Ingredient } from "@plantry/engine";
 
 const DISH_BY_ID = new Map<number, Dish>(dishes.map((d) => [d.id, d]));
 
 export function dishById(dishId: number): Dish | undefined {
   return DISH_BY_ID.get(dishId);
+}
+
+/** The complete library, meal-time partitioned, for the swap / add pickers. */
+export const allDishes: Dish[] = dishes;
+
+const INGREDIENTS_BY_DISH = new Map<number, Ingredient[]>();
+for (const row of ingredients) {
+  const list = INGREDIENTS_BY_DISH.get(row.dishId) ?? [];
+  list.push(row);
+  INGREDIENTS_BY_DISH.set(row.dishId, list);
+}
+
+/** The dish's ingredient rows (name + quantity + unit), or [] when none exist. */
+export function dishIngredients(dishId: number): Ingredient[] {
+  return INGREDIENTS_BY_DISH.get(dishId) ?? [];
+}
+
+export function mealLabelForDish(dish: Dish): string {
+  return dish.time === "Breakfast" ? "Breakfast" : "Lunch";
+}
+
+type Season = "Summer" | "Monsoon" | "Winter";
+
+// Bangalore seasons per docs/product.md §1, read from the ISO month. Mirrors the
+// Convex-side seasonOf so the add-a-dish pool the user sees matches the pool the
+// addDish mutation will accept (it hard-filters on Active + season + meal-time).
+function seasonOf(isoDate: string): Season {
+  const month = Number.parseInt(isoDate.slice(5, 7), 10);
+  if (month >= 3 && month <= 5) return "Summer";
+  if (month >= 6 && month <= 9) return "Monsoon";
+  return "Winter";
+}
+
+/**
+ * The Active, in-season library dishes for one meal-time, name-sorted. Drives
+ * the add-a-dish picker. The same hard filters the `addDish` mutation applies
+ * (meal-time, Active, season), so every dish shown can actually be added.
+ */
+export function addablePool(meal: "breakfast" | "lunch", weekStart: string): Dish[] {
+  const time = meal === "breakfast" ? "Breakfast" : "Lunch";
+  const season = seasonOf(weekStart);
+  return dishes
+    .filter((d) => {
+      if (d.active !== "Yes") return false;
+      if (d.time !== time) return false;
+      return d.seasons === "All" || d.seasons.includes(season);
+    })
+    .sort((a, b) => a.name.localeCompare(b.name));
 }
 
 // Photo resolution. Photos live at data/dish-photos/<slug>.jpg and are copied
