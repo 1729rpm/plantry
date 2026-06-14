@@ -11,6 +11,7 @@ satiety: Low
 prepMinutes: 25
 seasons: All
 complexity: Easy
+photo: moong-dal.jpg
 ---
 
 Light yellow moong dal finished with a simple cumin and garlic tempering.

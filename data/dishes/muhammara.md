@@ -12,6 +12,7 @@ prepMinutes: 20
 seasons: All
 complexity: Easy
 skill: Char the capsicum well so the dip turns smoky and sweet
+photo: muhammara.jpg
 ---
 
 A smoky roasted red pepper and walnut dip from the Levant.

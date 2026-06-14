@@ -13,6 +13,7 @@ seasons: All
 complexity: Medium
 skill: Comfortable, browning the masala and simmering the chicken till tender
 buySpecially: Curry cut chicken, 300g
+photo: palak-chicken-gravy.jpg
 ---
 
 Chicken simmered in a spiced spinach gravy.

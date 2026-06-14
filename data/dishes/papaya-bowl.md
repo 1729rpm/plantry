@@ -11,6 +11,7 @@ satiety: Low
 prepMinutes: 5
 seasons: All
 complexity: Easy
+photo: papaya-bowl.jpg
 ---
 
 Cubed ripe papaya with a squeeze of lemon to eat alongside breakfast.

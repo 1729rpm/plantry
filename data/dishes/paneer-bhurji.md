@@ -11,6 +11,7 @@ satiety: High
 prepMinutes: 20
 seasons: All
 complexity: Easy
+photo: paneer-bhurji.jpg
 ---
 
 Crumbled paneer tossed with onion, tomato and capsicum in a quick masala.

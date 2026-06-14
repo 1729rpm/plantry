@@ -11,6 +11,7 @@ satiety: High
 prepMinutes: 30
 seasons: All
 complexity: Medium
+photo: palak-paneer.jpg
 ---
 
 Paneer cubes folded into a smooth, lightly spiced spinach gravy.

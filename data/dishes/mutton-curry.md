@@ -13,6 +13,7 @@ seasons: All
 complexity: Medium
 skill: Comfortable, browning the onion masala and a long simmer matter
 buySpecially: Curry cut mutton, 300g
+photo: mutton-curry.jpg
 ---
 
 Home-style mutton curry in a spiced onion-tomato gravy.

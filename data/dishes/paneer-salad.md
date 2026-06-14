@@ -11,6 +11,7 @@ satiety: Medium
 prepMinutes: 10
 seasons: All
 complexity: Easy
+photo: paneer-salad.jpg
 ---
 
 A fresh salad of paneer cubes with lettuce, cucumber and tomato.

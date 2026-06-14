@@ -11,6 +11,7 @@ satiety: High
 prepMinutes: 15
 seasons: All
 complexity: Easy
+photo: paneer-sandwich.jpg
 ---
 
 Toasted sandwiches filled with spiced paneer, onion and capsicum.

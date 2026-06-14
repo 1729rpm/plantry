@@ -11,6 +11,7 @@ satiety: High
 prepMinutes: 30
 seasons: All
 complexity: Medium
+photo: mushroom-paneer.jpg
 ---
 
 Paneer and mushrooms in a spiced onion-tomato gravy.

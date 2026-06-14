@@ -13,6 +13,7 @@ seasons: All
 complexity: Medium
 skill: Comfortable, drying off the moisture so the mince stays loose not pasty
 buySpecially: Minced mutton, 300g
+photo: mutton-keema.jpg
 ---
 
 Minced mutton bhuna cooked dry with onion, tomato and green peas.

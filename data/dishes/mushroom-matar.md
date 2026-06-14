@@ -11,6 +11,7 @@ satiety: Medium
 prepMinutes: 25
 seasons: All
 complexity: Easy
+photo: mushroom-matar.jpg
 ---
 
 Mushrooms and green peas simmered in a homely onion-tomato gravy.

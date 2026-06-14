@@ -12,6 +12,7 @@ prepMinutes: 35
 seasons: All
 complexity: Medium
 skill: Add the stock a ladle at a time and stir so the rice turns creamy
+photo: mushroom-risotto.jpg
 ---
 
 Creamy slow-stirred rice with mushrooms, garlic and a little cheese.

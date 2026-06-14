@@ -11,6 +11,7 @@ satiety: High
 prepMinutes: 30
 seasons: All
 complexity: Medium
+photo: paneer-butter-masala.jpg
 ---
 
 Paneer in a rich, mildly sweet tomato and cashew gravy.
