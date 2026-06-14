@@ -150,7 +150,7 @@ A skipped day is a fast-loop override applied after generation. Generation itsel
 - **Grocery list.** A skipped day's dishes contribute nothing to the buy list. The grocery aggregator (whose list shape `docs/product.md` §3 item 3 fixes) accepts an optional set of skipped days and excludes those days' dishes before summing. With no days skipped, the list is exactly as before.
 - **History append.** On finalize, the week's dishes append to the historical record that drives the §4 recency rule. A skipped day's dishes were not cooked, so they must not append: recency must not see them. The history-row derivation accepts the same optional set of skipped days and emits zero rows for each.
 
-Both are pure, additive functions: the skipped-day input defaults to none, so every existing caller is unchanged. Wiring the override into the running app (the Convex `skippedDays` field and the "Skipped" rendering on the menu share) is a later slice; the engine functions are skip-aware so that wiring is a thin call-site change.
+Both are pure, additive functions: the skipped-day input defaults to none, so every existing caller is unchanged. The running app wires the override through the Convex `skippedDays` field, the skip-aware grocery query, the finalize archive exclusion, and the "Skipped" rendering on the Menu tab and the menu share image.
 
 ## 9. Item Cap
 

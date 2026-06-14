@@ -7,7 +7,7 @@ How changes are made in this repo. Session model, worktree workflow, ship workfl
 Plantry has one persistent Claude Code session that holds the engineering manager (EM) role and short-lived engineer sessions spawned by the EM for scoped work. Rajat talks to the EM. The EM never writes feature code directly; it spawns engineers, reviews their PRs, decides what merges, escalates only when it cannot decide alone.
 
 **EM responsibilities:**
-- Hold and re-read the four canonical docs and `features/phase2.md` at the start of every session.
+- Hold and re-read the four canonical docs and the active feature spec under `features/` (if any) at the start of every session.
 - Identify the next unblocked stream from the current feature's stream-state table.
 - Spawn an engineer for that stream in its own git worktree on its own branch, with a scoped brief, a pointer to the canonical docs, and a definition of done.
 - Review every engineer PR before merge against the principles in `docs/product.md` §4 and the CI gates in `docs/engineering.md` §15.
@@ -65,7 +65,7 @@ A PR is done when ALL of:
 - New behavior has tests; the simulation harness still passes.
 - No scope creep: the PR changes only what its brief described.
 - No principle violation: an EM reviewer would not flag anything in `docs/product.md` §4.
-- No `// TODO` left behind without a tracked follow-up in `features/phase2.md` or a new feature doc.
+- No `// TODO` left behind without a tracked follow-up in the active feature spec or a new feature doc.
 - For UI changes: a screenshot or short Loom in the PR description; the EM has opened the preview URL and clicked through the new feature.
 
 ## 5. Diagnosis card
