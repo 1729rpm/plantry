@@ -11,6 +11,7 @@ satiety: Medium
 prepMinutes: 15
 seasons: All
 complexity: Easy
+photo: veg-sandwich.jpg
 ---
 
 Layered vegetable sandwich with cucumber, tomato and a green chutney spread.

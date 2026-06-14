@@ -11,6 +11,7 @@ satiety: Medium
 prepMinutes: 25
 seasons: All
 complexity: Medium
+photo: thepla.jpg
 ---
 
 Soft Gujarati flatbreads kneaded with fenugreek, curd and spices.

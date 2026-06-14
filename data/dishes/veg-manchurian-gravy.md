@@ -12,6 +12,7 @@ prepMinutes: 35
 seasons: All
 complexity: Medium
 skill: Fry the vegetable balls firm before they go into the sauce so they hold
+photo: veg-manchurian-gravy.jpg
 ---
 
 Fried vegetable balls simmered in a garlicky Indo-Chinese brown sauce.
