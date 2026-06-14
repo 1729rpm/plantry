@@ -253,7 +253,7 @@ Statuses: `not started`, `in progress (branch)`, `shipped (#PR)`. Every slice's 
 | 7.1 | `feat/P-explore` | Explore tab + use-this-week + next-week flow + dislike signal | 5.2 | 6.1, 8.1, 9.1 | shipped (#56) |
 | 8.1 | `feat/Q-share-family` | Share image family, includeRecipe toggle, Web Share | 5.2 | 6.1, 7.1, 9.1 | shipped (#55) |
 | 9.1 | `feat/R-slow-loop-upgrade` | Slow loop reads new signals (incl. dislike signal) + reports; mark-applied + fixtures updated | 4.2 (and 2.1 for reports) | 5.x, 6.1, 7.1, 8.1 | shipped (#51) |
-| 10.1 | `docs/maintenance-<date>` | product.md full rewrite to current state; /reconcile-docs sweep; archive this spec | 6.1, 7.1, 8.1, 9.1 | B-track tails | not started |
+| 10.1 | `docs/maintenance-<date>` | product.md full rewrite to current state; /reconcile-docs sweep; archive this spec | 6.1, 7.1, 8.1, 9.1 | B-track tails | shipped (#57) |
 | B1.1–B1.3 | `data/enrichment-<n>` | Remaining ~90 dishes enriched, ~30 per batch | 2.2 | everything | shipped (#38 #40 #41; all library dishes enriched) |
 | B2.1 | `data/photos-style` | STYLE.md photo spec + first photo batch | 2.1 | everything | in progress (#37 — STYLE.md committed; first photo batch pending external image generation) |
 | B2.2+ | `data/photos-<n>` | Photo batches to full coverage | B2.1 | everything | not started |
