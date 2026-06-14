@@ -11,6 +11,7 @@ satiety: Medium
 prepMinutes: 20
 seasons: All
 complexity: Easy
+photo: cabbage-peas-aloo.jpg
 ---
 
 Shredded cabbage cooked down with peas and potato.

@@ -12,6 +12,7 @@ prepMinutes: 10
 seasons: [Summer]
 complexity: Easy
 buySpecially: Ripe Alphonso or Banganapalli mangoes, 500g
+photo: aamras.jpg
 ---
 
 Smooth sweet mango pulp lightly spiced with cardamom, the summer dessert.

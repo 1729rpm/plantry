@@ -11,6 +11,7 @@ satiety: High
 prepMinutes: 20
 seasons: All
 complexity: Easy
+photo: besan-paneer-chilla.jpg
 ---
 
 Savoury gram-flour pancakes studded with crumbled paneer and onion.

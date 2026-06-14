@@ -11,6 +11,7 @@ satiety: Low
 prepMinutes: 15
 seasons: All
 complexity: Easy
+photo: broccoli-corn.jpg
 ---
 
 Crisp broccoli florets and sweet corn tossed with garlic.

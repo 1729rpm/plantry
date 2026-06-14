@@ -12,6 +12,7 @@ prepMinutes: 35
 seasons: All
 complexity: Medium
 skill: Undercook the pasta slightly so it finishes in the oven without going soft
+photo: baked-mozzarella-pasta.jpg
 ---
 
 Pasta in a tomato sauce baked under a blanket of melted mozzarella.

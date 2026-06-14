@@ -12,6 +12,7 @@ prepMinutes: 20
 seasons: All
 complexity: Easy
 skill: Toast the tortilla slow so the cheese melts before the outside burns
+photo: black-bean-quesadilla.jpg
 ---
 
 Tortillas filled with spiced beans and melted cheese, toasted till crisp.

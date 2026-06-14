@@ -72,9 +72,11 @@ describe("coverageReport", () => {
     expect(cov.withRecipe).toBe(cov.activeDishCount);
     expect(cov.withComplexity).toBe(cov.activeDishCount);
     // Photos are a separate (B2) track, burned down one batch at a time. The
-    // first pilot batch (B2.2) landed 15 photos; this snapshot tracks live data,
-    // so each photo batch bumps this number. It is a report assertion, not a rule.
-    expect(cov.withPhoto).toBe(15);
+    // first pilot batch (B2.2) landed 15 photos; the full run (data/photos-2)
+    // brought coverage to 33 before the Hugging Face free-tier monthly credits
+    // depleted. This snapshot tracks live data, so each photo batch bumps this
+    // number. It is a report assertion, not a rule.
+    expect(cov.withPhoto).toBe(33);
   });
 });
 

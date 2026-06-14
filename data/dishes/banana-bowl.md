@@ -11,6 +11,7 @@ satiety: Low
 prepMinutes: 5
 seasons: All
 complexity: Easy
+photo: banana-bowl.jpg
 ---
 
 Sliced ripe bananas to eat alongside breakfast, simple and filling.
