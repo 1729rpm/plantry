@@ -215,7 +215,7 @@ export function DishDetailSheet({
           Replace this dish
         </PrimaryButton>
         <QuietButton danger className="detail__action-remove" onClick={onDelete}>
-          Remove
+          Delete
         </QuietButton>
       </div>
       <button type="button" className="detail__comment-link" onClick={onComment}>

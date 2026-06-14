@@ -57,6 +57,7 @@ export function ReasonDialog({
         rows={3}
         value={text}
         autoFocus
+        aria-label="Reason"
         placeholder="Why this change?"
         onChange={(e) => setText(e.target.value)}
         disabled={inFlight}
@@ -66,7 +67,7 @@ export function ReasonDialog({
           {error}
         </p>
       )}
-      <PrimaryButton onClick={() => canSubmit && onSubmit(trimmed)}>
+      <PrimaryButton disabled={!canSubmit} onClick={() => canSubmit && onSubmit(trimmed)}>
         {inFlight ? "Saving..." : (submitLabel ?? "Save change")}
       </PrimaryButton>
     </Sheet>

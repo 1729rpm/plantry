@@ -139,7 +139,12 @@ export function SwapPickerSheet({
       <div className="reason__hint">
         {dayLabel(day)} {mealLabel(meal).toLowerCase()}; pick from the library or use a one off
       </div>
-      <SearchField value={q} onChange={setQ} placeholder="Search, or type a one off dish" />
+      <SearchField
+        value={q}
+        onChange={setQ}
+        placeholder="Search, or type a one off dish"
+        autoFocus
+      />
       {trimmedQuery.length > 0 && (
         <button
           type="button"
@@ -152,6 +157,9 @@ export function SwapPickerSheet({
       {alternatives === undefined && <div className="picker__hint">Loading dishes...</div>}
       {alternatives !== undefined && visible.length === 0 && trimmedQuery.length === 0 && (
         <div className="picker__hint">No alternatives in the library for this meal.</div>
+      )}
+      {alternatives !== undefined && visible.length === 0 && trimmedQuery.length > 0 && (
+        <div className="picker__hint">No dish matches that name.</div>
       )}
       {visible.length > 0 && (
         <>

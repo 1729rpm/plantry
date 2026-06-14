@@ -3,6 +3,7 @@
 // components with CSS classes reading the tokens in index.css. Behaviour is the
 // contract, not the prototype's window-global implementation.
 
+import { useEffect } from "react";
 import type { CSSProperties, ReactNode } from "react";
 import type { Identity } from "../lib/types.js";
 import type { ComplexityVariant } from "../lib/library.js";
@@ -174,6 +175,19 @@ export function Sheet({
   children: ReactNode;
   tall?: boolean;
 }) {
+  // Lock background scroll while a sheet is open so the page behind the scrim
+  // cannot scroll. Save and restore the prior inline value so nested sheets
+  // (sheet-over-sheet, e.g. dish actions -> reason dialog) restore correctly:
+  // the inner sheet sees "hidden" already set, saves it, and restores it on
+  // unmount, leaving the outer sheet's lock intact.
+  useEffect(() => {
+    const previous = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => {
+      document.body.style.overflow = previous;
+    };
+  }, []);
+
   return (
     <div className="sheet">
       <button type="button" className="sheet__scrim" aria-label="Close" onClick={onClose} />
@@ -204,10 +218,12 @@ export function SearchField({
   value,
   onChange,
   placeholder,
+  autoFocus,
 }: {
   value: string;
   onChange: (next: string) => void;
   placeholder?: string;
+  autoFocus?: boolean;
 }) {
   return (
     <input
@@ -215,6 +231,8 @@ export function SearchField({
       type="text"
       value={value}
       placeholder={placeholder}
+      aria-label={placeholder}
+      autoFocus={autoFocus}
       onChange={(e) => onChange(e.target.value)}
     />
   );
