@@ -19,6 +19,25 @@ Decisions Rajat must approve go in the "Open items" list in `features/phase2.md`
 
 ---
 
+## 2026-06-15 02:50 IST  Dish-photo generation: provider path, realism prompt rewrite, content-filter sanitizer, parallelism
+
+**Stream:** content-batch (dish-photo B2 track; not a §5 spine slice). Built by `scripts/generate-dish-photos.mjs` against the `data/dish-photos/STYLE.md` spec.
+**Context:** The library had zero photos (slice B2.1 committed only the STYLE.md spec; actual generation was deferred as "outside the session"). Rajat asked to finalize image generation. Over the session it went pilot to partial to full to a realism rewrite to a full re-run, landing 200 of 200 photorealistic photos live on prod.
+**Options considered:**
+- (a) **Provider:** Gemini (Rajat's first pick) vs Hugging Face FLUX.1-schnell vs NVIDIA NIM FLUX.1-dev vs manual / local generation.
+- (b) **Realism fix** (the first NVIDIA set read as glossy CGI / illustration, which Rajat rejected as fake): append a "make it photorealistic, no gloss" section to the existing prompt vs rewrite the whole prompt from scratch.
+- (c) **Content-filter false-positives** (NVIDIA's safety filter deterministically rejects benign tokens like "fried" and "sweet-salty", returning a black frame): reword the canonical dish files vs a prompt-only synonym sanitizer vs switch model.
+- (d) **Speed:** sequential generation vs bounded concurrency plus a client-side rate limiter.
+**Chosen:**
+- **(a) Free tiers in sequence, as each constraint forced the next.** Gemini's key had zero image quota (image generation is effectively paid there); HF FLUX.1-schnell ran the free 15-dish pilot but its monthly free credits exhausted at 33 of ~195; NVIDIA NIM FLUX.1-dev (free `nvapi-` key, ~1000 credits/month) finished the library and is higher fidelity. Lesson recorded: a key that authenticates on `integrate.api.nvidia.com/v1/models` is NOT sufficient for images; the image host `ai.api.nvidia.com` needs an `nvapi-` prefixed key, and auth must be checked against the image endpoint, not the model catalog (a model-catalog 200 was a false green earlier in the session).
+- **(b) Full rewrite, not a patch.** The original styled-brief prompt ("appetizing serving", "matte stoneware", "the only objects in the frame are...") was itself summoning the studio-render look. Reframing the entire prompt as a candid, unstyled home phone photo ("everyday phone photo ... not styled or arranged ... true to life ... unpolished documentary food photography") makes realism intrinsic to the framing; a bolted-on "no gloss" section would fight the rest of the prompt and hardcode the symptom. Also lowered guidance (cfg_scale 5 to 3.5) and raised steps (30 to 40).
+- **(c) A general, prompt-only synonym sanitizer** (applies to every prompt, never edits the canonical dish files). Rewording dish descriptions would corrupt content the app shows; switching model loses the chosen look. The sanitizer maps a blocked token to a visually-equivalent synonym ("fried" to pan-cooked / wok-tossed / stir-fry rice / golden browned, "sweet-salty" to "sweet and savoury"). Root cause proven by live bisection: the token alone flips an otherwise-safe prompt to CONTENT_FILTERED, while "fry" passes.
+- **(d) Bounded concurrency pool** (`PHOTO_CONCURRENCY`, default 6) behind a sliding-window rate limiter (`PHOTO_MAX_RPM`, default 35, under NVIDIA's ~40/min) with exponential backoff and retry on HTTP 429 / 500 / 503. The full 200-dish run took about 14 minutes with zero 429s, versus roughly 50 minutes sequential.
+**Reversibility:** easy. Photos are data plus `photo:` frontmatter (git-revertable); the pipeline is one script with the HF path kept as a dormant `PROVIDER=hf` fallback; prompt, params, and concurrency are single-file edits; the sanitizer is one function.
+**Right-size check (per `docs/product.md` §4):** problem size structural (a generation pipeline plus library-wide content); fix level infrastructure (an offline tool plus the prompt spec), held to `data/` plus a `scripts/` file with no app, engine, or Convex change, and with both realism and the filter workaround encoded as general prompt behavior rather than per-dish hardcoding (Principles 1 and 8); generality: the sanitizer handles any future filter-tripping token, the concurrency and rate-limit apply to every run, and the candid-photo prompt covers the whole library and future dishes. Known residuals, separate from realism and not blocking: a stronger directional-sunlight mood than the old soft-cream look, and dish-fidelity mis-renders on a few visually-ambiguous dishes (for example carrot halwa rendering as a stew), each spot-regenerable individually.
+
+---
+
 ## 2026-06-12 — Design revamp: Explore "dislike" design defaults (planning)
 
 **Stream:** planning (design-revamp, no code touched)
