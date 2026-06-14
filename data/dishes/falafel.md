@@ -13,6 +13,7 @@ seasons: All
 complexity: Medium
 skill: Use soaked raw chickpeas, not boiled, so the patties bind and stay crisp
 prePrep: Soak the chickpeas overnight
+photo: falafel.jpg
 ---
 
 Crisp fried patties of ground chickpeas, herbs and garlic.

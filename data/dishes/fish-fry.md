@@ -13,6 +13,7 @@ seasons: All
 complexity: Easy
 buySpecially: Fish fillets or steaks, 300g
 prePrep: Marinate the fish for at least 20 minutes
+photo: fish-fry.jpg
 ---
 
 Spice-marinated fish shallow fried till crisp at the edges.
