@@ -13,6 +13,7 @@ seasons: All
 complexity: Easy
 skill: Roast long enough for the potatoes to drink up the lemony juices
 buySpecially: Curry cut chicken, 300g
+photo: greek-lemon-chicken-and-potatoes.jpg
 ---
 
 Chicken and potatoes roasted together in lemon, garlic and oregano.

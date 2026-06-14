@@ -13,6 +13,7 @@ seasons: All
 complexity: Medium
 buySpecially: Firm boneless fish fillets, 300g
 prePrep: Marinate the fish for at least an hour ahead
+photo: fish-tikka.jpg
 ---
 
 Curd-marinated fish cubes grilled until charred at the edges.

@@ -13,6 +13,7 @@ seasons: All
 complexity: Medium
 skill: Slide the fish in gently so the pieces stay whole
 buySpecially: Fresh fish steaks, 300g
+photo: fish-curry.jpg
 ---
 
 Coastal-style fish simmered in a coconut and tomato gravy with curry leaves.

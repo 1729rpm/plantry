@@ -11,6 +11,7 @@ satiety: Medium
 prepMinutes: 15
 seasons: All
 complexity: Easy
+photo: egg-salad.jpg
 ---
 
 Boiled eggs tossed with crisp salad leaves and a lemon dressing.

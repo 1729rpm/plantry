@@ -11,6 +11,7 @@ satiety: Medium
 prepMinutes: 25
 seasons: All
 complexity: Easy
+photo: dal-tadka.jpg
 ---
 
 Soft toor dal finished with a sizzling garlic and curry-leaf tempering.

@@ -11,6 +11,7 @@ satiety: Medium
 prepMinutes: 15
 seasons: All
 complexity: Easy
+photo: egg-podimas.jpg
 ---
 
 South Indian scrambled eggs with onion, curry leaf and a mustard tempering, a protein-rich breakfast main.

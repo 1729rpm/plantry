@@ -11,6 +11,7 @@ satiety: Medium
 prepMinutes: 25
 seasons: All
 complexity: Easy
+photo: dal-fry.jpg
 ---
 
 Toor dal cooked into a soft onion-tomato masala, richer than a plain tadka.

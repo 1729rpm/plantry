@@ -12,6 +12,7 @@ prepMinutes: 30
 seasons: [Winter]
 complexity: Medium
 skill: Comfortable, stuffing without tearing the dough takes a knack
+photo: gobi-paratha.jpg
 ---
 
 Whole-wheat parathas stuffed with spiced grated cauliflower.

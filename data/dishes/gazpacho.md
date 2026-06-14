@@ -13,6 +13,7 @@ seasons: [Summer]
 complexity: Easy
 skill: Chill it well; the soup is meant to be served cold
 prePrep: Chill the soup for a couple of hours before serving
+photo: gazpacho.jpg
 ---
 
 A chilled blended soup of ripe tomato, cucumber and capsicum.

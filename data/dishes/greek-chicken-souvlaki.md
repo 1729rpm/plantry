@@ -14,6 +14,7 @@ complexity: Medium
 skill: Marinate the chicken well and grill hot so the edges char
 buySpecially: Boneless chicken, 300g
 prePrep: Marinate the chicken for an hour or longer
+photo: greek-chicken-souvlaki.jpg
 ---
 
 Lemon and oregano marinated chicken grilled and served with a yoghurt dip.

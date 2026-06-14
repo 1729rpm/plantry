@@ -13,6 +13,7 @@ seasons: All
 complexity: Medium
 skill: Long slow simmer is what makes it creamy; do not rush
 prePrep: Soak the urad dal and kidney beans overnight
+photo: dal-makhani.jpg
 ---
 
 Black urad and kidney beans slow-simmered with butter and cream into a rich dal.

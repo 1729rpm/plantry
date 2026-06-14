@@ -12,6 +12,7 @@ prepMinutes: 10
 seasons: All
 complexity: Easy
 skill: Use ripe avocado and mash it chunky, not smooth
+photo: guacamole.jpg
 ---
 
 Mashed ripe avocado with onion, tomato, lime and coriander.

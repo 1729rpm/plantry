@@ -12,6 +12,7 @@ prepMinutes: 45
 seasons: All
 complexity: Hard
 skill: Comfortable, the layering and dum timing matter
+photo: egg-biryani.jpg
 ---
 
 A fragrant layered rice biryani with masala-coated boiled eggs.

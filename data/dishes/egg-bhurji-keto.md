@@ -11,6 +11,7 @@ satiety: High
 prepMinutes: 15
 seasons: All
 complexity: Easy
+photo: egg-bhurji-keto.jpg
 ---
 
 Spiced scrambled eggs cooked dry with onion, tomato and green chilli, no carb on the side.

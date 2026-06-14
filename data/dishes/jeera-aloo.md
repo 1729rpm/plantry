@@ -11,6 +11,7 @@ satiety: Low
 prepMinutes: 15
 seasons: All
 complexity: Easy
+photo: jeera-aloo.jpg
 ---
 
 Boiled potato cubes tossed in a cumin tempering with green chilli.

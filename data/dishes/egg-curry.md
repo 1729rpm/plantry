@@ -11,6 +11,7 @@ satiety: High
 prepMinutes: 25
 seasons: All
 complexity: Easy
+photo: egg-curry.jpg
 ---
 
 Boiled eggs simmered in a spiced onion-tomato gravy.

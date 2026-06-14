@@ -11,6 +11,7 @@ satiety: Low
 prepMinutes: 5
 seasons: All
 complexity: Easy
+photo: garlic-chutney.jpg
 ---
 
 A fiery dry garlic and red chilli chutney for dosa and idli.
