@@ -154,18 +154,19 @@ function readDish(slug) {
   return { path, raw, name, tags, description, hasPhoto };
 }
 
-// NVIDIA's FLUX.1-dev content filter false-positives on the literal token
-// "fried" (deterministically returns finishReason CONTENT_FILTERED / a black
-// frame, seed-independent); the verb "fry" is fine. This rewrites "fried" out of
-// the prompt string ONLY (never the canonical dish file on disk) to a
-// visually-equivalent synonym with no "fried" substring, so the rendered image
-// still matches the dish. Applied as a general token transform to every prompt,
-// ordered most-specific phrase first so the synonym preserves the dish's look,
-// with a bare "fried" -> "pan-cooked" fallback. Each rule is case-insensitive
-// and keeps the matched word's leading-capital casing.
-const FRIED_SUBSTITUTIONS = [
-  // Whole phrases first (most specific), so e.g. "fried rice" keeps the stir-fry
-  // look rather than collapsing to the bare fallback.
+// NVIDIA's FLUX.1-dev content filter false-positives on a few benign culinary
+// tokens, deterministically returning finishReason CONTENT_FILTERED / a black
+// frame (seed-independent). The literal "fried" is one ("fry" is fine); the
+// hyphenated/adjacent "sweet-salty" is another (bisected live: dropping it makes
+// the identical prompt succeed). This rewrites those tokens out of the prompt
+// string ONLY (never the canonical dish file on disk) to a visually-equivalent
+// synonym, so the rendered image still matches the dish. Applied as a general
+// token transform to every prompt, ordered most-specific phrase first so the
+// synonym preserves the dish's look. Each rule is case-insensitive and keeps the
+// matched word's leading-capital casing.
+const FILTER_SAFE_SUBSTITUTIONS = [
+  // "fried" family. Whole phrases first (most specific), so e.g. "fried rice"
+  // keeps the stir-fry look rather than collapsing to the bare fallback.
   [/\bstir-fried\b/gi, "wok-tossed"],
   [/\bdeep-fried\b/gi, "pan-crisped"],
   [/\bshallow fried\b/gi, "pan-crisped"],
@@ -176,6 +177,8 @@ const FRIED_SUBSTITUTIONS = [
   [/\bfried crisp\b/gi, "crisp-cooked"],
   // Bare fallback: any remaining standalone "fried".
   [/\bfried\b/gi, "pan-cooked"],
+  // "sweet-salty" / "sweet salty" -> "sweet and savoury" (same flavour profile).
+  [/\bsweet[-\s]salty\b/gi, "sweet and savoury"],
 ];
 
 /** Preserve the matched word's leading-capital casing on the replacement (e.g.
@@ -184,10 +187,11 @@ function matchCase(match, replacement) {
   return /^[A-Z]/.test(match) ? replacement[0].toUpperCase() + replacement.slice(1) : replacement;
 }
 
-/** Rewrite the filter-blocked "fried" token out of an assembled prompt string. */
-function sanitizeFriedToken(prompt) {
+/** Rewrite the filter-blocked tokens ("fried", "sweet-salty") out of an assembled
+ * prompt string so the provider's content filter does not false-positive on it. */
+function sanitizeFilterTokens(prompt) {
   let out = prompt;
-  for (const [re, repl] of FRIED_SUBSTITUTIONS) {
+  for (const [re, repl] of FILTER_SAFE_SUBSTITUTIONS) {
     out = out.replace(re, (m) => matchCase(m, repl));
   }
   return out;
@@ -207,7 +211,7 @@ function buildPrompt(slug, name, tags, description) {
     `bare surface on every side. Casual, realistic, unpolished documentary food ` +
     `photography, square 1:1.`;
   // Sanitize the assembled string only; the dish file on disk is untouched.
-  return sanitizeFriedToken(prompt);
+  return sanitizeFilterTokens(prompt);
 }
 
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
