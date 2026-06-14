@@ -36,20 +36,47 @@ export interface RankCandidatesArgs {
    * disable consolidation. See `ConsolidationContext`.
    */
   consolidationContext?: ConsolidationContext | null;
+  /**
+   * §4 step 5 within-week recency: ids of dishes already placed in an earlier
+   * slot of the week being generated. Any non-exempt candidate whose id is in
+   * this set is demoted below the fresh (not-yet-placed) candidates, dominating
+   * steps 1 to 4 so a broad pool's favourite cannot win every slot identically.
+   * Build it with `withinWeekRecencySet` so the demotion honours the §4
+   * exemptions (fruit, lunch carbs). Undefined or empty leaves the step a no-op,
+   * so every existing caller is unchanged.
+   */
+  withinWeekDishIds?: ReadonlySet<number>;
 }
 
 const LUNCH_CARB_CATEGORIES = new Set(["Chapati", "Rice"]);
 
 /**
  * §4 recency exemption: dishes with the `fruit` tag and lunch carbs (Category
- * in {Chapati, Rice}) are exempt from step 1 (longest unused). They pass
- * through with a neutral rank so step 1 cannot reorder them relative to each
- * other or to non-exempt dishes.
+ * in {Chapati, Rice}) are exempt from both step 1 (longest unused) and step 5
+ * (within-week recency). They pass through with a neutral rank so neither step
+ * reorders them relative to each other or to non-exempt dishes; this is what
+ * lets Seasonal fruit recur Mon/Wed/Fri and Roti recur across lunches.
  */
 function isRecencyExempt(dish: Dish): boolean {
   if (dish.tags.includes("fruit")) return true;
   if (LUNCH_CARB_CATEGORIES.has(dish.category)) return true;
   return false;
+}
+
+/**
+ * Build the §4 step 5 within-week demotion set from the dishes already placed
+ * earlier in the week being generated. Exempt dishes (fruit, lunch carbs) are
+ * left out so they stay free to repeat. Shared by the generateWeek loop and the
+ * single-slot picker (rankCandidatesForSlot), so the within-week recency rule
+ * has one definition, not two. Pass the running list of this-week picks; the
+ * returned set feeds `RankCandidatesArgs.withinWeekDishIds`.
+ */
+export function withinWeekRecencySet(picks: Dish[]): Set<number> {
+  const set = new Set<number>();
+  for (const dish of picks) {
+    if (!isRecencyExempt(dish)) set.add(dish.id);
+  }
+  return set;
 }
 
 /** Last-cooked date per dish id, taken from the most recent matching history row. */
@@ -166,14 +193,49 @@ export function byPreferredYes(pool: Dish[]): Dish[] {
 }
 
 /**
- * §4 selection priority. Composes the four steps in order; each step takes the
+ * §4 step 5: within-week recency. A candidate already placed earlier in the
+ * week being generated (its id is in `withinWeekDishIds`) is treated as the
+ * most-recently-used dish, so it sinks below every fresh (not-yet-placed)
+ * candidate. Applied last and as a stable partition, it dominates steps 1 to 4:
+ * a dish that consolidation (step 3) or Preferred=Yes (step 4) re-promoted is
+ * still pushed below the fresh alternatives, so a broad pool's favourite cannot
+ * win every Mon/Wed/Fri slot identically. Exempt dishes (fruit, lunch carbs)
+ * are never in the demotion set, so they keep their place. Fallback: if every
+ * candidate has already been placed this week, demoting them all equals demoting
+ * none, so the pool is returned unchanged and the repeat is allowed (mirrors the
+ * step 2 fresh-alternative fallback).
+ */
+export function byWithinWeekRecency(
+  pool: Dish[],
+  withinWeekDishIds: ReadonlySet<number> | undefined,
+): Dish[] {
+  if (!withinWeekDishIds || withinWeekDishIds.size === 0) return pool;
+  const fresh: Dish[] = [];
+  const placed: Dish[] = [];
+  for (const dish of pool) {
+    if (withinWeekDishIds.has(dish.id) && !isRecencyExempt(dish)) {
+      placed.push(dish);
+    } else {
+      fresh.push(dish);
+    }
+  }
+  // Every candidate already placed → no fresh alternative; allow the repeat.
+  if (fresh.length === 0) return pool;
+  return [...fresh, ...placed];
+}
+
+/**
+ * §4 selection priority. Composes the five steps in order; each step takes the
  * output of the previous as its input, so ties from step N are broken by step
- * N+1. Returns a stable permutation of the input pool.
+ * N+1. Step 5 (within-week recency) is the dominant terminal partition: it runs
+ * after all tie-breaks so an already-placed dish always sinks below a fresh one.
+ * Returns a stable permutation of the input pool.
  */
 export function rankCandidates(args: RankCandidatesArgs): Dish[] {
   const step1 = byLongestUnused(args.pool, args.history);
   const step2 = byNoSameDayPrimaryIngredient(step1, args.sameDayBreakfastPrimaryIngredient);
   const step3 = byIngredientConsolidation(step2, args.consolidationContext);
   const step4 = byPreferredYes(step3);
-  return step4;
+  const step5 = byWithinWeekRecency(step4, args.withinWeekDishIds);
+  return step5;
 }

@@ -182,7 +182,7 @@ describe("composition — docs/engine.md §3", () => {
       expect(out.hp).toEqual([hpGravy, hpDry]);
     });
 
-    it("partner pool when HP is Dry is non-HP Gravy; when HP is Gravy is Accompaniment", () => {
+    it("partner pool when HP is Dry is non-HP Gravy; when HP is Gravy is non-HP Accompaniment", () => {
       const nonHpGravy = makeDish({ time: "Lunch", category: "Gravy dish" });
       const hpGravy = makeDish({
         time: "Lunch",
@@ -193,6 +193,59 @@ describe("composition — docs/engine.md §3", () => {
       const out = menu1([nonHpGravy, hpGravy, acc], []);
       expect(out.partnerWhenHpIsDry).toEqual([nonHpGravy]);
       expect(out.partnerWhenHpIsGravy).toEqual([acc]);
+    });
+
+    it("§3 Menu 1 one-HP-per-meal: the Accompaniment partner pool excludes HP-tagged dishes", () => {
+      // The Menu 1 main is the HP pick, so the partner is non-HP. An HP-tagged
+      // Accompaniment (e.g. Chicken salad tagged HP) must not be eligible as the
+      // partner of an HP Gravy main: a meal carries one HP source, not two.
+      const hpGravy = makeDish({ time: "Lunch", category: "Gravy dish", tags: ["HP"] });
+      const hpAccompaniment = makeDish({
+        time: "Lunch",
+        category: "Accompaniment",
+        tags: ["HP"],
+        primaryIngredient: "Chicken",
+      });
+      const plainAccompaniment = makeDish({ time: "Lunch", category: "Accompaniment" });
+      const out = menu1([hpGravy, hpAccompaniment, plainAccompaniment], []);
+      // Filtered partner excludes the HP accompaniment; the fallback keeps it.
+      expect(out.partnerWhenHpIsGravy).toEqual([plainAccompaniment]);
+      expect(out.partnerWhenHpIsGravyFallback).toEqual([hpAccompaniment, plainAccompaniment]);
+    });
+
+    it("§3 Menu 1 one-HP-per-meal is property-based: a paneer HP accompaniment is excluded too", () => {
+      // Proves the exclusion keys on the HP tag, not on names: a paneer-on-paneer
+      // pairing is blocked exactly as chicken-on-chicken is.
+      const hpPaneerGravy = makeDish({
+        time: "Lunch",
+        category: "Gravy dish",
+        tags: ["HP"],
+        primaryIngredient: "Paneer",
+      });
+      const hpPaneerAccompaniment = makeDish({
+        time: "Lunch",
+        category: "Accompaniment",
+        tags: ["HP"],
+        primaryIngredient: "Paneer",
+      });
+      const plainAccompaniment = makeDish({ time: "Lunch", category: "Accompaniment" });
+      const out = menu1([hpPaneerGravy, hpPaneerAccompaniment, plainAccompaniment], []);
+      expect(out.partnerWhenHpIsGravy).toEqual([plainAccompaniment]);
+      expect(out.partnerWhenHpIsGravy.some((d) => d.tags.includes("HP"))).toBe(false);
+    });
+
+    it("§3 Menu 1 fallback pool keeps HP accompaniments for the thin-pool fallback", () => {
+      // When every Accompaniment is HP-tagged, the filtered pool is empty but the
+      // fallback retains them so pickMenu1 can still fill the slot.
+      const hpGravy = makeDish({ time: "Lunch", category: "Gravy dish", tags: ["HP"] });
+      const hpAccompaniment = makeDish({
+        time: "Lunch",
+        category: "Accompaniment",
+        tags: ["HP"],
+      });
+      const out = menu1([hpGravy, hpAccompaniment], []);
+      expect(out.partnerWhenHpIsGravy).toEqual([]);
+      expect(out.partnerWhenHpIsGravyFallback).toEqual([hpAccompaniment]);
     });
 
     it("lunchCarb pool defaults to Chapati and includes Rice when not already used this week", () => {

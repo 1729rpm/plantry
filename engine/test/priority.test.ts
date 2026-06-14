@@ -6,6 +6,8 @@ import {
   byConsolidationStub,
   byIngredientConsolidation,
   byPreferredYes,
+  byWithinWeekRecency,
+  withinWeekRecencySet,
 } from "../src/priority.js";
 import { emptyLedger } from "../src/consolidation.js";
 import type {
@@ -232,6 +234,111 @@ describe("priority — docs/engine.md §4", () => {
       // yesA before yesB and noA before noB while pulling all Yes above all No.
       const out = byPreferredYes([yesA, noA, yesB, noB]);
       expect(out.map((d) => d.name)).toEqual(["YesA", "YesB", "NoA", "NoB"]);
+    });
+  });
+
+  describe("§4 step 5: within-week recency", () => {
+    it("is a no-op when no within-week set is supplied", () => {
+      const a = makeDish({ name: "A" });
+      const b = makeDish({ name: "B" });
+      const out = byWithinWeekRecency([a, b], undefined);
+      expect(out.map((d) => d.name)).toEqual(["A", "B"]);
+    });
+
+    it("is a no-op for an empty within-week set", () => {
+      const a = makeDish({ name: "A" });
+      const b = makeDish({ name: "B" });
+      const out = byWithinWeekRecency([a, b], new Set<number>());
+      expect(out.map((d) => d.name)).toEqual(["A", "B"]);
+    });
+
+    it("sinks an already-placed dish below fresh alternatives", () => {
+      const placed = makeDish({ name: "Placed" });
+      const fresh = makeDish({ name: "Fresh" });
+      // Placed leads the input, but it was already placed this week.
+      const out = byWithinWeekRecency([placed, fresh], new Set([placed.id]));
+      expect(out.map((d) => d.name)).toEqual(["Fresh", "Placed"]);
+    });
+
+    it("preserves order within the fresh and placed groups", () => {
+      const freshA = makeDish({ name: "FreshA" });
+      const placedA = makeDish({ name: "PlacedA" });
+      const freshB = makeDish({ name: "FreshB" });
+      const placedB = makeDish({ name: "PlacedB" });
+      const out = byWithinWeekRecency(
+        [freshA, placedA, freshB, placedB],
+        new Set([placedA.id, placedB.id]),
+      );
+      expect(out.map((d) => d.name)).toEqual(["FreshA", "FreshB", "PlacedA", "PlacedB"]);
+    });
+
+    it("never demotes fruit-tagged dishes even if in the set (exempt)", () => {
+      const fruit = makeDish({ name: "Fruit", tags: ["fruit"], category: "Fruit" });
+      const fresh = makeDish({ name: "Fresh" });
+      // fruit.id is in the within-week set but the exemption keeps it in place.
+      const out = byWithinWeekRecency([fruit, fresh], new Set([fruit.id]));
+      expect(out.map((d) => d.name)).toEqual(["Fruit", "Fresh"]);
+    });
+
+    it("never demotes lunch carbs even if in the set (exempt)", () => {
+      const roti = makeDish({ name: "Roti", category: "Chapati" });
+      const fresh = makeDish({ name: "Fresh" });
+      const out = byWithinWeekRecency([roti, fresh], new Set([roti.id]));
+      expect(out.map((d) => d.name)).toEqual(["Roti", "Fresh"]);
+    });
+
+    it("returns the pool unchanged when every candidate was already placed (allow the repeat)", () => {
+      const a = makeDish({ name: "A" });
+      const b = makeDish({ name: "B" });
+      const out = byWithinWeekRecency([a, b], new Set([a.id, b.id]));
+      // No fresh alternative remains → §4 step 5 fallback preserves input order.
+      expect(out.map((d) => d.name)).toEqual(["A", "B"]);
+    });
+
+    it("dominates consolidation and Preferred=Yes end-to-end: a placed favourite still sinks", () => {
+      // Reproduces the Cluster A defect at the rankCandidates level: the top
+      // dish is Preferred=Yes and never-cooked in cross-week history, so steps 1
+      // to 4 keep it first; step 5 demotes it because it was placed this week.
+      const placedFavourite = makeDish({
+        name: "PlacedFavourite",
+        preferred: "Yes",
+        primaryIngredient: "Chicken",
+      });
+      const freshPlain = makeDish({
+        name: "FreshPlain",
+        preferred: "No",
+        primaryIngredient: "Paneer",
+      });
+      const baseline = rankCandidates({ pool: [placedFavourite, freshPlain], history: [] });
+      // Without the within-week set, the Preferred favourite leads.
+      expect(baseline.map((d) => d.name)).toEqual(["PlacedFavourite", "FreshPlain"]);
+
+      const withWithinWeek = rankCandidates({
+        pool: [placedFavourite, freshPlain],
+        history: [],
+        withinWeekDishIds: new Set([placedFavourite.id]),
+      });
+      // With it, the placed favourite sinks below the fresh alternative.
+      expect(withWithinWeek.map((d) => d.name)).toEqual(["FreshPlain", "PlacedFavourite"]);
+    });
+  });
+
+  describe("withinWeekRecencySet", () => {
+    it("collects non-exempt placed dish ids and excludes exempt ones", () => {
+      const gravy = makeDish({ name: "Gravy", category: "Gravy dish" });
+      const fruit = makeDish({ name: "Fruit", tags: ["fruit"], category: "Fruit" });
+      const roti = makeDish({ name: "Roti", category: "Chapati" });
+      const rice = makeDish({ name: "Rice", category: "Rice" });
+      const set = withinWeekRecencySet([gravy, fruit, roti, rice]);
+      expect(set.has(gravy.id)).toBe(true);
+      expect(set.has(fruit.id)).toBe(false);
+      expect(set.has(roti.id)).toBe(false);
+      expect(set.has(rice.id)).toBe(false);
+      expect(set.size).toBe(1);
+    });
+
+    it("is empty for no picks", () => {
+      expect(withinWeekRecencySet([]).size).toBe(0);
     });
   });
 

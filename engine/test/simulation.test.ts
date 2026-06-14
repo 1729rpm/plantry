@@ -4,7 +4,7 @@ import { deriveHistoryRows } from "../src/historyRows.js";
 import { aggregateGroceryList, type GroceryDayPicks } from "../src/groceryList.js";
 import { loadLiveData } from "./loadLive.js";
 import type { Day } from "../src/eligibility.js";
-import type { MenuHistoryRow, Season } from "../src/data/schemas.js";
+import type { Dish, MenuHistoryRow, Season } from "../src/data/schemas.js";
 
 /**
  * Forward simulation harness (docs/engine.md §9 spec-code parity: "the
@@ -90,6 +90,26 @@ describe("forward simulation harness", () => {
       for (const day of week.days) {
         const total = day.slots.reduce((sum, s) => sum + s.dishes.length, 0);
         expect(total).toBeGreaterThan(0);
+      }
+
+      // §4 step 5 within-week recency (Cluster A): no non-exempt dish appears
+      // 3+ times in any generated week. Only fruit-tagged dishes and lunch carbs
+      // (Chapati, Rice) are exempt and may recur (Seasonal fruit, Roti).
+      const dishCounts = new Map<number, { count: number; dish: Dish }>();
+      for (const day of week.days) {
+        for (const slot of day.slots) {
+          for (const dish of slot.dishes) {
+            const e = dishCounts.get(dish.id) ?? { count: 0, dish };
+            e.count += 1;
+            dishCounts.set(dish.id, e);
+          }
+        }
+      }
+      for (const { count, dish } of dishCounts.values()) {
+        const exempt =
+          dish.tags.includes("fruit") || dish.category === "Chapati" || dish.category === "Rice";
+        if (exempt) continue;
+        expect(count, `week ${weekStart}: ${dish.name} appears ${count}x`).toBeLessThan(3);
       }
 
       // Finalize: append derived history rows. The skipped week skips Friday.
