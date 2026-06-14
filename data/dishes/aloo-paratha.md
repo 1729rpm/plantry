@@ -12,6 +12,7 @@ prepMinutes: 30
 seasons: All
 complexity: Medium
 skill: Rolling a stuffed paratha without tearing takes a steady hand
+photo: aloo-paratha.jpg
 ---
 
 Wheat parathas stuffed with spiced mashed potato, griddled till golden.

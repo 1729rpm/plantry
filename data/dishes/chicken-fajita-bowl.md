@@ -13,6 +13,7 @@ seasons: All
 complexity: Medium
 skill: Char the chicken and peppers hard so they pick up a smoky edge
 buySpecially: Boneless chicken, 300g
+photo: chicken-fajita-bowl.jpg
 ---
 
 Smoky spiced chicken with charred peppers and onions over rice.

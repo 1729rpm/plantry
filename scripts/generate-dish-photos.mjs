@@ -1,14 +1,14 @@
 #!/usr/bin/env node
 // AI dish-photo generation pipeline (design-revamp B2.2). Reads dish files under
 // data/dishes/<slug>.md, fills the cuisine-aware prompt from data/dish-photos/STYLE.md
-// per dish, calls the Google Gemini image-generation API, converts the result to a
-// web-ready square JPEG via macOS `sips` (no npm image library, per STYLE.md), writes
-// data/dish-photos/<slug>.jpg, and sets the dish file's `photo:` frontmatter so the
-// image and its declared field always land together.
+// per dish, calls the Hugging Face text-to-image API (FLUX.1-schnell), converts the
+// result to a web-ready square JPEG via macOS `sips` (no npm image library, per
+// STYLE.md), writes data/dish-photos/<slug>.jpg, and sets the dish file's `photo:`
+// frontmatter so the image and its declared field always land together.
 //
-// The API key is read from the GEMINI_API_KEY env var. NEVER hardcode or commit it.
-// Load it before running:
-//   export GEMINI_API_KEY=$(grep '^GEMINI_API_KEY=' "/Users/rajatmugdal/Downloads/AI Products/ALL_KEYS.md" | cut -d= -f2-)
+// The API token is read from the HF_TOKEN env var. NEVER hardcode or commit it.
+// Load it before running (strip any trailing inline comment):
+//   export HF_TOKEN=$(grep '^HF_TOKEN=' "/Users/rajatmugdal/Downloads/AI Products/ALL_KEYS.md" | sed 's/^HF_TOKEN=//' | sed 's/#.*//' | xargs)
 //
 // Usage:
 //   node scripts/generate-dish-photos.mjs <slug> [<slug> ...]   # generate named dishes
@@ -27,13 +27,13 @@ const repoRoot = resolve(here, "..");
 const dishesDir = resolve(repoRoot, "data", "dishes");
 const photosDir = resolve(repoRoot, "data", "dish-photos");
 
-// Gemini image model. gemini-2.5-flash-image (GA "Nano Banana") is on the AI
-// Studio free tier and supports generateContent. The preview alias named in the
-// brief (gemini-2.5-flash-image-preview) is not listed on this key; the GA name
-// is the same model. Fallback kept for older keys/tiers.
-const PRIMARY_MODEL = "gemini-2.5-flash-image";
-const FALLBACK_MODEL = "gemini-2.0-flash-preview-image-generation";
-const API_BASE = "https://generativelanguage.googleapis.com/v1beta/models";
+// Image model: black-forest-labs/FLUX.1-schnell, an ungated, fast distilled
+// text-to-image model served free on Hugging Face. Two endpoints are tried in
+// order: the Inference Providers router (the current path), then the legacy
+// serverless Inference API as a fallback. Both return raw image bytes (PNG/JPEG).
+const MODEL = "black-forest-labs/FLUX.1-schnell";
+const ROUTER_URL = `https://router.huggingface.co/hf-inference/models/${MODEL}`;
+const LEGACY_URL = `https://api-inference.huggingface.co/models/${MODEL}`;
 
 const MAX_BYTES = 300 * 1024; // STYLE.md: "well under ~300 KB"
 const TARGET_PX = 1024;
@@ -55,13 +55,17 @@ const CUISINE_MAP = {
   oriental: { adj: "Thai", article: "a" },
 };
 const FUNCTIONAL_TAGS = new Set(["HP", "complete_meal", "complete_carb", "fruit"]);
-// Slug-level override (STYLE.md): Singapore noodles is Singaporean/Chinese-Malay,
-// not Thai, so it drops the cuisine adjective rather than be mislabelled.
-const NEUTRAL_CUISINE_SLUGS = new Set(["singapore-noodles"]);
+// Slug-level cuisine overrides (STYLE.md): a dish whose first cuisine tag would
+// mislabel it gets its phrase pinned here by slug. Singapore noodles is tagged
+// `oriental` (which defaults to Thai) but is Chinese-Malay, so Rajat pinned it to
+// "a Chinese home-cooked dish".
+const CUISINE_SLUG_OVERRIDES = {
+  "singapore-noodles": "a Chinese home-cooked dish",
+};
 
 /** Build the cuisine phrase slot ("a Thai home-cooked dish" / "an Indian home-cooked dish"). */
 function cuisinePhrase(slug, tags) {
-  if (NEUTRAL_CUISINE_SLUGS.has(slug)) return "a home-cooked dish";
+  if (CUISINE_SLUG_OVERRIDES[slug]) return CUISINE_SLUG_OVERRIDES[slug];
   for (const tag of tags) {
     if (FUNCTIONAL_TAGS.has(tag)) continue;
     const hit = CUISINE_MAP[tag];
@@ -131,42 +135,72 @@ function buildPrompt(slug, name, tags, description) {
 
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
-/** Call Gemini generateContent; return base64 image data, or throw. Retries 429. */
-async function generateImage(model, prompt, apiKey) {
-  const url = `${API_BASE}/${model}:generateContent`;
-  const body = {
-    contents: [{ parts: [{ text: prompt }] }],
-    generationConfig: { responseModalities: ["IMAGE"] },
-  };
-  const maxAttempts = 5;
-  for (let attempt = 1; attempt <= maxAttempts; attempt += 1) {
-    const res = await fetch(url, {
-      method: "POST",
-      headers: { "Content-Type": "application/json", "x-goog-api-key": apiKey },
-      body: JSON.stringify(body),
-    });
-    if (res.status === 429 || res.status === 503) {
-      const backoff = Math.min(60000, 2000 * 2 ** (attempt - 1));
-      console.warn(
-        `  rate-limited (${res.status}), backoff ${backoff}ms (attempt ${attempt}/${maxAttempts})`,
-      );
-      await sleep(backoff);
-      continue;
-    }
-    const json = await res.json();
-    if (!res.ok) {
-      throw new Error(`Gemini ${model} HTTP ${res.status}: ${JSON.stringify(json).slice(0, 400)}`);
-    }
-    const parts = json?.candidates?.[0]?.content?.parts ?? [];
-    const imgPart = parts.find((p) => p.inlineData?.data);
-    if (!imgPart) {
-      throw new Error(
-        `Gemini ${model}: no image in response: ${JSON.stringify(json).slice(0, 400)}`,
-      );
-    }
-    return imgPart.inlineData.data;
+/** POST the prompt to one HF endpoint; resolve to a Buffer of image bytes, throw on
+ * a hard error, or return null to signal a retryable condition (429/503/model load). */
+async function callEndpoint(url, prompt, token, attempt, maxAttempts) {
+  const res = await fetch(url, {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${token}`,
+      "Content-Type": "application/json",
+      Accept: "image/png",
+    },
+    body: JSON.stringify({
+      inputs: prompt,
+      // FLUX.1-schnell is a distilled few-step model; 4 steps is its sweet spot.
+      parameters: { width: TARGET_PX, height: TARGET_PX, num_inference_steps: 4 },
+      // Wait for a cold model rather than erroring immediately on first call.
+      options: { wait_for_model: true },
+    }),
+  });
+  if (res.status === 429 || res.status === 503) {
+    const backoff = Math.min(60000, 2000 * 2 ** (attempt - 1));
+    const note = await res.text().catch(() => "");
+    console.warn(
+      `  ${res.status} (${note.slice(0, 120)}), backoff ${backoff}ms (attempt ${attempt}/${maxAttempts})`,
+    );
+    await sleep(backoff);
+    return null; // retryable
   }
-  throw new Error(`Gemini ${model}: exhausted retries (rate-limited)`);
+  const ct = res.headers.get("content-type") || "";
+  if (!res.ok) {
+    const note = await res.text().catch(() => "");
+    const err = new Error(`HF HTTP ${res.status} (${url}): ${note.slice(0, 400)}`);
+    err.httpStatus = res.status;
+    throw err;
+  }
+  if (!ct.startsWith("image/")) {
+    // Some error states come back 200 with a JSON body.
+    const note = await res.text().catch(() => "");
+    throw new Error(`HF non-image response (${ct}) from ${url}: ${note.slice(0, 400)}`);
+  }
+  return Buffer.from(await res.arrayBuffer());
+}
+
+/** Generate one image via Hugging Face FLUX.1-schnell; return a Buffer of image
+ * bytes, or throw. Tries the router endpoint first, falls back to the legacy
+ * serverless endpoint, and retries 429/503 (model-loading) with backoff. */
+async function generateImage(prompt, token) {
+  const maxAttempts = 5;
+  let lastErr;
+  for (const url of [ROUTER_URL, LEGACY_URL]) {
+    for (let attempt = 1; attempt <= maxAttempts; attempt += 1) {
+      try {
+        const buf = await callEndpoint(url, prompt, token, attempt, maxAttempts);
+        if (buf) return buf;
+      } catch (err) {
+        lastErr = err;
+        // A 404 on the router means the model is not on that path; fall through to
+        // the legacy endpoint immediately rather than retrying.
+        if (err.httpStatus === 404) break;
+        // Auth/quota are not worth retrying or falling back on; surface at once.
+        if (err.httpStatus === 401 || err.httpStatus === 402 || err.httpStatus === 403) throw err;
+        // Other hard errors: stop retrying this endpoint, try the next.
+        break;
+      }
+    }
+  }
+  throw lastErr ?? new Error("HF: exhausted retries on both endpoints");
 }
 
 function run(cmd, args) {
@@ -188,7 +222,10 @@ function toWebReadyJpeg(rawPath, outPath) {
   // Center-crop to square.
   run("sips", ["-c", String(side), String(side), rawPath, "--out", outPath]);
   // Resize to target and set JPEG with a starting quality; step down if over budget.
-  for (const q of [80, 70, 60, 50, 40]) {
+  // The ladder runs to a low floor so even busy, high-detail dishes (which compress
+  // poorly) land under MAX_BYTES; FLUX output is sharp enough that q=25 still reads
+  // cleanly at the small thumbnail and the wide Explore strip.
+  for (const q of [80, 70, 60, 50, 40, 30, 25]) {
     run("sips", [
       "-s",
       "format",
@@ -224,7 +261,7 @@ function setPhotoField(slug, raw, photoFilename) {
   return newFm + closeFence + rest;
 }
 
-async function processDish(slug, apiKey, model) {
+async function processDish(slug, token) {
   const { path, raw, name, tags, description, hasPhoto } = readDish(slug);
   const prompt = buildPrompt(slug, name, tags, description);
   console.log(`\n[${slug}] ${name}`);
@@ -235,10 +272,10 @@ async function processDish(slug, apiKey, model) {
   }
   if (!existsSync(photosDir)) mkdirSync(photosDir, { recursive: true });
 
-  const b64 = await generateImage(model, prompt, apiKey);
+  const imgBuf = await generateImage(prompt, token);
   const rawPath = resolve(photosDir, `.${slug}.raw`);
   const outPath = resolve(photosDir, `${slug}.jpg`);
-  writeFileSync(rawPath, Buffer.from(b64, "base64"));
+  writeFileSync(rawPath, imgBuf);
   try {
     const q = toWebReadyJpeg(rawPath, outPath);
     const bytes = statSync(outPath).size;
@@ -270,32 +307,36 @@ async function main() {
     );
     process.exit(1);
   }
-  const apiKey = process.env.GEMINI_API_KEY;
-  if (!apiKey && !process.argv.includes("--dry-run")) {
-    console.error("GEMINI_API_KEY not set. See header comment for how to load it.");
+  const token = process.env.HF_TOKEN;
+  if (!token && !process.argv.includes("--dry-run")) {
+    console.error("HF_TOKEN not set. See header comment for how to load it.");
     process.exit(1);
   }
 
   const slugs = process.argv.includes("--one") ? [args[0]] : args;
-  let model = PRIMARY_MODEL;
+  const landed = [];
+  const failed = [];
   for (let i = 0; i < slugs.length; i += 1) {
     const slug = slugs[i];
     try {
-      await processDish(slug, apiKey, model);
+      await processDish(slug, token);
+      landed.push(slug);
     } catch (err) {
-      // On a first-dish model failure, try the fallback model once.
-      if (model === PRIMARY_MODEL && /HTTP 40[04]|not found|no image/.test(String(err))) {
-        console.warn(`  ${PRIMARY_MODEL} failed (${err.message}); trying ${FALLBACK_MODEL}`);
-        model = FALLBACK_MODEL;
-        await processDish(slug, apiKey, model);
-      } else {
-        throw err;
+      failed.push(slug);
+      // Auth/quota are fatal: stop the run and report so we do not burn the
+      // remaining slugs against a dry key (brief: fail fast on quota/auth).
+      if (err.httpStatus === 401 || err.httpStatus === 402 || err.httpStatus === 403) {
+        console.error(`\n[${slug}] FATAL auth/quota error, stopping run: ${err.message}`);
+        break;
       }
+      // Other per-dish failures: log and keep going so a partial pilot still lands.
+      console.error(`\n[${slug}] failed (continuing): ${err.message}`);
     }
     // Pace requests (free-tier throttle).
     if (i < slugs.length - 1) await sleep(4000);
   }
-  console.log(`\nDone. Model used: ${model}`);
+  console.log(`\nDone. Model: ${MODEL}. Landed ${landed.length}/${slugs.length}.`);
+  if (failed.length) console.log(`Failed: ${failed.join(", ")}`);
 }
 
 main().catch((err) => {

@@ -12,6 +12,7 @@ prepMinutes: 15
 seasons: All
 complexity: Easy
 skill: Blend long with a little iced water so it turns pale and silky
+photo: hummus.jpg
 ---
 
 Smooth blended chickpeas with tahini, garlic and lemon.

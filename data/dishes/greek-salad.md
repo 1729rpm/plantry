@@ -12,6 +12,7 @@ prepMinutes: 15
 seasons: All
 complexity: Easy
 skill: Cut the vegetables chunky so the salad stays crisp and juicy
+photo: greek-salad.jpg
 ---
 
 Chunky cucumber, tomato and onion with feta and olive oil.

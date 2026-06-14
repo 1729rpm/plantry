@@ -13,6 +13,7 @@ seasons: All
 complexity: Medium
 skill: Fry the green curry paste in coconut cream till it splits before adding liquid
 buySpecially: Boneless chicken, 300g
+photo: thai-green-curry-chicken.jpg
 ---
 
 Boneless chicken and vegetables in a fragrant Thai green coconut curry.

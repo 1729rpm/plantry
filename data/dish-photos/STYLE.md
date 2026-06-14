@@ -96,9 +96,10 @@ The cuisine-tag vocabulary in the library is exactly:
 
 `oriental` maps to Thai: the dishes tagged `oriental` are Thai (pad thai, the
 Thai curries, Thai basil chicken, Thai pineapple fried rice). The one exception
-is **Singapore noodles** (a Singaporean/Chinese-Malay dish, not Thai); for that
-dish use the neutral phrase "a home-cooked dish" (drop the cuisine adjective)
-rather than mislabel it. The pipeline hardcodes this single override by slug.
+is **Singapore noodles** (a Chinese-Malay curry-powder noodle dish, not Thai);
+that dish is pinned to "a Chinese home-cooked dish" so it is not mislabelled as
+Thai (Rajat's call: it is the closest honest single-word cuisine for the photo).
+The pipeline hardcodes this single override by slug.
 
 This table is the single source of truth for the tag-to-cuisine mapping; the
 generation script reads its logic from here, so any future cuisine tag must be

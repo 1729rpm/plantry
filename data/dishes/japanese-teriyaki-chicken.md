@@ -12,6 +12,7 @@ prepMinutes: 25
 seasons: All
 complexity: Easy
 skill: Reduce the sauce till it coats the chicken in a glossy glaze
+photo: japanese-teriyaki-chicken.jpg
 ---
 
 Pan-seared chicken glazed in a sweet-salty soy teriyaki sauce.

@@ -71,9 +71,10 @@ describe("coverageReport", () => {
     expect(cov.withDescription).toBe(cov.activeDishCount);
     expect(cov.withRecipe).toBe(cov.activeDishCount);
     expect(cov.withComplexity).toBe(cov.activeDishCount);
-    // Photos remain a separate (B2) track; no images committed yet, so coverage
-    // is zero. The first photo batch updates this expectation.
-    expect(cov.withPhoto).toBe(0);
+    // Photos are a separate (B2) track, burned down one batch at a time. The
+    // first pilot batch (B2.2) landed 15 photos; this snapshot tracks live data,
+    // so each photo batch bumps this number. It is a report assertion, not a rule.
+    expect(cov.withPhoto).toBe(15);
   });
 });
 
