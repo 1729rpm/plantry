@@ -11,6 +11,7 @@ satiety: High
 prepMinutes: 10
 seasons: All
 complexity: Easy
+photo: anda-bhurji.jpg
 ---
 
 Indian scrambled eggs cooked down with onion, tomato and green chilli.

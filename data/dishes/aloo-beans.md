@@ -11,6 +11,7 @@ satiety: Low
 prepMinutes: 20
 seasons: All
 complexity: Easy
+photo: aloo-beans.jpg
 ---
 
 French beans and potato stir-fried with onion and a light spicing.

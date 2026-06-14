@@ -12,6 +12,7 @@ prepMinutes: 25
 seasons: All
 complexity: Easy
 skill: Season the beans and rice well so the bowl is not bland
+photo: bean-burrito-bowl.jpg
 ---
 
 A loaded bowl of spiced beans, rice, corn and fresh salsa.

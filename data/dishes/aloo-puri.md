@@ -12,6 +12,7 @@ prepMinutes: 35
 seasons: All
 complexity: Medium
 prePrep: Boil the potatoes the night before for a quicker morning
+photo: aloo-puri.jpg
 ---
 
 A spiced potato masala served with puffy deep-fried puris.

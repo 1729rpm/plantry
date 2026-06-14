@@ -12,6 +12,7 @@ prepMinutes: 25
 seasons: [Winter]
 complexity: Medium
 skill: Patting the gluten-free dough thin by hand takes a little practice
+photo: bajra-roti.jpg
 ---
 
 Rustic winter flatbreads of pearl millet, warming and earthy.
