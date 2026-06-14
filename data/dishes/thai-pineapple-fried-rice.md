@@ -12,6 +12,7 @@ prepMinutes: 25
 seasons: All
 complexity: Easy
 skill: Use cold cooked rice so the grains stay separate on high heat
+photo: thai-pineapple-fried-rice.jpg
 ---
 
 Cold rice tossed with egg, cashews and sweet pineapple in a light curry-spiced fry.

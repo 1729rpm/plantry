@@ -73,11 +73,12 @@ describe("coverageReport", () => {
     expect(cov.withComplexity).toBe(cov.activeDishCount);
     // Photos are a separate (B2) track, burned down one batch at a time. This
     // snapshot tracks live data, so each photo batch bumps this number. The
-    // data/photos-3 run on NVIDIA FLUX.1-dev brought coverage to 191 of 200
-    // active dishes; the 9 still missing are ones the provider safety filter
-    // refuses to render (the biryanis, a few fried-rice/fish/falafel dishes),
-    // covered by the no-photo placeholder. It is a report assertion, not a rule.
-    expect(cov.withPhoto).toBe(191);
+    // data/photos-4 run closed the last 9: a prompt-only sanitizer rewrites the
+    // token "fried" (which the NVIDIA FLUX.1-dev content filter false-positives
+    // on) to a visually-equivalent synonym, so the biryanis and the
+    // fried-rice/fish/falafel dishes now render. Coverage is 200 of 200 active
+    // dishes. It is a report assertion, not a rule.
+    expect(cov.withPhoto).toBe(200);
   });
 });
 

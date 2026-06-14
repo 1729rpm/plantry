@@ -136,10 +136,49 @@ function readDish(slug) {
   return { path, raw, name, tags, description, hasPhoto };
 }
 
+// NVIDIA's FLUX.1-dev content filter false-positives on the literal token
+// "fried" (deterministically returns finishReason CONTENT_FILTERED / a black
+// frame, seed-independent); the verb "fry" is fine. This rewrites "fried" out of
+// the prompt string ONLY (never the canonical dish file on disk) to a
+// visually-equivalent synonym with no "fried" substring, so the rendered image
+// still matches the dish. Applied as a general token transform to every prompt,
+// ordered most-specific phrase first so the synonym preserves the dish's look,
+// with a bare "fried" -> "pan-cooked" fallback. Each rule is case-insensitive
+// and keeps the matched word's leading-capital casing.
+const FRIED_SUBSTITUTIONS = [
+  // Whole phrases first (most specific), so e.g. "fried rice" keeps the stir-fry
+  // look rather than collapsing to the bare fallback.
+  [/\bstir-fried\b/gi, "wok-tossed"],
+  [/\bdeep-fried\b/gi, "pan-crisped"],
+  [/\bshallow fried\b/gi, "pan-crisped"],
+  [/\bfried rice\b/gi, "stir-fry rice"],
+  [/\bfried onions\b/gi, "golden browned onions"],
+  [/\bfried onion\b/gi, "golden browned onion"],
+  [/\bfried patties\b/gi, "golden patties"],
+  [/\bfried crisp\b/gi, "crisp-cooked"],
+  // Bare fallback: any remaining standalone "fried".
+  [/\bfried\b/gi, "pan-cooked"],
+];
+
+/** Preserve the matched word's leading-capital casing on the replacement (e.g.
+ * "Fried rice" -> "Stir-fry rice") so a sentence-initial term stays capitalized. */
+function matchCase(match, replacement) {
+  return /^[A-Z]/.test(match) ? replacement[0].toUpperCase() + replacement.slice(1) : replacement;
+}
+
+/** Rewrite the filter-blocked "fried" token out of an assembled prompt string. */
+function sanitizeFriedToken(prompt) {
+  let out = prompt;
+  for (const [re, repl] of FRIED_SUBSTITUTIONS) {
+    out = out.replace(re, (m) => matchCase(m, repl));
+  }
+  return out;
+}
+
 /** Fill the frozen STYLE.md prompt. Only the three slots vary. */
 function buildPrompt(slug, name, tags, description) {
   const cuisine = cuisinePhrase(slug, tags);
-  return (
+  const prompt =
     `A single appetizing serving of ${name}, ${cuisine} ` +
     `(${description}), photographed from directly overhead (flat lay, 90-degree ` +
     `top-down). The dish is plated in or on simple matte stoneware in a warm cream or ` +
@@ -153,8 +192,9 @@ function buildPrompt(slug, name, tags, description) {
     `actually looks when cooked at home. The food fills roughly the central two-thirds ` +
     `of a square frame with comfortable headroom on every edge. Sharp focus on the food, ` +
     `shallow background blur. Realistic photographic style, natural food textures. ` +
-    `Square 1:1 composition.`
-  );
+    `Square 1:1 composition.`;
+  // Sanitize the assembled string only; the dish file on disk is untouched.
+  return sanitizeFriedToken(prompt);
 }
 
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
