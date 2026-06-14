@@ -368,9 +368,19 @@ Every PR runs these checks; any failure blocks merge.
 5. **Property tests.** Item cap never exceeded, no dish in no-repeat window appears in output, Saturday alternates Menu 3/4 across consecutive weeks.
 6. **Convex schema typecheck.** `npx convex codegen` succeeds; no orphan tables or fields.
 7. **Frontend build.** Vite build succeeds; type-check passes; service worker bundles.
-8. **Lint and format.** ESLint + Prettier, no warnings.
+8. **Lint and format.** ESLint + Prettier + stylelint, no warnings. stylelint parses every `app/web/src/**/*.css` and fails the build on unbalanced or unclosed CSS, which Vite would otherwise tolerate and ship silently.
 
-## 16. Anti-patterns
+## 16. UI verification: full-flow crawl-and-compare
+
+The CI gates above catch data, engine, type, and CSS-syntax errors, but not how the app renders or behaves. Rendering and interaction are verified by an in-depth crawl the EM spins off for every frontend-touching slice (see `docs/development.md` §3 and §4), run against the PR preview before merge and against production after.
+
+The crawl is Playwright-driven and walks every customer flow, not only the slice's feature: the passcode gate and identity picker, the Menu week, the Day editor and every sheet (dish actions, details and recipe, replace and swap, add a dish, comment, skip, restore), Grocery, Explore (grid, filters, dish sheet, dislike), Changes, the Share preview, and the identity switch. It enters the app by injecting the auth and identity records into `localStorage` (`plantry:auth`, `plantry:identity`), so it needs no passcode and writes no user profile; read-only passes take no other writes, and mutating flows are exercised on the preview's isolated database, or mutate-then-revert against production with explicit approval.
+
+For each screen the crawl captures a screenshot and asserts structural invariants: no element overflows the viewport horizontally, key elements are actually styled (computed-style checks, for example a grid resolves to a grid and cards are phone-sized rather than overflowing), focus moves into a sheet when it opens, the page behind a sheet cannot scroll, tap targets are at least 44px, and the console is clean. Each screenshot is compared against the matching screen in `design_handoff/`; a deviation is either fixed or recorded as an accepted difference in the PR's diagnosis card. Because the stylesheet and the shared primitives are global, a CSS or primitive change is crawled across all tabs regardless of which screen the slice nominally touched.
+
+The scriptable floor of this crawl is `app/web/e2e/smoke.mjs` (`npm run test:smoke`): it loads each tab and asserts no horizontal overflow and correctly sized cards. It runs locally or against a deployment; the EM runs the fuller in-depth crawl-and-compare per slice.
+
+## 17. Anti-patterns
 
 - Reading markdown files inside Convex functions at runtime. Markdown is read at build time; runtime reads typed JS modules.
 - Adding a new frontmatter key to the per-dish files or a new column to the `ingredients.md` catalog for a one-off case (violates Principle 8 in `docs/product.md`).
