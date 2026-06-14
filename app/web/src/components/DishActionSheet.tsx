@@ -81,8 +81,8 @@ export function DishActionSheet({
   if (confirmingDelete) {
     return (
       <ReasonDialog
-        title={`Remove ${dishLabel}`}
-        hint="Removing leaves the day with fewer dishes. A short reason helps the review."
+        title={`Delete ${dishLabel}`}
+        hint="Deleting leaves the day with fewer dishes. A short reason helps the review."
         submitLabel="Delete dish"
         inFlight={inFlight}
         error={error}
@@ -112,7 +112,7 @@ export function DishActionSheet({
           onClick={() => setConfirmingDelete(true)}
         >
           <span className="action-sheet__label action-sheet__label--danger">Delete</span>
-          <span className="action-sheet__hint">Remove from this day</span>
+          <span className="action-sheet__hint">Delete from this day</span>
         </button>
       </div>
     </Sheet>
