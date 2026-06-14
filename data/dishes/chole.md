@@ -12,6 +12,7 @@ prepMinutes: 35
 seasons: All
 complexity: Medium
 prePrep: Soak the chickpeas overnight
+photo: chole.jpg
 ---
 
 Spiced chickpea curry in a dark onion-tomato masala, a Punjabi staple.

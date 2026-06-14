@@ -13,6 +13,7 @@ seasons: All
 complexity: Medium
 skill: Cook the prawns fast on high heat so they stay plump and do not toughen
 buySpecially: Cleaned prawns, 300g
+photo: chinese-chilli-garlic-prawns.jpg
 ---
 
 Prawns tossed fast in a sticky chilli, garlic and soy sauce.

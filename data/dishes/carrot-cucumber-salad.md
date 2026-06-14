@@ -11,6 +11,7 @@ satiety: Low
 prepMinutes: 5
 seasons: All
 complexity: Easy
+photo: carrot-cucumber-salad.jpg
 ---
 
 A fresh grated carrot and cucumber salad sharpened with lemon.

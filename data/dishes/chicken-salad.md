@@ -11,6 +11,7 @@ satiety: Medium
 prepMinutes: 15
 seasons: All
 complexity: Easy
+photo: chicken-salad.jpg
 ---
 
 Seared chicken tossed with lettuce, cucumber and a lemon dressing.

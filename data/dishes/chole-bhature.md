@@ -12,6 +12,7 @@ prepMinutes: 50
 seasons: All
 complexity: Hard
 prePrep: Soak the chickpeas overnight and prove the bhatura dough ahead
+photo: chole-bhature.jpg
 ---
 
 Spiced chickpea chole served with soft, puffy deep-fried bhature.

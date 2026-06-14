@@ -12,6 +12,7 @@ prepMinutes: 30
 seasons: All
 complexity: Medium
 skill: Reduce the tomato sauce well so the bowl is saucy, not watery
+photo: chicken-enchilada-bowl.jpg
 ---
 
 Shredded chicken in a smoky tomato sauce over rice with beans and cheese.

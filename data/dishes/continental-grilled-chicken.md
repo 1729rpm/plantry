@@ -13,6 +13,7 @@ seasons: All
 complexity: Easy
 skill: Rest the chicken after grilling so it stays juicy
 buySpecially: Chicken breast, 250g
+photo: continental-grilled-chicken.jpg
 ---
 
 Herb-marinated grilled chicken breast with sauteed vegetables.

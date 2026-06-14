@@ -14,6 +14,7 @@ complexity: Medium
 skill: Comfortable, browning the onion masala matters
 equipment: Heavy kadhai
 buySpecially: Curry cut chicken, 600g
+photo: chicken-masala-gravy.jpg
 ---
 
 Everyday chicken curry built on slow-browned onions and a tomato-curd masala.

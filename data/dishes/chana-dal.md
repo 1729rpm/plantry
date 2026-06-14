@@ -11,6 +11,7 @@ satiety: Medium
 prepMinutes: 35
 seasons: All
 complexity: Easy
+photo: chana-dal.jpg
 ---
 
 Nutty chana dal cooked soft and finished with a garlic tempering.
