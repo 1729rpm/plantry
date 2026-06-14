@@ -121,6 +121,19 @@ nextWeekQueue                          # dishes saved for next week from Explore
 # ones `placed` with the consuming week, and leaves unplaceable ones `queued` (an
 # incident is logged). The slow loop may mark stale queued rows `dropped`.
 
+dishDislikes                           # dishes disliked from Explore ("Not for me")
+  createdAt: number
+  author: "rajat" | "tuhina"
+  dishId: number                       # library dish id
+  reason: string | null                # optional, unlike the reason-required writes
+  status: "queued" | "applied" | "dismissed"
+  consumedWeekStart: string | null     # set once the slow loop consumes the row
+
+# A records-only signal: the dislike affordance writes one row and does nothing
+# in-session (no re-rank, no hide). The slow loop clusters dislikes and may
+# deactivate or down-rank a dish under right-size discipline, marking consumed
+# rows `applied` or `dismissed`.
+
 incidents
   createdAt: number
   source: "engine" | "backend" | "frontend"
@@ -135,7 +148,7 @@ userProfiles
   installedAt: number
 ```
 
-`comments`, `manualChanges`, `incidents`, and `nextWeekQueue` are the signal channels the slow loop consumes. Comments are explicit user feedback. Manual changes are observed behavior, one row per swap, custom one-off, delete, add, day skip, day restore, or save-for-next-week with the user's stated reason. Incidents are runtime violations from the engine or backend. The next-week queue records dishes the user wants the engine to favor. The `status` lifecycle on `comments`, `manualChanges`, and `incidents` is identical so the slow-loop mark-applied action can mark every consumed row uniformly (see `MAINTENANCE.md` §3); `nextWeekQueue` has its own `queued`/`placed`/`dropped` lifecycle driven by generation and the slow loop.
+`comments`, `manualChanges`, `incidents`, `nextWeekQueue`, and `dishDislikes` are the signal channels the slow loop consumes. Comments are explicit user feedback. Manual changes are observed behavior, one row per swap, custom one-off, delete, add, day skip, day restore, or save-for-next-week with the user's stated reason. Incidents are runtime violations from the engine or backend. The next-week queue records dishes the user wants the engine to favor. Dislikes record dishes the user does not want, surfaced from Explore. The `status` lifecycle on `comments`, `manualChanges`, and `incidents` is identical so the slow-loop mark-applied action can mark every consumed row uniformly (see `MAINTENANCE.md` §3); `nextWeekQueue` has its own `queued`/`placed`/`dropped` lifecycle driven by generation and the slow loop.
 
 The library + rules are not in Convex. Convex functions load them by importing typed JSON or TS modules emitted at build time from the markdown files (see §4).
 
