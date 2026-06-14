@@ -1286,13 +1286,32 @@ input {
   line-height: 1.5;
 }
 
+/* Label + dish names as a two-column row: a fixed, non-shrinking label column
+   on the left and the dish text in its own min-width:0 column on the right, so a
+   long dish list wraps within the text column (clean left edge) instead of
+   sliding back under the label. A small gap separates the stacked meal rows. */
+.share-img__meal {
+  display: flex;
+  gap: 8px;
+}
+
+.share-img__meal + .share-img__meal {
+  margin-top: 4px;
+}
+
 .share-img__meal-label {
+  flex: 0 0 62px;
   color: var(--pt-green);
   font-weight: 700;
   font-size: 10.5px;
   letter-spacing: 0.1em;
+  line-height: 1.5;
   text-transform: uppercase;
-  margin-right: 8px;
+  white-space: nowrap;
+}
+
+.share-img__meal-dishes {
+  min-width: 0;
 }
 
 .share-img__skipped {
@@ -1425,17 +1444,26 @@ input {
 .share__hint {
   font-size: 12.5px;
   color: var(--pt-sub);
-  margin-top: 10px;
+  margin-bottom: 10px;
 }
 
 .share__error {
   font-size: 12.5px;
   color: var(--pt-danger);
-  margin-top: 10px;
+  margin-bottom: 10px;
 }
 
-.share__send {
-  margin-top: 14px;
+/* Sticky footer pinned to the bottom of the sheet's scroll area. The rail above
+   scrolls; Send stays reachable. Full-bleed surface (negative margins cancel the
+   panel's 18px side padding) with a top hairline so scrolling content does not
+   show through. The panel's own bottom padding carries the iOS safe-area inset. */
+.share__footer {
+  position: sticky;
+  bottom: 0;
+  margin: 0 -18px;
+  padding: 12px 18px 4px;
+  background: var(--pt-surface);
+  border-top: 1px solid var(--pt-line);
 }
 
 /* Off-screen capture stage: laid out (not display:none) so html-to-image can
