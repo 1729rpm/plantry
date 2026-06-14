@@ -145,6 +145,31 @@ function hasTag(dish: Dish, tag: string): boolean {
   return dish.tags.includes(tag);
 }
 
+/** True when the dish carries the high-protein tag (§3 one-HP-per-meal input). */
+export function isHp(dish: Dish): boolean {
+  return hasTag(dish, "HP");
+}
+
+/**
+ * §3 one-HP-source-per-meal filter, applied to a non-main position pool once an
+ * HP dish already occupies the meal. A single meal (a day's breakfast or a day's
+ * lunch) carries AT MOST ONE HP-tagged dish, so when an earlier position of the
+ * meal took an HP dish, the remaining positions drop HP-tagged candidates. This
+ * is keyed on the `HP` tag, never on dish names, so it holds for any HP protein
+ * (chicken on chicken, paneer on paneer) and across every menu form.
+ *
+ * Thin-pool fallback: if removing HP-tagged dishes would empty the pool, the
+ * unfiltered pool is returned so the slot still fills (one HP-main meal with a
+ * second HP side beats an incomplete meal). This is rare given the broad
+ * companion pools and surfaces as composition signal for the slow loop, not a
+ * hard error. When `mealHasHp` is false the pool is returned unchanged.
+ */
+export function excludeHpIfMealHasHp(pool: Dish[], mealHasHp: boolean): Dish[] {
+  if (!mealHasHp) return pool;
+  const nonHp = pool.filter((d) => !isHp(d));
+  return nonHp.length > 0 ? nonHp : pool;
+}
+
 const PLAIN_BREAKFAST_CARB_CATEGORIES = new Set(["Bread", "Paratha", "Chilla"]);
 
 /** §3 Breakfast Mon/Wed/Fri Option A: complete_meal + fruit. */

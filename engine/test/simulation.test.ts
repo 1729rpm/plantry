@@ -3,6 +3,7 @@ import { generateWeek } from "../src/generateWeek.js";
 import { deriveHistoryRows } from "../src/historyRows.js";
 import { aggregateGroceryList, type GroceryDayPicks } from "../src/groceryList.js";
 import { loadLiveData } from "./loadLive.js";
+import { isHpMain, proteinFamily } from "../src/priority.js";
 import type { Day } from "../src/eligibility.js";
 import type { Dish, MenuHistoryRow, Season } from "../src/data/schemas.js";
 
@@ -130,6 +131,106 @@ describe("forward simulation harness", () => {
 
     // History grew by roughly five weeks of rows (minus the skipped Friday).
     expect(history.length).toBeGreaterThan(seedHistory.length);
+  });
+
+  it("Cluster D: no meal across the five-week sim carries more than one HP dish", () => {
+    const rng = makeRng(42);
+    let history: MenuHistoryRow[] = [...seedHistory];
+    let lastSaturdayMenu: 3 | 4 | null = null;
+
+    for (let i = 0; i < WEEKS; i += 1) {
+      const weekStart = weekStarts[i];
+      const week = generateWeek({
+        weekStart,
+        library,
+        history,
+        season: seasonOf(weekStart),
+        ingredients,
+        packSizes,
+        rng,
+        lastSaturdayMenu,
+      });
+
+      // §3 one-HP-per-meal: every slot (a day's breakfast or a day's lunch)
+      // carries at most one HP-tagged dish. The thin-pool fallback can in
+      // principle yield two, but the live library's broad companion pools make
+      // that not occur, so we assert the strict invariant here.
+      for (const day of week.days) {
+        for (const slot of day.slots) {
+          const hpCount = slot.dishes.filter((d) => d.tags.includes("HP")).length;
+          expect(
+            hpCount,
+            `week ${weekStart} ${day.day} ${slot.meal}: ${hpCount} HP dishes ` +
+              `(${slot.dishes.map((d) => d.name).join(", ")})`,
+          ).toBeLessThanOrEqual(1);
+        }
+      }
+
+      history = [...history, ...deriveHistoryRows({ week })];
+      const satLunch = week.days
+        .find((d) => d.day === "Sat")
+        ?.slots.find((s) => s.meal === "Lunch");
+      if (satLunch && satLunch.dishes.length > 0) {
+        lastSaturdayMenu = satLunch.dishes[0].tags.includes("HP") ? 3 : 4;
+      }
+    }
+  });
+
+  it("Cluster E: no single protein is the HP main 3+ times in a week when alternatives exist", () => {
+    const rng = makeRng(42);
+    let history: MenuHistoryRow[] = [...seedHistory];
+    let lastSaturdayMenu: 3 | 4 | null = null;
+
+    for (let i = 0; i < WEEKS; i += 1) {
+      const weekStart = weekStarts[i];
+      const week = generateWeek({
+        weekStart,
+        library,
+        history,
+        season: seasonOf(weekStart),
+        ingredients,
+        packSizes,
+        rng,
+        lastSaturdayMenu,
+      });
+
+      // The week's HP mains, normalized to protein families. The HP main of a
+      // meal is its first HP-main dish (Gravy/Dry/Complete meal/Keto + HP tag).
+      const hpMainFamilies: string[] = [];
+      for (const day of week.days) {
+        for (const slot of day.slots) {
+          const main = slot.dishes.find((d) => isHpMain(d));
+          if (main) hpMainFamilies.push(proteinFamily(main));
+        }
+      }
+      const familyCounts = new Map<string, number>();
+      for (const fam of hpMainFamilies) {
+        familyCounts.set(fam, (familyCounts.get(fam) ?? 0) + 1);
+      }
+
+      // The live Monsoon library has many proteins (chicken, paneer, egg, fish,
+      // prawn, mutton, soya, chickpea), so alternative HP-main proteins always
+      // have eligible candidates. The soft §4.6 rule must keep any one protein
+      // under 3 HP-main appearances per week.
+      for (const [fam, count] of familyCounts) {
+        expect(
+          count,
+          `week ${weekStart}: protein ${fam} is the HP main ${count} times`,
+        ).toBeLessThan(3);
+      }
+
+      // Sanity: the week genuinely uses multiple proteins (so the assertion is
+      // not vacuously satisfied by an HP-poor week).
+      expect(familyCounts.size).toBeGreaterThanOrEqual(2);
+
+      history = [...history, ...deriveHistoryRows({ week })];
+      const satLunch = week.days
+        .find((d) => d.day === "Sat")
+        ?.slots.find((s) => s.meal === "Lunch");
+      if (satLunch && satLunch.dishes.length > 0) {
+        lastSaturdayMenu = satLunch.dishes[0].tags.includes("HP") ? 3 : 4;
+      }
+    }
   });
 
   it("property: a skipped day contributes zero grocery rows and zero history rows", () => {

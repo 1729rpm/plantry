@@ -29,6 +29,8 @@ At most one weekday lunch per week may substitute Menu 3 or Menu 4 for its defau
 
 ## 3. Slot Composition
 
+**One HP source per meal (all forms).** A single meal (a day's breakfast or a day's lunch) contains at most one HP-tagged dish. Each meal form below picks its protein main first; once an HP dish occupies the meal, the meal's remaining (non-main) positions exclude HP-tagged dishes. This is keyed on the `HP` tag, never on dish names, so it holds for any HP protein (chicken on chicken, paneer on paneer) and across every form: a "Chicken biryani" complete_meal never sits beside a "Chicken salad" HP accompaniment in one Saturday Menu 3. Thin-pool fallback: if excluding HP-tagged dishes would empty a non-main position pool, the unfiltered pool is used so the slot still fills (one HP-main meal with a second HP side beats an incomplete meal). This is rare given the broad companion pools and surfaces as composition signal for the slow loop, not a hard error.
+
 ### Breakfast
 
 Mon, Wed, Fri (2 items), pick exactly one option per day:
@@ -49,7 +51,7 @@ Tue, Thu (1 item):
 - 1 partner: if HP is Dry, pick a non-HP Gravy dish; if HP is Gravy, pick a non-HP Accompaniment
 - 1 lunch carb (see §3.1)
 
-The partner is always non-HP: a meal carries one HP source, not two. The Menu 1 main is the meal's HP pick, so the partner pool (the non-HP Gravy when the main is Dry, the Accompaniment when the main is Gravy) excludes any dish carrying the HP tag. This is keyed on the HP tag, never on dish names, so it holds for any HP protein (chicken on chicken, paneer on paneer). Fallback: if excluding HP-tagged dishes would empty the partner pool, the unfiltered pool is used so the slot still fills (one HP-main meal with a second HP side beats an incomplete meal); this is rare given the broad Accompaniment and non-HP Gravy pools and surfaces as composition signal for the slow loop, not a hard error.
+The partner is always non-HP: this is the one-HP-source-per-meal rule (above) applied to Menu 1. The Menu 1 main is the meal's HP pick, so the partner pool (the non-HP Gravy when the main is Dry, the Accompaniment when the main is Gravy) excludes any dish carrying the HP tag, with the same thin-pool fallback.
 
 **Menu 2 (Tue, Thu), 4 items:**
 
@@ -58,10 +60,12 @@ The partner is always non-HP: a meal carries one HP source, not two. The Menu 1 
 - 1 non-HP Dry dish
 - 1 lunch carb (see §3.1)
 
+The Keto dish is the meal's protein lead and the only position that may be HP; the Gravy and Dry companions are already non-HP, so one-HP-per-meal holds by construction.
+
 **Menu 3 (Saturday), 3 items:**
 
 - 1 dish with both `complete_meal` and HP tags
-- 1 Accompaniment
+- 1 Accompaniment (non-HP; the lead is always HP, so one-HP-per-meal excludes HP accompaniments, with the thin-pool fallback)
 - 1 Dessert
 
 **Menu 4 (Saturday), 3 items:**
@@ -69,6 +73,8 @@ The partner is always non-HP: a meal carries one HP source, not two. The Menu 1 
 - 1 dish with `complete_meal` tag and no HP tag
 - 1 Keto dish
 - 1 Accompaniment
+
+The lead is non-HP, so the meal's one HP source (if any) is whichever of the Keto dish or the Accompaniment lands one first; once it does, the later position excludes HP-tagged dishes (with the thin-pool fallback). Breakfast forms apply the same rule: an HP breakfast main excludes an HP partner (a fruit partner is never HP; an HP accompaniment partner is dropped under Option B).
 
 ### 3.1 Lunch carb rule
 
@@ -99,8 +105,25 @@ After §3 composition has produced the candidate set for a slot, rank candidates
 3. **Ingredient consolidation (§10).** Prefer candidates that consume leftover from earlier picks in the week.
 4. **Preferred=Yes** over Preferred=No.
 5. **Within-week recency.** A dish already placed in an earlier slot of the week being generated is treated as most-recently-used for every subsequent slot's ranking, so it sinks below any fresh (not-yet-placed-this-week) alternative. This is the dominant ordering: unlike step 1's `menu_history.md` recency, it is applied last, so neither consolidation (step 3) nor Preferred=Yes (step 4) can re-promote an already-placed dish above an equally eligible fresh one. It exists because the cross-week history (step 1) is silent on the in-progress week, so without it a single broad pool's top-ranked dish (e.g. the longest-unused HP gravy) wins every Menu 1 slot Mon/Wed/Fri identically. When every candidate has already been placed this week, demoting them all is the same as demoting none, so the pool is returned unchanged and the repeat is allowed (the fresh-alternative fallback, mirroring step 2).
+6. **Within-week protein diversity (HP mains only).** This is the protein-level analogue of step 5, scoped to HP mains. An HP main is an `HP`-tagged dish in a meal's protein-main slot: Category in {Gravy dish, Dry dish, Complete meal, Keto}. (HP accompaniments are sides, not mains, so they neither consume nor are governed by this step; the one-HP-per-meal rule in §3 already keeps them off an HP-main meal.) When ranking an HP-main pool, a candidate whose **protein family** (see §4.6) already appeared as an HP main earlier in the week is deprioritised below the fresh-protein candidates, so a fresh protein ranks up and the week's HP mains spread across proteins (fish, prawn, mutton, egg get a fair shot) rather than repeating chicken or paneer. This is a soft preference, not a hard constraint: if every candidate's protein family already appeared (no fresh-protein alternative), the pool is returned unchanged so the slot still fills (the fresh-alternative fallback, mirroring steps 2 and 5). It never narrows §3 composition eligibility and never overrides the recency exemptions (below). It applies only to HP-main position pools; companion (non-main) pools are never reordered by protein.
 
-Recency exemptions (apply to both step 1 and step 5): dishes with the `fruit` tag, and lunch carbs (Category in {Chapati, Rice}). A fruit-tagged dish repeating across Mon/Wed/Fri breakfasts and Roti repeating across lunches are intended, not defects.
+Recency exemptions (apply to step 1 and step 5): dishes with the `fruit` tag, and lunch carbs (Category in {Chapati, Rice}). A fruit-tagged dish repeating across Mon/Wed/Fri breakfasts and Roti repeating across lunches are intended, not defects. Step 6 acts only on HP mains, none of which are exempt categories, so the exemption list does not interact with it.
+
+### 4.6 Protein-family normalization
+
+Step 6 compares dishes by protein family, not by raw `primaryIngredient`, so cuts of the same protein count as one protein for diversity. The mapping collapses these families and passes every other ingredient through unchanged (each is its own family):
+
+| `primaryIngredient` | Protein family |
+| ------------------- | -------------- |
+| Chicken             | Chicken        |
+| Chicken Breast      | Chicken        |
+| Chicken Keema       | Chicken        |
+| Soyabean Chunk      | Soyabean Chunk |
+| Soya Chunk          | Soyabean Chunk |
+| Soyabean            | Soyabean Chunk |
+| Soya                | Soyabean Chunk |
+
+Any value not in the table (Paneer, Egg, Fish, Prawn, Mutton, Tofu, Chickpea, and any non-protein primary such as Couscous or Rice) maps to itself. The normalization is keyed on the ingredient label, never on dish names, so it holds for any dish carrying that primary.
 
 ## 5. Picker Ranking
 
