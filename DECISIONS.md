@@ -19,6 +19,26 @@ Decisions Rajat must approve go in the "Open items" list in `features/phase2.md`
 
 ---
 
+## 2026-06-15  Live prod UI/UX audit -> two critical fixes (Explore/Share CSS, edit-flow polish) + a CSS lint gate
+
+**Stream:** cross-stream (EM-run prod audit; fixes shipped as engineer PRs #69 and #68).
+**Context:** EM ran a live UI/UX audit of production via Playwright (passcode gate bypassed by injecting the unlocked flag into `localStorage`; read-only passes did no prod writes). The audit surfaced two critical breakages plus a set of interaction-polish issues across the edit flows.
+**What the audit found and how it was verified:**
+- **Read pass:** the Explore tab rendered a single overflowing 1024px image and the Share images rendered as unstyled text. The Changes, Menu, and Grocery tabs looked correct.
+- **Mutate-then-revert pass:** every edit flow (Replace / Add / Delete / Skip / Restore, comments, swap-by-name) was exercised on the live week and fully restored afterward; the two test comments left behind were neutralized via `comments:markCommentsReviewedNoChange`. The ReasonDialog submit button was clickable-but-silent with no reason entered; the Swap picker showed nothing for a no-match name; the dish-removal verb was inconsistent ("Remove" vs "Delete") across surfaces.
+**Root causes (confirmed via git archaeology):**
+- The CSS breakage was three missing closing braces shipped by two separate slices (7.1 Explore added one, 8.1 Share added two). Under native CSS nesting an unclosed rule silently swallows every rule after it, so each slice's own tab looked fine in isolation while the blast radius landed elsewhere. Nothing caught it because there was no CSS validation in CI and `vite build` tolerates malformed CSS.
+- The ReasonDialog weak-disable (a styled-but-not-`disabled` button) was faithful to an internally-inconsistent design prototype; the prose canonical docs never reconciled the micro-interaction states, so the prototype's inconsistency carried straight through to shipped code.
+**Chosen / shipped:** two engineer PRs. **#69** balances the braces, raises several tap targets to 44 px, and adds a stylelint **"Lint CSS"** CI gate (`.stylelintrc.json`, `lint:css`, `ci.yml`) that fails on unbalanced/unclosed CSS (proven to catch this bug), plus an optional local Playwright render smoke test (`app/web/e2e/smoke.mjs`). **#68** truly disables the ReasonDialog submit until a reason is entered, adds a Swap-picker empty state, locks background scroll in the Sheet primitive, autofocuses pickers/comment fields with aria-labels, and makes the removal verb consistently "Delete".
+**Process improvements (one shipped, three recommended):**
+- Shipped: the CSS lint gate now guards CI.
+- Recommended follow-ups: a render smoke test in CI (not just local); widen the Definition-of-Done visual check to all tabs and treat CSS as global blast radius (a slice's CSS can break a tab the slice never touched); and give micro-interaction states a canonical home or shared primitives so disabled/empty/loading states are not re-improvised per slice.
+**Operational learning:** a fresh agent worktree needs `npm install` to link the workspace symlinks before the `app/web` build works; without it the build fails on the unresolved `@plantry/engine` workspace package.
+**Reversibility:** easy. Both fixes are git-revertable; the lint gate is one CI step plus a config file; no schema or data change.
+**Right-size check (per `docs/product.md` §4):** problem size structural for #69 (a missing CI class plus a global-blast-radius CSS bug) and a focused interaction fix for #68; fix level CI gate + frontend edits, held to `app/web` plus CI config with no engine/Convex/data change; generality: the stylelint gate catches any future unbalanced CSS across the whole stylesheet rather than patching the three braces by hand.
+
+---
+
 ## 2026-06-15 02:50 IST  Dish-photo generation: provider path, realism prompt rewrite, content-filter sanitizer, parallelism
 
 **Stream:** content-batch (dish-photo B2 track; not a §5 spine slice). Built by `scripts/generate-dish-photos.mjs` against the `data/dish-photos/STYLE.md` spec.
