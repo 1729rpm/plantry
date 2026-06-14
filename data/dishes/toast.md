@@ -11,6 +11,7 @@ satiety: Low
 prepMinutes: 5
 seasons: All
 complexity: Easy
+photo: toast.jpg
 ---
 
 Plain buttered toast, the simplest side for eggs or chai.

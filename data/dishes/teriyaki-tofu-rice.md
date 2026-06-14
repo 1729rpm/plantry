@@ -12,6 +12,7 @@ prepMinutes: 25
 seasons: All
 complexity: Easy
 skill: Reduce the teriyaki till it glazes the tofu in a glossy coat
+photo: teriyaki-tofu-rice.jpg
 ---
 
 Crisp tofu in a sweet soy teriyaki glaze served over rice with greens.

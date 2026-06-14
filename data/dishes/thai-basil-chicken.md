@@ -13,6 +13,7 @@ seasons: All
 complexity: Easy
 skill: Keep the heat high so the chicken browns rather than stews
 buySpecially: Chicken keema or minced chicken, 300g
+photo: thai-basil-chicken.jpg
 ---
 
 Minced chicken stir-fried hard with garlic, chilli and a fistful of basil.

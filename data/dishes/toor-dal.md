@@ -11,6 +11,7 @@ satiety: Medium
 prepMinutes: 25
 seasons: All
 complexity: Easy
+photo: toor-dal.jpg
 ---
 
 Everyday toor dal simmered soft and finished with a simple tempering.

@@ -11,6 +11,7 @@ satiety: Medium
 prepMinutes: 20
 seasons: All
 complexity: Easy
+photo: vegetable-upma.jpg
 ---
 
 Roasted semolina cooked with vegetables and a curry-leaf tempering.

@@ -11,6 +11,7 @@ satiety: Medium
 prepMinutes: 35
 seasons: All
 complexity: Medium
+photo: vegetable-korma.jpg
 ---
 
 Mixed vegetables in a mild, creamy cashew and curd gravy.

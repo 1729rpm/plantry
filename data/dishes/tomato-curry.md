@@ -11,6 +11,7 @@ satiety: Low
 prepMinutes: 20
 seasons: All
 complexity: Easy
+photo: tomato-curry.jpg
 ---
 
 A tangy, light tomato curry with a curry-leaf tempering, South Indian style.
