@@ -13,6 +13,7 @@ seasons: All
 complexity: Medium
 skill: Keep the heat high so the prawns stay firm and do not turn rubbery
 buySpecially: Cleaned medium prawns, 300g
+photo: prawn-pepper-fry.jpg
 ---
 
 South Indian style prawns tossed dry with onion, curry leaf and crushed black pepper.

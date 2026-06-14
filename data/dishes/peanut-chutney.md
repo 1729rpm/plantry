@@ -11,6 +11,7 @@ satiety: Low
 prepMinutes: 10
 seasons: All
 complexity: Easy
+photo: peanut-chutney.jpg
 ---
 
 A roasted peanut chutney with a curry-leaf tempering, for breakfast.

@@ -12,6 +12,7 @@ prepMinutes: 20
 seasons: All
 complexity: Easy
 prePrep: Hang the curd in a muslin cloth for a few hours to drain
+photo: shrikhand.jpg
 ---
 
 Thick hung-curd dessert sweetened and flavoured with cardamom and saffron.

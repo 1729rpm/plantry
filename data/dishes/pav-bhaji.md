@@ -12,6 +12,7 @@ prepMinutes: 40
 seasons: All
 complexity: Medium
 buySpecially: Pav bread, one packet
+photo: pav-bhaji.jpg
 ---
 
 Spiced mashed vegetables served with butter-toasted pav.

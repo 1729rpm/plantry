@@ -11,6 +11,7 @@ satiety: Medium
 prepMinutes: 25
 seasons: All
 complexity: Easy
+photo: sewaiyan-kheer.jpg
 ---
 
 Roasted vermicelli simmered in sweetened milk with cashews and raisins.

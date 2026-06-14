@@ -12,6 +12,7 @@ prepMinutes: 25
 seasons: All
 complexity: Easy
 buySpecially: Boneless chicken, 300g
+photo: pepper-chicken-dry.jpg
 ---
 
 Boneless chicken tossed dry with a heavy hit of crushed black pepper.

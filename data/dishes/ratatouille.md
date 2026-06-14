@@ -12,6 +12,7 @@ prepMinutes: 30
 seasons: All
 complexity: Easy
 skill: Cook the vegetables in stages so each keeps its shape
+photo: ratatouille.jpg
 ---
 
 A slow-cooked French stew of brinjal, zucchini, capsicum and tomato.

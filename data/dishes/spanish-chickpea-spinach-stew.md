@@ -12,6 +12,7 @@ prepMinutes: 25
 seasons: All
 complexity: Easy
 skill: Let the tomato base cook down before adding the greens
+photo: spanish-chickpea-spinach-stew.jpg
 ---
 
 Stewed chickpeas and wilted spinach in a smoky paprika tomato base.

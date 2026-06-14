@@ -12,6 +12,7 @@ prepMinutes: 40
 seasons: All
 complexity: Medium
 prePrep: Soak the kidney beans overnight
+photo: rajma-chawal.jpg
 ---
 
 Comforting kidney bean curry in an onion-tomato gravy, served over rice.

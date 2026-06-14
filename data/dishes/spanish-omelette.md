@@ -12,6 +12,7 @@ prepMinutes: 30
 seasons: All
 complexity: Medium
 skill: Cook on a low flame and flip carefully so it sets without browning
+photo: spanish-omelette.jpg
 ---
 
 Thick potato and onion omelette cooked slow and set like a cake.

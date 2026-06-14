@@ -12,6 +12,7 @@ prepMinutes: 25
 seasons: All
 complexity: Easy
 skill: Keep the heat low once the eggs go in so the whites set but the yolks stay soft
+photo: shakshuka.jpg
 ---
 
 Eggs poached in a spiced tomato, onion and capsicum sauce.

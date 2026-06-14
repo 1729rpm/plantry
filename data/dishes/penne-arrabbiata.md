@@ -12,6 +12,7 @@ prepMinutes: 25
 seasons: All
 complexity: Easy
 skill: Cook the pasta to just firm and finish it in the sauce so it grips
+photo: penne-arrabbiata.jpg
 ---
 
 Penne in a fiery tomato, garlic and chilli sauce.

@@ -11,6 +11,7 @@ satiety: Medium
 prepMinutes: 15
 seasons: All
 complexity: Easy
+photo: plain-paratha.jpg
 ---
 
 Flaky layered wheat paratha griddled with ghee.

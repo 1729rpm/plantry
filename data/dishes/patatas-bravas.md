@@ -12,6 +12,7 @@ prepMinutes: 25
 seasons: All
 complexity: Easy
 skill: Crisp the potato cubes well before saucing so they stay crunchy
+photo: patatas-bravas.jpg
 ---
 
 Crisp potato cubes tossed in a smoky, lightly spiced tomato sauce.

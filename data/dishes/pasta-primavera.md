@@ -12,6 +12,7 @@ prepMinutes: 25
 seasons: All
 complexity: Easy
 skill: Cook the pasta to just firm and keep the vegetables bright and crisp
+photo: pasta-primavera.jpg
 ---
 
 Pasta tossed with spring vegetables in a light garlic and olive oil sauce.
