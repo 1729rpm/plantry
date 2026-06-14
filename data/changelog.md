@@ -24,7 +24,7 @@ The test-fixture dry-run that proves the slow-loop pipeline end-to-end. All five
 - Cluster D (cmt_fixture_004 + cmt_fixture_005 + inc_fixture_002, paneer fatigue): small pattern within a single week. The engine already flagged it via incident, which is the correct level of behavior. Two cases is not yet a pattern per the right-size discipline; reviewed_no_change. Path back: 3+ weeks of paneer-frequency incidents upgrades to a per-week Primary Ingredient cap rule in §4 priority.
 - Cluster E (inc_fixture_001, Wednesday no-gravy dish): the engine's incident system is operating as designed; reviewed_no_change. Path back: when auto-recovery middleware (queued Stream C slice) ships, this incident gates a roll-back to last-good week; no rule edit needed in `docs/engine.md`.
 
-## 2026-06-14  Within-week recency + one-HP-per-meal  (slow-loop PR pending)
+## 2026-06-14  Within-week recency + one-HP-per-meal  (#61)
 
 Two engine rule changes from a Rajat-directed proactive run (a menu review of the 2026-06-15 generation). No Convex rows were consumed: every consumed-id list is empty. The 2026-06-15 menu showed the same HP gravy (Chicken masala gravy) winning every Mon/Wed/Fri Menu 1 slot, and a Menu 1 HP gravy main paired with a second HP dish (Chicken salad, HP-tagged) in one meal.
 
@@ -32,7 +32,7 @@ Two engine rule changes from a Rajat-directed proactive run (a menu review of th
 - Cluster B (one HP source per meal): structural; fix level rule edit + engine code + tests. §3 Menu 1 partner selection now excludes HP-tagged dishes from the partner/accompaniment pool when the main is the HP pick (a meal carries one HP source, not two). Keyed on the `HP` tag, never on dish names, so it holds for any HP protein (chicken on chicken, paneer on paneer). Graceful fallback: if excluding HP empties the partner pool, the unfiltered pool is used so the slot still fills. Rationale: property-based fix on the existing tag; no data or tag change warranted.
 - Cluster C (cuisine variety: fish/prawn/mutton): small (one genuine gap); reviewed_no_change for fish/prawn (already active in the library and surfaced by Cluster A's new variety), and deferred for mutton to a separate `data/expansion-*` content batch (zero mutton dishes exist in the catalog; net-new dishes go through the reviewed expansion path, not this rules PR). Rationale: variety is mostly already present and unblocked by Cluster A; only red meat is truly missing.
 
-## 2026-06-14  One-HP-per-meal (all forms) + protein diversity  (slow-loop PR pending)
+## 2026-06-14  One-HP-per-meal (all forms) + protein diversity  (#62)
 
 Two engine rule changes, a Rajat-directed follow-up to the 2026-06-14 run after verifying the regenerated 2026-06-15 week. No Convex rows were consumed: every consumed-id list is empty. The verification surfaced two residual gaps the prior PR (#61) did not fully close: Saturday Menu 3 generated "Chicken biryani" (HP complete_meal) beside "Chicken salad" (HP accompaniment) in one meal (the one-HP rule had been scoped to Menu 1 only), and the regenerated week's HP mains were chicken + paneer x3 with fish/prawn/mutton/egg never surfacing (the dish-level within-week rule passed because the dishes were distinct, but the protein was not diverse).
 
