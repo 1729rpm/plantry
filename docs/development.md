@@ -11,6 +11,7 @@ Plantry has one persistent Claude Code session that holds the engineering manage
 - Identify the next unblocked stream from the current feature's stream-state table.
 - Spawn an engineer for that stream in its own git worktree on its own branch, with a scoped brief, a pointer to the canonical docs, and a definition of done.
 - Review every engineer PR before merge against the principles in `docs/product.md` §4 and the CI gates in `docs/engineering.md` §15.
+- For every slice that touches the app frontend (`app/web`), spin off the in-depth full-flow crawl-and-compare pass against the PR preview before merge, and review its output (see §3 and `docs/engineering.md` §16).
 - Track cross-stream consistency (a schema change should ripple to engine, Convex schema, frontend).
 - Maintain `DECISIONS.md`: append-only log of non-trivial choices taken without Rajat.
 - Surface batched open items to Rajat at natural checkpoints, never piecemeal.
@@ -51,10 +52,11 @@ Every code-touching session works in its own git worktree on its own feature bra
 
 1. Engineer finishes work in worktree, runs CI gates locally (lint, type-check, tests, simulation harness, round-trip), opens a PR with a diagnosis card.
 2. Vercel deploys a preview to `plantry-dev.mudgal.xyz` (aliased to the current PR's preview URL). Convex deploys a preview environment with an isolated DB.
-3. EM reviews the PR against principles and gates. Either merges or sends back with specific notes.
-4. On merge to `main`, Vercel and Convex promote to production at `plantry.mudgal.xyz`. The EM verifies the live deploy (open the URL, check the current week renders, no console errors).
-5. EM appends an entry to `docs/CHANGELOG.md` (one line: date + what shipped + PR link).
-6. EM removes the worktree.
+3. For any slice that touches the app frontend, before approving the merge the EM spins off the in-depth full-flow crawl against the PR preview (`docs/engineering.md` §16): an automated walk of every customer flow across all tabs and every sheet, not just the new feature, capturing a screenshot of each screen and asserting the structural invariants (no horizontal overflow, key elements actually styled, focus moves into a sheet on open, background scroll locks while a sheet is open, tap targets at least 44px, a clean console), and comparing each rendered screen against the matching `design_handoff/` screen. The EM reviews the output and resolves or explicitly accepts every deviation before merge. A CSS or shared-primitive change is whole-app blast radius: it is crawled across all tabs regardless of the slice's nominal scope.
+4. EM reviews the PR against principles and gates. Either merges or sends back with specific notes.
+5. On merge to `main`, Vercel and Convex promote to production at `plantry.mudgal.xyz`. The EM verifies the live deploy (open the URL, re-run the crawl's smoke pass across all tabs (every tab renders, no horizontal overflow, a clean console), not only the current week).
+6. EM appends an entry to `docs/CHANGELOG.md` (one line: date + what shipped + PR link).
+7. EM removes the worktree.
 
 ## 4. Definition of done
 
@@ -66,7 +68,7 @@ A PR is done when ALL of:
 - No scope creep: the PR changes only what its brief described.
 - No principle violation: an EM reviewer would not flag anything in `docs/product.md` §4.
 - No `// TODO` left behind without a tracked follow-up in the active feature spec or a new feature doc.
-- For UI changes: a screenshot or short Loom in the PR description; the EM has opened the preview URL and clicked through the new feature.
+- For UI changes: the EM has run the full-flow crawl-and-compare pass (§3, `docs/engineering.md` §16) against the preview, covering every flow and every sheet and compared against `design_handoff/`, and linked its result in the PR; any deviation from the design is resolved or explicitly accepted in the diagnosis card. A CSS or shared-primitive change is verified across all tabs, not only the touched screen.
 
 ## 5. Diagnosis card
 
