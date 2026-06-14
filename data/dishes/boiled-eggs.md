@@ -11,6 +11,7 @@ satiety: High
 prepMinutes: 10
 seasons: All
 complexity: Easy
+photo: boiled-eggs.jpg
 ---
 
 Simple hard-boiled eggs, a clean high-protein keto side.

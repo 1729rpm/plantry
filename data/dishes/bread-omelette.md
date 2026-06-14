@@ -11,6 +11,7 @@ satiety: High
 prepMinutes: 10
 seasons: All
 complexity: Easy
+photo: bread-omelette.jpg
 ---
 
 A quick masala omelette folded around toasted bread.

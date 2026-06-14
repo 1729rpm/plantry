@@ -12,6 +12,7 @@ prepMinutes: 20
 seasons: All
 complexity: Easy
 skill: Keep the heat high so the okra does not turn slimy
+photo: bhindi.jpg
 ---
 
 Stir-fried okra with onion, tomato and a light dusting of spices.
