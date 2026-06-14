@@ -12,6 +12,7 @@ prepMinutes: 25
 seasons: [Summer]
 complexity: Medium
 prePrep: Salt the sliced karela and rest to draw out bitterness
+photo: karela-fry.jpg
 ---
 
 Thinly sliced bitter gourd fried crisp with onion.

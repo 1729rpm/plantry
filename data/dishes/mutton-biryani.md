@@ -14,6 +14,7 @@ complexity: Hard
 skill: Cooking the mutton to tender and timing the dum so the rice and meat finish together
 buySpecially: Curry cut mutton, 300g
 prePrep: Marinate the mutton in curd and spices overnight so it tenderises
+photo: mutton-biryani.jpg
 ---
 
 Layered basmati rice and marinated mutton slow-cooked on dum with fried onions.

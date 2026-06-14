@@ -12,6 +12,7 @@ prepMinutes: 20
 seasons: All
 complexity: Easy
 skill: Use cold rice and keep the egg soft so the grains stay light
+photo: japanese-egg-fried-rice.jpg
 ---
 
 A light egg fried rice seasoned with soy, ginger and spring onion.
