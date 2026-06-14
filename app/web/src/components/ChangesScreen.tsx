@@ -192,7 +192,7 @@ export function deriveSummaryLine(changes: ManualChangeRow[]): string {
   const plural = (n: number, one: string, many: string) => `${n} ${n === 1 ? one : many}`;
   if (counts.swap) parts.push(plural(counts.swap, "swap", "swaps"));
   if (counts.added) parts.push(plural(counts.added, "dish added", "dishes added"));
-  if (counts.removed) parts.push(plural(counts.removed, "dish removed", "dishes removed"));
+  if (counts.removed) parts.push(plural(counts.removed, "dish deleted", "dishes deleted"));
   if (counts.skip) parts.push(plural(counts.skip, "skip", "skips"));
   if (counts.restore) parts.push(plural(counts.restore, "restore", "restores"));
   if (counts.saved) parts.push(`${counts.saved} saved for next week`);
