@@ -8,7 +8,8 @@
     "prebuild": "npm run bake --workspace @plantry/engine",
     "build": "tsc -b && vite build",
     "preview": "vite preview",
-    "typecheck": "tsc -b"
+    "typecheck": "tsc -b",
+    "test:smoke": "node e2e/smoke.mjs"
   },
   "dependencies": {
     "convex": "^1.16.0",
@@ -23,5 +24,8 @@
     "vite": "^5.4.6",
     "vite-plugin-pwa": "^0.20.5",
     "workbox-window": "^7.1.0"
+  },
+  "optionalDependencies": {
+    "playwright": "^1.48.0"
   }
 }

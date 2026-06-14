@@ -13,6 +13,7 @@
     "reports": "npm run reports --workspace @plantry/engine",
     "typecheck": "tsc -b",
     "lint": "eslint .",
+    "lint:css": "stylelint \"app/web/src/**/*.css\"",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "build": "npm run build --workspaces --if-present",
@@ -27,6 +28,8 @@
     "eslint-plugin-react-hooks": "^5.0.0",
     "globals": "^15.9.0",
     "prettier": "^3.3.3",
+    "stylelint": "^16.26.1",
+    "stylelint-config-standard": "^36.0.1",
     "typescript": "^5.5.4",
     "typescript-eslint": "^8.6.0"
   },
