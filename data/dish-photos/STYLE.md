@@ -21,14 +21,15 @@ work: it fixes the look before any pixels exist.
 
 ## Prompt template
 
-Fill the two slots from the dish's data file, then run verbatim. `{dish name}`
+Fill the three slots from the dish's data file, then run verbatim. `{dish name}`
 is the file's `name` field; `{short description}` is the first body paragraph of
-the dish file (the one-line description), trimmed to a phrase. Everything outside
-the slots is fixed and must not be reworded between runs (the fixed wording is
-what holds the style steady).
+the dish file (the one-line description), trimmed to a phrase; `{cuisine}` is the
+dish's cuisine phrase derived per the map below. Everything outside the slots is
+fixed and must not be reworded between runs (the fixed wording is what holds the
+style steady).
 
 ```
-A single appetizing serving of {dish name}, an Indian home-cooked dish
+A single appetizing serving of {dish name}, {cuisine}
 ({short description}), photographed from directly overhead (flat lay, 90-degree
 top-down). The dish is plated in or on simple matte stoneware in a warm cream or
 soft terracotta tone, centered in the frame with even space on all sides.
@@ -45,13 +46,63 @@ photographic style, natural food textures. Square 1:1 composition.
 ```
 
 Notes for whoever runs it:
-- Keep the fixed sentences exactly as written; only the two slots change. Swapping
-  the boilerplate is how a library drifts into two looks.
+- Keep the fixed sentences exactly as written; only the three slots change.
+  Swapping the boilerplate is how a library drifts into two looks.
 - If the model returns a non-square image or one cropped tight to the edges,
   regenerate rather than post-processing. The output should arrive web-ready
   (see Output below) with no editing step in the pipeline.
 - Do not add per-dish art direction ("on a banana leaf", "with a side of rice")
   unless the dish genuinely is that thing; the point is uniformity.
+
+---
+
+## Cuisine slot
+
+The library spans roughly ten cuisines, so the cuisine phrase is derived per
+dish rather than hardcoded. The `{cuisine}` slot is the full phrase
+"a {Adjective} home-cooked dish" or "an {Adjective} home-cooked dish" (pick the
+article that reads naturally before the adjective). Only the adjective varies;
+the "home-cooked dish" wording is fixed like the rest of the template.
+
+How to derive the cuisine for a dish:
+
+1. Take the first cuisine tag in the dish's `tags:` list (tags are ordered;
+   scan left to right and use the first one that is a cuisine tag).
+2. Map it to an adjective via the table below.
+3. If the dish has no cuisine tag, the cuisine is **Indian**. The roughly 110
+   untagged originals are Indian home cooking, which is the library's default.
+
+`HP`, `complete_meal`, `complete_carb`, and `fruit` are functional tags, not
+cuisines; never treat them as a cuisine. A dish like `[HP, oriental]` is Thai
+(skip `HP`, the first cuisine tag is `oriental`).
+
+The cuisine-tag vocabulary in the library is exactly:
+
+| Tag             | Cuisine adjective | Article |
+|-----------------|-------------------|---------|
+| `italian`       | Italian           | an      |
+| `chinese`       | Chinese           | a       |
+| `mexican`       | Mexican           | a       |
+| `greek`         | Greek             | a       |
+| `spanish`       | Spanish           | a       |
+| `korean`        | Korean            | a       |
+| `japanese`      | Japanese          | a       |
+| `continental`   | Continental       | a       |
+| `vietnamese`    | Vietnamese        | a       |
+| `lebanese`      | Lebanese          | a       |
+| `mediterranean` | Mediterranean     | a       |
+| `oriental`      | Thai              | a       |
+| (no cuisine tag)| Indian            | an      |
+
+`oriental` maps to Thai: the dishes tagged `oriental` are Thai (pad thai, the
+Thai curries, Thai basil chicken, Thai pineapple fried rice). The one exception
+is **Singapore noodles** (a Singaporean/Chinese-Malay dish, not Thai); for that
+dish use the neutral phrase "a home-cooked dish" (drop the cuisine adjective)
+rather than mislabel it. The pipeline hardcodes this single override by slug.
+
+This table is the single source of truth for the tag-to-cuisine mapping; the
+generation script reads its logic from here, so any future cuisine tag must be
+added to this table first.
 
 ---
 
