@@ -13,7 +13,7 @@ import {
   type Menu3CandidateSet,
   type Menu4CandidateSet,
 } from "./composition.js";
-import { rankCandidates, type ConsolidationContext } from "./priority.js";
+import { rankCandidates, withinWeekRecencySet, type ConsolidationContext } from "./priority.js";
 import { applyPick, emptyLedger, type IngredientLedger } from "./consolidation.js";
 import { applyCap } from "./cap.js";
 import { planRequests, slotKey } from "./requests.js";
@@ -143,10 +143,18 @@ export function generateWeek(args: GenerateWeekArgs): GeneratedWeek {
   let ledger: IngredientLedger = emptyLedger(packSizes);
   const weekLunchCarbs: Dish[] = [];
   const slotResults: GeneratedWeekSlot[] = [];
+  // Every dish placed so far this week, in pick order. Feeds two things: the
+  // synthetic within-week history below (step 1's date view of the in-progress
+  // week) and the §4 step 5 within-week demotion set (`withinWeekRecencySet`),
+  // which is the dominant signal that actually keeps a broad pool from picking
+  // the same dish every Mon/Wed/Fri.
+  const weekPicks: Dish[] = [];
   // Synthetic history for within-week recency: picks made earlier in the week
   // record a virtual cooking on `weekStart`, so §4 step 1 treats them as the
-  // most recently cooked and pushes them down the pool. Lunch carbs and fruit
-  // are recency-exempt in priority.ts, so this does not over-filter them.
+  // most recently cooked. Step 1 alone is not enough (steps 3 and 4 can
+  // re-promote a placed dish), which is why §4 step 5 demotes them outright;
+  // this synthetic history keeps step 1's ordering consistent with that. Lunch
+  // carbs and fruit are recency-exempt in priority.ts, so neither over-filters.
   const inWeekHistory: MenuHistoryRow[] = [];
   // Same-day breakfast primary ingredient, set when we pick breakfast and
   // consumed by the same day's lunch slot to feed §4 step 2.
@@ -165,11 +173,16 @@ export function generateWeek(args: GenerateWeekArgs): GeneratedWeek {
       ledger,
       ingredients,
     };
+    // §4 step 5: non-exempt dishes already placed this week sink below fresh
+    // alternatives for this slot's ranking. Recomputed each slot from the
+    // running picks so each subsequent slot sees the latest placements.
+    const withinWeekDishIds = withinWeekRecencySet(weekPicks);
     const picks = pickSlot({
       slot,
       candidateSet,
       compositionHistory,
       consolidationContext,
+      withinWeekDishIds,
       sameDayBreakfastPrimaryIngredient:
         slot.meal === "Lunch" ? sameDayBreakfastPrimary.get(slot.day) : undefined,
       substitutionLeadDishId:
@@ -182,6 +195,7 @@ export function generateWeek(args: GenerateWeekArgs): GeneratedWeek {
     // Update ledger and within-week recency on each pick.
     for (const dish of picks) {
       ledger = applyPick(ledger, dish, ingredients);
+      weekPicks.push(dish);
       inWeekHistory.push({
         weekStart,
         day: longDay(slot.day),
@@ -274,6 +288,12 @@ interface PickSlotArgs {
   candidateSet: CandidateSet;
   compositionHistory: MenuHistoryRow[];
   consolidationContext: ConsolidationContext;
+  /**
+   * §4 step 5 within-week recency: ids of non-exempt dishes already placed this
+   * week. Threaded into every rankCandidates call for this slot so a dish picked
+   * in an earlier slot sinks below fresh alternatives here.
+   */
+  withinWeekDishIds?: ReadonlySet<number>;
   sameDayBreakfastPrimaryIngredient?: string;
   /** §3.2: when set, the substituted day's lead complete_meal is pinned. */
   substitutionLeadDishId?: number;
@@ -311,6 +331,7 @@ function rank(args: PickSlotArgs, pool: Dish[]): Dish[] {
     history: args.compositionHistory,
     sameDayBreakfastPrimaryIngredient: args.sameDayBreakfastPrimaryIngredient,
     consolidationContext: args.consolidationContext,
+    withinWeekDishIds: args.withinWeekDishIds,
   });
   return promotePins(ranked, args.pinnedDishIds);
 }
@@ -370,7 +391,11 @@ function pickBreakfastSingle(args: PickSlotArgs, set: BreakfastSinglePickCandida
 
 /**
  * §3 Menu 1: HP first, then partner pool chosen by HP's category
- * (Dry → non-HP Gravy; Gravy → Accompaniment), then lunch carb.
+ * (Dry → non-HP Gravy; Gravy → non-HP Accompaniment), then lunch carb. The
+ * Menu 1 main is the meal's HP pick, so the partner pool is non-HP: a meal
+ * carries one HP source, not two. Fallback: if the non-HP Accompaniment pool is
+ * empty (a thin Accompaniment library), fall back to the unfiltered pool so the
+ * slot still fills, accepting a second HP side over an incomplete meal.
  */
 function pickMenu1(args: PickSlotArgs, set: Menu1CandidateSet): Dish[] {
   const hpRanked = rank(args, set.hp);
@@ -378,8 +403,17 @@ function pickMenu1(args: PickSlotArgs, set: Menu1CandidateSet): Dish[] {
     return pickLunchCarbOnly(args, set.lunchCarb);
   }
   const hp = hpRanked[0];
-  const partnerPool =
-    hp.category === "Dry dish" ? set.partnerWhenHpIsDry : set.partnerWhenHpIsGravy;
+  let partnerPool: Dish[];
+  if (hp.category === "Dry dish") {
+    partnerPool = set.partnerWhenHpIsDry;
+  } else {
+    // Gravy main → non-HP Accompaniment partner; fall back to the unfiltered
+    // Accompaniment pool only if the non-HP filter left nothing.
+    partnerPool =
+      set.partnerWhenHpIsGravy.length > 0
+        ? set.partnerWhenHpIsGravy
+        : set.partnerWhenHpIsGravyFallback;
+  }
   const partnerRanked = rank(
     args,
     partnerPool.filter((d) => d.id !== hp.id),
@@ -601,6 +635,12 @@ export function rankCandidatesForSlot(args: RankCandidatesForSlotArgs): Dish[] {
 
   const context: ConsolidationContext = { ledger, ingredients };
 
+  // §4 step 5: the same within-week demotion set generateWeek builds, derived
+  // from the dishes already placed this week (exempt dishes excluded by the
+  // shared helper), so the swap picker ranks an already-placed dish below fresh
+  // alternatives exactly as generation does.
+  const withinWeekDishIds = withinWeekRecencySet(currentWeekPicks);
+
   const pools = candidateSetPools(candidateSet);
   const ranked: Dish[] = [];
   const seen = new Set<number>();
@@ -610,6 +650,7 @@ export function rankCandidatesForSlot(args: RankCandidatesForSlotArgs): Dish[] {
       history: [...history, ...inWeekHistory],
       sameDayBreakfastPrimaryIngredient: sameDayPrimary,
       consolidationContext: context,
+      withinWeekDishIds,
     });
     for (const dish of r) {
       if (seen.has(dish.id)) continue;

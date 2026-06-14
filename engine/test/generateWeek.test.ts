@@ -366,6 +366,155 @@ describe("generateWeek — top-level engine", () => {
       });
     }
 
+    it("Cluster A: no non-exempt dish appears 3+ times in a generated week", () => {
+      // The defect: a broad HP pool's longest-unused favourite (e.g. Chicken
+      // masala gravy) won Mon/Wed/Fri Menu 1 identically. §4 step 5 within-week
+      // recency now sinks an already-placed dish below fresh alternatives.
+      const week = generateWeek({
+        weekStart: "2026-06-15",
+        library,
+        history,
+        season: "Monsoon",
+        ingredients,
+        packSizes,
+      });
+      const counts = new Map<number, { count: number; dish: Dish }>();
+      for (const day of week.days) {
+        for (const slot of day.slots) {
+          for (const dish of slot.dishes) {
+            const e = counts.get(dish.id) ?? { count: 0, dish };
+            e.count += 1;
+            counts.set(dish.id, e);
+          }
+        }
+      }
+      const exempt = (d: Dish) =>
+        d.tags.includes("fruit") || d.category === "Chapati" || d.category === "Rice";
+      for (const { count, dish } of counts.values()) {
+        if (exempt(dish)) continue;
+        expect(count, `${dish.name} appears ${count}x`).toBeLessThan(3);
+      }
+    });
+
+    it("Cluster A: the repeated Menu-1 main slot (Mon/Wed/Fri) draws distinct dishes", () => {
+      const week = generateWeek({
+        weekStart: "2026-06-15",
+        library,
+        history,
+        season: "Monsoon",
+        ingredients,
+        packSizes,
+      });
+      // The Menu 1 main is the HP lead (index 0 of the weekday lunch slot).
+      const menu1Mains: string[] = [];
+      for (const day of week.days) {
+        if (day.day !== "Mon" && day.day !== "Wed" && day.day !== "Fri") continue;
+        const lunch = day.slots.find((s) => s.meal === "Lunch");
+        if (lunch && lunch.dishes.length > 0) menu1Mains.push(lunch.dishes[0].name);
+      }
+      expect(menu1Mains.length).toBe(3);
+      expect(new Set(menu1Mains).size).toBe(3);
+    });
+
+    it("Cluster B: an HP-main Menu 1 meal never stacks a second HP dish", () => {
+      const week = generateWeek({
+        weekStart: "2026-06-15",
+        library,
+        history,
+        season: "Monsoon",
+        ingredients,
+        packSizes,
+      });
+      for (const day of week.days) {
+        // Weekday Menu 1 lunches only (Mon/Wed/Fri); Saturday Menu 3 leads with
+        // a complete_meal+HP dish by spec and is out of scope here.
+        if (day.day !== "Mon" && day.day !== "Wed" && day.day !== "Fri") continue;
+        const lunch = day.slots.find((s) => s.meal === "Lunch");
+        if (!lunch) continue;
+        const hpCount = lunch.dishes.filter((d) => d.tags.includes("HP")).length;
+        expect(hpCount, `${day.day} lunch has ${hpCount} HP dishes`).toBeLessThanOrEqual(1);
+      }
+    });
+  });
+
+  describe("Cluster B: HP-main partner fallback when the non-HP Accompaniment pool is thin", () => {
+    it("falls back to an HP Accompaniment rather than leaving the meal incomplete", () => {
+      nextId = 1;
+      // A library whose ONLY Accompaniment is HP-tagged. The non-HP partner pool
+      // is empty, so pickMenu1 must fall back so Menu 1 still fills three items.
+      const library: Dish[] = [
+        // Breakfast so the week is buildable (Mon/Wed/Fri pair + Tue/Thu single).
+        makeDish({
+          name: "Idli",
+          time: "Breakfast",
+          category: "Complete meal",
+          tags: ["complete_meal"],
+          primaryIngredient: "Idli batter",
+        }),
+        makeDish({
+          name: "Apple",
+          time: "Breakfast",
+          category: "Fruit",
+          tags: ["fruit"],
+          primaryIngredient: "Apple",
+        }),
+        makeDish({
+          name: "Dosa",
+          time: "Breakfast",
+          category: "Complete meal",
+          tags: ["complete_meal"],
+          primaryIngredient: "Dosa batter",
+        }),
+        // Menu 1: HP Gravy main + ONLY an HP-tagged Accompaniment partner.
+        makeDish({
+          name: "Chicken Curry",
+          time: "Lunch",
+          category: "Gravy dish",
+          tags: ["HP"],
+          primaryIngredient: "Chicken",
+        }),
+        makeDish({
+          name: "Chicken Salad",
+          time: "Lunch",
+          category: "Accompaniment",
+          tags: ["HP"],
+          primaryIngredient: "Chicken",
+        }),
+        makeDish({ name: "Chapati", time: "Lunch", category: "Chapati", primaryIngredient: "Wheat" }),
+        // Menu 2 fillers so other weekdays build.
+        makeDish({ name: "Tofu", time: "Lunch", category: "Keto", primaryIngredient: "Tofu" }),
+        makeDish({ name: "Dal", time: "Lunch", category: "Gravy dish", primaryIngredient: "Dal" }),
+        makeDish({ name: "Cabbage", time: "Lunch", category: "Dry dish", primaryIngredient: "Cabbage" }),
+        // Saturday fillers.
+        makeDish({
+          name: "Biryani",
+          time: "Lunch",
+          category: "Complete meal",
+          tags: ["complete_meal", "HP"],
+          primaryIngredient: "Chicken",
+        }),
+        makeDish({ name: "Halwa", time: "Lunch", category: "Dessert", primaryIngredient: "Carrot" }),
+      ];
+      const week = generateWeek({
+        weekStart: "2026-06-15",
+        library,
+        history: emptyHistory,
+        season: "Monsoon",
+        ingredients: emptyIngredients,
+        packSizes: emptyPackSizes,
+        rng: () => 0.1,
+      });
+      const monLunch = week.days.find((d) => d.day === "Mon")!.slots.find((s) => s.meal === "Lunch")!;
+      // The fallback fills the partner slot: Menu 1 still has 3 items including
+      // the HP Accompaniment (one-HP-per-meal yields to slot-completeness).
+      expect(monLunch.dishes.length).toBe(3);
+      expect(monLunch.dishes.some((d) => d.name === "Chicken Salad")).toBe(true);
+    });
+  });
+
+  describe("smoke against the live library + history (extra)", () => {
+    const { library, packSizes, ingredients, history } = loadLiveData();
+
     it("Saturday is Menu 3 or Menu 4 (alternating from last Saturday)", () => {
       const lastSat = 4 as const;
       const week = generateWeek({

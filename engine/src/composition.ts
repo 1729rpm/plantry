@@ -30,8 +30,17 @@ export interface BreakfastSinglePickCandidateSet {
 export interface Menu1CandidateSet {
   kind: "menu-1";
   hp: Dish[];
+  /** Non-HP Gravy partner used when the HP main is a Dry dish. */
   partnerWhenHpIsDry: Dish[];
+  /** Non-HP Accompaniment partner used when the HP main is a Gravy dish. */
   partnerWhenHpIsGravy: Dish[];
+  /**
+   * Unfiltered Accompaniment pool (HP-tagged included). The §3 rule keeps the
+   * partner non-HP, but if that empties the filtered Gravy-branch partner pool,
+   * pickMenu1 falls back to this so the slot still fills (one HP-main meal with
+   * a second HP side beats an incomplete meal). Broad live pools make this rare.
+   */
+  partnerWhenHpIsGravyFallback: Dish[];
   lunchCarb: Dish[];
 }
 
@@ -196,7 +205,17 @@ export function breakfastSinglePick(eligible: Dish[]): BreakfastSinglePickCandid
   };
 }
 
-/** §3 Menu 1 (Mon/Wed/Fri lunch): HP dish + partner (HP-dependent) + lunch carb. */
+/**
+ * §3 Menu 1 (Mon/Wed/Fri lunch): HP dish + partner (HP-dependent) + lunch carb.
+ *
+ * The Menu 1 main is always the HP pick, and a meal carries one HP source, not
+ * two, so both partner pools exclude HP-tagged dishes (keyed on the `HP` tag,
+ * not on dish names, so it holds for any HP protein: chicken on chicken, paneer
+ * on paneer). The Dry→Gravy partner was already non-HP; the Gravy→Accompaniment
+ * partner now drops HP-tagged Accompaniments too. The graceful fallback for an
+ * empty filtered pool lives in `pickMenu1` (it needs to know which branch the
+ * picked main took), not here.
+ */
 export function menu1(eligible: Dish[], weekLunchCarbs: Dish[]): Menu1CandidateSet {
   const lunch = eligible.filter((d) => d.time === "Lunch");
   return {
@@ -205,7 +224,8 @@ export function menu1(eligible: Dish[], weekLunchCarbs: Dish[]): Menu1CandidateS
       (d) => hasTag(d, "HP") && (d.category === "Gravy dish" || d.category === "Dry dish"),
     ),
     partnerWhenHpIsDry: lunch.filter((d) => !hasTag(d, "HP") && d.category === "Gravy dish"),
-    partnerWhenHpIsGravy: lunch.filter((d) => d.category === "Accompaniment"),
+    partnerWhenHpIsGravy: lunch.filter((d) => !hasTag(d, "HP") && d.category === "Accompaniment"),
+    partnerWhenHpIsGravyFallback: lunch.filter((d) => d.category === "Accompaniment"),
     lunchCarb: lunchCarbPool(eligible, weekLunchCarbs),
   };
 }

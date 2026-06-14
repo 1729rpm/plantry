@@ -46,8 +46,10 @@ Tue, Thu (1 item):
 **Menu 1 (Mon, Wed, Fri), 3 items:**
 
 - 1 HP dish (Category=Gravy dish or Dry dish)
-- 1 partner: if HP is Dry, pick a non-HP Gravy dish; if HP is Gravy, pick an Accompaniment
+- 1 partner: if HP is Dry, pick a non-HP Gravy dish; if HP is Gravy, pick a non-HP Accompaniment
 - 1 lunch carb (see §3.1)
+
+The partner is always non-HP: a meal carries one HP source, not two. The Menu 1 main is the meal's HP pick, so the partner pool (the non-HP Gravy when the main is Dry, the Accompaniment when the main is Gravy) excludes any dish carrying the HP tag. This is keyed on the HP tag, never on dish names, so it holds for any HP protein (chicken on chicken, paneer on paneer). Fallback: if excluding HP-tagged dishes would empty the partner pool, the unfiltered pool is used so the slot still fills (one HP-main meal with a second HP side beats an incomplete meal); this is rare given the broad Accompaniment and non-HP Gravy pools and surfaces as composition signal for the slow loop, not a hard error.
 
 **Menu 2 (Tue, Thu), 4 items:**
 
@@ -96,8 +98,9 @@ After §3 composition has produced the candidate set for a slot, rank candidates
 2. **Same-day key ingredient deprioritisation.** If breakfast's Primary Ingredient on the same day matches a candidate's Primary Ingredient, deprioritise the candidate. If no viable alternative exists, allow the repeat.
 3. **Ingredient consolidation (§10).** Prefer candidates that consume leftover from earlier picks in the week.
 4. **Preferred=Yes** over Preferred=No.
+5. **Within-week recency.** A dish already placed in an earlier slot of the week being generated is treated as most-recently-used for every subsequent slot's ranking, so it sinks below any fresh (not-yet-placed-this-week) alternative. This is the dominant ordering: unlike step 1's `menu_history.md` recency, it is applied last, so neither consolidation (step 3) nor Preferred=Yes (step 4) can re-promote an already-placed dish above an equally eligible fresh one. It exists because the cross-week history (step 1) is silent on the in-progress week, so without it a single broad pool's top-ranked dish (e.g. the longest-unused HP gravy) wins every Menu 1 slot Mon/Wed/Fri identically. When every candidate has already been placed this week, demoting them all is the same as demoting none, so the pool is returned unchanged and the repeat is allowed (the fresh-alternative fallback, mirroring step 2).
 
-Recency exemptions: dishes with `fruit` tag, and lunch carbs.
+Recency exemptions (apply to both step 1 and step 5): dishes with the `fruit` tag, and lunch carbs (Category in {Chapati, Rice}). A fruit-tagged dish repeating across Mon/Wed/Fri breakfasts and Roti repeating across lunches are intended, not defects.
 
 ## 5. Picker Ranking
 
