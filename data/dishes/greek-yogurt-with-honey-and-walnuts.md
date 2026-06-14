@@ -12,6 +12,7 @@ prepMinutes: 10
 seasons: All
 complexity: Easy
 skill: Use thick strained curd so it holds the honey on top
+photo: greek-yogurt-with-honey-and-walnuts.jpg
 ---
 
 Thick strained curd spooned with honey and toasted walnuts.

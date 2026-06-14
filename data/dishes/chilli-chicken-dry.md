@@ -13,6 +13,7 @@ seasons: All
 complexity: Medium
 skill: Keep the heat high so the chicken stays dry and the sauce just clings
 buySpecially: Boneless chicken, 300g
+photo: chilli-chicken-dry.jpg
 ---
 
 Indo-Chinese chicken tossed dry with capsicum, onion and a garlicky chilli sauce.

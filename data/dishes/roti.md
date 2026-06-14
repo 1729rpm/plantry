@@ -12,6 +12,7 @@ prepMinutes: 15
 seasons: All
 complexity: Easy
 skill: Puffing each roti on the flame takes a little practice
+photo: roti.jpg
 ---
 
 Soft everyday wheat flatbreads, the default lunch carb.

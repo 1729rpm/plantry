@@ -12,6 +12,7 @@ prepMinutes: 35
 seasons: All
 complexity: Medium
 skill: Cook each vegetable separately so the bowl stays colourful and distinct
+photo: tofu-bibimbap.jpg
 ---
 
 A Korean rice bowl topped with tofu, vegetables, a fried egg and gochujang.

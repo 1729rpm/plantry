@@ -12,6 +12,7 @@ prepMinutes: 25
 seasons: All
 complexity: Easy
 skill: Toss the curry powder through the noodles off the heat so it does not catch
+photo: singapore-noodles.jpg
 ---
 
 Thin rice noodles tossed with egg, vegetables and a warm curry-powder seasoning.

@@ -11,6 +11,7 @@ satiety: Low
 prepMinutes: 15
 seasons: All
 complexity: Easy
+photo: jeera-rice.jpg
 ---
 
 Fluffy basmati rice tempered with cumin and a slit green chilli.

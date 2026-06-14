@@ -14,6 +14,7 @@ complexity: Medium
 skill: Balancing the cream, butter and tomato so it stays smooth not split
 buySpecially: Boneless chicken, 300g
 prePrep: Marinate the chicken for at least 30 minutes
+photo: butter-chicken.jpg
 ---
 
 Tandoori-style chicken simmered in a silky tomato, butter and cashew gravy.

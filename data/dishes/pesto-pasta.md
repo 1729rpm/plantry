@@ -12,6 +12,7 @@ prepMinutes: 20
 seasons: All
 complexity: Easy
 skill: Toss the pesto through off the heat so it stays fresh and green
+photo: pesto-pasta.jpg
 ---
 
 Pasta tossed in a fresh basil, garlic and peanut pesto.
