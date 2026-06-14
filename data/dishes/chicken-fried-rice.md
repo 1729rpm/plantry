@@ -13,6 +13,7 @@ seasons: All
 complexity: Easy
 skill: Use cold cooked rice so the grains stay separate on high heat
 buySpecially: Boneless chicken, 250g
+photo: chicken-fried-rice.jpg
 ---
 
 Cold rice stir-fried with chicken, egg and vegetables Indo-Chinese style.

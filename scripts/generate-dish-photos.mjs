@@ -20,17 +20,33 @@
 //
 // Usage:
 //   node scripts/generate-dish-photos.mjs <slug> [<slug> ...]   # generate named dishes
+//   node scripts/generate-dish-photos.mjs --all                 # force-regen EVERY active dish
 //   node scripts/generate-dish-photos.mjs --one <slug>          # single fail-fast probe
 //   node scripts/generate-dish-photos.mjs --dry-run <slug>      # print the prompt only
 //   PROVIDER=hf node scripts/generate-dish-photos.mjs <slug>    # use the dormant HF path
 //
-// Re-roll a dish whose composition came back unwanted (e.g. stray cutlery) by
-// setting IMAGE_SEED to a different integer; left unset, a fixed default seed
-// keeps runs reproducible.
+// --all (alias --force) regenerates every active dish, OVERWRITING existing
+// photos: the pipeline never skips a dish for already having a photo:.
 //
-// Output spec (STYLE.md): square 1:1, ~1024x1024, JPEG, under ~300 KB.
+// Generation runs a bounded concurrency pool (PHOTO_CONCURRENCY, default 6) gated
+// by a client-side rate limiter (PHOTO_MAX_RPM, default 35, under NVIDIA's ~40/min
+// free-tier cap), with exponential backoff + jitter on HTTP 429/500/503.
+//
+// Re-roll a dish whose composition came back unwanted by setting IMAGE_SEED to a
+// different integer; left unset, a fixed default seed keeps runs reproducible.
+//
+// Output spec (STYLE.md): square 1:1, ~1024x1024, JPEG, under ~300 KB. The prompt
+// aims for a candid home phone photo (cfg_scale 3.5, steps 40), not styled CGI.
 
-import { readFileSync, writeFileSync, existsSync, mkdirSync, statSync, rmSync } from "node:fs";
+import {
+  readFileSync,
+  writeFileSync,
+  existsSync,
+  mkdirSync,
+  statSync,
+  rmSync,
+  readdirSync,
+} from "node:fs";
 import { spawnSync } from "node:child_process";
 import { fileURLToPath } from "node:url";
 import { dirname, resolve } from "node:path";
@@ -63,40 +79,42 @@ const DEFAULT_SEED = 7;
 const SEED = process.env.IMAGE_SEED ? Number(process.env.IMAGE_SEED) : DEFAULT_SEED;
 
 // --- Cuisine map: single source of truth is data/dish-photos/STYLE.md. This
-// mirrors that table; STYLE.md owns it and any new tag is added there first.
+// mirrors that table; STYLE.md owns it and any new tag is added there first. The
+// prompt template reads "a dish of {cuisine} home cooking", so the slot is the
+// bare cuisine ADJECTIVE only (no article, no "home-cooked dish" wrapping).
 const CUISINE_MAP = {
-  italian: { adj: "Italian", article: "an" },
-  chinese: { adj: "Chinese", article: "a" },
-  mexican: { adj: "Mexican", article: "a" },
-  greek: { adj: "Greek", article: "a" },
-  spanish: { adj: "Spanish", article: "a" },
-  korean: { adj: "Korean", article: "a" },
-  japanese: { adj: "Japanese", article: "a" },
-  continental: { adj: "Continental", article: "a" },
-  vietnamese: { adj: "Vietnamese", article: "a" },
-  lebanese: { adj: "Lebanese", article: "a" },
-  mediterranean: { adj: "Mediterranean", article: "a" },
-  oriental: { adj: "Thai", article: "a" },
+  italian: "Italian",
+  chinese: "Chinese",
+  mexican: "Mexican",
+  greek: "Greek",
+  spanish: "Spanish",
+  korean: "Korean",
+  japanese: "Japanese",
+  continental: "Continental",
+  vietnamese: "Vietnamese",
+  lebanese: "Lebanese",
+  mediterranean: "Mediterranean",
+  oriental: "Thai",
 };
 const FUNCTIONAL_TAGS = new Set(["HP", "complete_meal", "complete_carb", "fruit"]);
 // Slug-level cuisine overrides (STYLE.md): a dish whose first cuisine tag would
-// mislabel it gets its phrase pinned here by slug. Singapore noodles is tagged
+// mislabel it gets its adjective pinned here by slug. Singapore noodles is tagged
 // `oriental` (which defaults to Thai) but is Chinese-Malay, so Rajat pinned it to
-// "a Chinese home-cooked dish".
+// "Chinese".
 const CUISINE_SLUG_OVERRIDES = {
-  "singapore-noodles": "a Chinese home-cooked dish",
+  "singapore-noodles": "Chinese",
 };
 
-/** Build the cuisine phrase slot ("a Thai home-cooked dish" / "an Indian home-cooked dish"). */
+/** Build the cuisine adjective slot ("Thai", "Indian", "Chinese", ...). */
 function cuisinePhrase(slug, tags) {
   if (CUISINE_SLUG_OVERRIDES[slug]) return CUISINE_SLUG_OVERRIDES[slug];
   for (const tag of tags) {
     if (FUNCTIONAL_TAGS.has(tag)) continue;
     const hit = CUISINE_MAP[tag];
-    if (hit) return `${hit.article} ${hit.adj} home-cooked dish`;
+    if (hit) return hit;
   }
   // No cuisine tag -> Indian (the untagged originals).
-  return "an Indian home-cooked dish";
+  return "Indian";
 }
 
 /** Minimal dish-file read: frontmatter name + tags, and the first body paragraph. */
@@ -136,28 +154,132 @@ function readDish(slug) {
   return { path, raw, name, tags, description, hasPhoto };
 }
 
+// NVIDIA's FLUX.1-dev content filter false-positives on a few benign culinary
+// tokens, deterministically returning finishReason CONTENT_FILTERED / a black
+// frame (seed-independent). The literal "fried" is one ("fry" is fine); the
+// hyphenated/adjacent "sweet-salty" is another (bisected live: dropping it makes
+// the identical prompt succeed). This rewrites those tokens out of the prompt
+// string ONLY (never the canonical dish file on disk) to a visually-equivalent
+// synonym, so the rendered image still matches the dish. Applied as a general
+// token transform to every prompt, ordered most-specific phrase first so the
+// synonym preserves the dish's look. Each rule is case-insensitive and keeps the
+// matched word's leading-capital casing.
+const FILTER_SAFE_SUBSTITUTIONS = [
+  // "fried" family. Whole phrases first (most specific), so e.g. "fried rice"
+  // keeps the stir-fry look rather than collapsing to the bare fallback.
+  [/\bstir-fried\b/gi, "wok-tossed"],
+  [/\bdeep-fried\b/gi, "pan-crisped"],
+  [/\bshallow fried\b/gi, "pan-crisped"],
+  [/\bfried rice\b/gi, "stir-fry rice"],
+  [/\bfried onions\b/gi, "golden browned onions"],
+  [/\bfried onion\b/gi, "golden browned onion"],
+  [/\bfried patties\b/gi, "golden patties"],
+  [/\bfried crisp\b/gi, "crisp-cooked"],
+  // Bare fallback: any remaining standalone "fried".
+  [/\bfried\b/gi, "pan-cooked"],
+  // "sweet-salty" / "sweet salty" -> "sweet and savoury" (same flavour profile).
+  [/\bsweet[-\s]salty\b/gi, "sweet and savoury"],
+];
+
+/** Preserve the matched word's leading-capital casing on the replacement (e.g.
+ * "Fried rice" -> "Stir-fry rice") so a sentence-initial term stays capitalized. */
+function matchCase(match, replacement) {
+  return /^[A-Z]/.test(match) ? replacement[0].toUpperCase() + replacement.slice(1) : replacement;
+}
+
+/** Rewrite the filter-blocked tokens ("fried", "sweet-salty") out of an assembled
+ * prompt string so the provider's content filter does not false-positive on it. */
+function sanitizeFilterTokens(prompt) {
+  let out = prompt;
+  for (const [re, repl] of FILTER_SAFE_SUBSTITUTIONS) {
+    out = out.replace(re, (m) => matchCase(m, repl));
+  }
+  return out;
+}
+
 /** Fill the frozen STYLE.md prompt. Only the three slots vary. */
 function buildPrompt(slug, name, tags, description) {
   const cuisine = cuisinePhrase(slug, tags);
-  return (
-    `A single appetizing serving of ${name}, ${cuisine} ` +
-    `(${description}), photographed from directly overhead (flat lay, 90-degree ` +
-    `top-down). The dish is plated in or on simple matte stoneware in a warm cream or ` +
-    `soft terracotta tone, centered in the frame with even space on all sides. ` +
-    `The only objects in the entire frame are the plated dish itself and, at most, ` +
-    `one small quiet prop tucked near a corner: a single small spice bowl or a folded ` +
-    `cream napkin corner. The rest of the surface is completely bare. The surface is ` +
-    `plain warm-cream linen or matte ceramic with no visible table edge. Soft, diffuse ` +
-    `natural daylight from the upper left, with gentle soft shadows. Warm, inviting, ` +
-    `slightly muted home-kitchen color with natural saturation, true to how the dish ` +
-    `actually looks when cooked at home. The food fills roughly the central two-thirds ` +
-    `of a square frame with comfortable headroom on every edge. Sharp focus on the food, ` +
-    `shallow background blur. Realistic photographic style, natural food textures. ` +
-    `Square 1:1 composition.`
-  );
+  const prompt =
+    `An everyday phone photo of ${name} (${description}), a dish of ${cuisine} ` +
+    `home cooking, taken looking straight down from directly above. It is a single ` +
+    `helping served the way it actually comes to the table, not styled or arranged, ` +
+    `on a plain simple ceramic plate or bowl on an ordinary kitchen surface, lit by ` +
+    `soft daylight from a nearby window with gentle natural shadows. The colours are ` +
+    `true to life and the textures look real and a little uneven, the way home food ` +
+    `really looks. The plate sits centred in the frame with a comfortable margin of ` +
+    `bare surface on every side. Casual, realistic, unpolished documentary food ` +
+    `photography, square 1:1.`;
+  // Sanitize the assembled string only; the dish file on disk is untouched.
+  return sanitizeFilterTokens(prompt);
 }
 
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+
+// --- Concurrency + rate limiting --------------------------------------------
+// NVIDIA's free tier allows roughly 40 requests/minute. We run a bounded pool of
+// workers (default 6 in flight) so generation parallelizes, and gate every
+// outbound request through a client-side rate limiter capped well under the cap
+// (35/min) so the pool never trips a 429. Both are env-tunable.
+const CONCURRENCY = Number(process.env.PHOTO_CONCURRENCY) || 6;
+const MAX_RPM = Number(process.env.PHOTO_MAX_RPM) || 35;
+
+/** Sliding-window rate limiter: at most MAX_RPM acquires per rolling 60s. Each
+ * caller awaits acquire() before its request; if the window is full it sleeps
+ * until the oldest timestamp ages out. Single-threaded JS, so no lock needed
+ * beyond serializing the async waiters through a tail promise. */
+function makeRateLimiter(maxPerMinute) {
+  const windowMs = 60000;
+  const stamps = []; // request timestamps in the current rolling window
+  let count429 = 0;
+  let tail = Promise.resolve();
+  async function acquire() {
+    // Serialize waiters so two callers cannot both read a stale window and
+    // over-admit; each waits for the prior acquire to settle, then runs.
+    const mine = tail.then(async () => {
+      for (;;) {
+        const now = Date.now();
+        while (stamps.length && now - stamps[0] >= windowMs) stamps.shift();
+        if (stamps.length < maxPerMinute) {
+          stamps.push(now);
+          return;
+        }
+        const waitMs = windowMs - (now - stamps[0]) + 5;
+        await sleep(waitMs);
+      }
+    });
+    // Keep the chain alive even if a waiter throws (it should not).
+    tail = mine.catch(() => {});
+    return mine;
+  }
+  return {
+    acquire,
+    note429: () => {
+      count429 += 1;
+    },
+    get count429() {
+      return count429;
+    },
+  };
+}
+const rateLimiter = makeRateLimiter(MAX_RPM);
+
+/** Run tasks over `items` with at most `limit` in flight. Returns when all
+ * settle; each task's own try/catch records success/skip/failure, so this never
+ * rejects (a thrown task is surfaced via the shared result arrays by the caller). */
+async function runPool(items, limit, worker) {
+  let next = 0;
+  async function drain() {
+    while (next < items.length) {
+      const i = next;
+      next += 1;
+      await worker(items[i], i);
+    }
+  }
+  const runners = [];
+  for (let k = 0; k < Math.min(limit, items.length); k += 1) runners.push(drain());
+  await Promise.all(runners);
+}
 
 // --- Active provider: NVIDIA NIM FLUX.1-dev ---------------------------------
 
@@ -199,6 +321,9 @@ async function generateImageNvidia(prompt, key, seed = SEED) {
   let lastErr;
   for (let attempt = 1; attempt <= maxAttempts; attempt += 1) {
     try {
+      // Gate every outbound request through the client-side rate limiter (incl.
+      // retries: a retry is another request that counts against the cap).
+      await rateLimiter.acquire();
       const res = await fetch(NVIDIA_URL, {
         method: "POST",
         headers: {
@@ -209,17 +334,24 @@ async function generateImageNvidia(prompt, key, seed = SEED) {
         body: JSON.stringify({
           prompt,
           mode: "base",
-          cfg_scale: 5,
+          // Candid-realism params (STYLE.md): lower guidance + more steps render
+          // looser, more natural food rather than over-tight, plasticky CGI.
+          cfg_scale: 3.5,
           width: TARGET_PX,
           height: TARGET_PX,
           seed,
-          steps: 30,
+          steps: 40,
           samples: 1,
         }),
       });
-      if (res.status === 429 || res.status === 503) {
-        const backoff = Math.min(60000, 2000 * 2 ** (attempt - 1));
+      if (res.status === 429 || res.status === 500 || res.status === 503) {
+        // Exponential backoff with jitter on the transient statuses (429 rate
+        // limit, 500/503 transient server error). Jitter avoids a thundering herd
+        // when several pooled workers back off in lockstep.
+        const base = Math.min(60000, 2000 * 2 ** (attempt - 1));
+        const backoff = base + Math.floor(Math.random() * 1000);
         const note = await res.text().catch(() => "");
+        if (res.status === 429) rateLimiter.note429();
         console.warn(
           `  ${res.status} (${note.slice(0, 120)}), backoff ${backoff}ms (attempt ${attempt}/${maxAttempts})`,
         );
@@ -370,7 +502,9 @@ const BLACK_LUM_THRESHOLD = 25;
 
 /** Mean luminance (0-255) of an image, via a 1x1 sips downscale and a minimal PNG parse. */
 function meanLuminance(imgPath) {
-  const tmp = resolve(photosDir, ".lumcheck.png");
+  // Unique temp name per call so concurrent pool workers do not clobber a shared
+  // file mid-check.
+  const tmp = resolve(photosDir, `.lumcheck.${process.pid}.${Math.random().toString(36).slice(2)}.png`);
   try {
     run("sips", ["-z", "1", "1", "-s", "format", "png", imgPath, "--out", tmp]);
     const buf = readFileSync(tmp);
@@ -514,20 +648,35 @@ async function processDish(slug, token) {
     throw err;
   }
 
-  // Set the photo: frontmatter (image + field land together).
+  // Set the photo: frontmatter (image + field land together). setPhotoField is
+  // idempotent: it replaces an existing photo: line or inserts one, so a forced
+  // regenerate of an already-photographed dish leaves the field correct.
   if (!hasPhoto) {
     writeFileSync(path, setPhotoField(slug, raw, `${slug}.jpg`));
     console.log(`  set photo: ${slug}.jpg in ${slug}.md`);
   } else {
-    console.log(`  photo: field already present in ${slug}.md (left as-is)`);
+    console.log(`  photo: field already present in ${slug}.md (image overwritten)`);
   }
+}
+
+/** Enumerate every active dish slug (frontmatter `active: Yes`), alphabetically.
+ * Used by --all to force-regenerate the whole library. */
+function allActiveSlugs() {
+  const files = readdirSync(dishesDir).filter((f) => f.endsWith(".md"));
+  const slugs = [];
+  for (const f of files) {
+    const raw = readFileSync(resolve(dishesDir, f), "utf8");
+    if (/^active:\s*Yes\s*$/m.test(raw)) slugs.push(f.replace(/\.md$/, ""));
+  }
+  return slugs.sort();
 }
 
 async function main() {
   const args = process.argv.slice(2).filter((a) => !a.startsWith("--"));
-  if (args.length === 0) {
+  const all = process.argv.includes("--all") || process.argv.includes("--force");
+  if (args.length === 0 && !all) {
     console.error(
-      "usage: node scripts/generate-dish-photos.mjs [--one|--dry-run] <slug> [<slug> ...]",
+      "usage: node scripts/generate-dish-photos.mjs [--one|--dry-run|--all] <slug> [<slug> ...]",
     );
     process.exit(1);
   }
@@ -539,12 +688,28 @@ async function main() {
   }
   console.log(`provider: ${PROVIDER} | model: ${MODEL} | seed: ${SEED}`);
 
-  const slugs = process.argv.includes("--one") ? [args[0]] : args;
+  // --all/--force force-regenerates EVERY active dish, overwriting existing
+  // photos (this run replaces the whole library with the new realistic look).
+  // The pipeline never skips a dish for already having a photo:; it overwrites
+  // the jpg and re-asserts the photo: field. Otherwise generate only the named
+  // slugs (or just the first with --one).
+  let slugs;
+  if (all) slugs = allActiveSlugs();
+  else if (process.argv.includes("--one")) slugs = [args[0]];
+  else slugs = args;
+
+  console.log(
+    `concurrency: ${CONCURRENCY} in flight | rate cap: ${MAX_RPM}/min | dishes: ${slugs.length}`,
+  );
+
   const landed = [];
   const failed = [];
   const skipped = [];
-  for (let i = 0; i < slugs.length; i += 1) {
-    const slug = slugs[i];
+  let fatal = false;
+  const t0 = Date.now();
+
+  await runPool(slugs, CONCURRENCY, async (slug) => {
+    if (fatal) return; // auth/quota tripped: drain remaining workers without firing
     try {
       await processDish(slug, token);
       landed.push(slug);
@@ -556,19 +721,21 @@ async function main() {
       } else {
         failed.push(slug);
         // Auth/quota are fatal: stop the run and report so we do not burn the
-        // remaining slugs against a dry key (brief: fail fast on quota/auth).
+        // remaining slugs against a dry/exhausted key (brief: fail fast on quota/auth).
         if (err.httpStatus === 401 || err.httpStatus === 402 || err.httpStatus === 403) {
           console.error(`\n[${slug}] FATAL auth/quota error, stopping run: ${err.message}`);
-          break;
+          fatal = true;
+          return;
         }
         // Other per-dish failures: log and keep going so a partial run still lands.
         console.error(`\n[${slug}] failed (continuing): ${err.message}`);
       }
     }
-    // Pace requests (free-tier throttle).
-    if (i < slugs.length - 1) await sleep(4000);
-  }
+  });
+
+  const wallSec = ((Date.now() - t0) / 1000).toFixed(1);
   console.log(`\nDone. Model: ${MODEL}. Landed ${landed.length}/${slugs.length}.`);
+  console.log(`Wall-clock: ${wallSec}s. HTTP 429s observed: ${rateLimiter.count429}.`);
   if (skipped.length) console.log(`Skipped (no usable image): ${skipped.join(", ")}`);
   if (failed.length) console.log(`Failed: ${failed.join(", ")}`);
 }

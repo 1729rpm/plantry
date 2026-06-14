@@ -11,6 +11,7 @@ satiety: Medium
 prepMinutes: 25
 seasons: All
 complexity: Easy
+photo: ghee-rice.jpg
 ---
 
 Fragrant rice cooked in ghee with whole spices, fried onion and cashews.

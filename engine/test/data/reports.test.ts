@@ -71,13 +71,12 @@ describe("coverageReport", () => {
     expect(cov.withDescription).toBe(cov.activeDishCount);
     expect(cov.withRecipe).toBe(cov.activeDishCount);
     expect(cov.withComplexity).toBe(cov.activeDishCount);
-    // Photos are a separate (B2) track, burned down one batch at a time. This
-    // snapshot tracks live data, so each photo batch bumps this number. The
-    // data/photos-3 run on NVIDIA FLUX.1-dev brought coverage to 191 of 200
-    // active dishes; the 9 still missing are ones the provider safety filter
-    // refuses to render (the biryanis, a few fried-rice/fish/falafel dishes),
-    // covered by the no-photo placeholder. It is a report assertion, not a rule.
-    expect(cov.withPhoto).toBe(191);
+    // Photos are a separate (B2) track. The data/photos-5 run regenerated every
+    // active dish from a rewritten candid-home-photo prompt (replacing the prior
+    // styled/CGI look) and force-overwrote the whole library, so coverage is
+    // complete: 200 of 200 active dishes carry a photo. This snapshot tracks live
+    // data; it is a report assertion, not a rule.
+    expect(cov.withPhoto).toBe(200);
   });
 });
 

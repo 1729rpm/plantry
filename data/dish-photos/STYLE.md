@@ -24,35 +24,58 @@ work: it fixes the look before any pixels exist.
 Fill the three slots from the dish's data file, then run verbatim. `{dish name}`
 is the file's `name` field; `{short description}` is the first body paragraph of
 the dish file (the one-line description), trimmed to a phrase; `{cuisine}` is the
-dish's cuisine phrase derived per the map below. Everything outside the slots is
-fixed and must not be reworded between runs (the fixed wording is what holds the
-style steady).
+dish's cuisine adjective derived per the map below. Everything outside the slots
+is fixed and must not be reworded between runs (the fixed wording is what holds
+the style steady).
 
 ```
-A single appetizing serving of {dish name}, {cuisine}
-({short description}), photographed from directly overhead (flat lay, 90-degree
-top-down). The dish is plated in or on simple matte stoneware in a warm cream or
-soft terracotta tone, centered in the frame with even space on all sides. The only
-objects in the entire frame are the plated dish itself and, at most, one small
-quiet prop tucked near a corner: a single small spice bowl or a folded cream napkin
-corner. The rest of the surface is completely bare. The surface is plain warm-cream
-linen or matte ceramic with no visible table edge. Soft, diffuse natural daylight
-from the upper left, with gentle soft shadows. Warm, inviting, slightly muted
-home-kitchen color with natural saturation, true to how the dish actually looks
-when cooked at home. The food fills roughly the central two-thirds of a square
-frame with comfortable headroom on every edge. Sharp focus on the food, shallow
-background blur. Realistic photographic style, natural food textures. Square 1:1
-composition.
+An everyday phone photo of {dish name} ({short description}), a dish of {cuisine} home cooking, taken looking straight down from directly above. It is a single helping served the way it actually comes to the table, not styled or arranged, on a plain simple ceramic plate or bowl on an ordinary kitchen surface, lit by soft daylight from a nearby window with gentle natural shadows. The colours are true to life and the textures look real and a little uneven, the way home food really looks. The plate sits centred in the frame with a comfortable margin of bare surface on every side. Casual, realistic, unpolished documentary food photography, square 1:1.
 ```
+
+The look this prompt aims for is a candid home phone photo: the dish as it
+actually lands on the table, shot from straight overhead in soft window light, on
+a plain everyday plate or bowl. It is deliberately unstyled and a little uneven.
+An earlier styled-stoneware, flat-lay-with-a-prop direction read as glossy CGI
+rather than real food; this candid framing is the correction.
 
 Notes for whoever runs it:
 - Keep the fixed sentences exactly as written; only the three slots change.
   Swapping the boilerplate is how a library drifts into two looks.
+- The `{cuisine}` slot is the bare cuisine adjective (Indian, Thai, Chinese, and
+  so on). The template already supplies "a dish of {cuisine} home cooking", so
+  there is no article logic and no "home-cooked dish" wrapping to fill; just drop
+  the adjective in.
+- The generation script applies one prompt-only transform after filling the
+  slots: it rewrites the literal token "fried" out of the assembled string (see
+  the "fried" token note below). This never touches the dish file on disk.
 - If the model returns a non-square image or one cropped tight to the edges,
   regenerate rather than post-processing. The output should arrive web-ready
   (see Output below) with no editing step in the pipeline.
 - Do not add per-dish art direction ("on a banana leaf", "with a side of rice")
   unless the dish genuinely is that thing; the point is uniformity.
+
+### Generation parameters
+
+Fixed for the whole library; the candid-realism look depends on them as much as on
+the prompt wording:
+
+- `cfg_scale` 3.5 (lower guidance lets the model render looser, more natural food
+  rather than the over-tight, plasticky composition higher guidance produces),
+- `steps` 40 (more refinement steps for realistic texture),
+- `width` / `height` 1024 (square source, see Crop below).
+
+### The "fried" token
+
+NVIDIA's FLUX.1-dev content filter false-positives on the literal token "fried"
+(it deterministically returns `finishReason: CONTENT_FILTERED` and a black frame,
+seed-independent); the verb "fry" is fine. The generation script rewrites "fried"
+out of the assembled prompt string only (never the dish file on disk) to a
+visually-equivalent synonym with no "fried" substring, so the rendered image still
+matches the dish: "stir-fried" -> "wok-tossed", "deep/shallow fried" ->
+"pan-crisped", "fried rice" -> "stir-fry rice", "fried onions" -> "golden browned
+onions", "fried patties" -> "golden patties", and a bare "fried" -> "pan-cooked".
+It is a general token transform applied to every prompt, so future "fried" dishes
+are handled automatically.
 
 ---
 
@@ -63,6 +86,9 @@ dish rather than hardcoded. The `{cuisine}` slot is the full phrase
 "a {Adjective} home-cooked dish" or "an {Adjective} home-cooked dish" (pick the
 article that reads naturally before the adjective). Only the adjective varies;
 the "home-cooked dish" wording is fixed like the rest of the template.
+
+The slot is the bare cuisine adjective (the template supplies "a dish of
+{cuisine} home cooking", so there is no article to pick and no wrapping to fill).
 
 How to derive the cuisine for a dish:
 
@@ -78,28 +104,28 @@ cuisines; never treat them as a cuisine. A dish like `[HP, oriental]` is Thai
 
 The cuisine-tag vocabulary in the library is exactly:
 
-| Tag             | Cuisine adjective | Article |
-|-----------------|-------------------|---------|
-| `italian`       | Italian           | an      |
-| `chinese`       | Chinese           | a       |
-| `mexican`       | Mexican           | a       |
-| `greek`         | Greek             | a       |
-| `spanish`       | Spanish           | a       |
-| `korean`        | Korean            | a       |
-| `japanese`      | Japanese          | a       |
-| `continental`   | Continental       | a       |
-| `vietnamese`    | Vietnamese        | a       |
-| `lebanese`      | Lebanese          | a       |
-| `mediterranean` | Mediterranean     | a       |
-| `oriental`      | Thai              | a       |
-| (no cuisine tag)| Indian            | an      |
+| Tag             | Cuisine adjective |
+|-----------------|-------------------|
+| `italian`       | Italian           |
+| `chinese`       | Chinese           |
+| `mexican`       | Mexican           |
+| `greek`         | Greek             |
+| `spanish`       | Spanish           |
+| `korean`        | Korean            |
+| `japanese`      | Japanese          |
+| `continental`   | Continental       |
+| `vietnamese`    | Vietnamese        |
+| `lebanese`      | Lebanese          |
+| `mediterranean` | Mediterranean     |
+| `oriental`      | Thai              |
+| (no cuisine tag)| Indian            |
 
 `oriental` maps to Thai: the dishes tagged `oriental` are Thai (pad thai, the
 Thai curries, Thai basil chicken, Thai pineapple fried rice). The one exception
 is **Singapore noodles** (a Chinese-Malay curry-powder noodle dish, not Thai);
-that dish is pinned to "a Chinese home-cooked dish" so it is not mislabelled as
-Thai (Rajat's call: it is the closest honest single-word cuisine for the photo).
-The pipeline hardcodes this single override by slug.
+that dish's cuisine adjective is pinned to **Chinese** so it is not mislabelled
+as Thai (Rajat's call: it is the closest honest single-word cuisine for the
+photo). The pipeline hardcodes this single override by slug.
 
 This table is the single source of truth for the tag-to-cuisine mapping; the
 generation script reads its logic from here, so any future cuisine tag must be
@@ -112,41 +138,40 @@ added to this table first.
 Each is fixed for the whole library. They are also encoded in the prompt above;
 this section is the human-readable contract, the prompt is the machine input.
 
-- **Framing and angle.** Directly overhead, flat lay, 90-degree top-down. One
-  serving, centered, with even margins. Top-down is the one angle that survives
-  both crops the UI applies (see Crop below), which is why it is fixed rather
-  than left to taste.
-- **Lighting.** Soft, diffuse natural daylight from the upper left. Gentle
-  shadows, no harsh specular highlights, no on-camera flash. Bright enough to
-  read on a phone in daylight, never blown out.
-- **Plating and styling.** Simple matte stoneware (a bowl for gravies and dals, a
-  plate for dry dishes and breads) in a warm cream or soft terracotta tone that
-  echoes the app's surfaces. The food looks home-cooked and honest, not
-  restaurant-glazed or styled with tweezers.
-  - **Props policy:** minimal. The output must show no cutlery, no hands, no
-    second plate, no text or labels, and no busy garnish. At most one quiet prop
-    (a folded cream napkin corner or a single small spice bowl), and the rest of
-    the surface is bare. An empty margin is on-style; clutter is not.
+- **Framing and angle.** Straight down from directly above, the casual overhead
+  angle of a phone snap. One helping, plate centred, with a comfortable margin of
+  bare surface on every side. Overhead is the one angle that survives both crops
+  the UI applies (see Crop below), which is why it is fixed rather than left to
+  taste.
+- **Lighting.** Soft daylight from a nearby window, with gentle natural shadows.
+  No harsh specular highlights, no on-camera flash. Bright enough to read on a
+  phone in daylight, never blown out.
+- **Plating and styling.** A plain, simple everyday ceramic plate or bowl (a bowl
+  for gravies and dals, a plate for dry dishes and breads) on an ordinary kitchen
+  surface. The food is served the way it actually comes to the table, not styled
+  or arranged: textures look real and a little uneven, the way home food really
+  looks. This is candid documentary food photography, not restaurant plating or
+  tweezer styling.
+  - **Props policy:** minimal. The frame is just the dish on its plate or bowl on
+    a plain kitchen surface, with bare margin around it. No styling props, no
+    cutlery, no hands, no second plate, no text or labels, no busy garnish. An
+    empty margin is on-style; clutter is not.
 
     This intent is enforced **positively** in the prompt, not by a list of
-    forbidden objects. The prompt names only the objects that are allowed in
-    frame (the dish, and at most one corner prop) and states the rest of the
-    surface is bare; it does not say "no cutlery", "no fork", "no hands", and so
-    on. The reason is mechanical: FLUX.1-schnell is a guidance-distilled model
-    that barely honors negative instructions, and naming an object in order to
-    exclude it tends to summon it (the model attends to the noun, not the
-    negation). An earlier exclusion-list prompt produced stray cutlery in most
-    frames; constraining the scene to the allowed objects removes it. Any future
-    "keep X out of frame" rule is expressed the same way: say what is in frame,
-    never what is forbidden.
-- **Background.** A plain warm-cream surface (linen or matte ceramic) with no
-  visible table edge and nothing else in frame. The background is a quiet field,
-  never a scene.
-- **Color and mood.** Warm, inviting, slightly muted, true-to-home. The palette
-  sits with the handoff direction (warm cream surfaces, terracotta accent; tokens
-  `--pt-bg #F7F2E9`, `--pt-surface #FFFDF9`, `--pt-accent #BC5430` in
-  `design_handoff/hifi-tokens.jsx`). Natural saturation, not the oversaturated,
-  high-contrast look of stock food photography.
+    forbidden objects. The prompt names only what is in frame (a single helping on
+    a plain plate or bowl on an ordinary surface, centred with bare margin) and
+    does not say "no cutlery", "no fork", "no hands", and so on. The reason is
+    mechanical: FLUX is a guidance-distilled model family that barely honors
+    negative instructions, and naming an object in order to exclude it tends to
+    summon it (the model attends to the noun, not the negation). Any future "keep
+    X out of frame" rule is expressed the same way: say what is in frame, never
+    what is forbidden.
+- **Background.** An ordinary plain kitchen surface around the plate, nothing else
+  in frame. The background is a quiet field, never a scene.
+- **Color and mood.** True to life, casual, realistic, unpolished. The colours are
+  the food's real colours under soft daylight, not the oversaturated, glossy,
+  high-contrast look of stock or CGI food photography. The look reads as a real
+  home phone photo, a little imperfect, rather than a styled studio shot.
 - **Crop and aspect ratio.** Square, 1:1. The source is square on purpose: the
   PWA renders photos with `object-fit: cover` at two very different shapes, a
   small rounded square thumbnail on day cards and dish rows (about 40 to 48 px,
