@@ -232,9 +232,12 @@ function buildPrompt(slug, name, tags, description) {
     `with gentle natural shadows, and honest true-to-life colour that is not bright ` +
     `or oversaturated. Most important, the food looks genuinely cooked and a little ` +
     `imperfect: real browning and char where it has been cooked; the correct real ` +
-    `texture and consistency for this dish (a dry dish stays dry, a gravy is thick ` +
-    `opaque and oil-flecked with pieces half-submerged, rice is loose separate ` +
-    `grains, a pudding is loose and soft); irregular hand-made shapes rather than ` +
+    `texture and consistency for this dish (a dry, grilled, roasted or fried dish ` +
+    `is served dry on a plate with charred or browned edges and absolutely no ` +
+    `pooled sauce, gravy or liquid around it; only a gravy dish sits in sauce, ` +
+    `which is then thick, opaque and oil-flecked with the pieces half-submerged; ` +
+    `rice is loose separate grains; a pudding is loose and soft); irregular ` +
+    `hand-made shapes rather than ` +
     `identical pieces; oil sheen, uneven edges, stray crumbs and a little mess; and ` +
     `any garnish scattered naturally as it really would be, never a single sprig ` +
     `placed in the centre. Shot on a phone, realistic and unstyled, square 1:1.`;

@@ -19,6 +19,17 @@ Decisions Rajat must approve go in the "Open items" list in `features/phase2.md`
 
 ---
 
+## 2026-06-15 04:30 IST  Dish photos rewritten for realism from a 60-image real-vs-AI study
+
+**Stream:** content-batch (dish-photo realism; follow-up to the dish-photo pipeline).
+**Context:** Two rounds of AI generation (FLUX.1-schnell, then FLUX.1-dev with a "candid photo" prompt) still read as AI/CGI to Rajat. Rather than keep tuning blind, he directed: pull real photos of the dishes, compare them to ours, extract the differences, and rewrite the prompt from them.
+**Options considered:** (a) keep iterating the prompt by feel; (b) use real recipe-site photos directly in the app; (c) use real photos only as a reference set to learn the gap, then rewrite the prompt.
+**Chosen:** (c). (b) is a licensing and coverage problem (recipe-blog images are copyrighted; obscure home dishes have no match), so real photos are reference-only. Pulled 60 real references (Wikimedia Commons + TheMealDB, keyless), ran a 5-way real-vs-AI comparison across all dish types, and consolidated the AI tells: the repeated template (flat top-down + uniform stoneware + studio sunbeam and hard shadow), a tiny portion in an oversized vessel, thin glassy sauces, plastic cloned geometric solids, no char or browning, wrong physical state (rice fused into a dome, kheer as a solid scoop), a single centred garnish sprig, and no real context. Rewrote the single coherent prompt around candid in-context realism (a natural or low angle, a real varied vessel, a softly blurred real background, ordinary light, and food that looks genuinely cooked and a little imperfect with the correct per-type texture), kept as one prompt with dish specifics carried by the {short description} slot plus a general "correct texture and consistency for this dish" clause, so there is no per-dish hardcoding. Params cfg_scale 3.5 / steps 40, with a per-dish seed for vessel and angle variety. Regenerated all 200 dishes (#72). This entry's follow-up strengthens the dry-dish cue and re-shoots the dishes that still rendered saucy.
+**Reversibility:** easy. Prompt and params are single-file edits; photos are git-revertable data; the Hugging Face path stays a dormant fallback.
+**Right-size check (per docs/product.md §4):** problem size structural (library-wide image quality); fix level the prompt spec plus the offline tool, with no app, engine, or Convex change, and realism encoded as general prompt framing learned from data rather than per-dish hardcoding (Principles 1 and 8); generality: the candid-realism prompt and the data-driven differences apply to the whole library and future dishes; the only residual is a few dry or grilled dishes that attract a sauce, addressed below by a general dry-emphasis cue rather than dish-name special-casing.
+
+---
+
 ## 2026-06-15  Live prod UI/UX audit -> two critical fixes (Explore/Share CSS, edit-flow polish) + a CSS lint gate
 
 **Stream:** cross-stream (EM-run prod audit; fixes shipped as engineer PRs #69 and #68).

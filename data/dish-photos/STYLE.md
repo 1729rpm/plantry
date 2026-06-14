@@ -36,7 +36,7 @@ is fixed and must not be reworded between runs (the fixed wording is what holds
 the look steady).
 
 ```
-A real, candid food photograph of {dish name} ({short description}), a home-style {cuisine} dish, shot the way a person would actually photograph their own meal: from a natural angle, often low or three-quarter rather than flat overhead, with shallow depth of field and a real, slightly cluttered home or restaurant background softly out of focus. It is served in a real everyday vessel that genuinely suits the dish (a steel katori or thali, a karahi or kadai, a cast-iron pan, or a plain home plate), filling the vessel like a real portion, not a small centred mound. Ordinary warm indoor light or soft daylight with gentle natural shadows, and honest true-to-life colour that is not bright or oversaturated. Most important, the food looks genuinely cooked and a little imperfect: real browning and char where it has been cooked; the correct real texture and consistency for this dish (a dry dish stays dry, a gravy is thick opaque and oil-flecked with pieces half-submerged, rice is loose separate grains, a pudding is loose and soft); irregular hand-made shapes rather than identical pieces; oil sheen, uneven edges, stray crumbs and a little mess; and any garnish scattered naturally as it really would be, never a single sprig placed in the centre. Shot on a phone, realistic and unstyled, square 1:1.
+A real, candid food photograph of {dish name} ({short description}), a home-style {cuisine} dish, shot the way a person would actually photograph their own meal: from a natural angle, often low or three-quarter rather than flat overhead, with shallow depth of field and a real, slightly cluttered home or restaurant background softly out of focus. It is served in a real everyday vessel that genuinely suits the dish (a steel katori or thali, a karahi or kadai, a cast-iron pan, or a plain home plate), filling the vessel like a real portion, not a small centred mound. Ordinary warm indoor light or soft daylight with gentle natural shadows, and honest true-to-life colour that is not bright or oversaturated. Most important, the food looks genuinely cooked and a little imperfect: real browning and char where it has been cooked; the correct real texture and consistency for this dish (a dry, grilled, roasted or fried dish is served dry on a plate with charred or browned edges and absolutely no pooled sauce, gravy or liquid around it; only a gravy dish sits in sauce, which is then thick, opaque and oil-flecked with the pieces half-submerged; rice is loose separate grains; a pudding is loose and soft); irregular hand-made shapes rather than identical pieces; oil sheen, uneven edges, stray crumbs and a little mess; and any garnish scattered naturally as it really would be, never a single sprig placed in the centre. Shot on a phone, realistic and unstyled, square 1:1.
 ```
 
 The look this prompt aims for: a real, candid food photo, the dish as it actually
@@ -160,11 +160,13 @@ this section is the human-readable contract, the prompt is the machine input.
   or tweezer styling.
   - **Cooked-and-imperfect food.** The most important cue. The food looks
     genuinely cooked and a little imperfect: real browning and char where it has
-    been cooked; the correct real texture and consistency for the dish (a dry dish
-    stays dry, a gravy is thick, opaque, and oil-flecked with pieces
-    half-submerged, rice is loose separate grains, a pudding is loose and soft);
-    irregular hand-made shapes rather than identical pieces; oil sheen, uneven
-    edges, stray crumbs, and a little mess.
+    been cooked; the correct real texture and consistency for the dish (a dry,
+    grilled, roasted or fried dish is served dry on a plate with charred or
+    browned edges and absolutely no pooled sauce, gravy or liquid around it; only
+    a gravy dish sits in sauce, which is then thick, opaque and oil-flecked with
+    the pieces half-submerged; rice is loose separate grains; a pudding is loose
+    and soft); irregular hand-made shapes rather than identical pieces; oil sheen,
+    uneven edges, stray crumbs, and a little mess.
   - **Garnish.** Scattered naturally as it really would be, never a single sprig
     placed in the centre.
   - **Props policy:** the vessel and a softly out-of-focus home or restaurant
