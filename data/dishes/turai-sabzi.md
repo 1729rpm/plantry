@@ -11,6 +11,7 @@ satiety: Low
 prepMinutes: 20
 seasons: [Summer, Monsoon]
 complexity: Easy
+photo: turai-sabzi.jpg
 ---
 
 Ridge gourd cooked down soft in a light onion-tomato masala.

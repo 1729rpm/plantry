@@ -13,6 +13,7 @@ seasons: All
 complexity: Medium
 skill: Mince the lemongrass fine so it cooks into the chicken
 prePrep: Marinate the chicken for an hour if time allows
+photo: vietnamese-lemongrass-chicken.jpg
 ---
 
 Caramelised chicken stir-fried with fragrant lemongrass, garlic and chilli.
