@@ -5,6 +5,8 @@ import {
   composeSlot,
   candidateSetPools,
   shouldSubstituteWeekday,
+  excludeHpIfMealHasHp,
+  isHp,
   type BreakfastWeekdayPairCandidateSet,
   type BreakfastSinglePickCandidateSet,
   type CandidateSet,
@@ -13,7 +15,12 @@ import {
   type Menu3CandidateSet,
   type Menu4CandidateSet,
 } from "./composition.js";
-import { rankCandidates, withinWeekRecencySet, type ConsolidationContext } from "./priority.js";
+import {
+  rankCandidates,
+  withinWeekRecencySet,
+  proteinFamiliesUsedAsHpMain,
+  type ConsolidationContext,
+} from "./priority.js";
 import { applyPick, emptyLedger, type IngredientLedger } from "./consolidation.js";
 import { applyCap } from "./cap.js";
 import { planRequests, slotKey } from "./requests.js";
@@ -177,12 +184,17 @@ export function generateWeek(args: GenerateWeekArgs): GeneratedWeek {
     // alternatives for this slot's ranking. Recomputed each slot from the
     // running picks so each subsequent slot sees the latest placements.
     const withinWeekDishIds = withinWeekRecencySet(weekPicks);
+    // §4 step 6 (Cluster E): protein families already spent on an HP main this
+    // week. Recomputed each slot so a later HP-main slot prefers a fresh protein
+    // over one the week has already used (chicken, paneer). Soft, HP-main-only.
+    const usedHpMainProteinFamilies = proteinFamiliesUsedAsHpMain(weekPicks);
     const picks = pickSlot({
       slot,
       candidateSet,
       compositionHistory,
       consolidationContext,
       withinWeekDishIds,
+      usedHpMainProteinFamilies,
       sameDayBreakfastPrimaryIngredient:
         slot.meal === "Lunch" ? sameDayBreakfastPrimary.get(slot.day) : undefined,
       substitutionLeadDishId:
@@ -294,6 +306,13 @@ interface PickSlotArgs {
    * in an earlier slot sinks below fresh alternatives here.
    */
   withinWeekDishIds?: ReadonlySet<number>;
+  /**
+   * §4 step 6 within-week protein diversity (Cluster E): protein families
+   * already spent on an HP main this week. Applied only when ranking an HP-main
+   * position pool (`rankHpMain`), so a non-main companion pool is never reordered
+   * by protein. Soft with fallback.
+   */
+  usedHpMainProteinFamilies?: ReadonlySet<string>;
   sameDayBreakfastPrimaryIngredient?: string;
   /** §3.2: when set, the substituted day's lead complete_meal is pinned. */
   substitutionLeadDishId?: number;
@@ -337,6 +356,25 @@ function rank(args: PickSlotArgs, pool: Dish[]): Dish[] {
 }
 
 /**
+ * Rank an HP-main position pool, applying §4 step 6 within-week protein
+ * diversity on top of the §4 steps `rank` applies. Used for the protein-main
+ * position of each meal form (Menu 1 HP, Menu 2 Keto, Menu 3 complete_meal+HP,
+ * Menu 4 Keto, and any HP breakfast main). Companion positions still call
+ * `rank`, so protein diversity never reorders a non-main pool.
+ */
+function rankHpMain(args: PickSlotArgs, pool: Dish[]): Dish[] {
+  const ranked = rankCandidates({
+    pool,
+    history: args.compositionHistory,
+    sameDayBreakfastPrimaryIngredient: args.sameDayBreakfastPrimaryIngredient,
+    consolidationContext: args.consolidationContext,
+    withinWeekDishIds: args.withinWeekDishIds,
+    usedHpMainProteinFamilies: args.usedHpMainProteinFamilies,
+  });
+  return promotePins(ranked, args.pinnedDishIds);
+}
+
+/**
  * §6: move any pinned (requested) dishes present in `ranked` to the front,
  * overriding §4 recency for that position. Pinned dishes keep their relative
  * order; the rest follow in ranked order. Pinned ids absent from the pool are
@@ -372,19 +410,29 @@ function pickBreakfastPair(args: PickSlotArgs, set: BreakfastWeekdayPairCandidat
 
 function tryPair(args: PickSlotArgs, leadPool: Dish[], partnerPool: Dish[]): Dish[] | null {
   if (leadPool.length === 0 || partnerPool.length === 0) return null;
-  const leadRanked = rank(args, leadPool);
+  // §4.6: the breakfast lead is the meal's main, so it carries protein diversity
+  // (an HP breakfast main counts toward and respects the week's protein spread).
+  // It is a no-op for non-HP leads (their family is not in the HP-main used-set).
+  const leadRanked = rankHpMain(args, leadPool);
   const lead = leadRanked[0];
-  // Avoid double-picking the same dish across positions when pools overlap.
+  // §3 one-HP-per-meal: once the lead is HP, the partner pool drops HP-tagged
+  // dishes (thin-pool fallback keeps the slot fillable). Avoid double-picking
+  // the same dish across positions when pools overlap.
   const partnerRanked = rank(
     args,
-    partnerPool.filter((d) => d.id !== lead.id),
+    excludeHpIfMealHasHp(
+      partnerPool.filter((d) => d.id !== lead.id),
+      isHp(lead),
+    ),
   );
   if (partnerRanked.length === 0) return null;
   return [lead, partnerRanked[0]];
 }
 
 function pickBreakfastSingle(args: PickSlotArgs, set: BreakfastSinglePickCandidateSet): Dish[] {
-  const ranked = rank(args, set.pool);
+  // §4.6: the single breakfast dish is the meal's main, so it carries protein
+  // diversity (no-op for the non-HP candidates in the pool).
+  const ranked = rankHpMain(args, set.pool);
   if (ranked.length === 0) return [];
   return [ranked[0]];
 }
@@ -398,7 +446,9 @@ function pickBreakfastSingle(args: PickSlotArgs, set: BreakfastSinglePickCandida
  * slot still fills, accepting a second HP side over an incomplete meal.
  */
 function pickMenu1(args: PickSlotArgs, set: Menu1CandidateSet): Dish[] {
-  const hpRanked = rank(args, set.hp);
+  // §4.6: the HP main is ranked with protein diversity so a week's Menu 1 mains
+  // spread across proteins instead of repeating chicken/paneer.
+  const hpRanked = rankHpMain(args, set.hp);
   if (hpRanked.length === 0) {
     return pickLunchCarbOnly(args, set.lunchCarb);
   }
@@ -425,7 +475,9 @@ function pickMenu1(args: PickSlotArgs, set: Menu1CandidateSet): Dish[] {
 }
 
 function pickMenu2(args: PickSlotArgs, set: Menu2CandidateSet): Dish[] {
-  const ketoRanked = rank(args, set.keto);
+  // §4.6: the Keto dish is Menu 2's protein lead, so it carries protein
+  // diversity. The non-HP Gravy/Dry companions do not (they are not HP mains).
+  const ketoRanked = rankHpMain(args, set.keto);
   const keto = ketoRanked[0];
   const gravyRanked = rank(
     args,
@@ -443,31 +495,63 @@ function pickMenu2(args: PickSlotArgs, set: Menu2CandidateSet): Dish[] {
 }
 
 /**
- * §3 Menu 3: complete_meal+HP + Accompaniment + Dessert. If §3.2 has pinned
- * a lead complete_meal Lunch dish, use it (overriding §4); otherwise rank.
+ * §3 Menu 3: complete_meal+HP + Accompaniment + Dessert. The lead is always
+ * HP-tagged, so the Accompaniment carries the §3 one-HP-per-meal filter: it
+ * drops HP-tagged dishes (e.g. a "Chicken salad" alongside a "Chicken biryani"
+ * lead) unless that empties the pool, in which case the thin-pool fallback
+ * keeps the slot fillable. Dessert is never HP-tagged, so the filter is a no-op
+ * there but is applied uniformly for clarity. If §3.2 has pinned a lead
+ * complete_meal Lunch dish, use it (overriding §4); otherwise rank.
  */
 function pickMenu3(args: PickSlotArgs, set: Menu3CandidateSet): Dish[] {
-  const lead = pickSubstitutedLead(args, set.completeMealHp);
+  // §4.6: the complete_meal+HP lead is the meal's HP main, so it is ranked with
+  // protein diversity (a chicken biryani lead deprioritises a second chicken
+  // main later in the week).
+  const lead = pickSubstitutedLead(args, set.completeMealHp, rankHpMain);
+  const mealHasHp = lead ? isHp(lead) : false;
   const acc = rank(
     args,
-    set.accompaniment.filter((d) => !lead || d.id !== lead.id),
+    excludeHpIfMealHasHp(
+      set.accompaniment.filter((d) => !lead || d.id !== lead.id),
+      mealHasHp,
+    ),
   )[0];
   const dessert = rank(
     args,
-    set.dessert.filter((d) => !lead || d.id !== lead.id),
+    excludeHpIfMealHasHp(
+      set.dessert.filter((d) => !lead || d.id !== lead.id),
+      mealHasHp,
+    ),
   )[0];
   return compact([lead, acc, dessert]);
 }
 
+/**
+ * §3 Menu 4: complete_meal-non-HP + Keto + Accompaniment. The lead is non-HP,
+ * so the meal's one HP source (if any) is whichever of Keto/Accompaniment lands
+ * one first. We track whether the meal already holds an HP dish and apply the
+ * §3 one-HP-per-meal filter to each subsequent position: once Keto is HP, the
+ * Accompaniment drops HP-tagged dishes (thin-pool fallback keeps it fillable).
+ */
 function pickMenu4(args: PickSlotArgs, set: Menu4CandidateSet): Dish[] {
-  const lead = pickSubstitutedLead(args, set.completeMealNonHp);
-  const keto = rank(
+  // The lead is non-HP (no protein diversity on it). The Keto dish is the meal's
+  // protein lead and the §4.6 main, so it is ranked with protein diversity.
+  const lead = pickSubstitutedLead(args, set.completeMealNonHp, rank);
+  let mealHasHp = lead ? isHp(lead) : false;
+  const keto = rankHpMain(
     args,
-    set.keto.filter((d) => !lead || d.id !== lead.id),
+    excludeHpIfMealHasHp(
+      set.keto.filter((d) => !lead || d.id !== lead.id),
+      mealHasHp,
+    ),
   )[0];
+  if (keto && isHp(keto)) mealHasHp = true;
   const acc = rank(
     args,
-    set.accompaniment.filter((d) => !lead || d.id !== lead.id),
+    excludeHpIfMealHasHp(
+      set.accompaniment.filter((d) => !lead || d.id !== lead.id),
+      mealHasHp,
+    ),
   )[0];
   return compact([lead, keto, acc]);
 }
@@ -475,13 +559,19 @@ function pickMenu4(args: PickSlotArgs, set: Menu4CandidateSet): Dish[] {
 /**
  * §3.2 substitution: when a specific complete_meal dish was pinned, prefer
  * it directly (rank still consulted for fallback). Otherwise rank normally.
+ * The `ranker` argument lets the HP-main lead (Menu 3) carry §4.6 protein
+ * diversity while the non-HP lead (Menu 4) does not.
  */
-function pickSubstitutedLead(args: PickSlotArgs, pool: Dish[]): Dish | undefined {
+function pickSubstitutedLead(
+  args: PickSlotArgs,
+  pool: Dish[],
+  ranker: (args: PickSlotArgs, pool: Dish[]) => Dish[],
+): Dish | undefined {
   if (args.substitutionLeadDishId !== undefined) {
     const pinned = pool.find((d) => d.id === args.substitutionLeadDishId);
     if (pinned) return pinned;
   }
-  const ranked = rank(args, pool);
+  const ranked = ranker(args, pool);
   return ranked[0];
 }
 

@@ -8,14 +8,13 @@ import {
   byPreferredYes,
   byWithinWeekRecency,
   withinWeekRecencySet,
+  byProteinDiversity,
+  proteinFamily,
+  proteinFamiliesUsedAsHpMain,
+  isHpMain,
 } from "../src/priority.js";
 import { emptyLedger } from "../src/consolidation.js";
-import type {
-  Dish,
-  Ingredient,
-  MenuHistoryRow,
-  PackSizeHeader,
-} from "../src/data/schemas.js";
+import type { Dish, Ingredient, MenuHistoryRow, PackSizeHeader } from "../src/data/schemas.js";
 
 let nextId = 1;
 
@@ -550,6 +549,155 @@ describe("priority — docs/engine.md §4", () => {
     it("returns an empty array unchanged", () => {
       const out = rankCandidates({ pool: [], history: [] });
       expect(out).toEqual([]);
+    });
+  });
+
+  // Cluster E: protein-level within-week diversity for HP mains (§4.6).
+  describe("§4.6 protein-family normalization", () => {
+    it("collapses the chicken cuts onto one family", () => {
+      expect(proteinFamily(makeDish({ primaryIngredient: "Chicken" }))).toBe("Chicken");
+      expect(proteinFamily(makeDish({ primaryIngredient: "Chicken Breast" }))).toBe("Chicken");
+      expect(proteinFamily(makeDish({ primaryIngredient: "Chicken Keema" }))).toBe("Chicken");
+    });
+
+    it("collapses the soya forms onto one family", () => {
+      expect(proteinFamily(makeDish({ primaryIngredient: "Soyabean Chunk" }))).toBe(
+        "Soyabean Chunk",
+      );
+      expect(proteinFamily(makeDish({ primaryIngredient: "Soya Chunk" }))).toBe("Soyabean Chunk");
+    });
+
+    it("passes unmapped proteins through unchanged (each its own family)", () => {
+      for (const p of ["Paneer", "Fish", "Prawn", "Mutton", "Egg", "Chickpea"]) {
+        expect(proteinFamily(makeDish({ primaryIngredient: p }))).toBe(p);
+      }
+    });
+  });
+
+  describe("§4.6 isHpMain", () => {
+    it("is true for HP-tagged Gravy/Dry/Complete meal/Keto", () => {
+      for (const category of ["Gravy dish", "Dry dish", "Complete meal", "Keto"] as const) {
+        expect(isHpMain(makeDish({ tags: ["HP"], category }))).toBe(true);
+      }
+    });
+
+    it("is false for an HP Accompaniment (a side, not a main)", () => {
+      expect(isHpMain(makeDish({ tags: ["HP"], category: "Accompaniment" }))).toBe(false);
+    });
+
+    it("is false for a non-HP dish", () => {
+      expect(isHpMain(makeDish({ tags: [], category: "Gravy dish" }))).toBe(false);
+    });
+  });
+
+  describe("§4.6 proteinFamiliesUsedAsHpMain", () => {
+    it("collects only HP-main protein families, normalized", () => {
+      const chickenGravy = makeDish({
+        tags: ["HP"],
+        category: "Gravy dish",
+        primaryIngredient: "Chicken",
+      });
+      const keemaDry = makeDish({
+        tags: ["HP"],
+        category: "Dry dish",
+        primaryIngredient: "Chicken Keema",
+      });
+      const paneerSide = makeDish({
+        tags: ["HP"],
+        category: "Accompaniment",
+        primaryIngredient: "Paneer",
+      });
+      const plainGravy = makeDish({ tags: [], category: "Gravy dish", primaryIngredient: "Dal" });
+      const set = proteinFamiliesUsedAsHpMain([chickenGravy, keemaDry, paneerSide, plainGravy]);
+      // Chicken + Chicken Keema collapse to one family; the HP side and the
+      // non-HP gravy are excluded.
+      expect([...set]).toEqual(["Chicken"]);
+    });
+  });
+
+  describe("§4.6 byProteinDiversity", () => {
+    it("is a no-op when no protein families have been used", () => {
+      const a = makeDish({ tags: ["HP"], primaryIngredient: "Chicken" });
+      const b = makeDish({ tags: ["HP"], primaryIngredient: "Fish" });
+      expect(byProteinDiversity([a, b], undefined)).toEqual([a, b]);
+      expect(byProteinDiversity([a, b], new Set<string>())).toEqual([a, b]);
+    });
+
+    it("ranks a fresh protein above a repeated one", () => {
+      const chicken = makeDish({
+        tags: ["HP"],
+        category: "Gravy dish",
+        primaryIngredient: "Chicken",
+      });
+      const fish = makeDish({ tags: ["HP"], category: "Gravy dish", primaryIngredient: "Fish" });
+      // Chicken already used this week as an HP main → fish (fresh) ranks up.
+      const out = byProteinDiversity([chicken, fish], new Set(["Chicken"]));
+      expect(out.map((d) => d.primaryIngredient)).toEqual(["Fish", "Chicken"]);
+    });
+
+    it("collapses chicken cuts: a chicken-keema main is demoted by a prior chicken main", () => {
+      const keema = makeDish({
+        tags: ["HP"],
+        category: "Dry dish",
+        primaryIngredient: "Chicken Keema",
+      });
+      const mutton = makeDish({
+        tags: ["HP"],
+        category: "Gravy dish",
+        primaryIngredient: "Mutton",
+      });
+      const out = byProteinDiversity([keema, mutton], new Set(["Chicken"]));
+      expect(out.map((d) => d.primaryIngredient)).toEqual(["Mutton", "Chicken Keema"]);
+    });
+
+    it("is soft: returns the pool unchanged when every candidate's protein was used", () => {
+      const chickenA = makeDish({
+        tags: ["HP"],
+        category: "Gravy dish",
+        primaryIngredient: "Chicken",
+      });
+      const chickenB = makeDish({
+        tags: ["HP"],
+        category: "Dry dish",
+        primaryIngredient: "Chicken Breast",
+      });
+      // Only chicken candidates and chicken already used → still fills (soft).
+      const out = byProteinDiversity([chickenA, chickenB], new Set(["Chicken"]));
+      expect(out).toEqual([chickenA, chickenB]);
+    });
+
+    it("does not reorder a non-HP-main candidate by its incidental primaryIngredient", () => {
+      // A non-HP gravy whose primaryIngredient is Paneer is NOT an HP main, so a
+      // prior paneer HP main does not demote it: the rule is scoped to HP mains.
+      const nonHpPaneer = makeDish({
+        tags: [],
+        category: "Gravy dish",
+        primaryIngredient: "Paneer",
+      });
+      const hpFish = makeDish({ tags: ["HP"], category: "Gravy dish", primaryIngredient: "Fish" });
+      const out = byProteinDiversity([nonHpPaneer, hpFish], new Set(["Paneer"]));
+      expect(out).toEqual([nonHpPaneer, hpFish]);
+    });
+  });
+
+  describe("§4.6 rankCandidates end-to-end protein diversity", () => {
+    it("a week starting with a chicken main ranks a non-chicken protein up next", () => {
+      // Both never-cooked HP gravies; chicken would lead on id order, but the
+      // week already spent Chicken on an HP main, so fish ranks up.
+      const chicken = makeDish({
+        tags: ["HP"],
+        category: "Gravy dish",
+        primaryIngredient: "Chicken",
+      });
+      const fish = makeDish({ tags: ["HP"], category: "Gravy dish", primaryIngredient: "Fish" });
+      const baseline = rankCandidates({ pool: [chicken, fish], history: [] });
+      expect(baseline.map((d) => d.primaryIngredient)).toEqual(["Chicken", "Fish"]);
+      const diversified = rankCandidates({
+        pool: [chicken, fish],
+        history: [],
+        usedHpMainProteinFamilies: new Set(["Chicken"]),
+      });
+      expect(diversified.map((d) => d.primaryIngredient)).toEqual(["Fish", "Chicken"]);
     });
   });
 });

@@ -11,6 +11,8 @@ import {
   menu4,
   lunchCarbPool,
   shouldSubstituteWeekday,
+  excludeHpIfMealHasHp,
+  isHp,
 } from "../src/composition.js";
 import type {
   BreakfastWeekdayPairCandidateSet,
@@ -657,6 +659,52 @@ describe("composition — docs/engine.md §3", () => {
           season: "Summer",
         }),
       ).toThrow(/lunchMenu/);
+    });
+  });
+
+  // Cluster D (one HP source per meal, all menu forms): the §3 one-HP-per-meal
+  // filter generalises #61's Menu-1-only non-HP partner across every form.
+  describe("§3 one-HP-per-meal filter (Cluster D)", () => {
+    it("isHp keys on the HP tag, not on names", () => {
+      expect(isHp(makeDish({ tags: ["HP"] }))).toBe(true);
+      expect(isHp(makeDish({ tags: [] }))).toBe(false);
+      expect(isHp(makeDish({ tags: ["complete_meal"] }))).toBe(false);
+    });
+
+    it("is a no-op when the meal does not yet hold an HP dish", () => {
+      const hp = makeDish({ tags: ["HP"], category: "Accompaniment" });
+      const plain = makeDish({ category: "Accompaniment" });
+      expect(excludeHpIfMealHasHp([hp, plain], false)).toEqual([hp, plain]);
+    });
+
+    it("drops HP-tagged dishes once the meal holds an HP dish", () => {
+      const hp = makeDish({
+        tags: ["HP"],
+        category: "Accompaniment",
+        primaryIngredient: "Chicken",
+      });
+      const plain = makeDish({ category: "Accompaniment" });
+      expect(excludeHpIfMealHasHp([hp, plain], true)).toEqual([plain]);
+    });
+
+    it("is property-based: a paneer HP side is dropped exactly as a chicken one", () => {
+      const hpPaneer = makeDish({
+        tags: ["HP"],
+        category: "Accompaniment",
+        primaryIngredient: "Paneer",
+      });
+      const plain = makeDish({ category: "Accompaniment" });
+      const out = excludeHpIfMealHasHp([hpPaneer, plain], true);
+      expect(out).toEqual([plain]);
+      expect(out.some((d) => d.tags.includes("HP"))).toBe(false);
+    });
+
+    it("thin-pool fallback: returns the unfiltered pool when every candidate is HP", () => {
+      const hpA = makeDish({ tags: ["HP"], category: "Accompaniment" });
+      const hpB = makeDish({ tags: ["HP"], category: "Accompaniment" });
+      // No non-HP candidate exists, so the slot still fills (a second HP side
+      // beats an incomplete meal). Documented fallback.
+      expect(excludeHpIfMealHasHp([hpA, hpB], true)).toEqual([hpA, hpB]);
     });
   });
 });

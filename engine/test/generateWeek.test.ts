@@ -480,11 +480,21 @@ describe("generateWeek — top-level engine", () => {
           tags: ["HP"],
           primaryIngredient: "Chicken",
         }),
-        makeDish({ name: "Chapati", time: "Lunch", category: "Chapati", primaryIngredient: "Wheat" }),
+        makeDish({
+          name: "Chapati",
+          time: "Lunch",
+          category: "Chapati",
+          primaryIngredient: "Wheat",
+        }),
         // Menu 2 fillers so other weekdays build.
         makeDish({ name: "Tofu", time: "Lunch", category: "Keto", primaryIngredient: "Tofu" }),
         makeDish({ name: "Dal", time: "Lunch", category: "Gravy dish", primaryIngredient: "Dal" }),
-        makeDish({ name: "Cabbage", time: "Lunch", category: "Dry dish", primaryIngredient: "Cabbage" }),
+        makeDish({
+          name: "Cabbage",
+          time: "Lunch",
+          category: "Dry dish",
+          primaryIngredient: "Cabbage",
+        }),
         // Saturday fillers.
         makeDish({
           name: "Biryani",
@@ -493,7 +503,12 @@ describe("generateWeek — top-level engine", () => {
           tags: ["complete_meal", "HP"],
           primaryIngredient: "Chicken",
         }),
-        makeDish({ name: "Halwa", time: "Lunch", category: "Dessert", primaryIngredient: "Carrot" }),
+        makeDish({
+          name: "Halwa",
+          time: "Lunch",
+          category: "Dessert",
+          primaryIngredient: "Carrot",
+        }),
       ];
       const week = generateWeek({
         weekStart: "2026-06-15",
@@ -504,11 +519,193 @@ describe("generateWeek — top-level engine", () => {
         packSizes: emptyPackSizes,
         rng: () => 0.1,
       });
-      const monLunch = week.days.find((d) => d.day === "Mon")!.slots.find((s) => s.meal === "Lunch")!;
+      const monLunch = week.days
+        .find((d) => d.day === "Mon")!
+        .slots.find((s) => s.meal === "Lunch")!;
       // The fallback fills the partner slot: Menu 1 still has 3 items including
       // the HP Accompaniment (one-HP-per-meal yields to slot-completeness).
       expect(monLunch.dishes.length).toBe(3);
       expect(monLunch.dishes.some((d) => d.name === "Chicken Salad")).toBe(true);
+    });
+  });
+
+  describe("Cluster D: one HP source per meal, all menu forms", () => {
+    it("Saturday Menu 3 does not pair an HP complete_meal with an HP accompaniment", () => {
+      nextId = 1;
+      // The live defect: "Chicken biryani" (HP complete_meal) + "Chicken salad"
+      // (HP accompaniment) in one Saturday Menu 3 meal. With a non-HP
+      // accompaniment available the HP one must be excluded.
+      const library: Dish[] = [
+        makeDish({
+          name: "Chicken Biryani",
+          time: "Lunch",
+          category: "Complete meal",
+          tags: ["complete_meal", "HP"],
+          primaryIngredient: "Chicken",
+        }),
+        makeDish({
+          name: "Chicken Salad",
+          time: "Lunch",
+          category: "Accompaniment",
+          tags: ["HP"],
+          primaryIngredient: "Chicken",
+        }),
+        makeDish({
+          name: "Cucumber Raita",
+          time: "Lunch",
+          category: "Accompaniment",
+          primaryIngredient: "Cucumber",
+        }),
+        makeDish({
+          name: "Halwa",
+          time: "Lunch",
+          category: "Dessert",
+          primaryIngredient: "Carrot",
+        }),
+      ];
+      const week = generateWeek({
+        weekStart: "2026-06-15",
+        library,
+        history: emptyHistory,
+        season: "Monsoon",
+        ingredients: emptyIngredients,
+        packSizes: emptyPackSizes,
+        rng: () => 0.1,
+        lastSaturdayMenu: 4, // force Menu 3 this Saturday
+      });
+      const satLunch = week.days
+        .find((d) => d.day === "Sat")!
+        .slots.find((s) => s.meal === "Lunch")!;
+      const hpCount = satLunch.dishes.filter((d) => d.tags.includes("HP")).length;
+      expect(hpCount).toBe(1);
+      expect(satLunch.dishes.some((d) => d.name === "Chicken Salad")).toBe(false);
+      expect(satLunch.dishes.some((d) => d.name === "Cucumber Raita")).toBe(true);
+    });
+
+    it("a breakfast pair carries at most one HP dish", () => {
+      nextId = 1;
+      // Option A (complete_meal + fruit): the only non-fruit partner is an HP
+      // accompaniment, but Option A's partner is fruit (never HP). Use Option B
+      // (complete_carb + accompaniment) so the partner could be HP: an HP
+      // complete_carb lead must exclude an HP accompaniment partner.
+      const library: Dish[] = [
+        makeDish({
+          name: "Besan Paneer Chilla",
+          time: "Breakfast",
+          category: "Chilla",
+          tags: ["complete_carb", "HP"],
+          primaryIngredient: "Paneer",
+        }),
+        makeDish({
+          name: "Egg Salad",
+          time: "Breakfast",
+          category: "Accompaniment",
+          tags: ["HP"],
+          primaryIngredient: "Egg",
+        }),
+        makeDish({
+          name: "Mint Chutney",
+          time: "Breakfast",
+          category: "Accompaniment",
+          primaryIngredient: "Mint",
+        }),
+        // Lunch + other fillers so the rest of the week builds.
+        makeDish({
+          name: "Dal",
+          time: "Lunch",
+          category: "Gravy dish",
+          primaryIngredient: "Dal",
+        }),
+        makeDish({
+          name: "Chapati",
+          time: "Lunch",
+          category: "Chapati",
+          primaryIngredient: "Wheat",
+        }),
+        makeDish({ name: "Tofu", time: "Lunch", category: "Keto", primaryIngredient: "Tofu" }),
+        makeDish({
+          name: "Cabbage",
+          time: "Lunch",
+          category: "Dry dish",
+          primaryIngredient: "Cabbage",
+        }),
+        makeDish({
+          name: "Veg Pulao",
+          time: "Lunch",
+          category: "Complete meal",
+          tags: ["complete_meal"],
+          primaryIngredient: "Rice",
+        }),
+        makeDish({
+          name: "Curd",
+          time: "Lunch",
+          category: "Accompaniment",
+          primaryIngredient: "Curd",
+        }),
+      ];
+      const week = generateWeek({
+        weekStart: "2026-06-15",
+        library,
+        history: emptyHistory,
+        season: "Monsoon",
+        ingredients: emptyIngredients,
+        packSizes: emptyPackSizes,
+        rng: () => 0.1,
+        lastSaturdayMenu: 3, // Saturday becomes Menu 4 (non-HP lead)
+      });
+      const monBreakfast = week.days
+        .find((d) => d.day === "Mon")!
+        .slots.find((s) => s.meal === "Breakfast")!;
+      // The HP chilla is the lead; the HP egg salad must be excluded so only the
+      // plain Mint Chutney can partner it.
+      const hpCount = monBreakfast.dishes.filter((d) => d.tags.includes("HP")).length;
+      expect(hpCount).toBeLessThanOrEqual(1);
+      if (monBreakfast.dishes.some((d) => d.name === "Besan Paneer Chilla")) {
+        expect(monBreakfast.dishes.some((d) => d.name === "Egg Salad")).toBe(false);
+      }
+    });
+
+    it("thin-pool fallback: Menu 3 still fills when the only accompaniment is HP", () => {
+      nextId = 1;
+      const library: Dish[] = [
+        makeDish({
+          name: "Chicken Biryani",
+          time: "Lunch",
+          category: "Complete meal",
+          tags: ["complete_meal", "HP"],
+          primaryIngredient: "Chicken",
+        }),
+        // ONLY accompaniment is HP-tagged: the filter empties, so the fallback
+        // keeps the slot fillable (a second HP side beats an incomplete meal).
+        makeDish({
+          name: "Chicken Salad",
+          time: "Lunch",
+          category: "Accompaniment",
+          tags: ["HP"],
+          primaryIngredient: "Chicken",
+        }),
+        makeDish({
+          name: "Halwa",
+          time: "Lunch",
+          category: "Dessert",
+          primaryIngredient: "Carrot",
+        }),
+      ];
+      const week = generateWeek({
+        weekStart: "2026-06-15",
+        library,
+        history: emptyHistory,
+        season: "Monsoon",
+        ingredients: emptyIngredients,
+        packSizes: emptyPackSizes,
+        rng: () => 0.1,
+        lastSaturdayMenu: 4,
+      });
+      const satLunch = week.days
+        .find((d) => d.day === "Sat")!
+        .slots.find((s) => s.meal === "Lunch")!;
+      expect(satLunch.dishes.length).toBe(3);
+      expect(satLunch.dishes.some((d) => d.name === "Chicken Salad")).toBe(true);
     });
   });
 
