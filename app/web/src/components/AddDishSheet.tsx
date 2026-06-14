@@ -118,7 +118,7 @@ export function AddDishSheet({
           </Chip>
         </div>
       )}
-      <SearchField value={q} onChange={setQ} placeholder="Search dishes" />
+      <SearchField value={q} onChange={setQ} placeholder="Search dishes" autoFocus />
       {visible.length === 0 ? (
         <div className="picker__hint">No dish matches that name.</div>
       ) : (

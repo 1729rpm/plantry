@@ -83,7 +83,7 @@ export function DishActionSheet({
       <ReasonDialog
         title={`Remove ${dishLabel}`}
         hint="Removing leaves the day with fewer dishes. A short reason helps the review."
-        submitLabel="Remove dish"
+        submitLabel="Delete dish"
         inFlight={inFlight}
         error={error}
         onSubmit={handleDelete}

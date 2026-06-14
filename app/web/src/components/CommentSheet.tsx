@@ -166,6 +166,8 @@ export function CommentSheet({ target, identity, onClose }: CommentSheetProps) {
         className="reason__text"
         rows={3}
         value={text}
+        autoFocus
+        aria-label="Comment"
         placeholder="e.g. too many gravies this day"
         onChange={(e) => setText(e.target.value)}
         disabled={inFlight}
