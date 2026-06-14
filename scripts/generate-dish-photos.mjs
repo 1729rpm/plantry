@@ -32,11 +32,15 @@
 // by a client-side rate limiter (PHOTO_MAX_RPM, default 35, under NVIDIA's ~40/min
 // free-tier cap), with exponential backoff + jitter on HTTP 429/500/503.
 //
-// Re-roll a dish whose composition came back unwanted by setting IMAGE_SEED to a
-// different integer; left unset, a fixed default seed keeps runs reproducible.
+// Each dish gets its own base seed derived from its slug, so vessels, backgrounds,
+// and angles vary across the library (variety is desired, not uniformity) while a
+// re-run reproduces the same set. Set IMAGE_SEED to pin every dish to one seed
+// (used to A/B a prompt change against a fixed composition).
 //
 // Output spec (STYLE.md): square 1:1, ~1024x1024, JPEG, under ~300 KB. The prompt
-// aims for a candid home phone photo (cfg_scale 3.5, steps 40), not styled CGI.
+// aims for a real, candid food photo (cfg_scale 3.5, steps 40), not styled CGI:
+// a natural angle, a real everyday vessel, an out-of-focus home context, and food
+// that looks genuinely cooked and a little imperfect with correct per-type texture.
 
 import {
   readFileSync,
@@ -77,6 +81,22 @@ const TARGET_PX = 1024;
 // Fixed default seed keeps runs reproducible; override per-dish re-rolls with IMAGE_SEED.
 const DEFAULT_SEED = 7;
 const SEED = process.env.IMAGE_SEED ? Number(process.env.IMAGE_SEED) : DEFAULT_SEED;
+
+/** Per-dish base seed. Variety across the library is now desired (different
+ * vessels, backgrounds, and angles per dish), so each dish gets its own seed
+ * derived deterministically from its slug rather than the one fixed library seed.
+ * Deterministic so a re-run reproduces the same library, varied so two adjacent
+ * dishes do not share a composition. IMAGE_SEED, if set, pins every dish to that
+ * one seed (used to A/B a prompt change against a fixed composition). */
+function dishSeed(slug) {
+  if (process.env.IMAGE_SEED) return SEED;
+  let h = 2166136261; // FNV-1a 32-bit
+  for (let i = 0; i < slug.length; i += 1) {
+    h ^= slug.charCodeAt(i);
+    h = Math.imul(h, 16777619);
+  }
+  return (h >>> 0) % 1000000;
+}
 
 // --- Cuisine map: single source of truth is data/dish-photos/STYLE.md. This
 // mirrors that table; STYLE.md owns it and any new tag is added there first. The
@@ -201,15 +221,23 @@ function sanitizeFilterTokens(prompt) {
 function buildPrompt(slug, name, tags, description) {
   const cuisine = cuisinePhrase(slug, tags);
   const prompt =
-    `An everyday phone photo of ${name} (${description}), a dish of ${cuisine} ` +
-    `home cooking, taken looking straight down from directly above. It is a single ` +
-    `helping served the way it actually comes to the table, not styled or arranged, ` +
-    `on a plain simple ceramic plate or bowl on an ordinary kitchen surface, lit by ` +
-    `soft daylight from a nearby window with gentle natural shadows. The colours are ` +
-    `true to life and the textures look real and a little uneven, the way home food ` +
-    `really looks. The plate sits centred in the frame with a comfortable margin of ` +
-    `bare surface on every side. Casual, realistic, unpolished documentary food ` +
-    `photography, square 1:1.`;
+    `A real, candid food photograph of ${name} (${description}), a home-style ` +
+    `${cuisine} dish, shot the way a person would actually photograph their own ` +
+    `meal: from a natural angle, often low or three-quarter rather than flat ` +
+    `overhead, with shallow depth of field and a real, slightly cluttered home or ` +
+    `restaurant background softly out of focus. It is served in a real everyday ` +
+    `vessel that genuinely suits the dish (a steel katori or thali, a karahi or ` +
+    `kadai, a cast-iron pan, or a plain home plate), filling the vessel like a real ` +
+    `portion, not a small centred mound. Ordinary warm indoor light or soft daylight ` +
+    `with gentle natural shadows, and honest true-to-life colour that is not bright ` +
+    `or oversaturated. Most important, the food looks genuinely cooked and a little ` +
+    `imperfect: real browning and char where it has been cooked; the correct real ` +
+    `texture and consistency for this dish (a dry dish stays dry, a gravy is thick ` +
+    `opaque and oil-flecked with pieces half-submerged, rice is loose separate ` +
+    `grains, a pudding is loose and soft); irregular hand-made shapes rather than ` +
+    `identical pieces; oil sheen, uneven edges, stray crumbs and a little mess; and ` +
+    `any garnish scattered naturally as it really would be, never a single sprig ` +
+    `placed in the centre. Shot on a phone, realistic and unstyled, square 1:1.`;
   // Sanitize the assembled string only; the dish file on disk is untouched.
   return sanitizeFilterTokens(prompt);
 }
@@ -600,11 +628,14 @@ async function processDish(slug, token) {
   //     help; skip the dish (no jpg, no photo: field). The placeholder covers it.
   //   - A black frame without that signal (a transient render failure): re-roll
   //     once or twice with a varied seed.
+  const baseSeed = dishSeed(slug);
   let attempt = 0;
   let skipped = false;
   for (;;) {
     attempt += 1;
-    const seedOverride = attempt === 1 ? undefined : SEED + attempt * 1000;
+    // Per-dish base seed on the first attempt (variety across the library);
+    // re-rolls (black frame) bump deterministically from there.
+    const seedOverride = baseSeed + (attempt - 1) * 1000;
     const { buf: imgBuf, usage, finishReason } = await generateImage(prompt, token, seedOverride);
     if (usage) console.log(`  usage: ${JSON.stringify(usage)}`);
     if (finishReason === "CONTENT_FILTERED") {
