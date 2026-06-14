@@ -14,6 +14,7 @@ complexity: Hard
 skill: Layering and timing the dum so the rice and chicken finish together
 buySpecially: Curry cut chicken, 300g
 prePrep: Marinate the chicken in curd and spices for at least an hour
+photo: chicken-biryani.jpg
 ---
 
 Layered basmati rice and marinated chicken slow-cooked on dum with fried onions.
