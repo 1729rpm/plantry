@@ -13,6 +13,7 @@ seasons: All
 complexity: Medium
 skill: Comfortable, browning the onion masala matters
 buySpecially: Curry cut chicken, 300g
+photo: chicken-curry.jpg
 ---
 
 Home-style chicken curry in a spiced onion-tomato gravy.

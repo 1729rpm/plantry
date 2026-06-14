@@ -12,6 +12,7 @@ prepMinutes: 25
 seasons: All
 complexity: Easy
 skill: Steam the couscous loose and fluff it so it does not clump
+photo: mediterranean-couscous-bowl.jpg
 ---
 
 Fluffy couscous with chickpeas, crisp vegetables, feta and lemon.

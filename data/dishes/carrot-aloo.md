@@ -11,6 +11,7 @@ satiety: Low
 prepMinutes: 20
 seasons: All
 complexity: Easy
+photo: carrot-aloo.jpg
 ---
 
 Diced carrot and potato cooked dry with a light tempering.

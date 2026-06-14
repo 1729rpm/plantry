@@ -11,6 +11,7 @@ satiety: Medium
 prepMinutes: 20
 seasons: All
 complexity: Easy
+photo: coconut-rice.jpg
 ---
 
 South Indian rice tossed in a coconut, cashew and curry-leaf tempering.

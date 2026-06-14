@@ -13,6 +13,7 @@ seasons: All
 complexity: Medium
 buySpecially: Firm paneer block, 250g
 prePrep: Marinate the paneer in spiced curd for at least an hour
+photo: paneer-tikka.jpg
 ---
 
 Curd and spice marinated paneer grilled with onion and capsicum.

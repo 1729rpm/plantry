@@ -11,6 +11,7 @@ satiety: High
 prepMinutes: 40
 seasons: All
 complexity: Medium
+photo: keema-pulao.jpg
 ---
 
 A one-pot rice pulao cooked with spiced chicken keema and peas.

@@ -11,6 +11,7 @@ satiety: High
 prepMinutes: 25
 seasons: All
 complexity: Medium
+photo: paneer-do-pyaza.jpg
 ---
 
 Paneer cooked with a double measure of onion in two textures.

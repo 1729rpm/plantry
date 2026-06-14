@@ -13,6 +13,7 @@ seasons: All
 complexity: Easy
 buySpecially: Boneless chicken breast, 300g
 prePrep: Marinate the chicken for at least 30 minutes
+photo: grilled-chicken-breast.jpg
 ---
 
 Lemon and garlic marinated chicken breast, grilled till juicy.

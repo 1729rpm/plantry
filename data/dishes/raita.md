@@ -11,6 +11,7 @@ satiety: Low
 prepMinutes: 5
 seasons: All
 complexity: Easy
+photo: raita.jpg
 ---
 
 Whisked curd with cucumber, onion and tomato, a cooling side for any meal.

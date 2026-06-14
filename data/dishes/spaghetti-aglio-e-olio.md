@@ -12,6 +12,7 @@ prepMinutes: 20
 seasons: All
 complexity: Easy
 skill: Warm the garlic gently in oil so it flavours without burning
+photo: spaghetti-aglio-e-olio.jpg
 ---
 
 Spaghetti tossed with slow-warmed garlic, olive oil and chilli flakes.

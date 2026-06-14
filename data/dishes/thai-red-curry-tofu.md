@@ -12,6 +12,7 @@ prepMinutes: 25
 seasons: All
 complexity: Medium
 skill: Fry the curry paste in the thick coconut cream first so it splits and turns fragrant
+photo: thai-red-curry-tofu.jpg
 ---
 
 Firm tofu and vegetables simmered in a Thai red coconut curry.

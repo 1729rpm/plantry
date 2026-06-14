@@ -12,6 +12,7 @@ prepMinutes: 50
 seasons: All
 complexity: Hard
 skill: Layering and timing the dum so the rice and vegetables finish together
+photo: veg-biryani.jpg
 ---
 
 Layered basmati rice and spiced mixed vegetables slow-cooked on dum.

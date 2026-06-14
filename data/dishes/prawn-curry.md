@@ -13,6 +13,7 @@ seasons: All
 complexity: Medium
 skill: Prawns cook fast, pull them off the heat as soon as they curl
 buySpecially: Cleaned, deveined prawns, 300g
+photo: prawn-curry.jpg
 ---
 
 Prawns simmered in a coconut and tomato gravy with curry leaves.

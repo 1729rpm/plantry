@@ -12,6 +12,7 @@ prepMinutes: 15
 seasons: All
 complexity: Easy
 skill: Stir the miso in off the heat so it does not boil and turn bitter
+photo: japanese-miso-soup.jpg
 ---
 
 A light, savoury broth with soft tofu cubes and spring onion.

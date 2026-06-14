@@ -12,6 +12,7 @@ prepMinutes: 20
 seasons: All
 complexity: Easy
 skill: Boil the noodles just under done and oil them so they do not stick
+photo: veg-hakka-noodles.jpg
 ---
 
 Boiled wheat noodles tossed Indo-Chinese style with shredded vegetables.

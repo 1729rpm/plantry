@@ -11,6 +11,7 @@ satiety: High
 prepMinutes: 20
 seasons: All
 complexity: Easy
+photo: paneer-capsicum.jpg
 ---
 
 Paneer and capsicum tossed dry in a quick onion-tomato masala.

@@ -11,6 +11,7 @@ satiety: Medium
 prepMinutes: 25
 seasons: All
 complexity: Easy
+photo: mix-veg-sabzi.jpg
 ---
 
 A dry stir-fry of mixed vegetables in a light onion-tomato masala.

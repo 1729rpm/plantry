@@ -12,6 +12,7 @@ prepMinutes: 35
 seasons: All
 complexity: Medium
 buySpecially: Curry cut chicken, 600g
+photo: chicken-stew.jpg
 ---
 
 A gentle Kerala-style chicken stew in a coconut-milk broth.

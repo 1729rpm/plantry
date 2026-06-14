@@ -13,6 +13,7 @@ seasons: [Winter]
 complexity: Medium
 skill: Patient stirring so the milk reduces without catching
 buySpecially: Red winter carrots, 500g
+photo: carrot-halwa.jpg
 ---
 
 Slow-cooked grated carrots reduced in milk with ghee, cashews and raisins.

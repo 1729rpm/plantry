@@ -12,6 +12,7 @@ prepMinutes: 25
 seasons: All
 complexity: Easy
 skill: Dress the salad just before serving so the herbs stay fresh
+photo: vietnamese-noodle-salad.jpg
 ---
 
 Cold rice noodles tossed with crisp vegetables, herbs and a tangy lime dressing.

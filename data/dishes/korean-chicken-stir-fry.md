@@ -13,6 +13,7 @@ seasons: All
 complexity: Medium
 skill: Reduce the sauce till it glazes the chicken without burning the sugar
 buySpecially: Boneless chicken, 300g
+photo: korean-chicken-stir-fry.jpg
 ---
 
 Chicken stir-fried in a sweet and spicy gochujang glaze with vegetables.

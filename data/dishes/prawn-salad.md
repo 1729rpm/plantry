@@ -12,6 +12,7 @@ prepMinutes: 15
 seasons: All
 complexity: Easy
 buySpecially: Cleaned prawns, 200g
+photo: prawn-salad.jpg
 ---
 
 Poached prawns over crisp salad leaves with a lemon dressing.

@@ -11,6 +11,7 @@ satiety: High
 prepMinutes: 15
 seasons: All
 complexity: Easy
+photo: paneer-bhurji-106.jpg
 ---
 
 Crumbled paneer scrambled with onion, tomato and spices, a quick breakfast.

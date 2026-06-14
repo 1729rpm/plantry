@@ -12,6 +12,7 @@ prepMinutes: 30
 seasons: All
 complexity: Medium
 skill: Comfortable, keep whisking so the curd does not split
+photo: kadhi.jpg
 ---
 
 A tangy besan and curd kadhi finished with a curry-leaf tempering.

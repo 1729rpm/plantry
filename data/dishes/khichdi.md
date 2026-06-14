@@ -11,6 +11,7 @@ satiety: High
 prepMinutes: 30
 seasons: All
 complexity: Easy
+photo: khichdi.jpg
 ---
 
 Soft one-pot rice and moong dal cooked with ginger, a light comfort meal.

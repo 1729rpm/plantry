@@ -12,6 +12,7 @@ prepMinutes: 20
 seasons: All
 complexity: Easy
 buySpecially: Boneless chicken breast, 200g
+photo: chicken-breast-salad.jpg
 ---
 
 Grilled chicken breast sliced over crisp salad leaves with a lemon dressing.

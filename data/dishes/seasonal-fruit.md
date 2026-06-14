@@ -11,6 +11,7 @@ satiety: Low
 prepMinutes: 5
 seasons: All
 complexity: Easy
+photo: seasonal-fruit.jpg
 ---
 
 Whatever fruit is in season that week, washed and cut to eat alongside breakfast.

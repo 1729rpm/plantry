@@ -11,6 +11,7 @@ satiety: Medium
 prepMinutes: 25
 seasons: All
 complexity: Medium
+photo: missi-roti.jpg
 ---
 
 Spiced flatbreads of wheat and gram flour kneaded with onion, chilli and ajwain.

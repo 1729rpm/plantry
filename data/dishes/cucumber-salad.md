@@ -11,6 +11,7 @@ satiety: Low
 prepMinutes: 5
 seasons: All
 complexity: Easy
+photo: cucumber-salad.jpg
 ---
 
 Crunchy cucumber tossed with onion, lemon and coriander, a cooling lunch side.

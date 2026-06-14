@@ -12,6 +12,7 @@ prepMinutes: 10
 seasons: All
 complexity: Easy
 prePrep: Sprout the moong over a day or two if not buying it ready-sprouted
+photo: sprouts-salad.jpg
 ---
 
 A protein-packed raw salad of moong sprouts with onion, tomato and lemon.

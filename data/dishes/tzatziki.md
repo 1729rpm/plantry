@@ -12,6 +12,7 @@ prepMinutes: 10
 seasons: All
 complexity: Easy
 skill: Squeeze the grated cucumber dry so the dip stays thick
+photo: tzatziki.jpg
 ---
 
 A cooling thick-curd dip with grated cucumber, garlic and mint.

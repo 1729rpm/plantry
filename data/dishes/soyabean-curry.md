@@ -12,6 +12,7 @@ prepMinutes: 25
 seasons: All
 complexity: Easy
 prePrep: Soak the soya chunks in hot water till they swell, then squeeze dry
+photo: soyabean-curry.jpg
 ---
 
 Protein-rich soya chunks simmered in a spiced onion-tomato gravy.

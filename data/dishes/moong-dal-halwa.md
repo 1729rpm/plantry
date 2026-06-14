@@ -13,6 +13,7 @@ seasons: [Winter]
 complexity: Hard
 skill: Patient slow roasting of the dal paste so it turns nutty without burning
 prePrep: Soak the moong dal for a few hours, then grind to a coarse paste
+photo: moong-dal-halwa.jpg
 ---
 
 Rich winter halwa of slow-roasted moong dal cooked in ghee with milk, cashews and raisins.

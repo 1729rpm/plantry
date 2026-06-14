@@ -11,6 +11,7 @@ satiety: Low
 prepMinutes: 5
 seasons: All
 complexity: Easy
+photo: mint-chutney.jpg
 ---
 
 Bright green mint and coriander chutney for parathas and snacks.

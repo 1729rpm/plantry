@@ -11,6 +11,7 @@ satiety: Medium
 prepMinutes: 10
 seasons: All
 complexity: Easy
+photo: grilled-cheese-sandwich.jpg
 ---
 
 Bread and cheese griddled until golden and molten.

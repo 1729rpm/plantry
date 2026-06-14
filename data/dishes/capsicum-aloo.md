@@ -11,6 +11,7 @@ satiety: Low
 prepMinutes: 20
 seasons: All
 complexity: Easy
+photo: capsicum-aloo.jpg
 ---
 
 Capsicum and potato stir-fried with a simple cumin tempering.

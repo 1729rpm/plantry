@@ -12,6 +12,7 @@ prepMinutes: 25
 seasons: All
 complexity: Medium
 prePrep: Soak the sabudana overnight till the pearls swell and separate
+photo: sabudana-khichdi.jpg
 ---
 
 Soaked tapioca pearls tossed with potato, peanuts and green chilli.

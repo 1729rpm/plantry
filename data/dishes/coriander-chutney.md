@@ -11,6 +11,7 @@ satiety: Low
 prepMinutes: 5
 seasons: All
 complexity: Easy
+photo: coriander-chutney.jpg
 ---
 
 Fresh coriander and green chilli ground with lemon into a quick breakfast chutney.

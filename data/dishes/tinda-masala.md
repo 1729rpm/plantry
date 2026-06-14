@@ -11,6 +11,7 @@ satiety: Low
 prepMinutes: 25
 seasons: [Summer, Monsoon]
 complexity: Easy
+photo: tinda-masala.jpg
 ---
 
 Apple gourd cooked down in a homely onion-tomato masala.

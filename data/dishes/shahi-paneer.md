@@ -11,6 +11,7 @@ satiety: High
 prepMinutes: 30
 seasons: All
 complexity: Medium
+photo: shahi-paneer.jpg
 ---
 
 Paneer in a regal, creamy cashew gravy, mildly spiced and lightly sweet.

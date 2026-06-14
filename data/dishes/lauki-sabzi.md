@@ -11,6 +11,7 @@ satiety: Low
 prepMinutes: 20
 seasons: [Summer, Monsoon]
 complexity: Easy
+photo: lauki-sabzi.jpg
 ---
 
 Diced bottle gourd cooked soft in a light onion-tomato masala.

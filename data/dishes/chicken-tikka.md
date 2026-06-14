@@ -13,6 +13,7 @@ seasons: All
 complexity: Medium
 buySpecially: Boneless chicken, 300g
 prePrep: Marinate the chicken in spiced curd for at least an hour
+photo: chicken-tikka.jpg
 ---
 
 Curd and spice marinated chicken grilled with onion and capsicum.

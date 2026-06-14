@@ -12,6 +12,7 @@ prepMinutes: 20
 seasons: All
 complexity: Easy
 buySpecially: Boneless chicken breast, 300g
+photo: chicken-breast.jpg
 ---
 
 A simple pan-seared chicken breast seasoned with pepper and lemon.

@@ -12,6 +12,7 @@ prepMinutes: 35
 seasons: All
 complexity: Medium
 buySpecially: Chicken keema (minced chicken), 300g
+photo: chicken-keema.jpg
 ---
 
 Minced chicken cooked dry with peas in an onion-tomato masala.

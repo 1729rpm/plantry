@@ -160,9 +160,9 @@ Round-trip discipline: the build's parser is the same parser used by the round-t
 
 ### Dish-photo generation
 
-Dish photos are produced by an offline build-time tool, `scripts/generate-dish-photos.mjs`, run by hand outside the app and the CI pipeline. It generates each photo from the cuisine-aware positive-constraint prompt in `data/dish-photos/STYLE.md` (the prompt names only the allowed objects, the dish and at most one corner prop, rather than listing forbidden cutlery; the cuisine is derived per dish from its tag, Indian by default). Images come from FLUX.1-schnell via the Hugging Face Inference Providers router (the tool reads `HF_TOKEN` from the environment) and are normalized with macOS `sips` to a square 1024² JPEG under ~300 KB, so there is no npm image library. For each dish the tool writes `data/dish-photos/<slug>.jpg` and sets the dish's `photo:` frontmatter. It is resumable: it skips any dish that already carries a `photo:` field, so re-running it only fills gaps.
+Dish photos are produced by an offline build-time tool, `scripts/generate-dish-photos.mjs`, run by hand outside the app and the CI pipeline. It generates each photo from the cuisine-aware positive-constraint prompt in `data/dish-photos/STYLE.md` (the prompt names only the allowed objects, the dish and at most one corner prop, rather than listing forbidden cutlery; the cuisine is derived per dish from its tag, Indian by default). The active provider is FLUX.1-dev via NVIDIA NIM (`ai.api.nvidia.com/v1/genai/black-forest-labs/flux.1-dev`), a JSON endpoint that returns the image as base64 in `artifacts[0].base64`; the tool reads `NVIDIA_API_KEY` from the environment. (A Hugging Face FLUX.1-schnell path is kept in the tool as a dormant fallback, selected with `PROVIDER=hf`.) The decoded image is normalized with macOS `sips` to a square 1024² JPEG under ~300 KB, so there is no npm image library. For each dish the tool writes `data/dish-photos/<slug>.jpg` and sets the dish's `photo:` frontmatter. It is resumable: it skips any dish that already carries a `photo:` field, so re-running it only fills gaps. A render the provider's safety filter rejects comes back as a black frame with `finishReason: CONTENT_FILTERED`; the tool detects that (and a luminance check guards against any other all-black frame), skips the dish without writing a file or setting `photo:`, and leaves it for the placeholder.
 
-Coverage is partial: 33 of 195 active dishes carry a photo. The remaining dishes render on the no-photo placeholder (the `Thumb` diagonal-stripe fallback), so partial coverage reads as intentional rather than broken. Further generation is paused at the Hugging Face monthly free-credit cap; a later run, picking up where the last one stopped, fills the rest.
+Coverage is partial: 191 of 200 active dishes carry a photo. The remaining dishes render on the no-photo placeholder (the `Thumb` diagonal-stripe fallback), so partial coverage reads as intentional rather than broken. The handful still uncovered are dishes the provider safety filter declines to render (several rice-heavy dishes such as the biryanis); they stay on the placeholder.
 
 ## 5. Read paths and write paths
 
@@ -279,7 +279,7 @@ Convex prod and preview each have their own `<deployment>.convex.cloud` URLs; th
 - `SWIGGY_MCP_URL` (future) — endpoint of the Swiggy MCP server.
 
 **Offline tooling (local environment):**
-- `HF_TOKEN` — Hugging Face token the dish-photo generation tool (`scripts/generate-dish-photos.mjs`, §4) reads to call the Inference Providers router. Not a runtime variable; it lives only in the environment of whoever runs the tool.
+- `NVIDIA_API_KEY` — NVIDIA NIM key the dish-photo generation tool (`scripts/generate-dish-photos.mjs`, §4) reads to call the FLUX.1-dev endpoint. Not a runtime variable; it lives only in the environment of whoever runs the tool. (The tool's dormant Hugging Face fallback reads `HF_TOKEN` instead when run with `PROVIDER=hf`.)
 
 ## 12. Share image family
 

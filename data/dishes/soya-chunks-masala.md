@@ -12,6 +12,7 @@ prepMinutes: 25
 seasons: All
 complexity: Easy
 prePrep: Soak the soya chunks in hot water, then squeeze dry
+photo: soya-chunks-masala.jpg
 ---
 
 Protein-rich soya chunks simmered with capsicum in an onion-tomato masala.

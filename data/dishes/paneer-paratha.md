@@ -12,6 +12,7 @@ prepMinutes: 25
 seasons: All
 complexity: Medium
 skill: Comfortable, stuffing and rolling without the filling tearing through
+photo: paneer-paratha.jpg
 ---
 
 Whole-wheat paratha stuffed with spiced grated paneer.

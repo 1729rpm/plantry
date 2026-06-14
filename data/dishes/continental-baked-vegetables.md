@@ -12,6 +12,7 @@ prepMinutes: 35
 seasons: All
 complexity: Easy
 skill: Parboil the firm vegetables so they finish soft under the cheese
+photo: continental-baked-vegetables.jpg
 ---
 
 Mixed vegetables in a light white sauce baked under a cheese crust.

@@ -11,6 +11,7 @@ satiety: Medium
 prepMinutes: 25
 seasons: [Winter]
 complexity: Easy
+photo: gobi-aloo.jpg
 ---
 
 Cauliflower and potato stir-fried with onion, tomato and warming spices.

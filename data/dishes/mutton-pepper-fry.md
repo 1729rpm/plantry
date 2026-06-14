@@ -14,6 +14,7 @@ complexity: Medium
 skill: Pressure cooking the mutton first, then frying dry with plenty of crushed pepper
 buySpecially: Curry cut mutton, 300g
 prePrep: Pressure cook the mutton with salt and turmeric till tender
+photo: mutton-pepper-fry.jpg
 ---
 
 South Indian style mutton tossed dry with onion, curry leaf and coarsely crushed black pepper.

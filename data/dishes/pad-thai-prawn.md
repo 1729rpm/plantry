@@ -13,6 +13,7 @@ seasons: All
 complexity: Medium
 skill: Soak the rice noodles soft, then toss fast on high heat so they do not clump
 buySpecially: Cleaned prawns, 200g
+photo: pad-thai-prawn.jpg
 ---
 
 Stir-fried rice noodles with prawns, egg and bean sprouts in a tangy tamarind sauce.

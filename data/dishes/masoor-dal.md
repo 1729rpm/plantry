@@ -11,6 +11,7 @@ satiety: Low
 prepMinutes: 25
 seasons: All
 complexity: Easy
+photo: masoor-dal.jpg
 ---
 
 Quick-cooking red masoor dal in a simple onion-tomato base.

@@ -12,6 +12,7 @@ prepMinutes: 30
 seasons: All
 complexity: Medium
 equipment: Heavy kadhai
+photo: kadai-paneer.jpg
 ---
 
 Paneer and capsicum in a robust tomato gravy with freshly crushed kadai masala.

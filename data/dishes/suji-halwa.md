@@ -12,6 +12,7 @@ prepMinutes: 20
 seasons: All
 complexity: Easy
 skill: Roast the semolina patiently so the halwa is not raw
+photo: suji-halwa.jpg
 ---
 
 Ghee-roasted semolina cooked into a soft sweet halwa with cashews and raisins.

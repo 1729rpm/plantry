@@ -11,6 +11,7 @@ satiety: High
 prepMinutes: 30
 seasons: All
 complexity: Easy
+photo: veg-pulao.jpg
 ---
 
 Fragrant basmati rice cooked with mixed vegetables and whole spices.

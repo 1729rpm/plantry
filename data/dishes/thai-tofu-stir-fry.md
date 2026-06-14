@@ -12,6 +12,7 @@ prepMinutes: 20
 seasons: All
 complexity: Easy
 skill: Press the tofu dry and sear it hard before the sauce goes in so it browns
+photo: thai-tofu-stir-fry.jpg
 ---
 
 Tofu and crunchy vegetables tossed in a sweet, garlicky Thai stir-fry sauce.

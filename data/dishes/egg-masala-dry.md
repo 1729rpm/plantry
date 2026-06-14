@@ -11,6 +11,7 @@ satiety: High
 prepMinutes: 15
 seasons: All
 complexity: Easy
+photo: egg-masala-dry.jpg
 ---
 
 Boiled eggs tossed in a dry onion-tomato masala.

@@ -12,6 +12,7 @@ prepMinutes: 25
 seasons: All
 complexity: Medium
 skill: Keep the tofu in soft chunks; do not stir it to pieces
+photo: korean-tofu-soup.jpg
 ---
 
 A gently spiced soft tofu broth with mushroom, spring onion and egg.

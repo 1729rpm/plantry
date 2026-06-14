@@ -12,6 +12,7 @@ prepMinutes: 20
 seasons: All
 complexity: Medium
 skill: Keep the heat high so the paneer stays dry and the sauce clings
+photo: chilli-paneer-dry.jpg
 ---
 
 Indo-Chinese paneer tossed dry with capsicum, onion and a garlicky chilli sauce.

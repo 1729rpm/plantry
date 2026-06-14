@@ -11,6 +11,7 @@ satiety: Low
 prepMinutes: 20
 seasons: All
 complexity: Easy
+photo: mushroom-corn.jpg
 ---
 
 Mushrooms and sweet corn tossed in a quick onion-tomato masala.

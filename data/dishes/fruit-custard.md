@@ -12,6 +12,7 @@ prepMinutes: 15
 seasons: All
 complexity: Easy
 prePrep: Chill the custard for a few hours before serving
+photo: fruit-custard.jpg
 ---
 
 Chilled vanilla custard folded with chopped seasonal fruit.

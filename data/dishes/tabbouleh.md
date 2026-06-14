@@ -12,6 +12,7 @@ prepMinutes: 20
 seasons: All
 complexity: Easy
 skill: Chop the parsley fine and dry so the salad stays bright, not soggy
+photo: tabbouleh.jpg
 ---
 
 A bright herb salad of parsley, tomato and bulgur dressed with lemon and olive oil.

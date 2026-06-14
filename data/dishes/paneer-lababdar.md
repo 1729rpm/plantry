@@ -11,6 +11,7 @@ satiety: High
 prepMinutes: 30
 seasons: All
 complexity: Medium
+photo: paneer-lababdar.jpg
 ---
 
 Paneer in a creamy tomato-cashew gravy with a tangy, spiced edge.

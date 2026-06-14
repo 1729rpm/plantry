@@ -12,6 +12,7 @@ prepMinutes: 25
 seasons: All
 complexity: Easy
 skill: Let the tomato sauce reduce slowly so it turns sweet rather than sharp
+photo: pasta-pomodoro.jpg
 ---
 
 Pasta in a simple slow-cooked tomato and basil sauce.

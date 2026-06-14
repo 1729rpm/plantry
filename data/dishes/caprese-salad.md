@@ -11,6 +11,7 @@ satiety: Low
 prepMinutes: 10
 seasons: All
 complexity: Easy
+photo: caprese-salad.jpg
 ---
 
 Sliced tomato and mozzarella layered with basil and olive oil.

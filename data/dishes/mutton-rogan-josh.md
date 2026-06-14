@@ -13,6 +13,7 @@ seasons: All
 complexity: Hard
 skill: Browning the mutton and slow simmering so the meat turns tender without drying
 buySpecially: Curry cut mutton, 300g
+photo: mutton-rogan-josh.jpg
 ---
 
 Kashmiri style mutton slow-cooked in a spiced curd and onion gravy with a deep red colour.

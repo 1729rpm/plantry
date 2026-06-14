@@ -11,6 +11,7 @@ satiety: High
 prepMinutes: 25
 seasons: All
 complexity: Easy
+photo: peas-pulao.jpg
 ---
 
 Fragrant basmati rice cooked with green peas and whole spices.

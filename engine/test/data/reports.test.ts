@@ -71,12 +71,13 @@ describe("coverageReport", () => {
     expect(cov.withDescription).toBe(cov.activeDishCount);
     expect(cov.withRecipe).toBe(cov.activeDishCount);
     expect(cov.withComplexity).toBe(cov.activeDishCount);
-    // Photos are a separate (B2) track, burned down one batch at a time. The
-    // first pilot batch (B2.2) landed 15 photos; the full run (data/photos-2)
-    // brought coverage to 33 before the Hugging Face free-tier monthly credits
-    // depleted. This snapshot tracks live data, so each photo batch bumps this
-    // number. It is a report assertion, not a rule.
-    expect(cov.withPhoto).toBe(33);
+    // Photos are a separate (B2) track, burned down one batch at a time. This
+    // snapshot tracks live data, so each photo batch bumps this number. The
+    // data/photos-3 run on NVIDIA FLUX.1-dev brought coverage to 191 of 200
+    // active dishes; the 9 still missing are ones the provider safety filter
+    // refuses to render (the biryanis, a few fried-rice/fish/falafel dishes),
+    // covered by the no-photo placeholder. It is a report assertion, not a rule.
+    expect(cov.withPhoto).toBe(191);
   });
 });
 

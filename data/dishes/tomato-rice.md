@@ -11,6 +11,7 @@ satiety: Low
 prepMinutes: 20
 seasons: All
 complexity: Easy
+photo: tomato-rice.jpg
 ---
 
 Rice tossed in a tangy tomato masala with a curry-leaf and peanut tempering.

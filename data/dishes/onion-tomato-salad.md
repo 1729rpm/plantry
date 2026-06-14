@@ -11,6 +11,7 @@ satiety: Low
 prepMinutes: 5
 seasons: All
 complexity: Easy
+photo: onion-tomato-salad.jpg
 ---
 
 Sliced onion and tomato dressed with lemon, a simple everyday lunch side.
