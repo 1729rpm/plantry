@@ -98,7 +98,7 @@ function changeHeadline(row: ManualChangeRow): string {
     case "add":
       return `Added ${pickName(row.after)}${onDay(row.day)}`;
     case "delete":
-      return `Removed ${pickName(row.before)}${onDay(row.day)}`;
+      return `Deleted ${pickName(row.before)}${onDay(row.day)}`;
     case "skip_day":
       return row.day ? `Skipped ${dayLabel(row.day)}` : "Skipped a day";
     case "restore_day":
