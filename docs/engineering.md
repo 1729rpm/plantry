@@ -158,6 +158,12 @@ Convex functions cannot read the markdown files at runtime. The build pipeline r
 
 Round-trip discipline: the build's parser is the same parser used by the round-trip tests, so any drift between markdown source and bundled output is caught in CI. The bake also runs the blocking data validators before emitting (every dish ingredient row resolves to a catalog row, every catalog row has a group, dish ids and slugs are unique, slugs match filenames), so bad data fails the build rather than reaching the bundle.
 
+### Dish-photo generation
+
+Dish photos are produced by an offline build-time tool, `scripts/generate-dish-photos.mjs`, run by hand outside the app and the CI pipeline. It generates each photo from the cuisine-aware positive-constraint prompt in `data/dish-photos/STYLE.md` (the prompt names only the allowed objects, the dish and at most one corner prop, rather than listing forbidden cutlery; the cuisine is derived per dish from its tag, Indian by default). Images come from FLUX.1-schnell via the Hugging Face Inference Providers router (the tool reads `HF_TOKEN` from the environment) and are normalized with macOS `sips` to a square 1024² JPEG under ~300 KB, so there is no npm image library. For each dish the tool writes `data/dish-photos/<slug>.jpg` and sets the dish's `photo:` frontmatter. It is resumable: it skips any dish that already carries a `photo:` field, so re-running it only fills gaps.
+
+Coverage is partial: 33 of 195 active dishes carry a photo. The remaining dishes render on the no-photo placeholder (the `Thumb` diagonal-stripe fallback), so partial coverage reads as intentional rather than broken. Further generation is paused at the Hugging Face monthly free-credit cap; a later run, picking up where the last one stopped, fills the rest.
+
 ## 5. Read paths and write paths
 
 **Read (frontend opens):**
@@ -271,6 +277,9 @@ Convex prod and preview each have their own `<deployment>.convex.cloud` URLs; th
 - `APP_PASSCODE` — shared passcode for the splash gate.
 - `SLOW_LOOP_TOKEN` — token the slow-loop session uses to read queued comments without exposing the dashboard.
 - `SWIGGY_MCP_URL` (future) — endpoint of the Swiggy MCP server.
+
+**Offline tooling (local environment):**
+- `HF_TOKEN` — Hugging Face token the dish-photo generation tool (`scripts/generate-dish-photos.mjs`, §4) reads to call the Inference Providers router. Not a runtime variable; it lives only in the environment of whoever runs the tool.
 
 ## 12. Share image family
 
