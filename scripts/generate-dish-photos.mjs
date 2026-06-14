@@ -35,7 +35,7 @@ const MODEL = "black-forest-labs/FLUX.1-schnell";
 const ROUTER_URL = `https://router.huggingface.co/hf-inference/models/${MODEL}`;
 const LEGACY_URL = `https://api-inference.huggingface.co/models/${MODEL}`;
 
-const MAX_BYTES = 300 * 1024; // STYLE.md: "well under ~300 KB"
+const MAX_BYTES = 295 * 1024; // STYLE.md: "well under ~300 KB" (strict, leaves headroom under 300 KB)
 const TARGET_PX = 1024;
 
 // --- Cuisine map: single source of truth is data/dish-photos/STYLE.md. This
@@ -120,16 +120,16 @@ function buildPrompt(slug, name, tags, description) {
     `(${description}), photographed from directly overhead (flat lay, 90-degree ` +
     `top-down). The dish is plated in or on simple matte stoneware in a warm cream or ` +
     `soft terracotta tone, centered in the frame with even space on all sides. ` +
-    `Set on a plain warm-cream linen or matte ceramic surface with no visible table ` +
-    `edge, no other plates, no cutlery, no hands, no text, no garnish clutter; at most ` +
-    `one small, quiet prop (a folded cream napkin corner or a single spice bowl) only ` +
-    `if the frame would otherwise feel empty. Soft, diffuse natural daylight from the ` +
-    `upper left, gentle shadows, no harsh highlights, no flash. Warm, inviting, ` +
-    `slightly muted home-kitchen color, true to how the dish actually looks when ` +
-    `cooked at home (not glossy restaurant styling, not oversaturated). The food fills ` +
-    `roughly the central two-thirds of a square frame with comfortable headroom on ` +
-    `every edge. Sharp focus on the food, shallow background blur. Realistic ` +
-    `photographic style, natural food textures. Square 1:1 composition.`
+    `The only objects in the entire frame are the plated dish itself and, at most, ` +
+    `one small quiet prop tucked near a corner: a single small spice bowl or a folded ` +
+    `cream napkin corner. The rest of the surface is completely bare. The surface is ` +
+    `plain warm-cream linen or matte ceramic with no visible table edge. Soft, diffuse ` +
+    `natural daylight from the upper left, with gentle soft shadows. Warm, inviting, ` +
+    `slightly muted home-kitchen color with natural saturation, true to how the dish ` +
+    `actually looks when cooked at home. The food fills roughly the central two-thirds ` +
+    `of a square frame with comfortable headroom on every edge. Sharp focus on the food, ` +
+    `shallow background blur. Realistic photographic style, natural food textures. ` +
+    `Square 1:1 composition.`
   );
 }
 
@@ -148,7 +148,16 @@ async function callEndpoint(url, prompt, token, attempt, maxAttempts) {
     body: JSON.stringify({
       inputs: prompt,
       // FLUX.1-schnell is a distilled few-step model; 4 steps is its sweet spot.
-      parameters: { width: TARGET_PX, height: TARGET_PX, num_inference_steps: 4 },
+      // The HF backend is deterministic for a fixed (prompt, seed): re-running an
+      // identical prompt returns the identical image. To re-roll a dish whose
+      // composition came back unwanted (e.g. stray cutlery), set HF_SEED to a
+      // different integer; left unset, the default seed keeps runs reproducible.
+      parameters: {
+        width: TARGET_PX,
+        height: TARGET_PX,
+        num_inference_steps: 4,
+        ...(process.env.HF_SEED ? { seed: Number(process.env.HF_SEED) } : {}),
+      },
       // Wait for a cold model rather than erroring immediately on first call.
       options: { wait_for_model: true },
     }),
@@ -225,7 +234,7 @@ function toWebReadyJpeg(rawPath, outPath) {
   // The ladder runs to a low floor so even busy, high-detail dishes (which compress
   // poorly) land under MAX_BYTES; FLUX output is sharp enough that q=25 still reads
   // cleanly at the small thumbnail and the wide Explore strip.
-  for (const q of [80, 70, 60, 50, 40, 30, 25]) {
+  for (const q of [80, 70, 60, 50, 40, 30, 25, 20, 15]) {
     run("sips", [
       "-s",
       "format",
@@ -241,7 +250,7 @@ function toWebReadyJpeg(rawPath, outPath) {
     ]);
     if (statSync(outPath).size <= MAX_BYTES) return q;
   }
-  return 40; // last attempt stands; size reported by caller
+  return 15; // last attempt stands; size reported by caller
 }
 
 /** Set or insert the `photo:` frontmatter line, preserving all other bytes. */
