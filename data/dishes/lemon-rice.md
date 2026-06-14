@@ -11,6 +11,7 @@ satiety: Low
 prepMinutes: 15
 seasons: All
 complexity: Easy
+photo: lemon-rice.jpg
 ---
 
 Cooked rice tossed in a tangy lemon, turmeric and peanut tempering.

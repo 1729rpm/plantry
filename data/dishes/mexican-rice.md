@@ -12,6 +12,7 @@ prepMinutes: 20
 seasons: All
 complexity: Easy
 skill: Toast the rice in oil first so the grains stay separate
+photo: mexican-rice.jpg
 ---
 
 Tomato-stained rice cooked with sweet corn, peas and mild spices.

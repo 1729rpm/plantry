@@ -11,6 +11,7 @@ satiety: Medium
 prepMinutes: 35
 seasons: [Summer, Monsoon]
 complexity: Easy
+photo: lauki-chana-dal.jpg
 ---
 
 Bottle gourd simmered with chana dal in a light onion-tomato gravy.

@@ -11,6 +11,7 @@ satiety: Low
 prepMinutes: 10
 seasons: All
 complexity: Easy
+photo: masala-toast.jpg
 ---
 
 Bread slices toasted with a spiced onion and tomato topping, a quick savoury side.

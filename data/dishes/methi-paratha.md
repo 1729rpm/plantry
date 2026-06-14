@@ -12,6 +12,7 @@ prepMinutes: 25
 seasons: [Winter]
 complexity: Medium
 skill: Chop the methi fine and squeeze out bitterness before kneading
+photo: methi-paratha.jpg
 ---
 
 Wheat parathas kneaded with chopped fenugreek leaves and spices, griddled till golden.

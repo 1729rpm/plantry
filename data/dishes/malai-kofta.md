@@ -13,6 +13,7 @@ seasons: All
 complexity: Hard
 skill: Comfortable, the koftas must bind so they do not break when fried
 equipment: Heavy kadhai
+photo: malai-kofta.jpg
 ---
 
 Soft paneer and potato koftas in a rich cashew-tomato gravy.

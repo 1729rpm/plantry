@@ -12,6 +12,7 @@ prepMinutes: 35
 seasons: All
 complexity: Medium
 skill: Stir often so the milk reduces evenly without catching
+photo: kheer.jpg
 ---
 
 Rice slow-cooked in reduced milk with cardamom, cashews and raisins.

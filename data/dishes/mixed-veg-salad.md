@@ -11,6 +11,7 @@ satiety: Low
 prepMinutes: 10
 seasons: All
 complexity: Easy
+photo: mixed-veg-salad.jpg
 ---
 
 A crisp raw salad of cucumber, carrot and cabbage dressed with lemon.

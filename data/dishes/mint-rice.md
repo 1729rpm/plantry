@@ -11,6 +11,7 @@ satiety: Medium
 prepMinutes: 20
 seasons: All
 complexity: Easy
+photo: mint-rice.jpg
 ---
 
 Cooked rice tossed in a fresh mint and coriander paste with a light tempering.

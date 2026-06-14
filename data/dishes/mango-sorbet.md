@@ -13,6 +13,7 @@ seasons: [Summer]
 complexity: Easy
 skill: Use very ripe mango so no extra sugar is needed
 prePrep: Freeze the blended mango for a few hours before serving
+photo: mango-sorbet.jpg
 ---
 
 A simple frozen blend of ripe mango with a squeeze of lime.

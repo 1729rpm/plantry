@@ -11,6 +11,7 @@ satiety: Medium
 prepMinutes: 15
 seasons: All
 complexity: Easy
+photo: masala-oats.jpg
 ---
 
 Quick savoury oats simmered with vegetables and a light Indian masala.

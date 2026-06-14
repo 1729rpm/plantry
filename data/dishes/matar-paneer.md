@@ -11,6 +11,7 @@ satiety: High
 prepMinutes: 25
 seasons: All
 complexity: Medium
+photo: matar-paneer.jpg
 ---
 
 Paneer cubes and green peas in a smooth onion-tomato gravy.

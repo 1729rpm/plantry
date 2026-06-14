@@ -12,6 +12,7 @@ prepMinutes: 30
 seasons: All
 complexity: Medium
 skill: Cook each vegetable separately so the colours and textures stay distinct
+photo: korean-japchae.jpg
 ---
 
 Glass noodles tossed with stir-fried vegetables in a sweet soy sesame glaze.

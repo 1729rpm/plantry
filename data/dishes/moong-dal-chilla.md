@@ -12,6 +12,7 @@ prepMinutes: 20
 seasons: All
 complexity: Easy
 prePrep: Soak the moong dal for a few hours, then grind to a batter
+photo: moong-dal-chilla.jpg
 ---
 
 Savoury yellow moong lentil pancakes with onion, ginger and green chilli.

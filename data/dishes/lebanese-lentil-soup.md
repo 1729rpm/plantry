@@ -12,6 +12,7 @@ prepMinutes: 30
 seasons: All
 complexity: Easy
 skill: Cook the lentils soft enough to blend smooth for a velvety soup
+photo: lebanese-lentil-soup.jpg
 ---
 
 A smooth, lemony red lentil soup with cumin and a hint of garlic.
