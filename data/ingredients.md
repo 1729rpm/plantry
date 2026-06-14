@@ -93,6 +93,7 @@ Grouping judgment calls (institutional memory; do not silently re-bucket):
 | Moong Dal | Pantry | g | | | 24 | 59 | |
 | Mozzarella | Proteins and Dairy | g | 200 g | | 22 | 2.2 | |
 | Mushroom | Vegetables | g | 200 g | | 3.1 | 3.3 | |
+| Mutton | Proteins and Dairy | g | | | 25 | 0 | |
 | Noodles | Pantry | g | | | 12 | 71 | |
 | Oats | Pantry | g | | | 13 | 67 | |
 | Olive Oil | Pantry | ml | | | 0 | 0 | |
