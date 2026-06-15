@@ -19,6 +19,17 @@ Decisions Rajat must approve go in the "Open items" list in `features/phase2.md`
 
 ---
 
+## 2026-06-15 05:30 IST  Dish photos: per-dish visual details on a realism skeleton
+
+**Stream:** content-batch (dish-photo realism).
+**Context:** After several rounds, even the candid-realism prompt still produced ingredient-level errors that read as fake (bhindi as whole cylinders not sliced, plain roti garnished with coriander, boiled eggs too smooth, dry dishes shown in sauce). Rajat directed: check all 200 dishes against real pictures and add per-dish detail to the prompt, accepting per-dish specificity over a single generic prompt.
+**Options considered:** (a) keep one generic realism prompt; (b) ship real reference photos directly; (c) one shared realism skeleton plus a per-dish visual-detail line (form, cut, garnish, dry-vs-gravy, texture) checked against real pictures.
+**Chosen:** (c). A single generic prompt cannot encode each dish's true appearance, and (b) is a licensing and coverage dead end. A study wrote a per-dish detail line for all 200 (real Wikimedia/TheMealDB references plus culinary knowledge), stored in `data/dish-photos/details.md`; the generator injects each dish's detail into the realism skeleton. This deliberately reverses the earlier "no per-dish hardcoding" rule, because the dish-specific detail is the fix, and it lives as reviewable data, not code special-cases. Proven first on the four dishes Rajat flagged (bhindi sliced, eggs halved and dimpled, roti plain, chilla dry), then run across all 200.
+**Reversibility:** easy. details.md is data; the skeleton and params are single-file edits; photos are git-revertable; per-dish lines are individually editable.
+**Right-size check (per docs/product.md §4):** problem size structural (library-wide image accuracy); fix level a data map (details.md) plus the offline tool, no app, engine, or Convex change; generality: every dish gets a reviewable, editable detail line and the skeleton stays one coherent prompt, so a new dish just adds a line. Residual: a few dry or grilled dishes the model still pools a thin sauce on despite the detail; spot-editable.
+
+---
+
 ## 2026-06-15  Live prod UI/UX audit -> two critical fixes (Explore/Share CSS, edit-flow polish) + a CSS lint gate
 
 **Stream:** cross-stream (EM-run prod audit; fixes shipped as engineer PRs #69 and #68).
