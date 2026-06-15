@@ -214,13 +214,16 @@ this section is the human-readable contract, the prompt is the machine input.
   found a waxy/plastic CGI sheen and oversaturation to be the #1 universal AI
   tell, so the wording counters it head-on.
 - **Crop and aspect ratio.** Square, 1:1. The source is square on purpose: the
-  PWA renders photos with `object-fit: cover` at two very different shapes, a
+  PWA renders photos with `object-fit: cover` at several different shapes, a
   small rounded square thumbnail on day cards and dish rows (about 40 to 48 px,
-  `design_handoff/hifi-primitives.jsx`) and a wide, short hero strip on Explore
-  cards (full width, 96 px tall, `design_handoff/hifi-screens.jsx`). The square
-  source survives both crops: the square thumb is a lossless center, and the wide
-  strip center-crops without clipping the dish. Keep the dish well inside the
-  frame so neither crop touches it.
+  `design_handoff/hifi-primitives.jsx`) and wider landscape crops elsewhere: a
+  16:9 strip on Explore cards and a 5:2 hero on the dish detail sheet, both pinned
+  by `aspect-ratio` so the crop is identical on every phone width (a fixed pixel
+  height against a fluid width made the crop viewport-dependent and showed the
+  vessel rim on narrow phones; see CHANGELOG #93/#94). The square source survives
+  all of these crops: the square thumb is a lossless center, and the landscape
+  crops center-crop without clipping the dish. Keep the dish well inside the frame
+  so no crop touches it.
 - **Output size and format.** Web-ready at generation, no post-processing
   dependency in the pipeline (slice 1.2 carried over a no-image-processing-library
   constraint; photos arrive already sized). Target a square JPEG, roughly

@@ -19,6 +19,15 @@ Decisions Rajat must approve go in the "Open items" list in `features/phase2.md`
 
 ---
 
+## 2026-06-15 17:30 IST  Lock dish-photo card crops with `aspect-ratio` (16:9 Explore, 5:2 detail hero)
+
+**Stream:** cross-stream (UI bugfix).
+**Context:** Rajat reported "white space on top" of some Explore dish photos on his phone. The root cause was a fixed pixel height (`96px`) against a fluid `width: 100%`, which makes the `object-fit: cover` crop ratio track the viewport, so on narrow phones the box went near-square and exposed the bright vessel rim and blurred background at the top of the angled-bowl photos. The same pattern existed in the detail-sheet hero (`height: 150px`).
+**Options considered:** (a) nudge `object-position` downward to bias the crop off the rim; (b) replace the fixed height with a fixed `aspect-ratio` so the crop ratio is identical on every width; (c) re-shoot the affected photos with tighter framing.
+**Chosen:** (b). (a) is a global compromise that trades the rim on flat-bowl dishes for clipping the top of mounded dishes, and there is no per-dish framing metadata to apply it selectively; (c) is heavy image work for what is a layout defect. `aspect-ratio` fixes the actual cause (a viewport-dependent crop) in one CSS line per rule and reproduces the tight, food-filled crop on all devices. Rajat chose 16:9 for the Explore card from the presented options; the EM chose 5:2 for the wider detail hero to preserve its prior ~150px height while still cropping past the rim. At Rajat's direction the hero fix shipped as a separate follow-up (#94) rather than folded into #93.
+**Reversibility:** trivial; each is a one-line CSS value, git-revertable, no data or schema impact.
+**Right-size check (per `docs/product.md` §4):** problem size was a real cross-device layout defect spanning every angled-bowl photo in both the Explore grid and the detail sheet; fix level is one CSS property per rule, with no image, engine, or Convex change; generality: the `aspect-ratio` lock holds for any future dish photo at any viewport width, and the anti-pattern (fixed height + fluid width on an `object-fit: cover` image) is now a logged review flag. The diagnosis nearly stopped at "photo composition, not a bug" because the first reproduction used a wider column than a real phone; reproducing at the user's actual device width is what surfaced it. The `.thumb` square pins both dimensions and is viewport-independent, so it was left untouched.
+
 ## 2026-06-15 05:30 IST  Dish photos: per-dish visual details on a realism skeleton
 
 **Stream:** content-batch (dish-photo realism).
