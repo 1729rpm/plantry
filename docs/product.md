@@ -4,7 +4,7 @@ Plantry is a weekly meal planner for a two-adult Indian household in Bangalore. 
 
 ## 1. Persona and household
 
-Two adults: Rajat (product owner) and Tuhina (second user). Cooking style is high-protein and lean, with a strong vegetarian baseline and frequent paneer, eggs, chicken, fish, and prawns. Seasonality matters: ingredients shift across Bangalore's three seasons (Summer March to May, Monsoon June to September, Winter October to February). Both users hold equal control of the week; either can swap a dish, add a dish, drop in a one-off, delete a dish, skip a day, save a dish for next week, dislike a dish in Explore, or leave a comment.
+Two adults: Rajat (product owner) and Tuhina (second user). Cooking style is high-protein and lean, with a strong vegetarian baseline and frequent paneer, eggs, chicken, fish, and prawns. Seasonality matters: ingredients shift across Bangalore's three seasons (Summer March to May, Monsoon June to September, Winter October to February). Both users hold equal control of the week; either can swap a dish, add a dish, drop in a one-off, delete a dish, skip a day, save a dish for next week, or dislike a dish in Explore.
 
 ## 2. Weekly loop
 
@@ -15,7 +15,7 @@ Two adults: Rajat (product owner) and Tuhina (second user). Cooking style is hig
 | Sat | none | 3 items | 3 |
 | Sun | none | none | 0 |
 
-Each week, the engine reads the dish library, the rules, the season, and the recent history, then produces a complete valid menu plus a grocery list. The week opens on the Menu tab. From a day's Edit button, either user can swap any dish (the engine offers a ranked picker over the meal-time-matching library), add a library dish to a day, drop in a custom one-off (a free-text dish in place of a position), delete a dish, skip a whole day (eating out or away) and restore it later, or leave a comment on a dish or a day. Swaps, adds, one-offs, deletes, skips, restores, and saves-for-next-week apply immediately and are recorded against the week with author, timestamp, and a required reason that feeds the slow loop alongside comments. A skipped day keeps its dishes (restore is lossless) but counts no groceries and does not enter the history on finalize. Comments and dislikes do nothing immediately; they queue for the slow loop.
+Each week, the engine reads the dish library, the rules, the season, and the recent history, then produces a complete valid menu plus a grocery list. The week opens on the Menu tab. From a day's Edit button, either user can swap any dish (the engine offers a ranked picker over the meal-time-matching library), add a library dish to a day, drop in a custom one-off (a free-text dish in place of a position), delete a dish, or skip a whole day (eating out or away) and restore it later. Swaps, adds, one-offs, deletes, skips, restores, and saves-for-next-week apply immediately and are recorded against the week with author, timestamp, and a required reason that feeds the slow loop. A skipped day keeps its dishes (restore is lossless) but counts no groceries and does not enter the history on finalize. A dislike does nothing immediately; it queues for the slow loop.
 
 The Explore tab is a separate surface for browsing dishes the household has not cooked yet (see §3 item 5). The Changes tab is the week's running record of every edit and comment (see §3 item 6).
 
@@ -40,8 +40,8 @@ These are decision rules. Every change to Plantry (engineer pull request, slow-l
 1. **Right-size the fix.** Before any change lands, state the size of the problem (one-off, small pattern, structural), the smallest level it can be solved at (data row, new tag, rule wording, engine code, UI affordance, infrastructure), and whether the proposed fix generalizes. A single-row data fix beats a new column; a new tag beats a new cross-cutting rule; a UI affordance beats a new rule altogether. Do not generalize from one or two cases.
 2. **Solve structurally, not by name.** When a special case appears, identify the property that makes it special and encode that property. Tag presence is preferred over dish-name matching.
 3. **Spec and code stay in lockstep.** `docs/engine.md` is the human-readable rules spec; `engine/` is its executable form. Any change to one without the other is a continuous-integration failure.
-4. **Two loops, never one.** The fast loop is operational and immediate (swap, add, one-off, delete, skip, save, comment, dislike). The slow loop is structural and human-approved (library, rules, engine). The fast loop never silently mutates the rules.
-5. **Record, do not apply.** Feedback that implies structural change is queued, not applied. Comments and dislikes record a signal; the slow loop is the only path by which structure changes.
+4. **Two loops, never one.** The fast loop is operational and immediate (swap, add, one-off, delete, skip, save, dislike). The slow loop is structural and human-approved (library, rules, engine). The fast loop never silently mutates the rules.
+5. **Record, do not apply.** Feedback that implies structural change is queued, not applied. A dislike records a signal; the slow loop is the only path by which structure changes.
 6. **Non-sycophantic feedback handling.** When feedback arrives, diagnose size and level before proposing a fix. "No change warranted" is a valid output, with a stated reason. Agreeable acceptance of every request is a failure mode.
 7. **Decouple display from structure.** Internal labels (Option A/B/C, Menu 1/2/3/4, tag names, affinity keys) never leak to the user-facing output.
 8. **Simplicity over flexibility.** Three similar rows beat a premature abstraction. A column earns its place by changing outputs.
@@ -62,7 +62,6 @@ The user-facing output is plain, readable, and uncluttered. No internal jargon, 
 - Day skip and restore (eating out or away); the day's dishes are kept so restore is lossless; required reason.
 - Save a dish for next week from Explore; the next generation favors it; required reason.
 - Explore browse with familiar-but-new ranking, multi-select filters, and a records-only dislike (optional reason) read only by the slow loop.
-- Comments attached to a dish or a day, queued for the slow loop.
 - The grocery list, grouped and skip-aware, plus the share image family (menu, grocery, recipe sheets) over the native share sheet.
 - A library of roughly 200 dishes across roughly ten cuisines (Indian baseline plus international and world cuisines), spanning vegetarian, egg, dairy, seafood, and red-meat (mutton) proteins, each carrying a description, a recipe, complexity, derived macros, and special-sourcing metadata.
 - Identity is light: a device-stored "I am Rajat" or "I am Tuhina" profile attributes edits; a shared passcode keeps the URL private. No accounts.
@@ -91,7 +90,7 @@ The user-facing output is plain, readable, and uncluttered. No internal jargon, 
 ## 9. Glossary
 
 - **PWA, Progressive Web App.** A website built so a phone can install it to the home screen and run it full-screen like a native app, with the page cached for instant, offline-tolerant loads. Avoids the app stores; one web codebase serves both phones.
-- **Slow loop and fast loop.** The fast loop is what happens this week (swap, add, one-off, delete, skip, save, comment, dislike), applied immediately to one week. The slow loop is how the system itself evolves (library, rules, engine code), applied via a human-approved pull request.
+- **Slow loop and fast loop.** The fast loop is what happens this week (swap, add, one-off, delete, skip, save, dislike), applied immediately to one week. The slow loop is how the system itself evolves (library, rules, engine code), applied via a human-approved pull request.
 - **Structural vs operational.** Operational changes are local to one week and reversible. Structural changes touch the library or the rules and affect every future menu, so they pass through review.
 - **Familiar but new.** The Explore ranking idea: surface dishes the household has not cooked, ranked by how much they resemble what it does cook (shared key ingredients, usual protein range, common categories), so novelty still fits the household's habits.
 - **MCP, Model Context Protocol.** An open standard for letting a language model call external tools through a uniform interface. A Swiggy MCP would expose Swiggy's catalog and cart actions as MCP tools the engine could call.
