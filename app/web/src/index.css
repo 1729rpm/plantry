@@ -1495,10 +1495,11 @@ input {
   padding: 18px 16px 14px;
 }
 
-/* The menu slide is a <canvas> (menuShareCanvas.ts). Its backing store is 3x and
-   its inline style sets the logical 360px box; fit it to the rail card by
-   displaying at 100% width with auto height (the backing store keeps it crisp).
-   block removes the inline-element baseline gap so the frame hugs the canvas. */
+/* The menu slide is a <canvas> (menuShareCanvas.ts). Its backing store is 3x; the
+   canvas carries no inline CSS size, so this class sizes the on-screen box: 100%
+   width with auto height fits it to the rail card off the backing store's
+   intrinsic aspect ratio (which keeps it crisp). block removes the inline-element
+   baseline gap so the frame hugs the canvas. */
 .share__menu-canvas {
   display: block;
   width: 100%;

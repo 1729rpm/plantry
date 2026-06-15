@@ -437,8 +437,11 @@ function paintMenu(
 
 // Public API: lay out + draw the menu into the given canvas. Sizes the canvas
 // backing store to logical*EXPORT_SCALE for crispness (matching the old export's
-// pixelRatio: 3) and sets the CSS size to the logical dimensions so the same
-// canvas displays at 100% in the preview rail. Fonts must be loaded first; call
+// pixelRatio: 3). On-screen display is governed by CSS (.share__menu-canvas:
+// width:100%; height:auto), which scales the canvas to fit the slide frame using
+// the intrinsic aspect ratio from the backing-store width/height attributes; we
+// deliberately do not set an inline CSS size here, so the preview never overflows
+// the rail. Fonts must be loaded first; call
 // ensureMenuShareFonts() and await it before this, or pass a font-ready ctx.
 //
 // Returns the logical { width, height } so the caller can size the slide frame.
@@ -456,12 +459,13 @@ export function drawMenuShareCanvas(
   ctx.setTransform(1, 0, 0, 1, 0, 0);
   const laidOut = layoutMenu(ctx, days);
 
-  // Size the backing store at 3x, the CSS box at logical size, then scale the
-  // context so all drawing math stays in logical pixels.
+  // Size the backing store at 3x, then scale the context so all drawing math
+  // stays in logical pixels. We do not set an inline CSS size: .share__menu-canvas
+  // (width:100%; height:auto) sizes the on-screen box from the backing store's
+  // intrinsic aspect ratio, so the preview fits the slide frame instead of
+  // overflowing it at a fixed 360px.
   canvas.width = WIDTH * EXPORT_SCALE;
   canvas.height = laidOut.totalHeight * EXPORT_SCALE;
-  canvas.style.width = `${WIDTH}px`;
-  canvas.style.height = `${laidOut.totalHeight}px`;
   ctx.setTransform(EXPORT_SCALE, 0, 0, EXPORT_SCALE, 0, 0);
 
   paintMenu(ctx, laidOut, rangeLabel);
