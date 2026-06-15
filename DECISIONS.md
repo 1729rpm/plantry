@@ -19,7 +19,7 @@ Decisions Rajat must approve go in the "Open items" list in `features/phase2.md`
 
 ---
 
-## 2026-06-15 17:30 IST  Lock dish-photo card crops with `aspect-ratio` (16:9 Explore, 5:2 detail hero)
+## 2026-06-15 17:30 IST Lock dish-photo card crops with `aspect-ratio` (16:9 Explore, 5:2 detail hero)
 
 **Stream:** cross-stream (UI bugfix).
 **Context:** Rajat reported "white space on top" of some Explore dish photos on his phone. The root cause was a fixed pixel height (`96px`) against a fluid `width: 100%`, which makes the `object-fit: cover` crop ratio track the viewport, so on narrow phones the box went near-square and exposed the bright vessel rim and blurred background at the top of the angled-bowl photos. The same pattern existed in the detail-sheet hero (`height: 150px`).
@@ -28,7 +28,7 @@ Decisions Rajat must approve go in the "Open items" list in `features/phase2.md`
 **Reversibility:** trivial; each is a one-line CSS value, git-revertable, no data or schema impact.
 **Right-size check (per `docs/product.md` §4):** problem size was a real cross-device layout defect spanning every angled-bowl photo in both the Explore grid and the detail sheet; fix level is one CSS property per rule, with no image, engine, or Convex change; generality: the `aspect-ratio` lock holds for any future dish photo at any viewport width, and the anti-pattern (fixed height + fluid width on an `object-fit: cover` image) is now a logged review flag. The diagnosis nearly stopped at "photo composition, not a bug" because the first reproduction used a wider column than a real phone; reproducing at the user's actual device width is what surfaced it. The `.thumb` square pins both dimensions and is viewport-independent, so it was left untouched.
 
-## 2026-06-15 05:30 IST  Dish photos: per-dish visual details on a realism skeleton
+## 2026-06-15 05:30 IST Dish photos: per-dish visual details on a realism skeleton
 
 **Stream:** content-batch (dish-photo realism).
 **Context:** After several rounds, even the candid-realism prompt still produced ingredient-level errors that read as fake (bhindi as whole cylinders not sliced, plain roti garnished with coriander, boiled eggs too smooth, dry dishes shown in sauce). Rajat directed: check all 200 dishes against real pictures and add per-dish detail to the prompt, accepting per-dish specificity over a single generic prompt.
@@ -39,42 +39,44 @@ Decisions Rajat must approve go in the "Open items" list in `features/phase2.md`
 
 ---
 
-## 2026-06-15  Live prod UI/UX audit -> two critical fixes (Explore/Share CSS, edit-flow polish) + a CSS lint gate
+## 2026-06-15 Live prod UI/UX audit -> two critical fixes (Explore/Share CSS, edit-flow polish) + a CSS lint gate
 
 **Stream:** cross-stream (EM-run prod audit; fixes shipped as engineer PRs #69 and #68).
 **Context:** EM ran a live UI/UX audit of production via Playwright (passcode gate bypassed by injecting the unlocked flag into `localStorage`; read-only passes did no prod writes). The audit surfaced two critical breakages plus a set of interaction-polish issues across the edit flows.
 **What the audit found and how it was verified:**
+
 - **Read pass:** the Explore tab rendered a single overflowing 1024px image and the Share images rendered as unstyled text. The Changes, Menu, and Grocery tabs looked correct.
 - **Mutate-then-revert pass:** every edit flow (Replace / Add / Delete / Skip / Restore, comments, swap-by-name) was exercised on the live week and fully restored afterward; the two test comments left behind were neutralized via `comments:markCommentsReviewedNoChange`. The ReasonDialog submit button was clickable-but-silent with no reason entered; the Swap picker showed nothing for a no-match name; the dish-removal verb was inconsistent ("Remove" vs "Delete") across surfaces.
-**Root causes (confirmed via git archaeology):**
+  **Root causes (confirmed via git archaeology):**
 - The CSS breakage was three missing closing braces shipped by two separate slices (7.1 Explore added one, 8.1 Share added two). Under native CSS nesting an unclosed rule silently swallows every rule after it, so each slice's own tab looked fine in isolation while the blast radius landed elsewhere. Nothing caught it because there was no CSS validation in CI and `vite build` tolerates malformed CSS.
 - The ReasonDialog weak-disable (a styled-but-not-`disabled` button) was faithful to an internally-inconsistent design prototype; the prose canonical docs never reconciled the micro-interaction states, so the prototype's inconsistency carried straight through to shipped code.
-**Chosen / shipped:** two engineer PRs. **#69** balances the braces, raises several tap targets to 44 px, and adds a stylelint **"Lint CSS"** CI gate (`.stylelintrc.json`, `lint:css`, `ci.yml`) that fails on unbalanced/unclosed CSS (proven to catch this bug), plus an optional local Playwright render smoke test (`app/web/e2e/smoke.mjs`). **#68** truly disables the ReasonDialog submit until a reason is entered, adds a Swap-picker empty state, locks background scroll in the Sheet primitive, autofocuses pickers/comment fields with aria-labels, and makes the removal verb consistently "Delete".
-**Process improvements (one shipped, three recommended):**
+  **Chosen / shipped:** two engineer PRs. **#69** balances the braces, raises several tap targets to 44 px, and adds a stylelint **"Lint CSS"** CI gate (`.stylelintrc.json`, `lint:css`, `ci.yml`) that fails on unbalanced/unclosed CSS (proven to catch this bug), plus an optional local Playwright render smoke test (`app/web/e2e/smoke.mjs`). **#68** truly disables the ReasonDialog submit until a reason is entered, adds a Swap-picker empty state, locks background scroll in the Sheet primitive, autofocuses pickers/comment fields with aria-labels, and makes the removal verb consistently "Delete".
+  **Process improvements (one shipped, three recommended):**
 - Shipped: the CSS lint gate now guards CI.
 - Recommended follow-ups: a render smoke test in CI (not just local); widen the Definition-of-Done visual check to all tabs and treat CSS as global blast radius (a slice's CSS can break a tab the slice never touched); and give micro-interaction states a canonical home or shared primitives so disabled/empty/loading states are not re-improvised per slice.
-**Operational learning:** a fresh agent worktree needs `npm install` to link the workspace symlinks before the `app/web` build works; without it the build fails on the unresolved `@plantry/engine` workspace package.
-**Reversibility:** easy. Both fixes are git-revertable; the lint gate is one CI step plus a config file; no schema or data change.
-**Right-size check (per `docs/product.md` §4):** problem size structural for #69 (a missing CI class plus a global-blast-radius CSS bug) and a focused interaction fix for #68; fix level CI gate + frontend edits, held to `app/web` plus CI config with no engine/Convex/data change; generality: the stylelint gate catches any future unbalanced CSS across the whole stylesheet rather than patching the three braces by hand.
+  **Operational learning:** a fresh agent worktree needs `npm install` to link the workspace symlinks before the `app/web` build works; without it the build fails on the unresolved `@plantry/engine` workspace package.
+  **Reversibility:** easy. Both fixes are git-revertable; the lint gate is one CI step plus a config file; no schema or data change.
+  **Right-size check (per `docs/product.md` §4):** problem size structural for #69 (a missing CI class plus a global-blast-radius CSS bug) and a focused interaction fix for #68; fix level CI gate + frontend edits, held to `app/web` plus CI config with no engine/Convex/data change; generality: the stylelint gate catches any future unbalanced CSS across the whole stylesheet rather than patching the three braces by hand.
 
 ---
 
-## 2026-06-15 02:50 IST  Dish-photo generation: provider path, realism prompt rewrite, content-filter sanitizer, parallelism
+## 2026-06-15 02:50 IST Dish-photo generation: provider path, realism prompt rewrite, content-filter sanitizer, parallelism
 
 **Stream:** content-batch (dish-photo B2 track; not a §5 spine slice). Built by `scripts/generate-dish-photos.mjs` against the `data/dish-photos/STYLE.md` spec.
 **Context:** The library had zero photos (slice B2.1 committed only the STYLE.md spec; actual generation was deferred as "outside the session"). Rajat asked to finalize image generation. Over the session it went pilot to partial to full to a realism rewrite to a full re-run, landing 200 of 200 photorealistic photos live on prod.
 **Options considered:**
+
 - (a) **Provider:** Gemini (Rajat's first pick) vs Hugging Face FLUX.1-schnell vs NVIDIA NIM FLUX.1-dev vs manual / local generation.
 - (b) **Realism fix** (the first NVIDIA set read as glossy CGI / illustration, which Rajat rejected as fake): append a "make it photorealistic, no gloss" section to the existing prompt vs rewrite the whole prompt from scratch.
 - (c) **Content-filter false-positives** (NVIDIA's safety filter deterministically rejects benign tokens like "fried" and "sweet-salty", returning a black frame): reword the canonical dish files vs a prompt-only synonym sanitizer vs switch model.
 - (d) **Speed:** sequential generation vs bounded concurrency plus a client-side rate limiter.
-**Chosen:**
+  **Chosen:**
 - **(a) Free tiers in sequence, as each constraint forced the next.** Gemini's key had zero image quota (image generation is effectively paid there); HF FLUX.1-schnell ran the free 15-dish pilot but its monthly free credits exhausted at 33 of ~195; NVIDIA NIM FLUX.1-dev (free `nvapi-` key, ~1000 credits/month) finished the library and is higher fidelity. Lesson recorded: a key that authenticates on `integrate.api.nvidia.com/v1/models` is NOT sufficient for images; the image host `ai.api.nvidia.com` needs an `nvapi-` prefixed key, and auth must be checked against the image endpoint, not the model catalog (a model-catalog 200 was a false green earlier in the session).
 - **(b) Full rewrite, not a patch.** The original styled-brief prompt ("appetizing serving", "matte stoneware", "the only objects in the frame are...") was itself summoning the studio-render look. Reframing the entire prompt as a candid, unstyled home phone photo ("everyday phone photo ... not styled or arranged ... true to life ... unpolished documentary food photography") makes realism intrinsic to the framing; a bolted-on "no gloss" section would fight the rest of the prompt and hardcode the symptom. Also lowered guidance (cfg_scale 5 to 3.5) and raised steps (30 to 40).
 - **(c) A general, prompt-only synonym sanitizer** (applies to every prompt, never edits the canonical dish files). Rewording dish descriptions would corrupt content the app shows; switching model loses the chosen look. The sanitizer maps a blocked token to a visually-equivalent synonym ("fried" to pan-cooked / wok-tossed / stir-fry rice / golden browned, "sweet-salty" to "sweet and savoury"). Root cause proven by live bisection: the token alone flips an otherwise-safe prompt to CONTENT_FILTERED, while "fry" passes.
 - **(d) Bounded concurrency pool** (`PHOTO_CONCURRENCY`, default 6) behind a sliding-window rate limiter (`PHOTO_MAX_RPM`, default 35, under NVIDIA's ~40/min) with exponential backoff and retry on HTTP 429 / 500 / 503. The full 200-dish run took about 14 minutes with zero 429s, versus roughly 50 minutes sequential.
-**Reversibility:** easy. Photos are data plus `photo:` frontmatter (git-revertable); the pipeline is one script with the HF path kept as a dormant `PROVIDER=hf` fallback; prompt, params, and concurrency are single-file edits; the sanitizer is one function.
-**Right-size check (per `docs/product.md` §4):** problem size structural (a generation pipeline plus library-wide content); fix level infrastructure (an offline tool plus the prompt spec), held to `data/` plus a `scripts/` file with no app, engine, or Convex change, and with both realism and the filter workaround encoded as general prompt behavior rather than per-dish hardcoding (Principles 1 and 8); generality: the sanitizer handles any future filter-tripping token, the concurrency and rate-limit apply to every run, and the candid-photo prompt covers the whole library and future dishes. Known residuals, separate from realism and not blocking: a stronger directional-sunlight mood than the old soft-cream look, and dish-fidelity mis-renders on a few visually-ambiguous dishes (for example carrot halwa rendering as a stew), each spot-regenerable individually.
+  **Reversibility:** easy. Photos are data plus `photo:` frontmatter (git-revertable); the pipeline is one script with the HF path kept as a dormant `PROVIDER=hf` fallback; prompt, params, and concurrency are single-file edits; the sanitizer is one function.
+  **Right-size check (per `docs/product.md` §4):** problem size structural (a generation pipeline plus library-wide content); fix level infrastructure (an offline tool plus the prompt spec), held to `data/` plus a `scripts/` file with no app, engine, or Convex change, and with both realism and the filter workaround encoded as general prompt behavior rather than per-dish hardcoding (Principles 1 and 8); generality: the sanitizer handles any future filter-tripping token, the concurrency and rate-limit apply to every run, and the candid-photo prompt covers the whole library and future dishes. Known residuals, separate from realism and not blocking: a stronger directional-sunlight mood than the old soft-cream look, and dish-fidelity mis-renders on a few visually-ambiguous dishes (for example carrot halwa rendering as a stew), each spot-regenerable individually.
 
 ---
 
@@ -84,11 +86,12 @@ Decisions Rajat must approve go in the "Open items" list in `features/phase2.md`
 **Context:** Rajat (2026-06-12) asked for a "dislike" option in the Explore tab that does nothing in the current session but is read by the slow loop. The Explore tab is slice 7.1 (not built yet) and the slow-loop upgrade is slice 9.1, so the requirement is woven into both via `features/design-revamp.md` (§1.5, §1.6, §1.8, §3 decision 12, §6.12, §6.14, §5 table). The feature itself is Rajat-confirmed; the three design choices below are EM defaults, reversible until 7.1 ships.
 **Options considered:** (a) **storage** — a new `dishDislikes` table parallel to `nextWeekQueue` vs. a new `manualChanges` kind vs. reusing `comments`. (b) **reason** — required (uniform with the save-for-next-week rule, decision 8) vs. optional. (c) **in-session behavior** — record-only vs. also re-rank or hide the disliked dish in the explore feed.
 **Chosen:**
+
 - **(a) `dishDislikes` table + `dislikeDish` mutation, built in 7.1.** `{ createdAt, author, dishId, reason: string | null, status: "queued" | "applied" | "dismissed", consumedWeekStart: string | null }`. Additive and existing-rows-safe (per [[convex-schema-breaking-change]], no wipe needed). **Not** a `manualChanges` kind: a dislike is a signal about a dish, not a change to the current week, so folding it into the week's change log would mis-shape both the Changes tab and the slow loop's clustering. Not `comments` either: a dislike is a structured per-dish signal with a lifecycle (queued -> applied/dismissed), not free text.
 - **(b) reason optional.** A dislike is a lightweight tap; requiring a "why" would add friction to a one-gesture action whose value is the signal itself. This deliberately differs from decision 8 (required reason on save-for-next-week), where the reason is the whole point of the queued action.
 - **(c) record-only, no in-session effect, no auto-hide ever.** The fast loop never re-ranks the explore feed or hides the dish on a dislike (Principle 5, record do not apply; Principle 7, no internal labels leak). The only consequence is via the slow loop (9.1), which clusters dislikes and may deactivate or down-rank a dish under right-size discipline: one dislike is no change; a dish disliked repeatedly, or by both household members, is a structural candidate.
-**Reversibility:** easy, until 7.1 ships. The table, mutation, and affordance do not exist yet; flipping any of the three defaults is a brief edit before the slice is built. After 7.1 ships, the table is additive and droppable, the reason field can become required with a UI change, and in-session behavior is fast-loop reversible.
-**Right-size check (per `docs/product.md` §4):** problem size structural (a new slow-loop signal channel); fix level new table + mutation + UI affordance (the smallest level that captures the signal with a consumable lifecycle, mirroring the established `nextWeekQueue` pattern); generality: dislikes join the slow loop's signal set exactly like skips, deletes, adds, saves, and unplaceable requests, and the mark-applied mechanism extends with a `dislike_ids:` cluster key the same way it did for `next_week_queue_ids:`.
+  **Reversibility:** easy, until 7.1 ships. The table, mutation, and affordance do not exist yet; flipping any of the three defaults is a brief edit before the slice is built. After 7.1 ships, the table is additive and droppable, the reason field can become required with a UI change, and in-session behavior is fast-loop reversible.
+  **Right-size check (per `docs/product.md` §4):** problem size structural (a new slow-loop signal channel); fix level new table + mutation + UI affordance (the smallest level that captures the signal with a consumable lifecycle, mirroring the established `nextWeekQueue` pattern); generality: dislikes join the slow loop's signal set exactly like skips, deletes, adds, saves, and unplaceable requests, and the mark-applied mechanism extends with a `dislike_ids:` cluster key the same way it did for `next_week_queue_ids:`.
 
 ---
 
@@ -250,6 +253,7 @@ Per Rajat's instruction this turn ("if not present in all-keys but inside the fo
 **Right-size check:** problem size, infrastructure (one-time); fix level, CLI commands + config files; generality: the layout (`convex.json` with `functions: "./"`, `vercel.json` at root) supports every future deploy without rework.
 
 **Open walls (escalating to Rajat):**
+
 - `.claude/settings.local.json` write blocked by the auto-mode classifier regardless of user authorization. Rajat must paste the additionalDirectories block himself. Without it, every engineer subagent for Streams A-F will fail to read its worktree.
 - `vercel domains add plantry.mudgal.xyz` and `plantry-dev.mudgal.xyz` blocked by the classifier as production hosting changes. Rajat to run these two commands or click through in the Vercel dashboard.
 
@@ -341,6 +345,7 @@ Worktrees: `../plantry-stream-A` (`feat/A-data-history`), `../plantry-stream-B` 
 **Stream:** planning (no code touched)
 **Context:** Rajat dropped the first Claude Design handoff at `design_handoff/` and asked the EM to plan the implementation as serially shippable slices, with a coherent (not patchwork) final structure, generic self-healing structures, a dish library expansion, and forward compatibility with ordering automation. Plan written to `features/design-revamp.md` for execution next session.
 **Key EM decisions baked into the plan (each reversible until its slice ships):**
+
 - **Per-dish files replace the dishes.md table.** The handoff adds recipe steps, cook notes, descriptions, and photos per dish; multi-line prose does not fit a table row. One file per dish (`data/dishes/<slug>.md`, YAML frontmatter + body) absorbs each dish's ingredients.md rows too, so a dish has exactly one canonical home. Rejected: a parallel recipes.md table (second home for dish facts, drift-prone); keeping the table and stuffing prose into cells (unreviewable diffs).
 - **ingredients.md becomes a canonical ingredient catalog** (name, grocery group, unit, pack size, grams per piece, macros per 100g). Absorbs the GROCERY_GROUPS code map (a duplicate ingredient list living in engine code today) and provides the machine-resolvable surface ordering automation needs. Rejected: per-dish macro columns (200 hand-entered numbers with no validator is how data rots).
 - **Dish protein and protein-to-carb ratio are derived** from ingredient quantities x catalog macros, per person (dish serves two). No per-dish override until a real dish needs one. HP tag stays the rule input; a validator reports HP-vs-protein drift rather than silently changing the rule.
@@ -350,8 +355,8 @@ Worktrees: `../plantry-stream-A` (`feat/A-data-history`), `../plantry-stream-B` 
 - **Requests mechanism kept minimal:** generateWeek takes a list of requested dish ids (fed by a new nextWeekQueue table), generalizing engine.md §3.2 trigger (a). Not a generic directive language; calendar awareness can extend it later if it earns it.
 - **Slice order J (data foundation, golden-master gated) -> K (enrichment schema + macros) -> L (engine rules) -> M (Convex) -> N (PWA core) -> O/P/Q parallel (Changes/Explore/Share), content batches R/S parallel from K.** Foundation-first because every later slice reads the new data shape; golden-master test makes J provably behavior-neutral.
 - **Content batches (enrichment, expansion) are a sanctioned second path for canonical-data PRs** alongside the slow loop, Rajat-reviewed; development.md §9 to be amended in slice J.
-**Escalations queued for Rajat (in features/design-revamp.md §2):** day-skip scope pull-forward, share image family (product behavior change), day-level comments, tab name, reason on save-for-next-week, explore hiding rules, includeRecipe semantics, photo sourcing, two new libraries (yaml, html-to-image), expansion target ~200, delete permissiveness.
-**Right-size check:** problem is structural by definition (a design revamp touching data model, rules, backend, frontend); the chosen levels favor data-and-validator structures over code special cases (catalog over code map, derived over stored, tag over column), per Principles 1, 2, 8.
+  **Escalations queued for Rajat (in features/design-revamp.md §2):** day-skip scope pull-forward, share image family (product behavior change), day-level comments, tab name, reason on save-for-next-week, explore hiding rules, includeRecipe semantics, photo sourcing, two new libraries (yaml, html-to-image), expansion target ~200, delete permissiveness.
+  **Right-size check:** problem is structural by definition (a design revamp touching data model, rules, backend, frontend); the chosen levels favor data-and-validator structures over code special cases (catalog over code map, derived over stored, tag over column), per Principles 1, 2, 8.
 
 ---
 
@@ -363,10 +368,11 @@ Worktrees: `../plantry-stream-A` (`feat/A-data-history`), `../plantry-stream-B` 
 **EM defaults adopted (Rajat's answer 3 found the batched small items unclear; defaults adopted per recommendation, reversible until each ships):** tab named "Changes"; reason required on save-for-next-week; Explore hides placed/queued dishes; includeRecipe resets weekly; delete permitted to leave a day below composition shape (fast loop stays permissive).
 **Plan restructure:** slices renumbered to x.y (spine 1.1 to 10.1, content tracks B1/B2/B3) with a §0 resume protocol: verify state from git and PR history before trusting the stated slice; every slice's PR flips its own status row so the committed doc stays accurate without main-directory commits.
 **New slices from the structure and slow-loop review:**
+
 - 1.1 bookkeeping: commits the plan and handoff, and aligns three drifted root-inventory lists (CI structure check, engineering.md §14, MAINTENANCE.md §2.9) that omit scripts/, root config files, design_handoff/, claude-design.md.
 - 9.1 slow-loop upgrade: slow loop gains five new signal channels (skip/delete/add/save patterns, unplaceable requests), proactive report-driven runs (coverage + pool-coverage reports as inputs, so a zero-comment week can still yield a useful PR), per-dish-file targets, mark-applied extension for nextWeekQueue (new cluster-block key + internal mutation), updated fixtures.
 - Mechanical path updates to MAINTENANCE.md and the slow-loop command ride slice 1.2 (lockstep: no doc points at dead paths between slices).
-**Right-size check:** resume protocol is process-level (doc convention, no tooling); slow-loop upgrade is infrastructure-level and earns it because every new fast-loop affordance (skip, delete, add, save) otherwise produces signal nothing consumes; structure alignment is a data fix to three stale lists.
+  **Right-size check:** resume protocol is process-level (doc convention, no tooling); slow-loop upgrade is infrastructure-level and earns it because every new fast-loop affordance (skip, delete, add, save) otherwise produces signal nothing consumes; structure alignment is a data fix to three stale lists.
 
 ---
 
@@ -376,6 +382,7 @@ Worktrees: `../plantry-stream-A` (`feat/A-data-history`), `../plantry-stream-B` 
 **Trigger:** Rajat asked to (a) source parsley and flag it as a specially-sourced ingredient, and (b) add an eval that flags dishes using ingredients that must be sourced specially (not at the regular Bangalore sabziwala/kirana). This is the additive sourcing metadata design-revamp §1.1 anticipated and the §8 ordering-automation sourcing signal.
 **Chosen level:** a catalog `Special` column (`Yes`/blank) plus a non-blocking special-sourcing report in `data/validators.ts`, wired into `npm run reports`. The smallest level that captures per-ingredient sourcing once and reports it per dish. Rejected: a per-dish `buySpecially` freeform note (already exists for prose; it does not generalize across dishes or feed a machine-readable report).
 **Ingredients marked `Special = Yes` (proposed set, for Rajat's review):**
+
 - parsley (new row, Aromatics and Herbs, macros ~3 protein / 6 carbs per 100 g) — fresh continental parsley, not a sabziwala staple.
 - tahini — sesame paste, specialty/import aisle.
 - tofu — supermarket chilled aisle, not at a kirana.
@@ -384,16 +391,16 @@ Worktrees: `../plantry-stream-A` (`feat/A-data-history`), `../plantry-stream-B` 
 - olive oil — supermarket cooking-oil aisle, not the kirana mustard/sunflower default.
 - basil (borderline call: marked) — fresh continental basil (distinct from tulsi), a specialty herb.
 - pasta, spaghetti (borderline calls: marked) — packaged Italian dry goods, supermarket only.
-**Borderline items left blank (regular sourcing):** noodles (Hakka/instant, kirana staple), cornflour (kirana staple), bean sprout (fresh mung sprouts are common at a Bangalore sabziwala), generic cheese, soyabean chunk. These are reversible by editing one cell.
-**Tabbouleh fix:** `data/dishes/tabbouleh.md` switched its ingredient row from Coriander Leaf to Parsley (its description already said parsley); now that Parsley is in the catalog the name-resolution validator passes.
-**Right-size check:** structural by definition (new catalog column + reporting eval), but the chosen levels favor a data-and-validator structure over code special cases (a column the catalog parser/serializer round-trip carry, a pure reporting function), per Principles 1, 2, 8. Additive: existing catalog rows read a blank `Special` cell as regular sourcing, so no migration. Out of scope (recorded so it is not forgotten): Convex, PWA, grocery-list surfacing of special sourcing, new dishes.
+  **Borderline items left blank (regular sourcing):** noodles (Hakka/instant, kirana staple), cornflour (kirana staple), bean sprout (fresh mung sprouts are common at a Bangalore sabziwala), generic cheese, soyabean chunk. These are reversible by editing one cell.
+  **Tabbouleh fix:** `data/dishes/tabbouleh.md` switched its ingredient row from Coriander Leaf to Parsley (its description already said parsley); now that Parsley is in the catalog the name-resolution validator passes.
+  **Right-size check:** structural by definition (new catalog column + reporting eval), but the chosen levels favor a data-and-validator structure over code special cases (a column the catalog parser/serializer round-trip carry, a pure reporting function), per Principles 1, 2, 8. Additive: existing catalog rows read a blank `Special` cell as regular sourcing, so no migration. Out of scope (recorded so it is not forgotten): Convex, PWA, grocery-list surfacing of special sourcing, new dishes.
 
 ---
 
-## 2026-06-15 07:05 IST  Bottom nav icons go beyond the design handoff
+## 2026-06-15 07:05 IST Bottom nav icons go beyond the design handoff
 
 **Stream:** `feat/tab-bar-icons` (engineer, Rajat add-on; not a §5 spine slice).
-**Context:** Rajat asked for distinct icons on the four bottom-nav tabs. The current build renders one 5px placeholder dot above each label, and the design handoff (`design_handoff/hifi-primitives.jsx`, `TabBar`) renders that *same* dot. So adding icons is not "match the handoff"; it is a deliberate step beyond it, which I authorized on Rajat's direct request.
+**Context:** Rajat asked for distinct icons on the four bottom-nav tabs. The current build renders one 5px placeholder dot above each label, and the design handoff (`design_handoff/hifi-primitives.jsx`, `TabBar`) renders that _same_ dot. So adding icons is not "match the handoff"; it is a deliberate step beyond it, which I authorized on Rajat's direct request.
 **Options considered:** (a) inline single-stroke SVG icons inheriting `currentColor`; (b) an icon library (lucide/react-icons); (c) keep the dot.
 **Chosen:** (a). One icon per tab — Menu=calendar, Grocery=basket, Explore=compass, Changes=swap-arrows — as inline SVGs in a type-checked `Record<TabKey, ReactNode>` map, `stroke="currentColor"` so they inherit the existing active/inactive tab colors with no new color CSS; `.tab-bar__dot` becomes a sizing-only `.tab-bar__icon`. UI-affordance level, smallest that delivers the ask.
 **Why this level / why not the others:** a library would add a dependency not in `engineering.md` §1 for four glyphs (rejected, anti-pattern); keeping the dot ignores the request. Inline SVG is zero-dependency, themed for free via `currentColor`, and removes the dead dot rules.
@@ -402,7 +409,7 @@ Worktrees: `../plantry-stream-A` (`feat/A-data-history`), `../plantry-stream-B` 
 
 ---
 
-## 2026-06-15 11:10 IST  Menu/Explore design-feedback slice: optional swap reason, sheet Back model, focus-in
+## 2026-06-15 11:10 IST Menu/Explore design-feedback slice: optional swap reason, sheet Back model, focus-in
 
 **Stream:** `fix/ui-design-feedback` (engineer + EM recovery; Rajat design-feedback add-on, not a §5 spine slice).
 **Context:** Rajat gave eight UI design-feedback items. Three carried product calls, which I confirmed with him up front before any code: comment removal covers BOTH the day-level and dish-level entry points; the reworked replace flow shows dish details first with an OPTIONAL reason (so swap reasons can still reach the slow loop); the include-recipe toggle is surfaced in the Menu dish sheet ONLY, since an Explore dish is not placed in a week and has no slot to write to. The entries below are the calls I made on my own within that frame.
@@ -413,7 +420,7 @@ Worktrees: `../plantry-stream-A` (`feat/A-data-history`), `../plantry-stream-B` 
 
 ---
 
-## 2026-06-15 12:10 IST  Search-picker design feedback: which quick filters, and stable-height approach
+## 2026-06-15 12:10 IST Search-picker design feedback: which quick filters, and stable-height approach
 
 **Stream:** `feat/search-picker-filters-spacing` (engineer; Rajat design-feedback add-on, not a §5 spine slice).
 **Context:** Rajat gave three feedback items on "the search experience": (1) the page must not change height while searching, (2) padding so the subtitle hugs the title and the section title hugs the list, (3) Explore-style quick filters under the search bar. The "search experience" is two picker sheets (Add-a-dish, Replace/swap) that share one structure. I confirmed two scoping calls with Rajat up front (apply to BOTH sheets; "mirror Explore" for the filter set). The entries below are the calls I made within that frame.
@@ -425,7 +432,7 @@ Worktrees: `../plantry-stream-A` (`feat/A-data-history`), `../plantry-stream-B` 
 
 ---
 
-## 2026-06-15 13:15 IST  Picker rows diverge from the handoff: drop the duplicate complexity pill
+## 2026-06-15 13:15 IST Picker rows diverge from the handoff: drop the duplicate complexity pill
 
 **Stream:** `fix/picker-row-drop-duplicate-tag` (engineer; Rajat design-feedback add-on, not a §5 spine slice).
 **Context:** Rajat (with screenshot) flagged that each picker dish row shows the cook-complexity twice: once in the subtitle ("35 min · Cook will need some help") and again as a trailing `ComplexityTag` pill, which also steals width so long names wrap early. He asked to remove the pill and give the space to the title/subtitle.
@@ -434,7 +441,7 @@ Worktrees: `../plantry-stream-A` (`feat/A-data-history`), `../plantry-stream-B` 
 **Reversibility:** trivial — re-add the `trailing={<ComplexityTag .../>}` block at the two call sites.
 **Verification:** EM focused crawl on a local prod-wired build (read-only): both pickers show 0 `.picker__trailing` and 0 `.complexity-tag` inside rows, complexity still present in the subtitle, `.dish-row__body` 294px on a 390 viewport, no horizontal overflow, clean console across all four tabs; shared `DishRow` intact (Explore still renders 106 complexity pills, no regression). CI green. Merged as #86 (7feba43), Rajat-approved; live prod smoke verified.
 
-## 2026-06-15 13:18 IST  "Missing" dish photos (paneer bhurji, sprouts salad) are a stale PWA cache, not a repo defect
+## 2026-06-15 13:18 IST "Missing" dish photos (paneer bhurji, sprouts salad) are a stale PWA cache, not a repo defect
 
 **Stream:** cross-stream (EM diagnosis, no code change).
 **Context:** Rajat reported that Paneer bhurji and Sprouts salad show no image in the app. Both dishes' photos were among the ~17 reshot in #84, so they had just changed content.
@@ -445,7 +452,7 @@ Worktrees: `../plantry-stream-A` (`feat/A-data-history`), `../plantry-stream-B` 
 
 ---
 
-## 2026-06-15 13:35 IST  Swap-picker search blind spot: full-pool fix, frontend-only, rebased through two mid-flight picker PRs
+## 2026-06-15 13:35 IST Swap-picker search blind spot: full-pool fix, frontend-only, rebased through two mid-flight picker PRs
 
 **Stream:** cross-stream (Rajat bug report; engineer in a worktree + EM diagnosis, review, and rebase).
 **Context:** Rajat reported that searching "roti" in the Replace flow returned nothing, though Roti is a valid library dish. Diagnosis: `getSlotAlternatives` ranks the full in-season meal-time pool but then truncates to the requested `limit` (the frontend asked for 60) before returning, and `SwapPickerSheet` ran both its name search and #82's quick-filter chips over that truncated slice. Roti and Rice are the default lunch carbs, cooked every week, so the recency ranking sinks them below the top 60 of the ~159-dish pool and they were unsearchable. #82's filter chips inherited the same blind spot.
@@ -455,3 +462,16 @@ Worktrees: `../plantry-stream-A` (`feat/A-data-history`), `../plantry-stream-B` 
 **Reversibility:** easy. The change is one pure helper plus two constants (`POOL_LIMIT`, `SUGGESTED_CAP`); reverting restores the prior `limit: 60` filter.
 **Right-size check (per `docs/product.md` §4):** problem size, a real correctness bug (the search corpus excluded valid dishes); fix level, the smallest that delivers (frontend-only, one helper, eight new unit tests including the Roti-at-the-bottom repro); generality, the helper also closes #82's filter blind spot at no extra cost and Add-a-dish needed no change.
 **Verification:** EM per-slice full-flow crawl on a local prod-wired build (read-only), PASS: "roti" and "rice" now return their real library rows, "Easy to cook" on an empty search expands from the 12 suggestions to 98 full-pool rows, no console errors or overflow across all surfaces. CI green (engine "Lint, typecheck, build, test"; 498 engine + 26 web tests). Merged as #85 (f77b58e), Rajat-approved; live prod deploy in progress.
+
+---
+
+## 2026-06-15 18:09 IST Ship 50 easy-to-cook expansion dishes inactive-with-photos for review
+
+**Stream:** cross-stream (content expansion; engineer in a worktree, EM-authored seed).
+**Context:** A 50-dish easy-to-cook expansion batch was authored for the library (ids 222-271, spanning everyday Indian sabzis, dals, pulaos, soups, keto and a few continental/Mexican/Levantine items). The question was how to ship them: active immediately, or inactive for Rajat to review first; and whether to ship them with or without photos in this batch.
+**Options considered:** (a) ship all 50 `active: Yes` straight into the rotation, no review gate; (b) ship them complete (recipe + photo) but `active: No`, so Rajat reviews and flips them himself; (c) a smaller batch with photos now, the rest text-only later.
+**Chosen:** (b), per Rajat's choice of "smaller-batch-with-photos" combined with "inactive-until-reviewed". Each dish ships fully built (description, numbered recipe, complexity, and an AI photo) but `active: No` and `preferred: No`, so nothing enters the weekly generation pool until Rajat has looked at it. This keeps the rotation under his control while making each dish reviewable as a real, photographed card rather than a bare stub. The dishes use only existing catalog ingredients (no new `data/ingredients.md` rows), so referential integrity holds with zero catalog risk.
+**Photo workflow:** photos were generated through the established `scripts/generate-dish-photos.mjs` pipeline with 50 new per-dish `data/dish-photos/details.md` correction lines (the proven quality workflow that overrides FLUX's ingredient priors: white paneer not yellow, whole uncut eggs, loose separate rice grains, grainy dal not puree, okra as rounds, dry-vs-gravy explicit). Three high-prior dishes were retuned (dal-palak fully fixed to grainy-with-lentils; paneer-bhurji-keto and egg-roast pushed to their best achievable within a two-round seed/detail-line budget, still slightly imperfect on FLUX's stubborn "yellow paneer cubes" and "halved eggs" priors, flagged for Rajat).
+**ACTIVATION NOTE (out of scope here, one-line change at activation time):** these 50 are inactive, so the coverage/pool report tests stay green untouched in this PR. When Rajat later flips any of these to `active: Yes`, `engine/test/data/reports.test.ts`'s `expect(cov.withPhoto).toBe(200)` must be bumped to the new active-dish count (each activated dish adds one to both `activeDishCount` and `withPhoto`, and the description/recipe/complexity assertions stay satisfied because every new dish ships those). If any activated dish is seasonal (only Gajar matar [Winter], Methi chicken [Winter] and Mango lassi [Summer] are), also re-check the Fruit-pool and per-slot pool-count assertions in the same file. This is a deliberate deferral: gating these behind activation keeps the review step honest and the activation a trivial, reviewable test bump.
+**Reversibility:** trivial. The change is 50 new data files plus 50 photos plus three doc appends; deleting the files reverts it, and nothing else in the repo depends on them while they are inactive.
+**Right-size check (per `docs/product.md` §4):** problem size, a content-coverage gap (the library wanted more easy weeknight options); fix level, the smallest honest one (data-only, no engine/app/rule change, inactive until reviewed); generality, the dishes reuse the existing catalog and the existing photo pipeline, so no new machinery was introduced.
