@@ -369,15 +369,10 @@ input {
   color: var(--pt-accent);
 }
 
-.tab-bar__dot {
-  width: 5px;
-  height: 5px;
-  border-radius: var(--pt-radius-pill);
-  background: transparent;
-}
-
-.tab-bar__tab--active .tab-bar__dot {
-  background: var(--pt-accent);
+.tab-bar__icon {
+  width: 22px;
+  height: 22px;
+  display: block;
 }
 
 /* Buttons */
