@@ -141,9 +141,89 @@ export function ComplexityTag({ variant, label }: { variant: ComplexityVariant; 
   return <span className={`complexity-tag ${COMPLEXITY_CLASS[variant]}`}>{label}</span>;
 }
 
+/** A neutral/soft pill for the non-difficulty dish tags on an Explore card
+ *  (prep time, descriptors). Shares the complexity-tag pill shape so the set
+ *  reads as one row of pills, but in a quiet neutral fill rather than the
+ *  colored difficulty semantics. */
+export function MetaTag({ label }: { label: string }) {
+  return <span className="meta-tag">{label}</span>;
+}
+
 export type TabKey = "Menu" | "Grocery" | "Explore" | "Changes";
 
 const TABS: TabKey[] = ["Menu", "Grocery", "Explore", "Changes"];
+
+// Minimal single-stroke line icons, one per tab. Inline SVG (no icon library, per
+// engineering.md §1). Each inherits the tab button's color via currentColor:
+// terracotta accent when active, --pt-sub when inactive (see .tab-bar__tab rules
+// in index.css), so no per-icon color CSS is needed.
+const TAB_ICONS: Record<TabKey, ReactNode> = {
+  // Menu: a weekly-plan calendar (this is a Mon-Sat weekly menu planner).
+  Menu: (
+    <svg
+      className="tab-bar__icon"
+      viewBox="0 0 22 22"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.5"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden="true"
+    >
+      <rect x="3.5" y="4.5" width="15" height="14" rx="2" />
+      <path d="M3.5 8.5h15" />
+      <path d="M7.5 3v3M14.5 3v3" />
+    </svg>
+  ),
+  // Grocery: a shopping basket.
+  Grocery: (
+    <svg
+      className="tab-bar__icon"
+      viewBox="0 0 22 22"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.5"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden="true"
+    >
+      <path d="M4 8.5h14l-1.4 8.2a1.5 1.5 0 0 1-1.48 1.3H6.88a1.5 1.5 0 0 1-1.48-1.3L4 8.5Z" />
+      <path d="M8 8.5 10 3.5M14 8.5 12 3.5" />
+      <path d="M9 12v2.5M13 12v2.5" />
+    </svg>
+  ),
+  // Explore: a compass (discovery).
+  Explore: (
+    <svg
+      className="tab-bar__icon"
+      viewBox="0 0 22 22"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.5"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden="true"
+    >
+      <circle cx="11" cy="11" r="7.5" />
+      <path d="m14.2 7.8-1.7 4.7-4.7 1.7 1.7-4.7 4.7-1.7Z" />
+    </svg>
+  ),
+  // Changes: a two-arrow swap (in-week dish swaps + queued changes).
+  Changes: (
+    <svg
+      className="tab-bar__icon"
+      viewBox="0 0 22 22"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.5"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden="true"
+    >
+      <path d="M5 8h10l-2.5-2.5M17 14H7l2.5 2.5" />
+    </svg>
+  ),
+};
 
 export function TabBar({ active, onTab }: { active: TabKey; onTab: (tab: TabKey) => void }) {
   return (
@@ -156,7 +236,7 @@ export function TabBar({ active, onTab }: { active: TabKey; onTab: (tab: TabKey)
           aria-current={tab === active ? "page" : undefined}
           onClick={() => onTab(tab)}
         >
-          <span className="tab-bar__dot" />
+          {TAB_ICONS[tab]}
           {tab}
         </button>
       ))}

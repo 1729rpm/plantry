@@ -114,6 +114,95 @@ export function complexityVariant(complexity: Dish["complexity"]): ComplexityVar
   return "easy";
 }
 
+// Concise difficulty label for compact pills (the Explore card grid). The
+// verbose `complexityLabel` ("Cook will need some help") reads well in a roomy
+// row but is too wordy for a small pill on a two-column card, so the card uses
+// these one-word forms. The verbose form stays for the row-style call sites
+// (swap / add-a-dish pickers, dish sheets).
+const COMPLEXITY_SHORT_LABEL: Record<NonNullable<Dish["complexity"]>, string> = {
+  Easy: "Easy",
+  Medium: "Medium",
+  Hard: "Hard",
+};
+
+export function complexityShortLabel(complexity: Dish["complexity"]): string {
+  return complexity ? COMPLEXITY_SHORT_LABEL[complexity] : "Easy";
+}
+
+// Decode the free-form dish `tags` codes into display strings. The library
+// stores codes, not display text (Principle 7: display decoupled from
+// structure), so this is the one place that knows "HP" reads "High protein" and
+// that cuisine codes ("oriental", "italian") title-case for a pill. An unknown
+// code title-cases as a safe fallback rather than leaking the raw code.
+const TAG_LABELS: Record<string, string> = {
+  hp: "High protein",
+  complete_meal: "Complete meal",
+};
+
+const CUISINE_CODES = new Set([
+  "oriental",
+  "italian",
+  "mexican",
+  "spanish",
+  "lebanese",
+  "greek",
+  "mediterranean",
+  "fruit",
+]);
+
+function titleCase(code: string): string {
+  return code.charAt(0).toUpperCase() + code.slice(1).toLowerCase();
+}
+
+/** One pill on an Explore card. `kind` drives the visual style: the difficulty
+ *  pill keeps its color semantics (green / amber / red), the rest render in the
+ *  neutral/soft style. */
+export interface DishTag {
+  label: string;
+  kind: "difficulty" | "neutral";
+  variant?: ComplexityVariant;
+}
+
+/**
+ * The ordered display tags for an Explore card, surfacing the details that help
+ * someone choose a dish. Pure: a `Dish` in, display strings out. Order and cap
+ * follow the EM tag-set decision:
+ *   1. Difficulty (always), concise + colored.
+ *   2. Prep time, "{n} min", when present.
+ *   3. One descriptor, first that applies: High protein (tag HP) -> Complete
+ *      meal (category or tag) -> cuisine (first cuisine tag, title-cased) ->
+ *      Filling (satiety High).
+ * Capped at four pills so the set never exceeds two lines on the card grid.
+ * Dishes with empty `tags` degrade gracefully: they still get difficulty, prep
+ * time, and (when satiety is High) Filling, never a raw code or an empty pill.
+ */
+export function exploreCardTags(dish: Dish): DishTag[] {
+  const tags: DishTag[] = [
+    { label: complexityShortLabel(dish.complexity), kind: "difficulty", variant: complexityVariant(dish.complexity) },
+  ];
+
+  if (typeof dish.prepMinutes === "number" && dish.prepMinutes > 0) {
+    tags.push({ label: `${dish.prepMinutes} min`, kind: "neutral" });
+  }
+
+  const codes = dish.tags.map((t) => t.toLowerCase());
+  const descriptor = pickDescriptor(dish, codes);
+  if (descriptor) tags.push({ label: descriptor, kind: "neutral" });
+
+  return tags;
+}
+
+function pickDescriptor(dish: Dish, codes: string[]): string | null {
+  if (codes.includes("hp")) return TAG_LABELS.hp;
+  if (dish.category === "Complete meal" || codes.includes("complete_meal")) {
+    return TAG_LABELS.complete_meal;
+  }
+  const cuisine = codes.find((c) => CUISINE_CODES.has(c));
+  if (cuisine) return titleCase(cuisine);
+  if (dish.satiety === "High") return "Filling";
+  return null;
+}
+
 /**
  * The dish-row meta line. The handoff prototype showed "Ng protein · N min";
  * the live Dish type carries no per-serving protein yet (nutrition derivation is

@@ -13,9 +13,9 @@ import { useMutation, useQuery } from "convex/react";
 import { anyApi } from "convex/server";
 import type { ExploreAffinityKey } from "@plantry/engine";
 import type { CurrentWeek, Identity, Meal, ShortDay } from "../lib/types.js";
-import { dishById, dishPhotoUrl, complexityVariant, complexityLabel } from "../lib/library.js";
+import { dishById, dishPhotoUrl, exploreCardTags } from "../lib/library.js";
 import { dayLabel } from "../lib/days.js";
-import { Chip, ComplexityTag, Thumb } from "./primitives.js";
+import { Chip, ComplexityTag, MetaTag, Thumb } from "./primitives.js";
 import { ExploreDishSheet } from "./ExploreDishSheet.js";
 import { ReasonDialog } from "./ReasonDialog.js";
 import { ExploreDayPicker } from "./ExploreDayPicker.js";
@@ -320,11 +320,14 @@ function ExploreCard({ entry, onOpen }: { entry: ExploreFeedDish; onOpen: () => 
       <div className="explore-card__body">
         <div className="explore-card__name">{entry.name}</div>
         {dish && (
-          <div className="explore-card__tag">
-            <ComplexityTag
-              variant={complexityVariant(dish.complexity)}
-              label={complexityLabel(dish.complexity) ?? "Easy to cook"}
-            />
+          <div className="explore-card__tags">
+            {exploreCardTags(dish).map((tag) =>
+              tag.kind === "difficulty" ? (
+                <ComplexityTag key={tag.label} variant={tag.variant ?? "easy"} label={tag.label} />
+              ) : (
+                <MetaTag key={tag.label} label={tag.label} />
+              ),
+            )}
           </div>
         )}
       </div>

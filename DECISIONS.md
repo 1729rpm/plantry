@@ -378,3 +378,15 @@ Worktrees: `../plantry-stream-A` (`feat/A-data-history`), `../plantry-stream-B` 
 **Borderline items left blank (regular sourcing):** noodles (Hakka/instant, kirana staple), cornflour (kirana staple), bean sprout (fresh mung sprouts are common at a Bangalore sabziwala), generic cheese, soyabean chunk. These are reversible by editing one cell.
 **Tabbouleh fix:** `data/dishes/tabbouleh.md` switched its ingredient row from Coriander Leaf to Parsley (its description already said parsley); now that Parsley is in the catalog the name-resolution validator passes.
 **Right-size check:** structural by definition (new catalog column + reporting eval), but the chosen levels favor a data-and-validator structure over code special cases (a column the catalog parser/serializer round-trip carry, a pure reporting function), per Principles 1, 2, 8. Additive: existing catalog rows read a blank `Special` cell as regular sourcing, so no migration. Out of scope (recorded so it is not forgotten): Convex, PWA, grocery-list surfacing of special sourcing, new dishes.
+
+---
+
+## 2026-06-15 07:05 IST  Bottom nav icons go beyond the design handoff
+
+**Stream:** `feat/tab-bar-icons` (engineer, Rajat add-on; not a §5 spine slice).
+**Context:** Rajat asked for distinct icons on the four bottom-nav tabs. The current build renders one 5px placeholder dot above each label, and the design handoff (`design_handoff/hifi-primitives.jsx`, `TabBar`) renders that *same* dot. So adding icons is not "match the handoff"; it is a deliberate step beyond it, which I authorized on Rajat's direct request.
+**Options considered:** (a) inline single-stroke SVG icons inheriting `currentColor`; (b) an icon library (lucide/react-icons); (c) keep the dot.
+**Chosen:** (a). One icon per tab — Menu=calendar, Grocery=basket, Explore=compass, Changes=swap-arrows — as inline SVGs in a type-checked `Record<TabKey, ReactNode>` map, `stroke="currentColor"` so they inherit the existing active/inactive tab colors with no new color CSS; `.tab-bar__dot` becomes a sizing-only `.tab-bar__icon`. UI-affordance level, smallest that delivers the ask.
+**Why this level / why not the others:** a library would add a dependency not in `engineering.md` §1 for four glyphs (rejected, anti-pattern); keeping the dot ignores the request. Inline SVG is zero-dependency, themed for free via `currentColor`, and removes the dead dot rules.
+**Glyph mapping is a judgment call, reversible:** the four glyphs are my choice; any can be swapped by editing one SVG path. Flag in chat if a different glyph reads better for a tab.
+**Verification:** ran the per-slice full-flow crawl on a local prod build of the PR against prod Convex (read-only), all four tabs — no horizontal overflow, 4 legible distinct icons per tab, active=terracotta bold / inactive=muted, 47px tap targets, clean console. The handoff "deviation" is the icons themselves, accepted by this decision. Sheet focus-trap/scroll-lock not re-exercised: nav-only diff cannot affect the shared `Sheet` primitive (explicitly accepted). Merged as #74 (a9ecec3).
