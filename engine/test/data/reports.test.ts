@@ -95,10 +95,11 @@ describe("coverageReport", () => {
     expect(cov.withComplexity).toBe(cov.activeDishCount);
     // Photos are a separate (B2) track. The data/photos-5 run regenerated every
     // active dish from a rewritten candid-home-photo prompt (replacing the prior
-    // styled/CGI look) and force-overwrote the whole library, so coverage is
-    // complete: 250 of 250 active dishes carry a photo. This snapshot tracks live
-    // data; it is a report assertion, not a rule.
-    expect(cov.withPhoto).toBe(250);
+    // styled/CGI look) and force-overwrote the whole library; the expansion-5
+    // batch then added two more dishes (Steamed rice, Avocado toast), each shipped
+    // with a photo, so coverage stays complete: 252 of 252 active dishes carry a
+    // photo. This snapshot tracks live data; it is a report assertion, not a rule.
+    expect(cov.withPhoto).toBe(252);
   });
 });
 
