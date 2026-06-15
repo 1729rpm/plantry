@@ -16,6 +16,7 @@ import { eligibleDishes } from "../eligibility.js";
 import {
   breakfastWeekdayPair,
   breakfastSinglePick,
+  fruitOfDayPool,
   menu1,
   menu2,
   menu3,
@@ -302,14 +303,14 @@ export function poolCoverageReport(library: Dish[]): PoolCount[] {
 
     const pair = breakfastWeekdayPair(eligible);
     const single = breakfastSinglePick(eligible);
+    const fruit = fruitOfDayPool(eligible);
     const m1 = menu1(eligible, []);
     const m2 = menu2(eligible, []);
     const m3 = menu3(eligible);
     const m4 = menu4(eligible);
 
     const rows: Array<[string, number]> = [
-      ["Breakfast Option A: complete_meal", pair.optionA.completeMeal.length],
-      ["Breakfast Option A: fruit", pair.optionA.fruit.length],
+      ["Fruit of the day (§3.3)", fruit.length],
       ["Breakfast Option B: complete_carb", pair.optionB.completeCarb.length],
       ["Breakfast Option B: accompaniment", pair.optionB.accompaniment.length],
       ["Breakfast Option C: dry main", pair.optionC.dryMain.length],

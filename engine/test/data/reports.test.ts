@@ -86,8 +86,9 @@ describe("poolCoverageReport", () => {
     const pools = poolCoverageReport(library);
     const seasons = new Set(pools.map((p) => p.season));
     expect(seasons).toEqual(new Set(["Summer", "Monsoon", "Winter"]));
-    // 20 slot rows per season (see the report's slot table).
-    expect(pools.filter((p) => p.season === "Summer").length).toBe(20);
+    // 19 slot rows per season (see the report's slot table). Breakfast Option A
+    // (complete_meal + fruit) is retired; the Fruit of the day (§3.3) is one row.
+    expect(pools.filter((p) => p.season === "Summer").length).toBe(19);
     // Counts are non-negative integers.
     for (const p of pools) expect(p.count).toBeGreaterThanOrEqual(0);
   });
@@ -98,7 +99,7 @@ describe("poolCoverageReport", () => {
     // the assertion is the post-expansion floor, not the old thin baseline.
     const { library } = loadLiveData();
     const pools = poolCoverageReport(library);
-    const fruit = pools.find((p) => p.season === "Summer" && p.slot.includes("fruit"));
+    const fruit = pools.find((p) => p.season === "Summer" && p.slot.includes("Fruit"));
     expect(fruit).toBeDefined();
     expect(fruit!.count).toBe(3);
   });

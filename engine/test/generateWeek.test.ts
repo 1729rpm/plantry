@@ -39,14 +39,36 @@ const emptyPackSizes: PackSizeHeader[] = [];
  */
 function makeMinimalLibrary(): Dish[] {
   return [
-    // Breakfast Option A: complete_meal + fruit (Mon/Wed/Fri pair)
+    // Savoury Mon/Wed/Fri 2-item breakfast (Option B: complete_carb + breakfast
+    // accompaniment). Two complete_carbs and two accompaniments so step-1
+    // longest-unused has something to alternate over across Mon/Wed/Fri.
     makeDish({
-      name: "Idli Sambar",
+      name: "Aloo Paratha",
       time: "Breakfast",
-      category: "Complete meal",
-      tags: ["complete_meal"],
-      primaryIngredient: "Idli batter",
+      category: "Paratha",
+      tags: ["complete_carb"],
+      primaryIngredient: "Potato",
     }),
+    makeDish({
+      name: "Breakfast Curd",
+      time: "Breakfast",
+      category: "Accompaniment",
+      primaryIngredient: "Curd",
+    }),
+    makeDish({
+      name: "Methi Thepla",
+      time: "Breakfast",
+      category: "Paratha",
+      tags: ["complete_carb"],
+      primaryIngredient: "Fenugreek",
+    }),
+    makeDish({
+      name: "Breakfast Pickle",
+      time: "Breakfast",
+      category: "Accompaniment",
+      primaryIngredient: "Mango",
+    }),
+    // Fruit of the day pool (§3.3): Category=Fruit, outside breakfast/lunch.
     makeDish({
       name: "Apple",
       time: "Breakfast",
@@ -55,25 +77,11 @@ function makeMinimalLibrary(): Dish[] {
       primaryIngredient: "Apple",
     }),
     makeDish({
-      name: "Poha",
-      time: "Breakfast",
-      category: "Complete meal",
-      tags: ["complete_meal"],
-      primaryIngredient: "Poha",
-    }),
-    makeDish({
       name: "Banana",
       time: "Breakfast",
       category: "Fruit",
       tags: ["fruit"],
       primaryIngredient: "Banana",
-    }),
-    makeDish({
-      name: "Upma",
-      time: "Breakfast",
-      category: "Complete meal",
-      tags: ["complete_meal"],
-      primaryIngredient: "Semolina",
     }),
     // Single-pick breakfast (Tue/Thu): complete_meal or complete_carb
     makeDish({
@@ -230,6 +238,66 @@ describe("generateWeek — top-level engine", () => {
       // Tue/Thu: 1 breakfast + 4 lunch = 5
       // Sat: 3
       expect(dishesPerDay).toEqual([5, 5, 5, 5, 5, 3]);
+    });
+
+    it("§3.3 puts a Fruit of the day on every day Mon-Sat, Saturday included", () => {
+      const week = generateWeek({
+        weekStart: "2026-06-08",
+        library,
+        history: emptyHistory,
+        season: "Summer",
+        ingredients: emptyIngredients,
+        packSizes: emptyPackSizes,
+        rng: () => 0.1,
+        lastSaturdayMenu: null,
+      });
+      expect(week.days.map((d) => d.day)).toEqual(["Mon", "Tue", "Wed", "Thu", "Fri", "Sat"]);
+      for (const day of week.days) {
+        expect(day.fruit, `${day.day} fruit`).toBeDefined();
+        expect(day.fruit!.category).toBe("Fruit");
+      }
+    });
+
+    it("§9 fruit is outside the cap: a Fruit dish never appears in a meal slot", () => {
+      const week = generateWeek({
+        weekStart: "2026-06-08",
+        library,
+        history: emptyHistory,
+        season: "Summer",
+        ingredients: emptyIngredients,
+        packSizes: emptyPackSizes,
+        rng: () => 0.1,
+        lastSaturdayMenu: null,
+      });
+      for (const day of week.days) {
+        for (const slot of day.slots) {
+          for (const dish of slot.dishes) {
+            expect(dish.category, `${day.day} ${slot.meal} ${dish.name}`).not.toBe("Fruit");
+          }
+        }
+      }
+    });
+
+    it("§3.3 picks the longest-unused fruit first when history favours one", () => {
+      // Apple cooked recently, Banana never: the longest-unused pick leads Banana.
+      const recentHistory: MenuHistoryRow[] = [
+        { weekStart: "2026-06-01", day: "Monday", meal: "Breakfast", dishName: "Apple", dishId: 2 },
+      ];
+      const lib = makeMinimalLibrary();
+      const apple = lib.find((d) => d.name === "Apple")!;
+      const history: MenuHistoryRow[] = [{ ...recentHistory[0], dishId: apple.id }];
+      const week = generateWeek({
+        weekStart: "2026-06-08",
+        library: lib,
+        history,
+        season: "Summer",
+        ingredients: emptyIngredients,
+        packSizes: emptyPackSizes,
+        rng: () => 0.1,
+        lastSaturdayMenu: null,
+      });
+      // Monday gets the longest-unused fruit, which is not the recently-cooked Apple.
+      expect(week.days[0].fruit!.name).not.toBe("Apple");
     });
 
     it("emits no incidents and no dropped dish ids under the identity cap stub", () => {
@@ -584,10 +652,10 @@ describe("generateWeek — top-level engine", () => {
 
     it("a breakfast pair carries at most one HP dish", () => {
       nextId = 1;
-      // Option A (complete_meal + fruit): the only non-fruit partner is an HP
-      // accompaniment, but Option A's partner is fruit (never HP). Use Option B
-      // (complete_carb + accompaniment) so the partner could be HP: an HP
-      // complete_carb lead must exclude an HP accompaniment partner.
+      // Option B (complete_carb + accompaniment): the partner could be HP, so an
+      // HP complete_carb lead must exclude an HP accompaniment partner (the §3
+      // one-HP-per-meal rule). Breakfast is savoury only; fruit is the standalone
+      // Fruit of the day (§3.3), never a breakfast partner.
       const library: Dish[] = [
         makeDish({
           name: "Besan Paneer Chilla",
