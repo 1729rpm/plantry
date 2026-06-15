@@ -131,6 +131,10 @@ export const CatalogIngredientSchema = z.object({
   proteinPer100g: z.number().nonnegative().optional(),
   /** Carbohydrate grams per 100 g of the ingredient. Blank reads as zero. */
   carbsPer100g: z.number().nonnegative().optional(),
+  /** Fat grams per 100 g of the ingredient. The §11 calorie (Atwater) input; blank reads as zero. */
+  fatPer100g: z.number().nonnegative().optional(),
+  /** Fibre grams per 100 g of the ingredient. The §11 fibre input; blank reads as zero. */
+  fiberPer100g: z.number().nonnegative().optional(),
   // Sourcing metadata (special-sourcing slice, Rajat request 2026-06-12). The
   // machine-readable surface ordering automation needs (product.md §8): which
   // ingredients are NOT stocked by a regular Bangalore sabziwala/kirana and so

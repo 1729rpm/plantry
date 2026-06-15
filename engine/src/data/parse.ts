@@ -349,16 +349,17 @@ const CATALOG_HEADERS = [
   "Grams per piece",
   "Protein /100g",
   "Carbs /100g",
+  "Fat /100g",
+  "Fiber /100g",
   "Special",
 ];
 
 /**
  * Parse the ingredient catalog (data/ingredients.md). One row per canonical
- * ingredient; a blank Pack Size cell marks an untracked ingredient. The three
- * macro columns (Grams per piece, Protein /100g, Carbs /100g, design-revamp
- * §1.1) are schema-present from slice 2.1; every cell ships blank this slice and
- * a blank cell reads as absent (undefined), which nutrition derivation treats as
- * zero.
+ * ingredient; a blank Pack Size cell marks an untracked ingredient. The macro
+ * columns (Grams per piece, Protein /100g, Carbs /100g, Fat /100g, Fiber /100g,
+ * engine.md §11) power derived dish macros; a blank cell reads as absent
+ * (undefined), which nutrition derivation treats as zero.
  */
 export function parseIngredientCatalog(markdown: string): CatalogIngredient[] {
   const tables = findTables(markdown);
@@ -387,10 +388,14 @@ export function parseIngredientCatalog(markdown: string): CatalogIngredient[] {
       cells[5].length > 0 ? parseNumberStrict(cells[5], "Protein /100g", rowKey) : undefined;
     const carbsPer100g =
       cells[6].length > 0 ? parseNumberStrict(cells[6], "Carbs /100g", rowKey) : undefined;
+    const fatPer100g =
+      cells[7].length > 0 ? parseNumberStrict(cells[7], "Fat /100g", rowKey) : undefined;
+    const fiberPer100g =
+      cells[8].length > 0 ? parseNumberStrict(cells[8], "Fiber /100g", rowKey) : undefined;
     // The Special cell is "Yes" for special sourcing; blank means regular
     // sourcing (the common case). Only "Yes" or blank are accepted so a typo
     // (e.g. "yes", "Y") fails the build loudly rather than silently parsing.
-    const specialRaw = cells[7];
+    const specialRaw = cells[9];
     if (specialRaw.length > 0 && specialRaw !== "Yes") {
       throw new Error(`${rowKey}: Special must be "Yes" or blank, got "${specialRaw}"`);
     }
@@ -405,6 +410,8 @@ export function parseIngredientCatalog(markdown: string): CatalogIngredient[] {
           ...(gramsPerPiece !== undefined ? { gramsPerPiece } : {}),
           ...(proteinPer100g !== undefined ? { proteinPer100g } : {}),
           ...(carbsPer100g !== undefined ? { carbsPer100g } : {}),
+          ...(fatPer100g !== undefined ? { fatPer100g } : {}),
+          ...(fiberPer100g !== undefined ? { fiberPer100g } : {}),
           special,
         }),
       );

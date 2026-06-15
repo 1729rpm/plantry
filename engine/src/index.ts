@@ -91,7 +91,17 @@ export type {
 } from "./generateWeek.js";
 export { aggregateGroceryList } from "./groceryList.js";
 export type { GroceryItem, GroceryList, GroceryDayPicks } from "./groceryList.js";
-export { deriveDishMacros, proteinToCarbRatio, HOUSEHOLD_SERVINGS } from "./nutrition.js";
+export {
+  deriveDishMacros,
+  proteinToCarbRatio,
+  isHealthy,
+  HOUSEHOLD_SERVINGS,
+  ATWATER_PROTEIN_KCAL_PER_G,
+  ATWATER_CARBS_KCAL_PER_G,
+  ATWATER_FAT_KCAL_PER_G,
+  HEALTHY_PROTEIN_CALORIE_FRACTION,
+  HEALTHY_FIBER_PER_PERSON,
+} from "./nutrition.js";
 export type { DishMacros } from "./nutrition.js";
 export { rankPickerAlternatives, PROTEIN_BAND_WIDTH_GRAMS } from "./pickerRanking.js";
 export type { PickerRankingArgs } from "./pickerRanking.js";
