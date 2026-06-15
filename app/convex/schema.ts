@@ -28,7 +28,13 @@ export default defineSchema({
           v.literal("Fri"),
           v.literal("Sat"),
         ),
-        meal: v.union(v.literal("breakfast"), v.literal("lunch")),
+        // "fruit" is the standalone Fruit of the day (docs/engine.md §3.3): one
+        // Category=Fruit dish per day Mon-Sat, stored as its own slot row with a
+        // single-element `dishes` list. It sits outside the breakfast/lunch
+        // composition and outside the §9 item cap. Adding the literal is additive
+        // to the union (existing breakfast/lunch rows still validate); a regenerate
+        // is what actually writes the fruit rows (no fruit slots exist pre-deploy).
+        meal: v.union(v.literal("breakfast"), v.literal("lunch"), v.literal("fruit")),
         dishes: v.array(
           v.object({
             dishId: v.union(v.number(), v.null()), // null when custom one-off
