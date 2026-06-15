@@ -7,21 +7,16 @@
 // and does nothing else in-session (no re-rank, no hide; Principle 5,
 // Decision #12, features/design-revamp.md §1.5/§1.6).
 //
-// This is a separate component from DishDetailSheet on purpose: that sheet is
-// owned by the Menu/Day editing family (5.2) and the two slices editing app/web
-// alongside this one must not collide on it. Both render the same primitives, so
-// the visual surface stays consistent without sharing a mutable component.
+// The detail body (photo, head, stats, ingredients, cook notes, recipe) is the
+// shared DishDetailBody, reused by the Menu DishDetailSheet and the swap
+// picker's replace-confirm view. Only the meta suffix ("Not cooked yet"), the
+// "why it fits" line, the default-open cook section, and the Explore actions
+// are owned here.
 
-import { useState } from "react";
 import type { ExploreAffinityKey } from "@plantry/engine";
-import {
-  dishById,
-  dishIngredients,
-  dishPhotoUrl,
-  complexityLabel,
-  mealLabelForDish,
-} from "../lib/library.js";
-import { Sheet, StatChip, PrimaryButton, QuietButton, SectionLabel } from "./primitives.js";
+import { dishById } from "../lib/library.js";
+import { Sheet, PrimaryButton, QuietButton } from "./primitives.js";
+import { DishDetailBody } from "./DishDetailBody.js";
 import { affinityLine } from "../lib/explore.js";
 
 interface ExploreDishSheetProps {
@@ -42,10 +37,6 @@ export function ExploreDishSheet({
   onClose,
 }: ExploreDishSheetProps) {
   const dish = dishById(dishId);
-  // The recipe opens by default in the Explore context (the handoff's
-  // `context === 'explore'` default-open behaviour): exploring is about reading
-  // the dish, so the cooking notes and steps start expanded.
-  const [showInfo, setShowInfo] = useState<boolean>(true);
 
   if (!dish) {
     return (
@@ -56,102 +47,14 @@ export function ExploreDishSheet({
     );
   }
 
-  const photo = dishPhotoUrl(dish);
-  const label = complexityLabel(dish.complexity);
-  const ings = dishIngredients(dish.id);
-  const hasCookFields = Boolean(
-    dish.skill || dish.equipment || dish.buySpecially || dish.prePrep || dish.prepMinutes,
-  );
-
   return (
     <Sheet onClose={onClose} tall>
-      {photo ? (
-        <img className="detail__photo" src={photo} alt="" />
-      ) : (
-        <div className="detail__photo detail__photo--placeholder" aria-hidden="true" />
-      )}
-      <div className="detail__head">
-        <div className="detail__name">{dish.name}</div>
-        {dish.description && <div className="detail__desc">{dish.description}</div>}
-        <div className="detail__meta">{mealLabelForDish(dish)} · Not cooked yet</div>
-        <div className="explore-sheet__why">{affinityLine(dominantAffinity)}</div>
-      </div>
-
-      <div className="detail__stats">
-        <StatChip label="Prep" value={`${dish.prepMinutes} min`} />
-        <StatChip label="Satiety" value={dish.satiety} />
-        <StatChip label="Meal" value={mealLabelForDish(dish)} />
-      </div>
-
-      {ings.length > 0 && (
-        <div className="detail__section">
-          <SectionLabel>Ingredients</SectionLabel>
-          <div className="detail__ingredients">
-            {ings.map((ing, i) => (
-              <span key={`${ing.ingredient}-${i}`} className="detail__ingredient">
-                {ing.ingredient}
-                <span className="detail__ingredient-qty">
-                  {" "}
-                  {ing.quantity}
-                  {ing.unit}
-                </span>
-              </span>
-            ))}
-          </div>
-        </div>
-      )}
-
-      {(label || hasCookFields || dish.recipe) && (
-        <div className="detail__cook">
-          <button
-            type="button"
-            className="detail__cook-toggle"
-            onClick={() => setShowInfo((v) => !v)}
-          >
-            <span className="detail__cook-label">{label ?? "Cooking notes"}</span>
-            <span className="detail__cook-hint">{showInfo ? "Hide details" : "Show details"}</span>
-          </button>
-          {showInfo && (
-            <div className="detail__cook-body">
-              {dish.skill && (
-                <div>
-                  <span className="detail__field-key">Skill:</span> {dish.skill}
-                </div>
-              )}
-              {dish.equipment && (
-                <div>
-                  <span className="detail__field-key">Equipment:</span> {dish.equipment}
-                </div>
-              )}
-              {dish.buySpecially && (
-                <div>
-                  <span className="detail__field-key">Buy specially:</span> {dish.buySpecially}
-                </div>
-              )}
-              {dish.prePrep && (
-                <div>
-                  <span className="detail__field-key">Pre prep:</span>{" "}
-                  <span className="detail__prep">{dish.prePrep}</span>
-                </div>
-              )}
-              <div>
-                <span className="detail__field-key">Time:</span> About {dish.prepMinutes} minutes
-              </div>
-              {dish.recipe && dish.recipe.length > 0 && (
-                <div className="detail__recipe">
-                  <SectionLabel>Recipe</SectionLabel>
-                  {dish.recipe.map((step, i) => (
-                    <div key={i} className="detail__recipe-step">
-                      <span className="detail__recipe-num">{i + 1}</span>
-                      <span>{step}</span>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
-          )}
-        </div>
-      )}
+      <DishDetailBody
+        dish={dish}
+        metaSuffix="Not cooked yet"
+        belowMeta={<div className="explore-sheet__why">{affinityLine(dominantAffinity)}</div>}
+        defaultShowInfo
+      />
 
       <div className="detail__actions">
         <PrimaryButton className="explore-sheet__action-use" onClick={onUseThisWeek}>
@@ -162,7 +65,7 @@ export function ExploreDishSheet({
         </QuietButton>
       </div>
       <button type="button" className="explore-sheet__dislike" onClick={onDislike}>
-        Not for me
+        <span className="explore-sheet__dislike-label">Not for me</span>
       </button>
     </Sheet>
   );

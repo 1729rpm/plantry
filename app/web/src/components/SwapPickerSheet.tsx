@@ -1,10 +1,17 @@
 // Swap picker. Opened from the dish action sheet or the details sheet's Replace
 // action. Lists alternatives from the 3.1 picker ranking (getSlotAlternatives:
 // the broad, meal-time-matching, in-season pool ranked by recency + protein-band
-// similarity to the outgoing dish), searchable by name. Picking a dish opens the
-// shared reason dialog; on submit it calls swapDish with the live version for
-// optimistic concurrency. Ported from the SwapPickerSheet overlay in
-// design_handoff/hifi-overlays.jsx. The ranking lives in Convex, not here.
+// similarity to the outgoing dish), searchable by name.
+//
+// Picking a LIBRARY dish opens a details-first confirm view (the same shared
+// DishDetailBody surface as the Explore / Menu detail sheets) with a primary
+// "Replace dish" action and an OPTIONAL reason field: leaving the reason empty
+// still goes through (the product owner chose "Confirm + optional reason"). The
+// custom one-off path has no library dish to show, so it stays on the shared
+// ReasonDialog with a required reason. On submit either path calls its mutation
+// with the live version for optimistic concurrency. Ported from the
+// SwapPickerSheet overlay in design_handoff/hifi-overlays.jsx. The ranking
+// lives in Convex, not here.
 
 import { useMemo, useState } from "react";
 import { useMutation, useQuery } from "convex/react";
@@ -13,8 +20,9 @@ import type { Dish } from "@plantry/engine";
 import type { Identity, Meal, ShortDay } from "../lib/types.js";
 import { complexityVariant, complexityLabel } from "../lib/library.js";
 import { dayLabel, mealLabel } from "../lib/days.js";
-import { Sheet, SearchField, SectionLabel, ComplexityTag } from "./primitives.js";
+import { Sheet, SearchField, SectionLabel, ComplexityTag, PrimaryButton } from "./primitives.js";
 import { DishRow } from "./DishRow.js";
+import { DishDetailBody } from "./DishDetailBody.js";
 import { ReasonDialog } from "./ReasonDialog.js";
 
 // What the reason dialog will commit on submit: a library swap (a chosen dish)
@@ -60,6 +68,16 @@ export function SwapPickerSheet({
   const [choice, setChoice] = useState<Choice | null>(null);
   const [inFlight, setInFlight] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
+  // Optional reason for the library replace-confirm view. The custom one-off
+  // path captures its (required) reason through ReasonDialog instead.
+  const [reason, setReason] = useState<string>("");
+
+  function backToPicker() {
+    if (inFlight) return;
+    setChoice(null);
+    setReason("");
+    setError(null);
+  }
 
   const trimmedQuery = q.trim();
   const visible = useMemo(() => {
@@ -118,12 +136,63 @@ export function SwapPickerSheet({
     }
   }
 
+  // Library pick: show the dish details first (the shared detail surface) with a
+  // primary "Replace dish" action and an optional reason. Empty reason still
+  // swaps. Back arrow returns to the picker list.
+  if (choice && choice.kind === "library") {
+    return (
+      <Sheet onClose={onClose} tall>
+        <div className="swap-confirm__head">
+          <button
+            type="button"
+            className="swap-confirm__back"
+            aria-label="Back to the dish list"
+            onClick={backToPicker}
+          >
+            &lsaquo;
+          </button>
+          <div className="reason__title">Replace with {choice.dish.name}</div>
+        </div>
+        <DishDetailBody dish={choice.dish} />
+
+        <div className="swap-confirm__reason">
+          <label className="swap-confirm__reason-label" htmlFor="swap-reason">
+            Add a reason (optional)
+          </label>
+          <textarea
+            id="swap-reason"
+            className="reason__text"
+            rows={2}
+            value={reason}
+            aria-label="Reason (optional)"
+            placeholder="Why this change? Helps the weekly review."
+            onChange={(e) => setReason(e.target.value)}
+            disabled={inFlight}
+          />
+        </div>
+
+        {error && (
+          <p className="reason__error" role="alert">
+            {error}
+          </p>
+        )}
+        <PrimaryButton
+          className="swap-confirm__submit"
+          disabled={inFlight}
+          onClick={() => handleSubmit(reason.trim())}
+        >
+          {inFlight ? "Saving..." : "Replace dish"}
+        </PrimaryButton>
+      </Sheet>
+    );
+  }
+
+  // Custom one-off: no library dish to preview, so the required-reason dialog
+  // stays the confirm surface.
   if (choice) {
-    const title =
-      choice.kind === "library" ? `Replace with ${choice.dish.name}` : `Use "${choice.label}"`;
     return (
       <ReasonDialog
-        title={title}
+        title={`Use "${choice.label}"`}
         submitLabel="Replace dish"
         inFlight={inFlight}
         error={error}
@@ -162,7 +231,7 @@ export function SwapPickerSheet({
         <div className="picker__hint">No dish matches that name.</div>
       )}
       {visible.length > 0 && (
-        <>
+        <div className="picker__results">
           <SectionLabel>
             {trimmedQuery.length > 0 ? "From the library" : "Suggested for this day"}
           </SectionLabel>
@@ -192,7 +261,7 @@ export function SwapPickerSheet({
               />
             </button>
           ))}
-        </>
+        </div>
       )}
     </Sheet>
   );
