@@ -308,6 +308,18 @@ input {
   margin-bottom: 4px;
 }
 
+/* The Edit pill floats over the top-right corner of the card (top/right 12px,
+   44px tall, so it covers roughly the first ~56px below the card top). Reserve
+   that corner on the first meal block and the skipped block so a long section
+   label or first dish name reflows clear of the pill instead of running under
+   it on narrow iPhone widths. Lower meals sit below the pill and keep the full
+   width. 72px clears the pill's ~56px footprint plus the card's 16px right
+   padding. */
+.day-card__meal:first-child,
+.day-card__skipped {
+  padding-right: 72px;
+}
+
 .day-card__skipped {
   padding: 6px 0 14px;
 }
