@@ -99,7 +99,10 @@ input {
 }
 
 .screen__header {
-  padding: 54px 20px 12px;
+  /* Horizontal padding floors at the design inset but grows to clear a notched
+     iPhone's side safe area (env(...) is 0 on Android and most upright phones,
+     so this is a no-op there). */
+  padding: 54px max(20px, env(safe-area-inset-right)) 12px max(20px, env(safe-area-inset-left));
 }
 
 .screen__title {
@@ -116,14 +119,14 @@ input {
 }
 
 .screen__list {
-  padding: 4px 16px 16px;
+  padding: 4px max(16px, env(safe-area-inset-right)) 16px max(16px, env(safe-area-inset-left));
   display: flex;
   flex-direction: column;
   gap: 12px;
 }
 
 .screen__footer {
-  padding: 10px 16px 12px;
+  padding: 10px max(16px, env(safe-area-inset-right)) 12px max(16px, env(safe-area-inset-left));
   flex-shrink: 0;
 }
 
@@ -158,12 +161,18 @@ input {
   font-family: var(--pt-font-sans);
 }
 
-/* Chip / filter pill */
+/* Chip / filter pill. The visible pill is kept short (~34px) so a row of chips
+   (the picker meal toggle and quick filters, the reason quick-chips) does not
+   eat the vertical space a 44px-tall pill did. A transparent ::after overlay
+   extends the tap target back to 44px, centred on the pill and overflowing into
+   the row gap above and below, so the hit area stays accessible while the pill
+   reads shorter. */
 .chip {
+  position: relative;
   font-size: 13px;
   font-weight: 600;
   border-radius: var(--pt-radius-pill);
-  padding: 8px 14px;
+  padding: 6px 14px;
   font-family: var(--pt-font-sans);
   white-space: nowrap;
   background: var(--pt-surface);
@@ -172,7 +181,17 @@ input {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  min-height: 44px;
+  min-height: 34px;
+}
+
+.chip::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 50%;
+  height: 44px;
+  transform: translateY(-50%);
 }
 
 .chip--active {
@@ -305,6 +324,18 @@ input {
   margin-bottom: 4px;
 }
 
+/* The Edit pill floats over the top-right corner of the card (top/right 12px,
+   44px tall, so it covers roughly the first ~56px below the card top). Reserve
+   that corner on the first meal block and the skipped block so a long section
+   label or first dish name reflows clear of the pill instead of running under
+   it on narrow iPhone widths. Lower meals sit below the pill and keep the full
+   width. 72px clears the pill's ~56px footprint plus the card's 16px right
+   padding. */
+.day-card__meal:first-child,
+.day-card__skipped {
+  padding-right: 72px;
+}
+
 .day-card__skipped {
   padding: 6px 0 14px;
 }
@@ -345,7 +376,8 @@ input {
   display: flex;
   border-top: 1px solid var(--pt-line);
   background: var(--pt-surface);
-  padding: 10px 10px calc(14px + env(safe-area-inset-bottom, 12px));
+  padding: 10px max(10px, env(safe-area-inset-right)) calc(14px + env(safe-area-inset-bottom, 12px))
+    max(10px, env(safe-area-inset-left));
   flex-shrink: 0;
 }
 
@@ -433,10 +465,20 @@ input {
      its left/right edges and their border + focus outline (outline-offset
      draws ~3px outside the element) never get clipped. 12 + 6 = 18, the
      original visual inset, so nothing shifts. */
-  padding: 10px 12px calc(18px + env(safe-area-inset-bottom, 8px));
+  padding: 10px max(12px, env(safe-area-inset-right)) calc(18px + env(safe-area-inset-bottom, 8px))
+    max(12px, env(safe-area-inset-left));
   max-height: 88%;
   display: flex;
   flex-direction: column;
+  /* iOS keyboard seam: the panel anchors to bottom:0 of the layout viewport, so
+     when the software keyboard slides up over the bottom, the dark scrim can
+     show as a thin line in the seam between the panel's bottom edge and the top
+     of the keyboard while a search field is focused. Extend the panel's own
+     surface colour straight down past its bottom edge so that seam is filled
+     with cream, not the dark scrim. The spread sits below bottom:0, off-screen
+     on Android (env is 0 and there is no overlay keyboard there), so this is a
+     no-op everywhere except the iOS keyboard case. */
+  box-shadow: 0 80px 0 0 var(--pt-surface);
 }
 
 .sheet__grabber {
@@ -602,7 +644,7 @@ input {
 }
 
 .offline-banner {
-  margin: 0 16px 12px;
+  margin: 0 max(16px, env(safe-area-inset-right)) 12px max(16px, env(safe-area-inset-left));
   background: #f4efd8;
   color: #5b4e1c;
   padding: 8px 12px;
@@ -739,7 +781,7 @@ input {
 /* Day screen (the editing family entry, shown over the Menu tab)      */
 /* ------------------------------------------------------------------ */
 .day-screen__header {
-  padding: 54px 20px 10px;
+  padding: 54px max(20px, env(safe-area-inset-right)) 10px max(20px, env(safe-area-inset-left));
   display: flex;
   align-items: center;
   gap: 12px;
@@ -767,7 +809,7 @@ input {
 }
 
 .day-screen__body {
-  padding: 6px 16px 16px;
+  padding: 6px max(16px, env(safe-area-inset-right)) 16px max(16px, env(safe-area-inset-left));
   display: flex;
   flex-direction: column;
   gap: 12px;
@@ -1601,11 +1643,11 @@ input {
   display: flex;
   flex-wrap: wrap;
   gap: 8px;
-  padding: 4px 16px 12px;
+  padding: 4px max(16px, env(safe-area-inset-right)) 12px max(16px, env(safe-area-inset-left));
 }
 
 .explore__rubric {
-  padding: 0 16px;
+  padding: 0 max(16px, env(safe-area-inset-right)) 0 max(16px, env(safe-area-inset-left));
   font-size: 12px;
   letter-spacing: 0.1em;
   text-transform: uppercase;
@@ -1618,7 +1660,7 @@ input {
   grid-template-columns: 1fr 1fr;
   gap: 12px;
   align-content: start;
-  padding: 0 16px 24px;
+  padding: 0 max(16px, env(safe-area-inset-right)) 24px max(16px, env(safe-area-inset-left));
 }
 
 .explore-card {
