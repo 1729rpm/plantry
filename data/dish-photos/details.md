@@ -1,0 +1,207 @@
+# Per-dish visual details
+
+One line per dish: `<slug> | <visual detail>`. The photo generator injects the
+detail into the prompt so the image renders the dish's true ingredient form,
+cut, garnish, dry-vs-gravy state, and texture. Derived from a per-dish study of
+how each dish actually looks (real reference photos + culinary knowledge).
+
+aamras | Smooth thick golden-orange mango pulp in a bowl, pourable like custard, no chunks; tiny cardamom flecks optional. No garnish, no mango slices, no sprig.
+aloo-beans | Dry stir-fry on a plate: short fine-cut green bean pieces and small potato cubes, lightly browned, glistening with oil but no gravy. Faint turmeric tint. No garnish.
+aloo-matar | Potato cubes and round green peas in a thin-to-medium reddish-brown onion-tomato gravy, not soupy. Glossy oil sheen. Light coriander scatter on top.
+aloo-paratha | Round golden-brown griddled flatbread, blistered dark spots, ghee sheen, slightly puffed; faint potato-stuffing bulge. Served whole or torn. No visible filling spilling, no garnish.
+aloo-puri | Two or three puffed deep-fried golden puris beside a soft pale-yellow chunky-mashed potato masala (loose, lightly saucy), thin coriander flecks in the potato. No gravy pool.
+anda-bhurji | Dry crumbly scrambled egg, soft yellow curds mixed with finely chopped onion, tomato bits and green chilli, faint turmeric-orange tint, oily. Light coriander on top. No liquid.
+bajra-roti | Thick rustic hand-patted greyish-brown millet flatbread, slightly irregular round, matte dense surface with a few charred spots, ghee sheen. No garnish, no puffing.
+baked-mozzarella-pasta | Pasta in thick red tomato sauce under a browned bubbling melted-mozzarella blanket, golden patches; served in a baking dish. A few torn basil leaves. Cheese stretchy, not raw slices.
+banana-bowl | Plain round banana slices, pale cream-yellow, loose in a bowl, slightly uneven. Nothing else: no honey, no nuts, no garnish, no other fruit.
+bean-burrito-bowl | Composed bowl with distinct sections: white rice, dark-red saucy kidney beans, charred yellow corn, red-onion-tomato salsa, lime wedge. Coriander scatter. Not mixed together.
+beans-onion | Dry stir-fry: very finely chopped green beans with soft onion bits, glistening with oil, faint turmeric tint, slightly browned. No gravy, no garnish.
+besan-paneer-chilla | Flat round yellow gram-flour pancake, lightly browned mottled surface, studded with visible white paneer crumbs, onion and green flecks. Folded or flat on plate. No garnish.
+bhindi | Dry stir-fried okra cut into ROUNDS (not whole pods), slightly shrivelled and browned at edges, mixed with soft onion and tomato bits, oily sheen, no gravy. Faint white seeds visible in rounds.
+black-bean-quesadilla | Golden toasted tortilla wedges, crisp browned blistered surface, oozing melted cheese and dark mashed-bean filling at cut edges. Stacked wedges. Small salsa side optional, no garnish on top.
+boiled-eggs | Hard-boiled eggs halved lengthwise, firm pale-yellow yolk centre, white slightly DIMPLED and matte (not glassy-smooth), faint salt-and-pepper specks. Plain on plate, no garnish.
+bread-omelette | Folded yellow masala omelette wrapped around toasted bread slices, visible onion-chilli-coriander flecks in the egg, lightly browned edges, golden toast peeking out. No garnish.
+bread-upma | Soft pale bread cubes tossed and coated in turmeric-yellow onion-tomato tempering, curry leaves visible, slightly uneven moist-but-not-wet texture. Coriander scatter. No gravy.
+broccoli-corn | Bright green broccoli florets and yellow corn kernels, dry stir-fry not saucy, lightly charred edges, flecks of garlic and onion, glossy from oil; no creamy sauce, no cheese, no garnish.
+butter-chicken | Boneless chicken chunks in a smooth glossy orange-red gravy, silky not chunky or split, sheen of butter on top, swirl of cream and a few coriander leaves; no whole spices, no thick chunky masala.
+cabbage-peas-aloo | Finely shredded wilted pale-green cabbage with green peas and small potato cubes, dry and soft, turmeric-yellow tint; no gravy, cabbage limp not crisp, sparse or no garnish.
+caprese-salad | Alternating rounds of red tomato and white mozzarella with whole green basil leaves tucked between, drizzle of olive oil pooling, cracked pepper; raw fresh, no lettuce, no balsamic glaze.
+capsicum-aloo | Diced green capsicum and potato cubes, dry stir-fry, capsicum still bright and slightly firm, light turmeric coating, cumin seeds visible; no gravy, no coriander garnish, no tomato.
+carrot-aloo | Small diced orange carrot and potato cubes cooked dry and tender, turmeric-yellow tint, cumin tempering; minimal sauce, finished with a little chopped coriander; no gravy.
+carrot-cucumber-salad | Bright orange grated carrot and finely diced pale cucumber tossed together raw, glistening from lemon, flecks of green chilli and coriander; loose mound, no dressing pooling, no creamy element.
+carrot-halwa | Deep reddish-orange grated carrot cooked to a thick glossy moist mass, ghee sheen, studded with whole cashews and plump raisins; not dry, not loose; served warm.
+chana-dal | Soft thick yellow split chana dal holding grainy chunky texture (not pureed smooth), tomato-onion flecks, garlic tempering oil floating on top, coriander; medium-thick not soupy.
+chicken-biryani | Long separate basmati grains in mottled white-and-saffron-yellow, bone-in chicken pieces tucked in, golden fried onion strands, mint and coriander; dry and fluffy not wet, no uniform yellow, no peas.
+chicken-breast-salad | Sliced grilled chicken breast with light golden sear and grill marks laid over green lettuce, cucumber, tomato wedges and onion rings, lemon-glossed; chicken visibly fibrous not smooth, no creamy dressing.
+chicken-breast | Single pan-seared chicken breast, deep golden-brown crust with caramelized patches, sliced to show juicy white interior fibres, lemon wedge; no sauce, no breading, surface uneven and textured not smooth.
+chicken-curry | Bone-in curry-cut chicken pieces in a rich brown onion-tomato gravy with oil glistening on the surface, medium-bodied not thick paste, coriander scattered; homestyle, no cream, no cashew silkiness.
+chicken-enchilada-bowl | Shredded chicken in thick smoky brick-red tomato sauce over white rice with dark-red kidney beans, melted grated cheese on top, coriander and lime; saucy not watery, rustic shredded texture.
+chicken-fajita-bowl | Sliced charred chicken strips with blistered multicolour pepper and onion strips over white rice, visible dark char marks, lemon and coriander; dry-charred not saucy, distinct strips not mixed mush.
+chicken-fried-rice | Loose separate rice grains stir-fried, scattered with small chicken dice, yellow scrambled egg bits, orange carrot, green beans and capsicum, spring onion; light brown soy tint, dry not gloopy, no thick sauce.
+chicken-keema | Fine browned minced chicken cooked dry with green peas in a reddish-brown onion-tomato masala, crumbly granular texture, oil glistening, coriander; dry not gravy, no whole chunks.
+chicken-masala-gravy | Bone-in curry-cut pieces in a glossy reddish-brown onion-tomato gravy, medium-thick clinging not soupy, visible oil sheen on top, a light coriander sprinkle.
+chicken-salad | Sliced or shredded seared chicken breast (pale gold, charred edges) tossed with torn green lettuce and cucumber rounds, lightly glossed with lemon dressing, no creamy mayo, no gravy.
+chicken-sandwich | Sliced bread sandwich, cut diagonally, layered with seared chicken slices, crisp lettuce and tomato rounds visible at the cut edge, dry filling not saucy, no melted cheese.
+chicken-stew | Pale ivory coconut-milk broth, thin and brothy not creamy-thick, bone-in chicken pieces with soft cubed potato and carrot, whole curry leaves and black peppercorns, no red chilli colour.
+chicken-tikka | Charred deep-red-orange boneless chunks with blackened smoky edges, dry not saucy, skewered or piled with charred onion petals and green capsicum squares, dry-spiced surface, no gravy.
+chilli-chicken-dry | Dry glossy dark-brown chicken chunks with sauce just clinging (not pooled), tossed with diced green capsicum and onion petals, sliced green chilli and spring onion, slightly sticky sheen.
+chilli-paneer-dry | Cubed paneer (soft white, lightly browned edges) coated in clinging dark glossy sauce, dry not gravy, with green capsicum and onion squares, sliced green chilli and spring onion greens.
+chinese-chilli-garlic-prawns | Plump pink-orange curled prawns in a sticky glossy reddish chilli-garlic glaze coating them, minced garlic visible, slightly wet-shiny not soupy, scattered spring onion, no thick gravy.
+chinese-garlic-noodles | Long thin wheat noodles glossy with light golden-brown soy-garlic sauce, strands separate, flecked with minced garlic and crisp green beans, carrot juliennes, spring onion; not saucy-puddled.
+chole-bhature | Dark brown thick chana masala with whole chickpeas, beside one or two large puffy golden-brown deep-fried bhature (balloon-like, irregular blistered surface), sliced onion and lemon wedge alongside.
+chole | Dark reddish-brown thick chickpea curry, whole soft chickpeas visible in a medium-thick masala (not soupy), oil sheen, slivered ginger on top, no cream swirl.
+coconut-rice | Loose white rice grains flecked with fresh white grated coconut, golden fried cashews, whole curry leaves, brown mustard seeds and split urad dal, dry and fluffy not sticky, pale not yellow.
+continental-baked-vegetables | Chunky mixed veg (cauliflower, carrot, beans, peas) in pale white sauce under a patchy golden-brown bubbled cheese crust, in a baking dish, creamy not soupy, browned blistered top.
+continental-grilled-chicken | Whole grilled chicken breast fillet, golden with dark grill-char lines, dry surface (no sauce), plated with sauteed vegetables (carrot batons, beans), herb flecks, juices but no gravy.
+coriander-chutney | Smooth bright vivid green chutney, thick spoonable paste texture (not runny), uniform green from ground coriander and chilli, in a small bowl, no chunks, no garnish.
+cucumber-salad | Diced or sliced raw cucumber (pale green skin, white flesh) with thin onion slivers and chopped coriander, dry-fresh and crunchy, lightly dressed with lemon, no creamy dressing.
+curd-rice | Soft white rice mashed into thick creamy curd (slightly loose, not dry), pale, topped with a mustard-seed and curry-leaf tempering, sometimes flecks of green chilli and ginger, no yellow turmeric base.
+dal-fry | Thick pourable golden-yellow toor dal with visible soft onion-tomato bits, mildly textured not pureed; oil sheen on top; scattered fresh coriander; no cream, no whole spices floating.
+dal-makhani | Dark brownish-maroon, very thick glossy creamy dal with whole black urad beans and a few kidney beans visible; a swirl of cream on top, butter sheen; NOT bright orange or smooth.
+dal-tadka | Soupy bright-yellow toor dal, looser than dal fry; signature ghee tempering on top with browned garlic, cumin and curry leaves floating in red-tinged oil; coriander garnish.
+egg-bhurji-keto | Dry crumbly scrambled eggs, golden-yellow with reddish turmeric-chilli tint, broken into small soft curds mixed through diced onion and tomato; no gravy, no carb side; coriander flecks.
+egg-biryani | Long-grain basmati in white and turmeric-stained yellow patches, halved boiled eggs sitting on top with masala-tinged whites and matte yolks; mint and fried onion scattered; dry not saucy.
+egg-curry | Halved or whole peeled boiled eggs in a medium-thick reddish-brown onion-tomato gravy with oil floating on top; whites lightly turmeric-tinged; coriander; clearly a pourable curry not dry.
+egg-masala-dry | Halved boiled eggs coated in a thick dry brick-red onion-tomato masala clinging to them, no pooling gravy; yolks matte and dimpled, whites stained orange at edges; coriander garnish.
+egg-podimas | Finely scrambled dry pale-yellow eggs in small crumbs, flecked with curry leaves, mustard seeds and diced onion; light turmeric tint not deep red; coriander; no gravy whatsoever.
+egg-salad | Quartered boiled eggs (dimpled yolk, halved-then-quartered whites) atop chopped lettuce, cucumber, tomato and onion; glossy from lemon dressing; no mayo, no creamy coating; fresh and loose.
+falafel | Small deep-golden-brown craggy fried balls or patties, crisp rough exterior, interior bright green-flecked from herbs; coarse not smooth; served dry, no sauce coating; not perfectly round.
+fish-curry | Whole fish steaks/pieces in a thin-to-medium coconut-tomato gravy, pale orange with a creamy coconut tone, curry leaves floating; oil sheen on top; fish intact not flaked; coriander.
+fish-fry | Flat fish fillets/steaks shallow-fried deep golden-brown with crisp reddish spice-rubbed surface and slightly charred edges; dry, no sauce; raw sliced onion rings and lemon wedge alongside.
+fish-tikka | Fish cubes grilled with charred blackened edges and a reddish-orange tandoori marinade coating, slightly dry curd-spice crust; on skewers or plate; lemon wedge; no gravy, no garnish drizzle.
+fruit-custard | Chilled thick creamy pale-yellow custard studded with chunks of mixed fruit (banana, apple, grapes, pomegranate, mango); served in a bowl/glass; thick spoonable not runny; visible fruit pieces.
+garlic-chutney | Coarse, DRY, deep brick-red chunky paste (not a pourable green/white chutney), visibly grainy with crushed garlic and red chilli flecks; small mound in a bowl; oil sheen, no water pooling.
+gazpacho | Smooth chilled blended tomato soup, opaque coral-red to salmon colour, served cold in a bowl/glass; olive-oil drizzle swirl on top; thinner than puree; maybe diced veg garnish; never hot or chunky-cooked.
+ghee-rice | Fluffy off-white long-grain rice with a glossy ghee sheen, golden fried onion strands and whole cashews scattered through, whole spices (cardamom, clove, bay) visible; mild not bright like biryani.
+gobi-aloo | Dry stir-fry of cauliflower florets and potato cubes, no gravy; turmeric-yellow tinged with browned edges, flecked with cumin; matte, slightly dry surface. Optional light coriander garnish.
+gobi-paratha | Round whole-wheat flatbread, golden-brown blistered char spots, glistening with ghee; faint green specks of stuffing show through. No visible filling spilling out, no coriander on top.
+greek-chicken-souvlaki | Charred chunky chicken cubes (often skewered), grill marks and dark edges, no sauce coating; matte dry surface beside a separate white tzatziki dip. Oregano flecks, lemon wedge.
+greek-lemon-chicken-and-potatoes | Roasted bone-in chicken pieces and lemon-soaked potato wedges, golden-browned, glossy from pan juices not gravy; pale lemony sheen, oregano flecks, no thick sauce.
+greek-salad | Chunky unmixed cucumber, tomato wedges, raw red onion rings, black Kalamata olives, a thick slab of feta on top (not crumbled), olive oil sheen, oregano. No lettuce.
+greek-yogurt-with-honey-and-walnuts | Thick white strained yogurt mounded in a bowl, glossy amber honey drizzled over and pooling, scattered toasted walnut halves on top. No fruit, smooth-creamy surface.
+grilled-cheese-sandwich | Golden-brown griddled bread, crisp buttery surface, cut diagonally showing molten yellow cheese stretch inside. No fillings, no garnish, slightly greasy sheen.
+grilled-chicken-breast | Whole boneless breast fillet, golden with dark grill-mark stripes, dry surface (not saucy); juicy interior, lemon wedge. No gravy, light herb flecks only.
+guacamole | Chunky mashed green avocado, rustic not smooth, visible bits of diced tomato, red onion and coriander; lime-fresh, slightly lumpy texture. Served in a bowl.
+hummus | Smooth pale-beige creamy spread in a shallow bowl, swirled surface with a well of olive oil pooling, dusting of paprika and a few whole chickpeas. No bright-white, no green tint.
+japanese-egg-fried-rice | Light separate-grained rice, pale golden from egg, soft yellow egg fragments mixed through, green spring-onion bits; dry and fluffy, not clumpy or sticky. No heavy sauce coating.
+japanese-miso-soup | Cloudy pale-tan thin broth in a bowl, small soft white tofu cubes, floating green spring-onion rings and dark wakame strands; clear liquid, not creamy or thick.
+japanese-teriyaki-chicken | Glossy lacquered chicken pieces in dark glaze (a thin glossy coating, not a pool of sauce); deep brown caramelized sheen, sesame seeds, spring-onion. Sliced thigh pieces.
+jeera-aloo | Dry potato cubes tossed in cumin, golden-yellow with browned edges, whole cumin seeds visible, slit green chilli; matte and dry, no gravy. Light coriander only.
+jeera-rice | Fluffy separate-grained white basmati rice, plain off-white, scattered dark cumin seeds throughout, one slit green chilli. No yellow colour, no peas, no garnish.
+kadai-paneer | Soft white paneer cubes and chunky capsicum/onion in a thick semi-dry brick-red tomato gravy that clings (not soupy), coarse-crushed coriander-chilli masala, glossy oil flecks. Fresh coriander.
+kadhi | Smooth pale-yellow tangy curd-and-besan gravy, thin-to-medium pourable consistency, often with pakoras submerged; topped with a red-chilli-and-curry-leaf tempering floating in oil on the surface.
+karela-fry | Thin dark-green bitter-gourd rings with ridged scalloped edges, shrunken and crisp-fried to deep brown, tangled with browned onion slivers; completely dry, no gravy, no garnish.
+keema-pulao | Fluffy separate long-grain rice flecked light brown by spiced minced chicken crumbles and whole green peas; dry not wet, no sauce pooling, loose coriander on top, whole spices visible.
+kheer | Loose milky off-white liquid pudding, thin pourable not a scoop, soft swollen rice grains suspended in it, scattered cashew halves and dark raisins, pale cream colour, no thick set custard.
+khichdi | Soft mushy yellow-tinged porridge of broken-down rice and moong dal, thick and homogeneous not separate grains, glossy with ghee, coriander flecks and a lemon wedge; no gravy.
+korean-chicken-stir-fry | Glossy deep red-brown gochujang-glazed chicken chunks clinging with sauce-coated cabbage, carrot and onion; sticky reduced glaze not soupy, sesame and sliced spring-onion greens scattered on top.
+korean-japchae | Translucent grey-brown glass noodles tossed glossy in dark sweet soy-sesame, with distinct julienned carrot, green spinach, dark mushroom and capsicum strips; sesame seeds and spring onion, not a heavy sauce.
+korean-tofu-soup | Brick-red bubbling broth in a bowl with large soft white tofu chunks, sliced mushrooms, a poached set egg and floating spring-onion greens; thin spicy liquid, not a thick stew.
+lauki-chana-dal | Pale translucent bottle-gourd cubes and yellow split chana dal in a light thin onion-tomato gravy; soupy not creamy, dal grains still distinct, coriander on top.
+lauki-sabzi | Soft translucent pale-green bottle-gourd dice in a scant clinging onion-tomato masala; nearly dry semi-dry, no gravy pooling, light orange tinge, coriander flecks.
+lebanese-lentil-soup | Smooth blended golden-yellow puree-thick soup, velvety and uniform with no whole lentils, faint orange from carrot; lemon wedge and olive-oil drizzle, optional cumin dusting, served with bread.
+lemon-rice | Bright turmeric-yellow rice with separate grains, studded with golden fried peanuts, dark mustard seeds, curry leaves and green chilli slits; dry and tossed, no gravy, no coriander garnish.
+malai-kofta | Round golden-brown deep-fried koftas sitting in a smooth glossy orange-red cashew-tomato gravy, cream swirl drizzled on top, coriander; rich thick gravy, koftas not submerged.
+mango-sorbet | Vivid sunny-orange frozen scoops, soft icy granular texture not creamy ice-cream smooth, slightly slushy; plain in a bowl or glass, no garnish, no dairy whiteness.
+masala-oats | Thick creamy savoury porridge, pale beige-yellow from turmeric, studded with peas, orange carrot dice and tomato; soft homogeneous mush not soupy, coriander on top.
+masala-toast | Square bread slices toasted crisp golden-brown with a chunky raw-spiced onion-tomato-coriander topping on top, edges browned; flat open-faced, no melted cheese, no gravy.
+masoor-dal | Soft thin golden-yellow dal (red lentils cook to yellow, not red), pourable smooth-textured, glossy ghee tempering with cumin and golden garlic floating on top, coriander flecks.
+matar-paneer | Soft white paneer cubes and bright green peas in a smooth glossy orange-red onion-tomato gravy, medium-thick coating consistency; coriander on top, gentle oil sheen, no cream pool.
+mediterranean-couscous-bowl | Fine yellow couscous grains, loose and fluffy not clumped; visible chickpeas, small-diced cucumber, tomato, capsicum; crumbled white feta on top; glossy with oil, no sauce, lemon wedge.
+methi-paratha | Round flecked-green flatbread, fenugreek bits speckled through golden-brown dough with dark toasty blisters; matte ghee sheen; flat, not puffed; NO loose herb garnish on top.
+mexican-rice | Loose separate reddish-orange tomato-stained grains, not a dome; flecked with whole yellow corn kernels and green peas; dry not saucy; light coriander fleck.
+mint-chutney | Thick smooth dark-green ground paste in a small bowl, slightly coarse; dipping not runny; uniform green from mint and coriander, NO separate garnish on top.
+mint-rice | Loose separate grains tinged pale green from mint-coriander paste coating; bits of softened onion visible; dry and fluffy, not wet or molded; muted green not bright.
+missi-roti | Thick rustic yellowish flatbread (gram-flour tint) with visible onion bits and dark ajwain specks; uneven brown char spots; slightly oily; flat and dense, not puffed.
+mix-veg-sabzi | Dry stir-fry of small-diced carrot, beans, capsicum, peas, potato coated in thin clinging brown onion-tomato masala; NO gravy pooling; matte not saucy; light coriander fleck.
+mixed-veg-salad | Raw crisp salad: shredded cabbage and carrot, diced cucumber, tomato, onion rings, loosely tossed; lemon-dressed glisten, no creamy dressing; coriander scattered; bright and dry.
+moong-dal-chilla | Thin pale-yellow lentil pancake (savoury, not sweet), flat with faint browned lacy spots; onion and coriander flecks embedded; matte surface; folded or flat round, no batter sheen.
+moong-dal-halwa | Dense grainy golden-brown roasted-dal mass, glossy with visible free ghee; thick and clumpy, mounded in a bowl; studded with fried cashews and plump raisins; not smooth pudding.
+moong-dal | Thin pourable bright-yellow dal, soupy not thick; smooth with floating cumin seeds and browned garlic from tempering; ghee sheen on top; coriander fleck; no whole lentils visible.
+muhammara | Coarse brick-red ground dip with visible walnut bits, spread on a plate not a tall mound; matte rough texture; olive-oil drizzle pooling on top; deep red, not orange or smooth.
+mushroom-corn | Dry dish of sliced browned mushrooms and yellow corn kernels in thin clinging reddish masala; no gravy; mushrooms shrunken not raw-white; matte glossy, not saucy.
+mushroom-matar | Sliced mushrooms and green peas in moderate homely orange-brown onion-tomato gravy, semi-thick not flooded; gravy clings; no cream swirl; light coriander finish.
+mushroom-paneer | Soft off-white paneer cubes and sliced mushrooms in spiced reddish-brown onion-tomato gravy, semi-thick; paneer pale not fried-golden; clinging not runny; coriander fleck.
+mushroom-risotto | Creamy loose-flowing pale rice spreading on plate, individual grains in starchy sauce, not dry or sticky-molded; flecked with browned mushroom slices; glossy; no green herb garnish.
+mutton-biryani | Long separate basmati grains, some saffron-orange some white, not uniformly coloured; dark mutton pieces on bone tucked among rice; crisp brown fried-onion strands and mint scattered; dry, glistening, not saucy.
+mutton-curry | Dark reddish-brown bone-in mutton chunks in a medium-thick spiced onion-tomato gravy with floating oil sheen; loose coriander scatter; no cream, no smooth blended look.
+mutton-keema | Dry loose minced mutton, brown crumbly grains (not pasty or saucy) flecked with green peas and tomato bits; coriander on top; clings together but no gravy pooling.
+mutton-pepper-fry | Dry dark mutton chunks coated in coarse black-pepper-flecked masala, glossy not saucy; softened sliced onion and dark curry leaves clinging; no gravy, just a sticky dry coating.
+mutton-rogan-josh | Bone-in mutton in a deep brick-red curd-and-onion gravy, smooth and oily-glossy on top (no green or yellow tint); thin coriander garnish; signature red colour from Kashmiri chilli.
+oats-chilla | Flat round golden-brown savoury pancake, slightly speckled and uneven surface, visible bits of onion, tomato and orange carrot embedded; matte not glossy; no garnish or pour of sauce.
+onion-tomato-salad | Thin raw onion rings and tomato rounds tossed loose (not diced cubes), glistening with lemon, slit green chilli and coriander scattered; fresh and wet, no dressing pool.
+pad-thai-prawn | Pale thin rice vermicelli noodles tossed glossy-orange with tamarind, pink curled prawns, scrambled egg pieces, raw bean sprouts and spring onion; crushed peanuts and a lemon wedge; not soupy.
+palak-chicken-gravy | Bone-in chicken pieces in a coarse dark-green spinach gravy (not smooth puree), medium-thick; visible spinach texture; no cream swirl; chicken peeking through green.
+palak-paneer | White paneer cubes folded into a smooth dark-green spinach gravy, medium-thick; small swirl of cream on top; cubes soft-edged not deep-fried golden; no whole spinach leaves.
+paneer-bhurji-106 | Dry crumbled scrambled paneer, soft white-to-pale-yellow curds (turmeric-tinted), flecked with onion and tomato bits; loose and moist but not saucy; coriander garnish.
+paneer-bhurji | Dry crumbled paneer scramble, pale curds tinted with turmeric, studded with onion, tomato and green capsicum bits; loose moist texture, no gravy; coriander on top.
+paneer-butter-masala | White paneer cubes in a smooth glossy orange-red tomato-cashew gravy, rich and creamy; cream swirl on top, crushed kasuri methi flecks; mildly sweet glossy sheen, not chunky.
+paneer-capsicum | Dry dish: paneer squares and bright green capsicum squares tossed in a clingy onion-tomato masala; glossy coating not gravy; capsicum still firm and vivid; no garnish needed.
+paneer-do-pyaza | Dry dish: paneer cubes with prominent diced onion petals (layers separating) and capsicum, lightly masala-coated; onions still slightly crisp and translucent; no gravy pooling.
+paneer-lababdar | Paneer cubes plus grated paneer shreds in a creamy glossy tomato-cashew gravy, deeper and tangier red-orange than butter masala; cream swirl, kasuri methi; smooth not chunky.
+paneer-paratha | Golden-brown ghee-cooked whole-wheat flatbread with charred brown spots, slightly puffed; flecks of green chilli/coriander visible through the surface; folded or whole, served with curd.
+paneer-salad | Fresh raw salad: white (or lightly golden-seared) paneer cubes with torn green lettuce, diced cucumber, tomato and onion; glistening with lemon; loose and dry-fresh, no creamy dressing.
+paneer-sandwich | Golden toasted bread triangles with pressed diagonal grill ridges; visible crumbly white paneer-onion-capsicum filling at the cut edge, NOT melted cheese; no sauce, served dry with chutney on side.
+paneer-tikka | Dry char-grilled deep-orange paneer cubes on skewers (or scattered), blackened charred edges, NO gravy or sauce coating; interspersed with charred onion petals and capsicum squares; dusting of chaat masala, lemon wedge.
+papaya-bowl | Bright salmon-orange ripe papaya cut in clean firm cubes, matte not glossy, no syrup or sauce; in a plain bowl with a lemon wedge; no garnish, no leaves.
+pasta-pomodoro | Pasta generously coated in a smooth glossy red-orange tomato sauce that clings (not watery, not bare nests); a few torn fresh basil leaves on top; no cheese drift, light olive-oil sheen.
+pasta-primavera | Just-firm pasta tossed with bright crisp green broccoli florets, red/green capsicum strips and peas in a light glossy oil sheen (NOT creamy white sauce); fine grated cheese dusting; vegetables visible throughout.
+patatas-bravas | Deep-golden crisp-edged potato cubes piled up, partly draped with a thick smoky brick-red paprika-tomato sauce spooned over (not submerged); rustic, tapas-style.
+pav-bhaji | Thick coarse-mashed reddish-brown bhaji with visible mash texture and a glossy butter pat melting on top, flecks of coriander; served beside two soft butter-toasted pav buns, raw chopped onion and a lemon wedge.
+peanut-chutney | Thick coarse pale-beige peanut paste in a small bowl, slightly grainy texture (not smooth); topped with a curry-leaf and mustard-seed tempering visible as dark specks and whole curry leaves in oil.
+peas-pulao | Fluffy separate-grained white basmati rice studded with bright green whole peas, whole spices (cardamom, cloves, bay) visible; flecked with mint and coriander; dry, no gravy, no yellow colour.
+penne-arrabbiata | Penne tubes generously coated in a thick fiery red tomato-chilli sauce that clings inside and around the tubes (not bare); visible red chilli-flake specks, torn basil on top; no cream.
+pepper-chicken-dry | Dry dark-browned boneless chicken chunks, dry-coated and glistening with crushed black pepper (visibly coarse-ground), NO gravy; tossed with onion and capsicum pieces and curry leaves; matte not saucy.
+pesto-pasta | Pasta evenly coated in a coarse rustic green basil pesto (slightly textured, not smooth bright-green puree); muted olive-green tone; grated cheese on top; no whole nuts visible.
+plain-paratha | Round flaky golden-brown layered wheat flatbread with visible flaky layers and irregular brown-charred blistered spots, glossy from ghee; plain surface, NO coriander or herbs on it.
+poha | Soft pale-yellow flattened rice (turmeric-tinted, not bright), light and fluffy not sticky; studded with small potato cubes, whole peanuts, dark curry leaves; coriander and a lemon wedge; no gravy.
+prawn-curry | Pink curled prawns in a thin-to-medium orange-coral coconut-tomato gravy (pourable, not thick paste); curry leaves and coriander floating; light oil sheen on surface; visible whole prawns.
+prawn-pepper-fry | Dry-tossed pink-brown prawns coated in coarse crushed black pepper, glistening but NO gravy; mixed with softened onion slices and whole dark curry leaves; matte masala coat, lemon wedge.
+prawn-pulao | Fluffy separate-grained pale basmati rice (lightly spice-tinted, not heavily coloured) with pink curled prawns mixed through; whole spices, golden fried onion, mint and coriander flecks; dry, no gravy.
+prawn-salad | Pink curled poached prawns over torn green lettuce with diced cucumber, tomato, raw onion; glossy lemon-oil sheen, no creamy dressing, fresh coriander scattered, served cool in a bowl.
+prawn-stir-fry | Dry glistening prawns, pink and C-curled, coated in thin clinging masala (not gravy), tossed with capsicum and onion chunks; charred edges, oil-sheened, no sauce pooling.
+raita | Thin off-white whisked curd, slightly runny not thick, flecked with cumin and finely chopped cucumber/onion/tomato suspended throughout; chopped coriander on top, pale and cooling.
+rajma-chawal | Maroon-brown kidney beans in thick glossy onion-tomato gravy (not soupy), oil sheen on surface, beside a separate mound of loose white steamed rice; coriander garnish.
+ratatouille | Rustic chunky stew of distinct soft brinjal, zucchini, capsicum and tomato pieces holding their shape in a reduced tomato sauce; matte, olive-oil sheen, torn fresh basil on top.
+roti | Plain round wheat flatbread, pale tan with irregular brown char blisters, slightly puffed, soft and matte with a light ghee sheen; NO coriander or any garnish.
+sabudana-khichdi | Translucent glossy tapioca pearls (distinct, separate, not sticky clumped), studded with soft potato cubes and crushed peanuts; pale, oil-sheened, coriander and curry leaves, lemon wedge.
+seasonal-fruit | Simple bowl of fresh cut bite-size mixed fruit pieces, bright varied natural colours, raw and unadorned, no syrup or cream, just clean cut chunks.
+sewaiyan-kheer | Thin soft vermicelli strands suspended in creamy off-white thickened milk (pourable, not solid), pale beige; whole cashews and plump raisins on top, faint saffron-cardamom tint.
+shahi-paneer | Soft white paneer cubes in a smooth pale peach-orange creamy cashew gravy (rich, not red), glossy with a cream swirl; mild, no floating spices, light coriander.
+shakshuka | Soft poached eggs nestled in chunky rustic red tomato-capsicum-onion sauce in a pan; runny yellow yolks, set glossy whites (NOT smooth/uniform), coriander scattered.
+shrikhand | Very thick smooth hung-curd dessert, pale cream-yellow with saffron tint, scoopable like mousse (not runny); slivered cashews and saffron strands on top, no liquid.
+singapore-noodles | Thin dry rice vermicelli stained warm yellow by curry powder, tossed with thin capsicum/carrot/cabbage strips, scrambled egg bits and green spring onion; loose strands, no sauce pooling.
+soya-chunks-masala | Spongy brown soya chunks soaked in clinging thick onion-tomato masala (semi-dry, little gravy) with capsicum chunks; reddish-brown, oil sheen, coriander garnish.
+soyabean-curry | Spongy brown soya chunks in a thin-to-medium spiced red-brown onion-tomato gravy (more liquid than the masala version); oil floating on top, coriander garnish.
+spaghetti-aglio-e-olio | Plain pale spaghetti glossy with garlic oil, lightly coated not saucy; flecks of golden sliced garlic and red chilli flakes throughout; minimal herb, no cream, no tomato.
+spanish-chickpea-spinach-stew | Whole chickpeas and dark wilted spinach in a thick brick-red smoky paprika tomato base (stew, not soup); matte rustic, olive-oil sheen, no cream or garnish.
+spanish-omelette | Thick golden cake-like egg round (tortilla espanola), pale yellow not browned, dense set custardy interior packed with soft potato slices, cut into wedges; NO filling holes, NO garnish.
+sprouts-salad | Generous mound of pale moong sprouts (visible white tails) with fine-diced red onion, tomato, cucumber, slick of lemon, flecked with chopped coriander and green chilli; raw and chunky, not creamy.
+suji-halwa | Soft grainy dense semolina halwa, glossy golden-brown, holds a mound (not soupy), studded with fried cashews and plump raisins; ghee-sheen, NOT a pudding or liquid.
+tabbouleh | Bright herb-dominant salad, mostly finely chopped green parsley and mint with small bulgur grains, diced red tomato and onion; glistening lemon-oil, loose not soupy.
+tandoori-soya-chunks | Dark-red marinated spongy soya chunks, charred blackened edges, dry (no gravy), threaded with charred capsicum and onion squares; matte curd-spice coat, lemon wedge.
+teriyaki-tofu-rice | Golden seared tofu cubes in glossy dark-brown teriyaki glaze (not soupy), bright-green steamed broccoli florets, white rice, scattered spring onion; sticky sheen not watery.
+thai-basil-chicken | Dry browned crumbly minced chicken (not saucy), specks of garlic, green chilli, diced onion and capsicum, glossy with wilted dark basil leaves; over rice, minimal liquid.
+thai-green-curry-chicken | Pale-green coconut curry, medium-thin with surface oil sheen, chicken pieces, sliced French beans, capsicum strips, torn basil floating; soupy not paste-thick.
+thai-pineapple-fried-rice | Loose separate yellow-tinged rice grains, golden pineapple chunks, scrambled egg bits, whole cashews, capsicum, spring onion; dry stir-fried, no sauce pooling.
+thai-red-curry-tofu | Orange-red coconut curry with oil sheen, seared tofu cubes, capsicum strips, French beans, torn basil; medium-thin soupy gravy, not a thick paste.
+thai-tofu-stir-fry | Golden-seared tofu cubes, crisp green beans and capsicum strips, glossy light soy-garlic coat (barely-there sauce), spring onion and basil; dry stir-fry, not saucy.
+thepla | Thin mottled brown-speckled wheat flatbread flecked green with chopped fenugreek throughout the dough (not surface coriander); soft, oil-sheened with dark toasted spots, stacked.
+tinda-masala | Pale-green peeled apple-gourd cubes in a thick clingy reddish-brown onion-tomato masala (not soupy), oil separating; coriander sprinkle; homely semi-dry, not floating in gravy.
+toast | Two slices golden-toasted bread, melting butter sheen, slightly crisp edges; plain, NO herbs, NO toppings, NO garnish.
+tofu-bibimbap | Rice bowl with distinct sections: golden tofu cubes, dark wilted spinach, orange carrot strips, brown mushrooms, sunny-side-up egg, dollop of red gochujang; colourful, not pre-mixed.
+tomato-curry | Thin tangy red-orange South Indian curry, slightly soupy, visible curry leaves and mustard seeds from tempering, soft onion bits; coriander finish; light and pourable, not thick.
+tomato-rice | Reddish-orange tinted rice grains coated in tomato masala, whole peanuts and curry leaves scattered through; dry and fluffy (not wet/risotto), slight oil sheen.
+toor-dal | Smooth thin-to-medium yellow lentil soup (pourable, not paste-thick), no whole lentils visible; glossy ghee tempering of cumin and browned garlic floating on top; light coriander scatter; pale turmeric yellow.
+turai-sabzi | Dry sabzi of soft collapsed peeled ridge-gourd chunks (greenish-cream, not whole tubes), glistening with a thin clinging onion-tomato masala, NO standing gravy or pool; muted brownish-green, no garnish.
+tzatziki | Thick scoopable strained white curd dip holding soft peaks (not runny), flecked with grated cucumber shreds and green mint bits; surface drizzle of olive oil; pale cream, no cucumber slices on top.
+veg-biryani | Loose separate long basmati grains, mottled white/saffron-orange/brown, studded with whole spices (cardamom, bay, cloves) and visible carrot/potato/peas; crisp brown fried onions and mint scattered; dry, not saucy.
+veg-hakka-noodles | Glossy thin wheat noodles stained light brown by soy, tossed with thin matchstick-shredded crunchy cabbage, carrot, capsicum; dry stir-fry with no sauce pool; green spring-onion tops scattered.
+veg-manchurian-gravy | Dark-brown deep-fried veg balls (golden-brown craggy spheres) in a glossy translucent thin-glaze brown sauce, NOT thick or creamy; scattered chopped spring onion green; saucy but light.
+veg-pulao | Fluffy white-to-pale basmati grains, separate not sticky, dotted with diced carrot, peas, beans, capsicum and whole spices; gently oiled sheen; mint and coriander flecks; mild, not orange or saucy.
+veg-sandwich | Cold toasted/grilled triangle sandwich, golden-brown bread with grill marks, cut diagonally to show layered green chutney smear, cucumber and tomato slices, onion rings, lettuce; dry, no melted cheese.
+vegetable-korma | Diced vegetables in a smooth pale ivory-to-light-cream cashew-curd gravy (mild, not red or oily); medium thickness, not watery; subtle green chilli and coriander flecks; restrained, not bright orange.
+vegetable-sevai | Pale soft separate rice-vermicelli strands (off-white, short tangled threads), tossed dry with small diced carrot/beans/capsicum; dark curry leaves and mustard seeds visible; coriander flecks; no sauce.
+vegetable-upma | Soft fluffy pale-yellow semolina with a slightly lumpy grainy mound texture (not smooth porridge), studded with diced carrot, peas, onion; dark curry leaves and mustard seeds; coriander; no gravy.
+vietnamese-lemongrass-chicken | Glossy caramelised dark-golden-brown chicken pieces with sticky glaze coating (dry stir-fry, no gravy), flecked with minced lemongrass and garlic; onion slivers and chilli; charred edges, not pale or saucy.
+vietnamese-noodle-salad | Cold tangle of thin translucent-white rice vermicelli, topped with raw julienned carrot and cucumber, pale bean sprouts, whole mint and coriander leaves; crushed peanuts scattered; light dressing sheen, no thick sauce.

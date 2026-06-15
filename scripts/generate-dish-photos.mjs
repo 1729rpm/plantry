@@ -60,6 +60,7 @@ const here = dirname(fileURLToPath(import.meta.url));
 const repoRoot = resolve(here, "..");
 const dishesDir = resolve(repoRoot, "data", "dishes");
 const photosDir = resolve(repoRoot, "data", "dish-photos");
+const detailsPath = resolve(photosDir, "details.md");
 
 // Active provider: FLUX.1-dev via NVIDIA NIM. A higher-fidelity (full, not
 // distilled) FLUX model served on NVIDIA's hosted endpoint. The endpoint is a
@@ -135,6 +136,32 @@ function cuisinePhrase(slug, tags) {
   }
   // No cuisine tag -> Indian (the untagged originals).
   return "Indian";
+}
+
+/** Load the per-dish visual-detail map from data/dish-photos/details.md. Each
+ * data line is `<slug> | <visual detail>`; header/comment/blank lines (anything
+ * without the ` | ` separator, or starting with `#`) are ignored. Returns a
+ * { slug -> detail } map. Read once and cached for the whole run. The detail is
+ * the dish-specific visual line (form, cut, garnish, dry-vs-gravy, texture) that
+ * gets injected into the shared realism skeleton in buildPrompt. */
+let detailsCache = null;
+function loadDetails() {
+  if (detailsCache) return detailsCache;
+  const map = {};
+  if (existsSync(detailsPath)) {
+    const raw = readFileSync(detailsPath, "utf8");
+    for (const line of raw.split("\n")) {
+      const trimmed = line.trim();
+      if (!trimmed || trimmed.startsWith("#")) continue;
+      const idx = trimmed.indexOf("|");
+      if (idx === -1) continue;
+      const slug = trimmed.slice(0, idx).trim();
+      const detail = trimmed.slice(idx + 1).trim();
+      if (slug && detail) map[slug] = detail;
+    }
+  }
+  detailsCache = map;
+  return map;
 }
 
 /** Minimal dish-file read: frontmatter name + tags, and the first body paragraph. */
@@ -217,27 +244,25 @@ function sanitizeFilterTokens(prompt) {
   return out;
 }
 
-/** Fill the frozen STYLE.md prompt. Only the three slots vary. */
+/** Build the per-dish prompt: a shared realism skeleton plus the dish's own
+ * visual-detail line from data/dish-photos/details.md (form, cut, garnish,
+ * dry-vs-gravy state, texture). The detail is the fix for ingredient-level errors
+ * a single generic prompt produced (okra as whole cylinders, plain roti garnished,
+ * smooth eggs, dry dishes shown saucy). If a slug has no detail line (should not
+ * happen: details.md covers all 200), fall back to the dish's first-paragraph
+ * description so a new dish still renders. The {cuisine} adjective is derived as
+ * before. */
 function buildPrompt(slug, name, tags, description) {
   const cuisine = cuisinePhrase(slug, tags);
+  const detail = loadDetails()[slug] || description;
   const prompt =
-    `A real, candid food photograph of ${name} (${description}), a home-style ` +
-    `${cuisine} dish, shot the way a person would actually photograph their own ` +
-    `meal: from a natural angle, often low or three-quarter rather than flat ` +
-    `overhead, with shallow depth of field and a real, slightly cluttered home or ` +
-    `restaurant background softly out of focus. It is served in a real everyday ` +
-    `vessel that genuinely suits the dish (a steel katori or thali, a karahi or ` +
-    `kadai, a cast-iron pan, or a plain home plate), filling the vessel like a real ` +
-    `portion, not a small centred mound. Ordinary warm indoor light or soft daylight ` +
-    `with gentle natural shadows, and honest true-to-life colour that is not bright ` +
-    `or oversaturated. Most important, the food looks genuinely cooked and a little ` +
-    `imperfect: real browning and char where it has been cooked; the correct real ` +
-    `texture and consistency for this dish (a dry dish stays dry, a gravy is thick ` +
-    `opaque and oil-flecked with pieces half-submerged, rice is loose separate ` +
-    `grains, a pudding is loose and soft); irregular hand-made shapes rather than ` +
-    `identical pieces; oil sheen, uneven edges, stray crumbs and a little mess; and ` +
-    `any garnish scattered naturally as it really would be, never a single sprig ` +
-    `placed in the centre. Shot on a phone, realistic and unstyled, square 1:1.`;
+    `A real, candid phone photograph of ${name}, a home-style ${cuisine} dish: ` +
+    `${detail}. Shot from a natural low or three-quarter angle with shallow depth ` +
+    `of field, in a real everyday vessel that suits the dish, a softly blurred home ` +
+    `or restaurant background, ordinary warm light and gentle natural shadows, ` +
+    `honest true-to-life colour. The food looks genuinely cooked and a little ` +
+    `imperfect with real texture, irregular hand-made shapes, oil sheen and uneven ` +
+    `edges. Realistic and unstyled, square 1:1.`;
   // Sanitize the assembled string only; the dish file on disk is untouched.
   return sanitizeFilterTokens(prompt);
 }

@@ -2,22 +2,27 @@
 
 The single source of truth for how every Plantry dish photo looks. Photos are
 AI-generated, one dish at a time, by filling the prompt template below with a
-dish's name, a short description, and its cuisine, and running it through an image
-model (`scripts/generate-dish-photos.mjs`). Every image, for all 200 dishes in the
-library, is generated from this one document, so the whole library reads as one
-honest set of real-looking food photos. The look lives in this committed spec, not
-in anyone's memory: a run six months from now, on a different machine, that follows
-this file produces a photo that sits next to the others without a seam.
+dish's name, its cuisine, and its per-dish visual-detail line, and running it
+through an image model (`scripts/generate-dish-photos.mjs`). Every image, for all
+200 dishes in the library, is generated from one shared realism skeleton plus that
+dish's detail line, so the whole library reads as one honest set of real-looking
+food photos while each dish renders its own true ingredients. The look lives in
+this committed spec and in the committed detail map (`details.md`), not in anyone's
+memory: a run six months from now, on a different machine, that follows this file
+produces a photo that sits next to the others without a seam.
 
 The direction is candid realism: photos that look like a real person photographed
 their own meal, not a styled studio shot or glossy CGI. Each dish is shot at a
 natural angle in a real everyday vessel against a softly out-of-focus home or
 restaurant background, in ordinary warm light, with food that looks genuinely
-cooked and a little imperfect. The prompt was rewritten from a study of 60 real
-reference photos against the prior AI set: the earlier overhead, plain-plate,
-centred-mound direction read as too clean and styled, so the corrections (real
-angle, real vessel and context, cooked-and-imperfect food, correct per-type
-texture) are baked into the template below.
+cooked and a little imperfect. A single generic prompt held the overall look but
+got ingredient-level details wrong (okra rendered as whole cylinders rather than
+sliced rounds, plain roti garnished with coriander, boiled eggs too smooth, dry
+dishes shown in sauce). The fix is per-dish: a shared realism skeleton carries the
+look (angle, vessel, light, cooked-and-imperfect texture), and a per-dish
+visual-detail line carries the truth of the specific dish (form, cut, garnish,
+dry-vs-gravy state, texture). The detail lines live in `details.md`, one per dish,
+derived from a per-dish study of real reference photos plus culinary knowledge.
 
 Variety across the library is now desired, not uniformity. The generation script
 gives each dish its own base seed (derived from its slug), so vessels, backgrounds,
@@ -28,39 +33,48 @@ set.
 
 ## Prompt template
 
-Fill the three slots from the dish's data file, then run verbatim. `{dish name}`
-is the file's `name` field; `{short description}` is the first body paragraph of
-the dish file (the one-line description), trimmed to a phrase; `{cuisine}` is the
-dish's cuisine adjective derived per the map below. Everything outside the slots
-is fixed and must not be reworded between runs (the fixed wording is what holds
-the look steady).
+Each dish's prompt is a shared realism skeleton with three slots filled per dish:
+`{dish name}` is the file's `name` field; `{cuisine}` is the dish's cuisine
+adjective derived per the map below; `{per-dish detail}` is the dish's line from
+`details.md` (its true form, cut, garnish, dry-vs-gravy state, and texture).
+Everything outside the slots is the fixed skeleton and must not be reworded between
+runs (the fixed wording is what holds the look steady).
 
 ```
-A real, candid food photograph of {dish name} ({short description}), a home-style {cuisine} dish, shot the way a person would actually photograph their own meal: from a natural angle, often low or three-quarter rather than flat overhead, with shallow depth of field and a real, slightly cluttered home or restaurant background softly out of focus. It is served in a real everyday vessel that genuinely suits the dish (a steel katori or thali, a karahi or kadai, a cast-iron pan, or a plain home plate), filling the vessel like a real portion, not a small centred mound. Ordinary warm indoor light or soft daylight with gentle natural shadows, and honest true-to-life colour that is not bright or oversaturated. Most important, the food looks genuinely cooked and a little imperfect: real browning and char where it has been cooked; the correct real texture and consistency for this dish (a dry dish stays dry, a gravy is thick opaque and oil-flecked with pieces half-submerged, rice is loose separate grains, a pudding is loose and soft); irregular hand-made shapes rather than identical pieces; oil sheen, uneven edges, stray crumbs and a little mess; and any garnish scattered naturally as it really would be, never a single sprig placed in the centre. Shot on a phone, realistic and unstyled, square 1:1.
+A real, candid phone photograph of {dish name}, a home-style {cuisine} dish: {per-dish detail}. Shot from a natural low or three-quarter angle with shallow depth of field, in a real everyday vessel that suits the dish, a softly blurred home or restaurant background, ordinary warm light and gentle natural shadows, honest true-to-life colour. The food looks genuinely cooked and a little imperfect with real texture, irregular hand-made shapes, oil sheen and uneven edges. Realistic and unstyled, square 1:1.
 ```
 
 The look this prompt aims for: a real, candid food photo, the dish as it actually
 lands on the table, shot at a natural angle (low or three-quarter, not flat
 overhead) in a real everyday vessel against a softly blurred home context, in
 ordinary warm light, with food that reads as genuinely cooked and a little
-imperfect and with the correct real texture for its type. It is deliberately
-unstyled.
+imperfect and with the correct real texture for its type, and with the specific
+dish's true ingredients (carried by the `{per-dish detail}` line). It is
+deliberately unstyled.
 
 Notes for whoever runs it:
-- Keep the fixed sentences exactly as written; only the three slots change.
-  Swapping the boilerplate is how a library drifts into two looks.
+- Keep the fixed skeleton sentences exactly as written; only the three slots
+  change. Swapping the boilerplate is how a library drifts into two looks.
 - The `{cuisine}` slot is the bare cuisine adjective (Indian, Thai, Chinese, and
-  so on). The template already supplies "a home-style {cuisine} dish", so there is
+  so on). The skeleton already supplies "a home-style {cuisine} dish", so there is
   no article logic and no wrapping to fill; just drop the adjective in.
+- The `{per-dish detail}` slot is the dish's line in `details.md`, looked up by
+  slug. Each line names the dish's true form, cut, garnish, dry-vs-gravy state, and
+  texture, so the image renders the right ingredients (sliced okra, not whole pods;
+  plain roti, not garnished; halved eggs; a dry dish dry). If a dish has no line
+  (should not happen: `details.md` covers all 200), the generator falls back to the
+  dish file's first-paragraph description so a new dish still renders. A new dish is
+  added by appending one line to `details.md`; the skeleton does not change.
 - The generation script applies one prompt-only transform after filling the
   slots: it rewrites the filter-tripping tokens "fried" and "sweet-salty" out of
   the assembled string (see "Filter-safe tokens" below). This never touches the
-  dish file on disk.
+  dish file or `details.md` on disk.
 - If the model returns a non-square image or one cropped tight to the edges,
   regenerate rather than post-processing. The output should arrive web-ready
   (see Output below) with no editing step in the pipeline.
-- Do not add per-dish art direction beyond the three slots; the template's vessel
-  and context cues carry the look, and the per-dish seed carries the variety.
+- Per-dish art direction belongs in the dish's `details.md` line, reviewable as
+  data, not in the skeleton; the skeleton's vessel and context cues carry the
+  shared look and the per-dish seed carries the variety.
 
 ### Generation parameters
 
