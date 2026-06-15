@@ -175,10 +175,11 @@ const CATALOG_PREAMBLE = [
   "",
   "`Grams per piece` applies only to `pcs`-unit ingredients (an egg is about",
   "50 g) so macro derivation can convert pieces to grams; blank on every other",
-  "row. `Protein /100g` and `Carbs /100g` power derived dish macros (engine.md",
-  "Nutrition section); a blank cell reads as zero. These three columns are",
-  "schema-present from slice 2.1 and populated in slice 2.2; until then every",
-  "macro cell is blank, which the coverage report expects.",
+  "row. `Protein /100g`, `Carbs /100g`, `Fat /100g` and `Fiber /100g` power the",
+  "derived dish macros, calories (Atwater), and the Healthy definition (engine.md",
+  "Nutrition section); a blank cell reads as zero. Only macro-relevant rows (the",
+  "Proteins and Dairy, Pantry and Vegetables groups) carry values; aromatics,",
+  "herbs and the Other group may stay blank.",
   "",
   "`Special` is `Yes` for an ingredient that needs special sourcing (not stocked",
   "by a regular Bangalore sabziwala/kirana, so a supermarket or specialty-store",
@@ -213,6 +214,8 @@ const CATALOG_HEADERS = [
   "Grams per piece",
   "Protein /100g",
   "Carbs /100g",
+  "Fat /100g",
+  "Fiber /100g",
   "Special",
 ];
 
@@ -241,6 +244,8 @@ export function serializeIngredientCatalog(catalog: CatalogIngredient[]): string
         macroCell(row.gramsPerPiece),
         macroCell(row.proteinPer100g),
         macroCell(row.carbsPer100g),
+        macroCell(row.fatPer100g),
+        macroCell(row.fiberPer100g),
         specialCell(row.special),
       ]),
     );

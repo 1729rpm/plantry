@@ -139,11 +139,16 @@ describe("swapPickerVisible — search and filters reach the full pool, suggesti
   // it falls outside any short suggestion cap, so a name search (even with a
   // filter active) must still find it. Roti is also "Easy" so it survives the
   // "Easy to cook" chip; the harder dishes earlier in the pool do not.
+  // The "Healthy" chip now reads the engine-derived flag (engine.md §11), keyed
+  // on dish id against the baked live library, not a tag. So the dish that must
+  // satisfy "Healthy" uses a real healthy library id (9, "Mushroom matar"); the
+  // others use ids the engine does not flag healthy. Names are still arbitrary
+  // (the substring search tests key on the fixture name, not the library name).
   const pool: Dish[] = [
     dish({ id: 10, name: "Rajma", complexity: "Hard" }),
     dish({ id: 11, name: "Chole", complexity: "Medium" }),
     dish({ id: 12, name: "Bhindi", complexity: "Easy" }),
-    dish({ id: 13, name: "Aloo Gobi", complexity: "Easy", tags: ["healthy"] }),
+    dish({ id: 9, name: "Aloo Gobi", complexity: "Easy" }),
     dish({ id: 103, name: "Roti", complexity: "Easy" }),
   ];
 
@@ -180,7 +185,7 @@ describe("swapPickerVisible — search and filters reach the full pool, suggesti
     // "Easy to cook" must reach the easy dishes throughout the ranked pool
     // (Bhindi, Aloo Gobi, AND Roti at the bottom), not stop at the top cap.
     const visible = swapPickerVisible(pool, "", ["Easy to cook"], 1);
-    expect(visible.map((d) => d.id)).toEqual([12, 13, 103]);
+    expect(visible.map((d) => d.id)).toEqual([12, 9, 103]);
   });
 
   it("finds a bottom-ranked staple by name even with a filter active", () => {
@@ -198,9 +203,9 @@ describe("swapPickerVisible — search and filters reach the full pool, suggesti
   });
 
   it("ANDs multiple filters (Healthy + Easy)", () => {
-    // Only Aloo Gobi is both Easy and tagged healthy.
+    // Only id 9 is both Easy (fixture) and engine-derived Healthy (live library).
     const visible = swapPickerVisible(pool, "", ["Easy to cook", "Healthy"], 12);
-    expect(visible.map((d) => d.id)).toEqual([13]);
+    expect(visible.map((d) => d.id)).toEqual([9]);
   });
 
   it("applies the suggested cap only when BOTH query and filters are empty", () => {

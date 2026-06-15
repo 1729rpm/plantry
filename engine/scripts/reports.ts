@@ -59,11 +59,18 @@ export function runReports(options: ReportsOptions): string {
   lines.push(
     `  photo:       ${cov.withPhoto}/${cov.activeDishCount} (${pct(cov.withPhoto, cov.activeDishCount)})`,
   );
+  lines.push(`Macro-relevant catalog rows: ${cov.macroRelevantCount}`);
   lines.push(
-    `Macro-relevant catalog rows with macros: ${cov.macroRelevantWithMacros}/${cov.macroRelevantCount} (${pct(cov.macroRelevantWithMacros, cov.macroRelevantCount)})`,
+    `  protein/carbs: ${cov.macroRelevantWithMacros}/${cov.macroRelevantCount} (${pct(cov.macroRelevantWithMacros, cov.macroRelevantCount)})`,
   );
   lines.push(
-    "  (Blank macros are expected until slice 2.2; near-zero here is correct, not a failure.)",
+    `  fat:           ${cov.macroRelevantWithFat}/${cov.macroRelevantCount} (${pct(cov.macroRelevantWithFat, cov.macroRelevantCount)})`,
+  );
+  lines.push(
+    `  fibre:         ${cov.macroRelevantWithFiber}/${cov.macroRelevantCount} (${pct(cov.macroRelevantWithFiber, cov.macroRelevantCount)})`,
+  );
+  lines.push(
+    "  (Aromatics, herbs and the Other group may stay blank; food-group rows carry macros.)",
   );
   lines.push("");
 

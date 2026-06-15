@@ -240,6 +240,14 @@ function hasMacros(row: CatalogIngredient): boolean {
   return row.proteinPer100g !== undefined || row.carbsPer100g !== undefined;
 }
 
+function hasFat(row: CatalogIngredient): boolean {
+  return row.fatPer100g !== undefined;
+}
+
+function hasFiber(row: CatalogIngredient): boolean {
+  return row.fiberPer100g !== undefined;
+}
+
 export interface CoverageReport {
   activeDishCount: number;
   /** Count of active dishes carrying each enrichment field. */
@@ -247,9 +255,18 @@ export interface CoverageReport {
   withRecipe: number;
   withComplexity: number;
   withPhoto: number;
-  /** Macro-relevant catalog rows, and how many carry any macro value. */
+  /**
+   * Macro-relevant catalog rows, and how many carry each macro family. Tracked
+   * per family so the calorie (fat) and Healthy (fibre) inputs ratchet down
+   * independently of the original protein/carbs coverage.
+   */
   macroRelevantCount: number;
+  /** Rows carrying any protein or carbs value (the original §11 macro inputs). */
   macroRelevantWithMacros: number;
+  /** Rows carrying a Fat /100g value (the Atwater calorie input). */
+  macroRelevantWithFat: number;
+  /** Rows carrying a Fiber /100g value (a Healthy threshold input). */
+  macroRelevantWithFiber: number;
 }
 
 /**
@@ -268,6 +285,8 @@ export function coverageReport(dishes: Dish[], catalog: CatalogIngredient[]): Co
     withPhoto: active.filter((d) => d.photo !== undefined).length,
     macroRelevantCount: macroRelevant.length,
     macroRelevantWithMacros: macroRelevant.filter(hasMacros).length,
+    macroRelevantWithFat: macroRelevant.filter(hasFat).length,
+    macroRelevantWithFiber: macroRelevant.filter(hasFiber).length,
   };
 }
 
