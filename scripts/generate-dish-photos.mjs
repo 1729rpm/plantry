@@ -38,7 +38,7 @@
 // (used to A/B a prompt change against a fixed composition).
 //
 // Output spec (STYLE.md): square 1:1, ~1024x1024, JPEG, under ~300 KB. The prompt
-// aims for a real, candid food photo (cfg_scale 3.5, steps 40), not styled CGI:
+// aims for a real, candid food photo (cfg_scale 3.0, steps 40), not styled CGI:
 // a natural angle, a real everyday vessel, an out-of-focus home context, and food
 // that looks genuinely cooked and a little imperfect with correct per-type texture.
 
@@ -205,12 +205,15 @@ function readDish(slug) {
 // tokens, deterministically returning finishReason CONTENT_FILTERED / a black
 // frame (seed-independent). The literal "fried" is one ("fry" is fine); the
 // hyphenated/adjacent "sweet-salty" is another (bisected live: dropping it makes
-// the identical prompt succeed). This rewrites those tokens out of the prompt
-// string ONLY (never the canonical dish file on disk) to a visually-equivalent
-// synonym, so the rendered image still matches the dish. Applied as a general
-// token transform to every prompt, ordered most-specific phrase first so the
-// synonym preserves the dish's look. Each rule is case-insensitive and keeps the
-// matched word's leading-capital casing.
+// the identical prompt succeed); the hyphenated "flat-leaf" is a third, surfaced
+// by the realism-refinement skeleton's coriander-not-parsley clause (bisected
+// live: "flat-leaf" trips the filter, but "flat leaf" without the hyphen and the
+// bare word "parsley" both pass, so only the hyphen needs to go). This rewrites
+// those tokens out of the prompt string ONLY (never the canonical dish file on
+// disk) to a visually-equivalent synonym, so the rendered image still matches the
+// dish. Applied as a general token transform to every prompt, ordered
+// most-specific phrase first so the synonym preserves the dish's look. Each rule
+// is case-insensitive and keeps the matched word's leading-capital casing.
 const FILTER_SAFE_SUBSTITUTIONS = [
   // "fried" family. Whole phrases first (most specific), so e.g. "fried rice"
   // keeps the stir-fry look rather than collapsing to the bare fallback.
@@ -226,6 +229,9 @@ const FILTER_SAFE_SUBSTITUTIONS = [
   [/\bfried\b/gi, "pan-cooked"],
   // "sweet-salty" / "sweet salty" -> "sweet and savoury" (same flavour profile).
   [/\bsweet[-\s]salty\b/gi, "sweet and savoury"],
+  // "flat-leaf" -> "flat leaf" (drop only the hyphen; "flat leaf parsley" keeps
+  // the exact meaning of the coriander-not-parsley garnish cue and passes).
+  [/\bflat-leaf\b/gi, "flat leaf"],
 ];
 
 /** Preserve the matched word's leading-capital casing on the replacement (e.g.
@@ -260,9 +266,12 @@ function buildPrompt(slug, name, tags, description) {
     `${detail}. Shot from a natural low or three-quarter angle with shallow depth ` +
     `of field, in a real everyday vessel that suits the dish, a softly blurred home ` +
     `or restaurant background, ordinary warm light and gentle natural shadows, ` +
-    `honest true-to-life colour. The food looks genuinely cooked and a little ` +
-    `imperfect with real texture, irregular hand-made shapes, oil sheen and uneven ` +
-    `edges. Realistic and unstyled, square 1:1.`;
+    `honest true-to-life colour with a matte natural finish, true slightly-muted ` +
+    `colours, not glossy, not oversaturated, not plastic-looking. The food looks ` +
+    `genuinely cooked and a little imperfect with real texture, irregular hand-made ` +
+    `shapes, a little oil sheen and uneven edges; any garnish is fresh green ` +
+    `coriander (cilantro) leaves, never flat-leaf parsley. Realistic and unstyled, ` +
+    `square 1:1.`;
   // Sanitize the assembled string only; the dish file on disk is untouched.
   return sanitizeFilterTokens(prompt);
 }
@@ -389,7 +398,9 @@ async function generateImageNvidia(prompt, key, seed = SEED) {
           mode: "base",
           // Candid-realism params (STYLE.md): lower guidance + more steps render
           // looser, more natural food rather than over-tight, plasticky CGI.
-          cfg_scale: 3.5,
+          // Lowered to 3.0 (from 3.5) to reduce the over-styled CGI gloss the
+          // realism audit flagged as the #1 universal tell.
+          cfg_scale: 3.0,
           width: TARGET_PX,
           height: TARGET_PX,
           seed,
