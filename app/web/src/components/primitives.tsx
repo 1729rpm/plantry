@@ -141,6 +141,14 @@ export function ComplexityTag({ variant, label }: { variant: ComplexityVariant; 
   return <span className={`complexity-tag ${COMPLEXITY_CLASS[variant]}`}>{label}</span>;
 }
 
+/** A neutral/soft pill for the non-difficulty dish tags on an Explore card
+ *  (prep time, descriptors). Shares the complexity-tag pill shape so the set
+ *  reads as one row of pills, but in a quiet neutral fill rather than the
+ *  colored difficulty semantics. */
+export function MetaTag({ label }: { label: string }) {
+  return <span className="meta-tag">{label}</span>;
+}
+
 export type TabKey = "Menu" | "Grocery" | "Explore" | "Changes";
 
 const TABS: TabKey[] = ["Menu", "Grocery", "Explore", "Changes"];
