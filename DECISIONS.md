@@ -416,6 +416,15 @@ Worktrees: `../plantry-stream-A` (`feat/A-data-history`), `../plantry-stream-B` 
 
 ---
 
+## 2026-06-15 13:15 IST  Picker rows diverge from the handoff: drop the duplicate complexity pill
+
+**Stream:** `fix/picker-row-drop-duplicate-tag` (engineer; Rajat design-feedback add-on, not a §5 spine slice).
+**Context:** Rajat (with screenshot) flagged that each picker dish row shows the cook-complexity twice: once in the subtitle ("35 min · Cook will need some help") and again as a trailing `ComplexityTag` pill, which also steals width so long names wrap early. He asked to remove the pill and give the space to the title/subtitle.
+**Decision (deviate from the handoff):** The design handoff's picker rows carry the trailing complexity pill, so removing it is a deliberate step AGAINST the handoff, which I authorized on Rajat's direct request. The complexity is genuinely redundant with the subtitle, so this is a clean de-duplication, not a loss of information. Recorded as an accepted deviation in the PR diagnosis card so a future handoff-compare does not "restore" the pill.
+**Scope call:** fix at the two picker call sites only (drop the `trailing` prop), NOT in the shared `DishRow`. `DishRow` keeps its `trailing` prop for other callers; `.dish-row__body` is already `flex: 1; min-width: 0`, so the freed width is reclaimed with no new CSS. Removed the now-unused imports and the dead `.picker__trailing` rule. UI-affordance level, smallest change.
+**Reversibility:** trivial — re-add the `trailing={<ComplexityTag .../>}` block at the two call sites.
+**Verification:** EM focused crawl on a local prod-wired build (read-only): both pickers show 0 `.picker__trailing` and 0 `.complexity-tag` inside rows, complexity still present in the subtitle, `.dish-row__body` 294px on a 390 viewport, no horizontal overflow, clean console across all four tabs; shared `DishRow` intact (Explore still renders 106 complexity pills, no regression). CI green. Merged as #86 (7feba43), Rajat-approved; live prod smoke verified.
+
 ## 2026-06-15 13:18 IST  "Missing" dish photos (paneer bhurji, sprouts salad) are a stale PWA cache, not a repo defect
 
 **Stream:** cross-stream (EM diagnosis, no code change).
