@@ -12,6 +12,10 @@ Brief description in present tense, one to three sentences. Reference the PR.
 
 ---
 
+## 2026-06-15 Define "Healthy" from a real protein-to-calorie and fibre rule
+
+Replaces the inert `healthy` filter tag with an engine-derived `healthy` flag (engine.md §11). `data/ingredients.md` gains `Fat /100g` and `Fiber /100g` columns (populated on all 73 macro-relevant catalog rows, blank on aromatics/herbs/Other). `nutrition.ts` now derives per-person fat, fibre, and calories (Atwater 4/4/9) and a `healthy` boolean: at least 30 percent of calories from protein AND at least 3 g of fibre per person, both tunable named constants; a zero-calorie dish (no macro data) is never healthy, so the filter shows no false positives. The coverage report (§11.1) tracks fat and fibre coverage per family. The Explore feed and swap/add pickers read the derived flag via `app/web/src/lib/healthy.ts` (single source of truth; thresholds never re-implemented in TS). 10 of 250 active dishes currently qualify. Engine, spec, tests, catalog, and frontend move together (parity gate). (#PR)
+
 ## 2026-06-15 Activate the 50 easy-to-cook expansion dishes
 
 Flips the 50 expansion dishes (ids 222-271) from `active: No` to `active: Yes`, so they enter weekly menu generation; they remain `preferred: No`. The active library grows from 200 to 250 dishes. Two live-data snapshot assertions in `engine/test/data/reports.test.ts` move to match: coverage `withPhoto` 200 to 250 (every activated dish carries a photo), and the special-sourcing report gains Vegetable daliya (Bulgur Wheat) and Lentil salad (Parsley). The three intentionally-retired `active: No` dishes (ids < 222) are untouched. Data plus test only; no engine source, app, rule, or catalog change. (#PR)
