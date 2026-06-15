@@ -18,17 +18,9 @@ import { useMutation, useQuery } from "convex/react";
 import { anyApi } from "convex/server";
 import type { Dish } from "@plantry/engine";
 import type { Identity, Meal, ShortDay } from "../lib/types.js";
-import { complexityVariant, complexityLabel } from "../lib/library.js";
 import { PICKER_FILTERS, dishMatchesFilters, type DishFilter } from "../lib/dishFilters.js";
 import { dayLabel, mealLabel } from "../lib/days.js";
-import {
-  Sheet,
-  SearchField,
-  SectionLabel,
-  ComplexityTag,
-  PrimaryButton,
-  Chip,
-} from "./primitives.js";
+import { Sheet, SearchField, SectionLabel, PrimaryButton, Chip } from "./primitives.js";
 import { DishRow } from "./DishRow.js";
 import { DishDetailBody } from "./DishDetailBody.js";
 import { ReasonDialog } from "./ReasonDialog.js";
@@ -288,14 +280,6 @@ export function SwapPickerSheet({
                   author: "system",
                   updatedAt: 0,
                 }}
-                trailing={
-                  <span className="picker__trailing">
-                    <ComplexityTag
-                      variant={complexityVariant(d.complexity)}
-                      label={complexityLabel(d.complexity) ?? "Easy to cook"}
-                    />
-                  </span>
-                }
               />
             </button>
           ))}

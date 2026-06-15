@@ -952,12 +952,6 @@ input {
   min-height: 44px;
 }
 
-.picker__trailing {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-}
-
 .picker__custom {
   width: 100%;
   text-align: center;
