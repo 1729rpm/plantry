@@ -6,7 +6,7 @@ time: Lunch
 tags: []
 primaryIngredient: Mango
 preferred: No
-active: No
+active: Yes
 satiety: Low
 prepMinutes: 10
 seasons: [Summer]

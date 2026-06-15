@@ -6,7 +6,7 @@ time: Lunch
 tags: []
 primaryIngredient: Carrot
 preferred: No
-active: No
+active: Yes
 satiety: Low
 prepMinutes: 20
 seasons: [Winter]

@@ -6,7 +6,7 @@ time: Lunch
 tags: [complete_meal]
 primaryIngredient: Bulgur Wheat
 preferred: No
-active: No
+active: Yes
 satiety: Medium
 prepMinutes: 30
 seasons: All

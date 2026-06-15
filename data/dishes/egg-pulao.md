@@ -6,7 +6,7 @@ time: Lunch
 tags: [complete_meal, HP]
 primaryIngredient: Egg
 preferred: No
-active: No
+active: Yes
 satiety: High
 prepMinutes: 30
 seasons: All

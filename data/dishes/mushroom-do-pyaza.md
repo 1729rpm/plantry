@@ -6,7 +6,7 @@ time: Lunch
 tags: []
 primaryIngredient: Mushroom
 preferred: No
-active: No
+active: Yes
 satiety: Medium
 prepMinutes: 25
 seasons: All

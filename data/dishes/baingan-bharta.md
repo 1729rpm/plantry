@@ -6,7 +6,7 @@ time: Lunch
 tags: []
 primaryIngredient: Brinjal
 preferred: No
-active: No
+active: Yes
 satiety: Medium
 prepMinutes: 35
 seasons: All

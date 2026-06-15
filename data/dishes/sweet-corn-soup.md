@@ -6,7 +6,7 @@ time: Lunch
 tags: [chinese]
 primaryIngredient: Sweet Corn
 preferred: No
-active: No
+active: Yes
 satiety: Low
 prepMinutes: 20
 seasons: All

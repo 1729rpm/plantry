@@ -6,7 +6,7 @@ time: Lunch
 tags: []
 primaryIngredient: Sprout
 preferred: No
-active: No
+active: Yes
 satiety: Medium
 prepMinutes: 25
 seasons: All

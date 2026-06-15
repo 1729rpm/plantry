@@ -6,7 +6,7 @@ time: Lunch
 tags: [mexican]
 primaryIngredient: Tortilla
 preferred: No
-active: No
+active: Yes
 satiety: High
 prepMinutes: 15
 seasons: All

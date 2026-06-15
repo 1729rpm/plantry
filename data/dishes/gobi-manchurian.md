@@ -6,7 +6,7 @@ time: Lunch
 tags: [chinese]
 primaryIngredient: Cauliflower
 preferred: No
-active: No
+active: Yes
 satiety: Medium
 prepMinutes: 35
 seasons: All

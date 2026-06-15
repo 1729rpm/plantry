@@ -6,7 +6,7 @@ time: Lunch
 tags: []
 primaryIngredient: Sweet Corn
 preferred: No
-active: No
+active: Yes
 satiety: Low
 prepMinutes: 15
 seasons: All

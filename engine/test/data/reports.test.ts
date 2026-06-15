@@ -74,9 +74,9 @@ describe("coverageReport", () => {
     // Photos are a separate (B2) track. The data/photos-5 run regenerated every
     // active dish from a rewritten candid-home-photo prompt (replacing the prior
     // styled/CGI look) and force-overwrote the whole library, so coverage is
-    // complete: 200 of 200 active dishes carry a photo. This snapshot tracks live
+    // complete: 250 of 250 active dishes carry a photo. This snapshot tracks live
     // data; it is a report assertion, not a rule.
-    expect(cov.withPhoto).toBe(200);
+    expect(cov.withPhoto).toBe(250);
   });
 });
 
@@ -252,7 +252,8 @@ describe("specialSourcingReport", () => {
     //   Hummus -> Tahini; Tabbouleh -> Bulgur Wheat + Parsley (sorted);
     //   Muhammara -> Pomegranate Molasses; Tofu bibimbap + Korean chicken
     //   stir fry + Korean tofu soup -> Gochujang; Japanese miso soup ->
-    //   Miso Paste.
+    //   Miso Paste; Vegetable daliya -> Bulgur Wheat; Lentil salad ->
+    //   Parsley (the last two from the activated easy-to-cook expansion).
     expect(report).toEqual([
       { dishId: 174, dishName: "Hummus", ingredients: ["Tahini"] },
       { dishId: 176, dishName: "Tabbouleh", ingredients: ["Bulgur Wheat", "Parsley"] },
@@ -261,6 +262,8 @@ describe("specialSourcingReport", () => {
       { dishId: 192, dishName: "Korean chicken stir fry", ingredients: ["Gochujang"] },
       { dishId: 208, dishName: "Korean tofu soup", ingredients: ["Gochujang"] },
       { dishId: 210, dishName: "Japanese miso soup", ingredients: ["Miso Paste"] },
+      { dishId: 250, dishName: "Vegetable daliya", ingredients: ["Bulgur Wheat"] },
+      { dishId: 267, dishName: "Lentil salad", ingredients: ["Parsley"] },
     ]);
 
     // Staple Indian dishes and the regular-sourcing international dishes (pasta,
