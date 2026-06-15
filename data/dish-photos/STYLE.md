@@ -41,7 +41,7 @@ Everything outside the slots is the fixed skeleton and must not be reworded betw
 runs (the fixed wording is what holds the look steady).
 
 ```
-A real, candid phone photograph of {dish name}, a home-style {cuisine} dish: {per-dish detail}. Shot from a natural low or three-quarter angle with shallow depth of field, in a real everyday vessel that suits the dish, a softly blurred home or restaurant background, ordinary warm light and gentle natural shadows, honest true-to-life colour. The food looks genuinely cooked and a little imperfect with real texture, irregular hand-made shapes, oil sheen and uneven edges. Realistic and unstyled, square 1:1.
+A real, candid phone photograph of {dish name}, a home-style {cuisine} dish: {per-dish detail}. Shot from a natural low or three-quarter angle with shallow depth of field, in a real everyday vessel that suits the dish, a softly blurred home or restaurant background, ordinary warm light and gentle natural shadows, honest true-to-life colour with a matte natural finish, true slightly-muted colours, not glossy, not oversaturated, not plastic-looking. The food looks genuinely cooked and a little imperfect with real texture, irregular hand-made shapes, a little oil sheen and uneven edges; any garnish is fresh green coriander (cilantro) leaves, never flat-leaf parsley. Realistic and unstyled, square 1:1.
 ```
 
 The look this prompt aims for: a real, candid food photo, the dish as it actually
@@ -81,8 +81,10 @@ Notes for whoever runs it:
 Fixed for the whole library; the candid-realism look depends on them as much as on
 the prompt wording:
 
-- `cfg_scale` 3.5 (lower guidance lets the model render looser, more natural food
-  rather than the over-tight, plasticky composition higher guidance produces),
+- `cfg_scale` 3.0 (lower guidance lets the model render looser, more natural food
+  rather than the over-tight, plasticky composition higher guidance produces;
+  lowered from 3.5 to further cut the over-styled CGI gloss the realism audit
+  flagged as the #1 universal tell),
 - `steps` 40 (more refinement steps for realistic texture),
 - `width` / `height` 1024 (square source, see Crop below),
 - per-dish seed: each dish's base seed is derived from its slug, so the library has
@@ -91,17 +93,23 @@ the prompt wording:
 
 ### Filter-safe tokens
 
-NVIDIA's FLUX.1-dev content filter false-positives on a couple of benign culinary
+NVIDIA's FLUX.1-dev content filter false-positives on a few benign culinary
 tokens, deterministically returning `finishReason: CONTENT_FILTERED` and a black
 frame (seed-independent). The literal token "fried" is one (the verb "fry" is
-fine); the adjacent "sweet-salty" is another. The generation script rewrites these
-out of the assembled prompt string only (never the dish file on disk) to a
-visually-equivalent synonym with no blocked substring, so the rendered image still
-matches the dish: "stir-fried" -> "wok-tossed", "deep/shallow fried" ->
-"pan-crisped", "fried rice" -> "stir-fry rice", "fried onions" -> "golden browned
-onions", "fried patties" -> "golden patties", a bare "fried" -> "pan-cooked", and
-"sweet-salty" -> "sweet and savoury". It is a general token transform applied to
-every prompt, so future dishes with these words are handled automatically.
+fine); the adjacent "sweet-salty" is another; the hyphenated "flat-leaf" is a
+third (it surfaced from the skeleton's coriander-not-parsley garnish cue; bisected
+live, "flat-leaf" trips the filter while "flat leaf" without the hyphen and the
+bare word "parsley" both pass, so only the hyphen needs to go). The generation
+script rewrites these out of the assembled prompt string only (never the dish file
+on disk) to a visually-equivalent synonym with no blocked substring, so the
+rendered image still matches the dish: "stir-fried" -> "wok-tossed",
+"deep/shallow fried" -> "pan-crisped", "fried rice" -> "stir-fry rice",
+"fried onions" -> "golden browned onions", "fried patties" -> "golden patties", a
+bare "fried" -> "pan-cooked", "sweet-salty" -> "sweet and savoury", and
+"flat-leaf" -> "flat leaf" (so the skeleton's "never flat-leaf parsley" renders as
+"never flat leaf parsley", same meaning, no blocked substring). It is a general
+token transform applied to every prompt, so future dishes with these words are
+handled automatically.
 
 ---
 
@@ -180,7 +188,10 @@ this section is the human-readable contract, the prompt is the machine input.
     irregular hand-made shapes rather than identical pieces; oil sheen, uneven
     edges, stray crumbs, and a little mess.
   - **Garnish.** Scattered naturally as it really would be, never a single sprig
-    placed in the centre.
+    placed in the centre. Where a dish is garnished with green herb leaves, the
+    skeleton forces fresh green coriander (cilantro), never flat-leaf parsley:
+    the realism audit found flat parsley standing in for coriander was a recurring
+    ingredient tell.
   - **Props policy:** the vessel and a softly out-of-focus home or restaurant
     background carry the frame. This is enforced **positively** in the prompt, not
     by a list of forbidden objects: the prompt names what is in frame (the dish in
@@ -197,7 +208,11 @@ this section is the human-readable contract, the prompt is the machine input.
 - **Color and mood.** Honest and true to life, never bright or oversaturated. The
   colours are the food's real colours under ordinary warm light, not the glossy,
   high-contrast look of stock or CGI food photography. The look reads as a real
-  phone photo, a little imperfect, rather than a styled studio shot.
+  phone photo, a little imperfect, rather than a styled studio shot. The skeleton
+  states this explicitly as a matte natural finish with true slightly-muted
+  colours, not glossy, not oversaturated, not plastic-looking: the realism audit
+  found a waxy/plastic CGI sheen and oversaturation to be the #1 universal AI
+  tell, so the wording counters it head-on.
 - **Crop and aspect ratio.** Square, 1:1. The source is square on purpose: the
   PWA renders photos with `object-fit: cover` at two very different shapes, a
   small rounded square thumbnail on day cards and dish rows (about 40 to 48 px,
