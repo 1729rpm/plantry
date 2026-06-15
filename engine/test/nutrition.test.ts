@@ -284,7 +284,7 @@ describe("deriveDishMacros: healthy flag", () => {
     ];
     // 100 g soya -> per person P26, C16.5, fat 0.25, fibre 6.5.
     // calories = 4*26 + 4*16.5 + 9*0.25 = 104 + 66 + 2.25 = 172.25.
-    // protein fraction = 104/172.25 ~ 0.60 >= 0.30; fibre 6.5 >= 3 -> healthy.
+    // protein fraction = 104/172.25 ~ 0.60 >= 0.25; fibre 6.5 >= 3 -> healthy.
     const macros = deriveDishMacros([ing("Soyabean Chunk", 100, "g")], catalog);
     expect(macros.healthy).toBe(true);
   });
@@ -304,7 +304,7 @@ describe("deriveDishMacros: healthy flag", () => {
       },
     ];
     const macros = deriveDishMacros([ing("Chicken Breast", 200, "g")], catalog);
-    // protein fraction is well above 0.30, but fibre is 0 < 3.
+    // protein fraction is well above 0.25, but fibre is 0 < 3.
     const proteinFraction =
       (ATWATER_PROTEIN_KCAL_PER_G * macros.proteinPerPerson) / macros.caloriesPerPerson;
     expect(proteinFraction).toBeGreaterThanOrEqual(HEALTHY_PROTEIN_CALORIE_FRACTION);

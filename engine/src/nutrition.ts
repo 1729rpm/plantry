@@ -69,7 +69,7 @@ export const ATWATER_FAT_KCAL_PER_G = 9;
  * least this fraction of its calories come from protein AND it carries at least
  * `HEALTHY_FIBER_PER_PERSON` grams of fibre per person.
  */
-export const HEALTHY_PROTEIN_CALORIE_FRACTION = 0.3;
+export const HEALTHY_PROTEIN_CALORIE_FRACTION = 0.25;
 export const HEALTHY_FIBER_PER_PERSON = 3;
 
 /**

@@ -215,7 +215,7 @@ For one dish:
 - **Fibre (g per person)** = the same with `Fiber /100g` ÷ 2.
 - **Calories (kcal per person)** = 4 × protein + 4 × carbs + 9 × fat, the per-person grams above run through the Atwater factors (the standard food-energy convention: protein and carbohydrate yield about 4 kcal/g, fat about 9 kcal/g). Zero when no macro data exists for the dish.
 - **Protein-to-carb ratio** = protein ÷ carbs (per-person and dish-total give the same ratio); undefined when carbs are zero.
-- **Healthy** (a boolean) = the dish clears two bars at once: at least `HEALTHY_PROTEIN_CALORIE_FRACTION` of its calories come from protein (4 × protein ÷ calories) AND fibre per person is at least `HEALTHY_FIBER_PER_PERSON`. Both thresholds are named constants in `nutrition.ts`, tunable in one place: the defaults are 0.30 (30 percent of calories from protein) and 3 g of fibre per person. A dish with zero derived calories has no macro data, so it is never healthy: the filter never shows a false positive, and the zero-calorie guard also keeps the protein-fraction division safe.
+- **Healthy** (a boolean) = the dish clears two bars at once: at least `HEALTHY_PROTEIN_CALORIE_FRACTION` of its calories come from protein (4 × protein ÷ calories) AND fibre per person is at least `HEALTHY_FIBER_PER_PERSON`. Both thresholds are named constants in `nutrition.ts`, tunable in one place: the defaults are 0.25 (25 percent of calories from protein) and 3 g of fibre per person. A dish with zero derived calories has no macro data, so it is never healthy: the filter never shows a false positive, and the zero-calorie guard also keeps the protein-fraction division safe.
 
 The ÷ 2 is the household basis: every dish serves two and macros display per person.
 
