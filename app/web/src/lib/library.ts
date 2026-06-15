@@ -8,6 +8,7 @@
 
 import { dishes, ingredients } from "@plantry/engine/library";
 import type { Dish, Ingredient } from "@plantry/engine";
+import { dishMatchesFilters, type DishFilter } from "./dishFilters.js";
 
 const DISH_BY_ID = new Map<number, Dish>(dishes.map((d) => [d.id, d]));
 
@@ -178,7 +179,11 @@ export interface DishTag {
  */
 export function exploreCardTags(dish: Dish): DishTag[] {
   const tags: DishTag[] = [
-    { label: complexityShortLabel(dish.complexity), kind: "difficulty", variant: complexityVariant(dish.complexity) },
+    {
+      label: complexityShortLabel(dish.complexity),
+      kind: "difficulty",
+      variant: complexityVariant(dish.complexity),
+    },
   ];
 
   if (typeof dish.prepMinutes === "number" && dish.prepMinutes > 0) {
@@ -222,4 +227,35 @@ export function dishMetaLine(dish: Dish | undefined): string {
 
 export function dishHasPrePrep(dish: Dish | undefined): boolean {
   return Boolean(dish?.prePrep);
+}
+
+/**
+ * The swap picker's visible list. `pool` is the FULL ranked meal-time pool from
+ * getSlotAlternatives (requested with a high limit so nothing is truncated out
+ * of the search corpus). The full pool is the corpus for BOTH the name search
+ * and the quick-filter chips: it is filtered by `(query empty || name includes
+ * query) && dishMatchesFilters(d, filters)`, so a recently-cooked staple that
+ * ranks at the bottom is still reachable by name even with a filter active, and
+ * the chips narrow the whole pool rather than just the suggested head.
+ *
+ * The `suggestedCap` is a display limit that applies ONLY to the default view,
+ * when there is neither a query nor an active filter: that keeps the glanceable
+ * "Suggested for this day" list short. Any query or any active filter returns
+ * all matches. The cap is never the search/filter corpus. Mirrors AddDishSheet's
+ * filter over its full client-side pool.
+ */
+export function swapPickerVisible(
+  pool: Dish[],
+  query: string,
+  filters: DishFilter[],
+  suggestedCap: number,
+): Dish[] {
+  const needle = query.trim().toLowerCase();
+  const matches = pool.filter(
+    (d) =>
+      (needle === "" || d.name.toLowerCase().includes(needle)) && dishMatchesFilters(d, filters),
+  );
+  // Default view only (no query AND no filter): cap to the suggested head.
+  if (needle === "" && filters.length === 0) return matches.slice(0, suggestedCap);
+  return matches;
 }
