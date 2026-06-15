@@ -12,6 +12,10 @@ Brief description in present tense, one to three sentences. Reference the PR.
 
 ---
 
+## 2026-06-15 Fruit of the day, breakfast savoury-only
+
+Decouples fruit from breakfast (Tuhina feedback item 4, Stream D). A standalone Fruit of the day is now picked for every day Mon-Sat (Saturday included): exactly one Active, in-season, Category=Fruit dish, selected longest-unused and rotated across the days, recency-exempt so within-week repeats are allowed when the pool is thin. It sits outside the breakfast/lunch composition and outside the §9 item cap. Breakfast Option A (complete_meal + fruit) is retired, so the Mon/Wed/Fri 2-item breakfast is savoury (Option B or C); a consequence is that complete_meal breakfasts now appear only on the Tue/Thu single-item slot. The engine carries the pick as `fruit?` on each generated day; Convex stores it as a `meal: "fruit"` slot (one dish) on `currentWeek` (additive schema-union widening, but a regenerate is required to write the new fruit rows); the Menu day card and the menu share image render a "Fruit of the day" section; the grocery list aggregates fruit ingredients like any day dish. Engine, Convex schema, frontend, share canvas, `engine.md` §2/§3/§3.3/§4/§9/§12 and `product.md` §2. (#PR)
+
 ## 2026-06-15 Activate the 50 easy-to-cook expansion dishes
 
 Flips the 50 expansion dishes (ids 222-271) from `active: No` to `active: Yes`, so they enter weekly menu generation; they remain `preferred: No`. The active library grows from 200 to 250 dishes. Two live-data snapshot assertions in `engine/test/data/reports.test.ts` move to match: coverage `withPhoto` 200 to 250 (every activated dish carries a photo), and the special-sourcing report gains Vegetable daliya (Bulgur Wheat) and Lentil salad (Parsley). The three intentionally-retired `active: No` dishes (ids < 222) are untouched. Data plus test only; no engine source, app, rule, or catalog change. (#PR)
