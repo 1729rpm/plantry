@@ -39,7 +39,10 @@ import {
  */
 
 type ShortDay = "Mon" | "Tue" | "Wed" | "Thu" | "Fri" | "Sat";
-type LowerMeal = "breakfast" | "lunch";
+// "fruit" is the standalone Fruit of the day (docs/engine.md §3.3). The grocery
+// aggregation groups every slot's dishes by day regardless of meal, so a fruit
+// slot's ingredients flow into the list (skip-aware) like any other day dish.
+type LowerMeal = "breakfast" | "lunch" | "fruit";
 type DishPickShape = {
   dishId: number | null;
 };

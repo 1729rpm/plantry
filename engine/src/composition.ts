@@ -17,7 +17,6 @@ export type CandidateSet =
 
 export interface BreakfastWeekdayPairCandidateSet {
   kind: "breakfast-pair";
-  optionA: { completeMeal: Dish[]; fruit: Dish[] };
   optionB: { completeCarb: Dish[]; accompaniment: Dish[] };
   optionC: { dryMain: Dish[]; plainCarb: Dish[] };
 }
@@ -117,8 +116,6 @@ export function candidateSetPools(set: CandidateSet): Dish[][] {
   switch (set.kind) {
     case "breakfast-pair":
       return [
-        set.optionA.completeMeal,
-        set.optionA.fruit,
         set.optionB.completeCarb,
         set.optionB.accompaniment,
         set.optionC.dryMain,
@@ -172,17 +169,6 @@ export function excludeHpIfMealHasHp(pool: Dish[], mealHasHp: boolean): Dish[] {
 
 const PLAIN_BREAKFAST_CARB_CATEGORIES = new Set(["Bread", "Paratha", "Chilla"]);
 
-/** §3 Breakfast Mon/Wed/Fri Option A: complete_meal + fruit. */
-export function breakfastOptionA(eligible: Dish[]): {
-  completeMeal: Dish[];
-  fruit: Dish[];
-} {
-  return {
-    completeMeal: eligible.filter((d) => d.time === "Breakfast" && hasTag(d, "complete_meal")),
-    fruit: eligible.filter((d) => hasTag(d, "fruit")),
-  };
-}
-
 /** §3 Breakfast Mon/Wed/Fri Option B: complete_carb + breakfast accompaniment. */
 export function breakfastOptionB(eligible: Dish[]): {
   completeCarb: Dish[];
@@ -210,14 +196,29 @@ export function breakfastOptionC(eligible: Dish[]): {
   };
 }
 
-/** §3 Breakfast Mon/Wed/Fri composite: exposes all three options as pools. */
+/**
+ * §3 Breakfast Mon/Wed/Fri composite: exposes both savoury options as pools.
+ * Breakfast is savoury only (the fruit-bearing Option A is retired; fruit is
+ * now the standalone Fruit of the day, §3.3 / the engine's per-day fruit pick).
+ */
 export function breakfastWeekdayPair(eligible: Dish[]): BreakfastWeekdayPairCandidateSet {
   return {
     kind: "breakfast-pair",
-    optionA: breakfastOptionA(eligible),
     optionB: breakfastOptionB(eligible),
     optionC: breakfastOptionC(eligible),
   };
+}
+
+/**
+ * §3.3 Fruit of the day candidate pool. Every eligible (Active, in-season)
+ * Category=Fruit dish. Selection (longest-unused) is §4's job, applied by
+ * generateWeek; this function only defines the composition-eligible set. Fruit
+ * is its own day-level section, outside breakfast and lunch and outside the §9
+ * cap, so it has no CandidateSet kind: it is picked directly, not through the
+ * slot pipeline.
+ */
+export function fruitOfDayPool(eligible: Dish[]): Dish[] {
+  return eligible.filter((d) => d.category === "Fruit");
 }
 
 /** §3 Breakfast Tue/Thu single pick: complete_meal OR complete_carb. */

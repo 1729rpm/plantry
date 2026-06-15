@@ -6,7 +6,19 @@
 export type Identity = "rajat" | "tuhina";
 
 export type ShortDay = "Mon" | "Tue" | "Wed" | "Thu" | "Fri" | "Sat";
+/**
+ * An editable meal slot. Breakfast and lunch are the user-editable meals (swap,
+ * add, delete). The Fruit of the day is NOT editable, so it is not a `Meal`; the
+ * stored slot type that includes it is `SlotMeal`.
+ */
 export type Meal = "breakfast" | "lunch";
+/**
+ * The meal value a stored `currentWeek` slot can carry. Adds the standalone
+ * Fruit of the day (docs/engine.md §3.3): one Category=Fruit dish per day Mon-Sat,
+ * its own section outside breakfast/lunch and outside the §9 item cap. It is
+ * system-picked and read-only in the UI (the editor only edits breakfast/lunch).
+ */
+export type SlotMeal = Meal | "fruit";
 export type SlotSource = "generated" | "swapped" | "custom";
 export type SlotAuthor = "rajat" | "tuhina" | "system";
 
@@ -38,7 +50,7 @@ export interface DishPick {
  */
 export interface WeekSlot {
   day: ShortDay;
-  meal: Meal;
+  meal: SlotMeal;
   dishes: DishPick[];
 }
 

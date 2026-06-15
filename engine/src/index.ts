@@ -34,7 +34,7 @@ export type { SlotPlan, WeekScheduleArgs, LunchMenu } from "./schedule.js";
 export {
   composeSlot,
   candidateSetPools,
-  breakfastOptionA,
+  fruitOfDayPool,
   breakfastOptionB,
   breakfastOptionC,
   breakfastWeekdayPair,

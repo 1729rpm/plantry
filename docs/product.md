@@ -8,12 +8,14 @@ Two adults: Rajat (product owner) and Tuhina (second user). Cooking style is hig
 
 ## 2. Weekly loop
 
-| Day | Breakfast | Lunch | Items |
-|---|---|---|---|
-| Mon, Wed, Fri | 2 items | 3 items | 5 |
-| Tue, Thu | 1 item | 4 items | 5 |
-| Sat | none | 3 items | 3 |
-| Sun | none | none | 0 |
+| Day | Fruit | Breakfast | Lunch | Items |
+|---|---|---|---|---|
+| Mon, Wed, Fri | 1 fruit | 2 items | 3 items | 5 |
+| Tue, Thu | 1 fruit | 1 item | 4 items | 5 |
+| Sat | 1 fruit | none | 3 items | 3 |
+| Sun | none | none | none | 0 |
+
+Every day Mon to Sat also carries a Fruit of the day: one in-season fruit, shown as its own light section separate from breakfast and lunch (Saturday included, even though it has no breakfast). Breakfast itself is savoury. The fruit sits outside the breakfast and lunch slots and outside the item cap, so the "Items" column above (the capped breakfast plus lunch count) is unchanged by it.
 
 Each week, the engine reads the dish library, the rules, the season, and the recent history, then produces a complete valid menu plus a grocery list. The week opens on the Menu tab. From a day's Edit button, either user can swap any dish (the engine offers a ranked picker over the meal-time-matching library), add a library dish to a day, drop in a custom one-off (a free-text dish in place of a position), delete a dish, or skip a whole day (eating out or away) and restore it later. Swaps, adds, one-offs, deletes, skips, restores, and saves-for-next-week apply immediately and are recorded against the week with author, timestamp, and a required reason that feeds the slow loop. A skipped day keeps its dishes (restore is lossless) but counts no groceries and does not enter the history on finalize. A dislike does nothing immediately; it queues for the slow loop.
 

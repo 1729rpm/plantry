@@ -60,6 +60,10 @@ export function DayScreen({ day, identity, onBack }: DayScreenProps) {
     const slotsByMeal = new Map<Meal, DishPick[]>();
     for (const slot of week.slots) {
       if (slot.day !== day) continue;
+      // The Fruit of the day (docs/engine.md §3.3) is system-picked and not
+      // user-editable, so the day editor skips its slot: only breakfast and lunch
+      // are swappable/addable here.
+      if (slot.meal === "fruit") continue;
       slotsByMeal.set(slot.meal, slot.dishes);
     }
     const skip = (week.skippedDays ?? []).find((s) => s.day === day) ?? null;

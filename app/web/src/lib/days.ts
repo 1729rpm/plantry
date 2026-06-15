@@ -1,4 +1,4 @@
-import type { ShortDay, Meal } from "./types.js";
+import type { ShortDay, SlotMeal } from "./types.js";
 
 // The Convex schema stores currentWeek.slots[].day in short form ("Mon"..."Sat")
 // because that's the live-plan format; weekArchive uses the full-word form to
@@ -22,12 +22,19 @@ export function dayOrderIndex(day: ShortDay): number {
   return DAY_ORDER.indexOf(day);
 }
 
-export function mealLabel(meal: Meal): string {
-  return meal === "breakfast" ? "Breakfast" : "Lunch";
+export function mealLabel(meal: SlotMeal): string {
+  if (meal === "breakfast") return "Breakfast";
+  if (meal === "lunch") return "Lunch";
+  return "Fruit of the day";
 }
 
-export function mealOrderIndex(meal: Meal): number {
-  return meal === "breakfast" ? 0 : 1;
+// Order within a day card: breakfast, lunch, then the Fruit of the day as a
+// light closing section (docs/engine.md §3.3). On Saturday (no breakfast) it
+// reads lunch then fruit.
+export function mealOrderIndex(meal: SlotMeal): number {
+  if (meal === "breakfast") return 0;
+  if (meal === "lunch") return 1;
+  return 2;
 }
 
 const SHORT_MONTHS = [

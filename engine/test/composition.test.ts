@@ -1,7 +1,7 @@
 import { describe, it, expect } from "vitest";
 import {
   composeSlot,
-  breakfastOptionA,
+  fruitOfDayPool,
   breakfastOptionB,
   breakfastOptionC,
   breakfastSinglePick,
@@ -64,32 +64,22 @@ function lunch(day: SlotPlan["day"], lunchMenu: 1 | 2 | 3 | 4): SlotPlan {
 }
 
 describe("composition — docs/engine.md §3", () => {
-  describe("§3 breakfast Mon/Wed/Fri Option A: complete_meal + fruit", () => {
-    it("includes complete_meal Breakfast dishes in pool A.completeMeal", () => {
-      const cm = makeDish({
-        time: "Breakfast",
-        category: "Complete meal",
-        tags: ["complete_meal"],
-      });
-      const notCm = makeDish({ time: "Breakfast", category: "Bread" });
-      const lunchCm = makeDish({
-        time: "Lunch",
-        category: "Complete meal",
-        tags: ["complete_meal"],
-      });
-      const out = breakfastOptionA([cm, notCm, lunchCm]);
-      expect(out.completeMeal).toEqual([cm]);
-    });
-
-    it("includes fruit-tagged dishes in pool A.fruit regardless of category", () => {
-      const fruitTagged = makeDish({
+  describe("§3.3 Fruit of the day pool", () => {
+    it("includes every Category=Fruit dish, regardless of time or tags", () => {
+      const breakfastFruit = makeDish({
         time: "Breakfast",
         category: "Fruit",
         tags: ["fruit"],
       });
-      const noTag = makeDish({ time: "Breakfast", category: "Fruit" });
-      const out = breakfastOptionA([fruitTagged, noTag]);
-      expect(out.fruit).toEqual([fruitTagged]);
+      const lunchFruit = makeDish({ time: "Lunch", category: "Fruit", tags: [] });
+      const notFruit = makeDish({ time: "Breakfast", category: "Bread" });
+      const out = fruitOfDayPool([breakfastFruit, lunchFruit, notFruit]);
+      expect(out).toEqual([breakfastFruit, lunchFruit]);
+    });
+
+    it("returns an empty pool when no Fruit-category dish is eligible", () => {
+      const notFruit = makeDish({ category: "Gravy dish" });
+      expect(fruitOfDayPool([notFruit])).toEqual([]);
     });
   });
 
@@ -500,21 +490,21 @@ describe("composition — docs/engine.md §3", () => {
   });
 
   describe("composeSlot dispatch", () => {
-    it("dispatches Mon Breakfast to the three-option breakfast pair set", () => {
-      const cm = makeDish({
+    it("dispatches Mon Breakfast to the savoury breakfast pair set", () => {
+      const cc = makeDish({
         time: "Breakfast",
-        category: "Complete meal",
-        tags: ["complete_meal"],
+        category: "Paratha",
+        tags: ["complete_carb"],
       });
       const out = composeSlot({
         slot: breakfast("Mon"),
-        library: [cm],
+        library: [cc],
         history: emptyHistory,
         season: "Summer",
       });
       const pair = out as BreakfastWeekdayPairCandidateSet;
       expect(pair.kind).toBe("breakfast-pair");
-      expect(pair.optionA.completeMeal).toEqual([cm]);
+      expect(pair.optionB.completeCarb).toEqual([cc]);
     });
 
     it("dispatches Tue Breakfast to the single-pick set", () => {
@@ -599,31 +589,31 @@ describe("composition — docs/engine.md §3", () => {
     });
 
     it("applies §1 eligibility (active + season) before §3 composition", () => {
-      const cmInactive = makeDish({
+      const ccInactive = makeDish({
         time: "Breakfast",
-        category: "Complete meal",
-        tags: ["complete_meal"],
+        category: "Paratha",
+        tags: ["complete_carb"],
         active: "No",
       });
-      const cmOutOfSeason = makeDish({
+      const ccOutOfSeason = makeDish({
         time: "Breakfast",
-        category: "Complete meal",
-        tags: ["complete_meal"],
+        category: "Paratha",
+        tags: ["complete_carb"],
         seasons: ["Winter"],
       });
-      const cmOk = makeDish({
+      const ccOk = makeDish({
         time: "Breakfast",
-        category: "Complete meal",
-        tags: ["complete_meal"],
+        category: "Paratha",
+        tags: ["complete_carb"],
       });
       const out = composeSlot({
         slot: breakfast("Mon"),
-        library: [cmInactive, cmOutOfSeason, cmOk],
+        library: [ccInactive, ccOutOfSeason, ccOk],
         history: emptyHistory,
         season: "Summer",
       });
       const pair = out as BreakfastWeekdayPairCandidateSet;
-      expect(pair.optionA.completeMeal).toEqual([cmOk]);
+      expect(pair.optionB.completeCarb).toEqual([ccOk]);
     });
 
     it("threads weekLunchCarbs into Menu 1 / Menu 2 lunch carb pool", () => {

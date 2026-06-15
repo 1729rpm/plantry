@@ -263,6 +263,9 @@ function layoutMenu(
     };
     addMeal("Breakfast", model.breakfast);
     addMeal("Lunch", model.lunch);
+    // §3.3 Fruit of the day: its own labelled block, after the savoury meals, so
+    // the share image mirrors the on-screen day card's section order.
+    addMeal("Fruit of the day", model.fruit);
     // Total content = sum of meal blocks + gaps between them.
     const contentHeight =
       meals.reduce((sum, m) => sum + m.height, 0) + Math.max(0, meals.length - 1) * MEAL_GAP;

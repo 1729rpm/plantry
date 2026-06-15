@@ -16,12 +16,14 @@ Bangalore seasons: Summer (March to May), Monsoon (June to September), Winter (O
 
 ## 2. Weekly Schedule
 
-| Day           | Breakfast | Lunch                      | Items |
-| ------------- | --------- | -------------------------- | ----- |
-| Mon, Wed, Fri | 2 items   | Menu 1 (3 items)           | 5     |
-| Tue, Thu      | 1 item    | Menu 2 (4 items)           | 5     |
-| Sat           | (none)    | Menu 3 or Menu 4 (3 items) | 3     |
-| Sun           | (none)    | (none)                     | 0     |
+| Day           | Fruit   | Breakfast | Lunch                      | Items |
+| ------------- | ------- | --------- | -------------------------- | ----- |
+| Mon, Wed, Fri | 1 fruit | 2 items   | Menu 1 (3 items)           | 5     |
+| Tue, Thu      | 1 fruit | 1 item    | Menu 2 (4 items)           | 5     |
+| Sat           | 1 fruit | (none)    | Menu 3 or Menu 4 (3 items) | 3     |
+| Sun           | (none)  | (none)    | (none)                     | 0     |
+
+Every day Mon to Sat also carries a Fruit of the day (one in-season fruit, §3.3), Saturday included even though it has no breakfast. The fruit sits outside the breakfast and lunch slots and outside the §9 item cap, so the "Items" column above (the capped breakfast + lunch count) is unchanged by it.
 
 Saturday alternates between Menu 3 and Menu 4. Read `menu_history.md` for the most recent Saturday and pick the other menu. If history is empty, pick at random.
 
@@ -33,11 +35,14 @@ At most one weekday lunch per week may substitute Menu 3 or Menu 4 for its defau
 
 ### Breakfast
 
+Breakfast is savoury only: the Fruit of the day (§3.3) is its own section, never a breakfast item.
+
 Mon, Wed, Fri (2 items), pick exactly one option per day:
 
-- Option A: 1 dish with `complete_meal` tag, plus 1 dish with `fruit` tag
 - Option B: 1 dish with `complete_carb` tag, plus 1 breakfast accompaniment (Category=Accompaniment, Time=Breakfast)
 - Option C: 1 breakfast main (Category=Dry dish, Time=Breakfast), plus 1 plain breakfast carb (Time=Breakfast, Category in {Bread, Paratha, Chilla}, without `complete_carb` tag)
+
+The fruit-bearing Option A is retired (fruit is now §3.3), so both 2-item options are savoury. A consequence: a `complete_meal` breakfast dish, which Option A used to lead, now appears only on the Tue/Thu single-item slot below.
 
 Tue, Thu (1 item):
 
@@ -96,6 +101,15 @@ Substitution is triggered when either:
 
 The supporting items (Accompaniment, Dessert) are then picked per §4 from their composition-defined candidate sets. Saturday's own Menu 3/4 alternation (§2) is independent of this weekday substitution.
 
+### 3.3 Fruit of the day
+
+Every day Mon to Sat carries exactly one Fruit of the day, Saturday included even though it has no breakfast. The fruit is its own section, separate from breakfast and lunch: it is not a breakfast item, not a lunch item, and not subject to the breakfast/lunch composition forms above.
+
+- **Eligibility.** The candidate pool is every dish that is Active, in-season (§1), and Category=Fruit.
+- **Selection.** Pick the longest-unused eligible fruit dish (§4 step 1, oldest last-cooked date first; never-cooked counts as longest unused). Fruit stays recency-exempt (§4), so the within-week no-repeat rule does not apply to it: when the eligible pool is thin the same fruit may recur across days of one week, which is intended, not a defect.
+- **Cap.** The Fruit of the day is outside the §9 item cap. It is a fruit, not a meal item, so it never counts toward the 5-item weekday cap or the 3-item Saturday cap and is never a cap-drop candidate.
+- **Grocery and history.** A fruit dish is a real library dish with ingredient rows, so its ingredients flow into the grocery list (§8 skip-aware aggregation) like any other day dish. Because fruit is recency-exempt, the fruit pick does not append to the finalize history rows (§8): a history row for it would have no effect on later selection, and Saturday has no breakfast or lunch meal to attach it to.
+
 ## 4. Selection Priority
 
 After §3 composition has produced the candidate set for a slot, rank candidates in this order. Each step breaks ties from the previous.
@@ -107,7 +121,7 @@ After §3 composition has produced the candidate set for a slot, rank candidates
 5. **Within-week recency.** A dish already placed in an earlier slot of the week being generated is treated as most-recently-used for every subsequent slot's ranking, so it sinks below any fresh (not-yet-placed-this-week) alternative. This is the dominant ordering: unlike step 1's `menu_history.md` recency, it is applied last, so neither consolidation (step 3) nor Preferred=Yes (step 4) can re-promote an already-placed dish above an equally eligible fresh one. It exists because the cross-week history (step 1) is silent on the in-progress week, so without it a single broad pool's top-ranked dish (e.g. the longest-unused HP gravy) wins every Menu 1 slot Mon/Wed/Fri identically. When every candidate has already been placed this week, demoting them all is the same as demoting none, so the pool is returned unchanged and the repeat is allowed (the fresh-alternative fallback, mirroring step 2).
 6. **Within-week protein diversity (HP mains only).** This is the protein-level analogue of step 5, scoped to HP mains. An HP main is an `HP`-tagged dish in a meal's protein-main slot: Category in {Gravy dish, Dry dish, Complete meal, Keto}. (HP accompaniments are sides, not mains, so they neither consume nor are governed by this step; the one-HP-per-meal rule in §3 already keeps them off an HP-main meal.) When ranking an HP-main pool, a candidate whose **protein family** (see §4.6) already appeared as an HP main earlier in the week is deprioritised below the fresh-protein candidates, so a fresh protein ranks up and the week's HP mains spread across proteins (fish, prawn, mutton, egg get a fair shot) rather than repeating chicken or paneer. This is a soft preference, not a hard constraint: if every candidate's protein family already appeared (no fresh-protein alternative), the pool is returned unchanged so the slot still fills (the fresh-alternative fallback, mirroring steps 2 and 5). It never narrows §3 composition eligibility and never overrides the recency exemptions (below). It applies only to HP-main position pools; companion (non-main) pools are never reordered by protein.
 
-Recency exemptions (apply to step 1 and step 5): dishes with the `fruit` tag, and lunch carbs (Category in {Chapati, Rice}). A fruit-tagged dish repeating across Mon/Wed/Fri breakfasts and Roti repeating across lunches are intended, not defects. Step 6 acts only on HP mains, none of which are exempt categories, so the exemption list does not interact with it.
+Recency exemptions (apply to step 1 and step 5): dishes with the `fruit` tag, and lunch carbs (Category in {Chapati, Rice}). A fruit-tagged dish repeating across days as the Fruit of the day (§3.3) and Roti repeating across lunches are intended, not defects. Step 6 acts only on HP mains, none of which are exempt categories, so the exemption list does not interact with it.
 
 ### 4.6 Protein-family normalization
 
@@ -182,6 +196,8 @@ Both are pure, additive functions: the skipped-day input defaults to none, so ev
 
 Cap: 5 items per weekday, 3 on Saturday.
 
+The cap counts breakfast and lunch items only. The Fruit of the day (§3.3) is outside the cap: it is a fruit, not a meal item, so it never counts toward the per-day total and is never a cap-drop candidate.
+
 If §3 composition produces a menu over the cap, drop dishes one at a time:
 
 1. From the dishes with the lowest Satiety value present in the menu
@@ -248,7 +264,7 @@ Alongside the blocking validators (§1, §12), a reporting layer in `engine/src/
   - `HP`: high-protein (paneer, chicken, egg, fish, prawn, soya).
   - `complete_meal`: standalone dish, no sides needed.
   - `complete_carb`: substantial carb needing only an accompaniment.
-  - `fruit`: pairs with breakfast Option A; recency-exempt.
+  - `fruit`: marks a Fruit-of-the-day candidate (§3.3); recency-exempt.
 - `primaryIngredient`: dominant fresh or packaged ingredient. Drives §4.2 same-day deprioritisation and §10 consolidation. A free categorization label, not required to match a catalog ingredient name. Use `Mixed Veg` when no single vegetable dominates (it never triggers consolidation but does trigger same-day deduplication).
 - `preferred`: Yes/No. Used as a tiebreaker in §4.4.
 - `active`: Yes/No. Eligibility filter per §1.

@@ -6,7 +6,7 @@ import { history } from "@plantry/engine/history";
 import { generateWeek, type GeneratedWeek, type Season } from "@plantry/engine";
 
 type ShortDay = "Mon" | "Tue" | "Wed" | "Thu" | "Fri" | "Sat";
-type LowerMeal = "breakfast" | "lunch";
+type LowerMeal = "breakfast" | "lunch" | "fruit";
 
 /**
  * Bangalore seasons per `docs/product.md` §1:
@@ -116,21 +116,33 @@ export const generateCurrentWeek = internalMutation({
     }
 
     const now = Date.now();
-    const slots = generated.days.flatMap((d) =>
-      d.slots
+    const toDishEntry = (dishId: number) => ({
+      dishId: dishId as number | null,
+      customLabel: null as string | null,
+      source: "generated" as const,
+      author: "system" as const,
+      updatedAt: now,
+    });
+    const slots = generated.days.flatMap((d) => {
+      const mealSlots = d.slots
         .filter((slot) => slot.dishes.length > 0)
         .map((slot) => ({
           day: slot.day as ShortDay,
           meal: slot.meal.toLowerCase() as LowerMeal,
-          dishes: slot.dishes.map((dish) => ({
-            dishId: dish.id as number | null,
-            customLabel: null as string | null,
-            source: "generated" as const,
-            author: "system" as const,
-            updatedAt: now,
-          })),
-        })),
-    );
+          dishes: slot.dishes.map((dish) => toDishEntry(dish.id)),
+        }));
+      // §3.3 Fruit of the day: one Category=Fruit dish per day Mon-Sat, stored as
+      // its own `meal: "fruit"` slot with a single dish, alongside breakfast and
+      // lunch. Outside the §9 cap, so it is appended after the capped meal slots.
+      if (d.fruit) {
+        mealSlots.push({
+          day: d.day as ShortDay,
+          meal: "fruit" as LowerMeal,
+          dishes: [toDishEntry(d.fruit.id)],
+        });
+      }
+      return mealSlots;
+    });
 
     // Replace any existing row for this weekStart. Documented as intentional;
     // future auto-recovery middleware may insert a validation diff here.

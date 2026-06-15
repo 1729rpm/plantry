@@ -1,9 +1,11 @@
 import type { Dish, Ingredient, MenuHistoryRow, PackSizeHeader, Season } from "./data/schemas.js";
 import type { Day, Meal } from "./eligibility.js";
 import { weekSchedule, type SlotPlan } from "./schedule.js";
+import { eligibleDishes } from "./eligibility.js";
 import {
   composeSlot,
   candidateSetPools,
+  fruitOfDayPool,
   shouldSubstituteWeekday,
   excludeHpIfMealHasHp,
   isHp,
@@ -65,6 +67,14 @@ export interface GeneratedWeekSlot {
 export interface GeneratedWeekDay {
   day: Day;
   slots: GeneratedWeekSlot[];
+  /**
+   * §3.3 Fruit of the day: exactly one in-season Category=Fruit dish, present
+   * on every day the engine schedules (Mon-Sat, Saturday included). It is its
+   * own section, outside the breakfast/lunch `slots` and outside the §9 item
+   * cap, so it never appears in `slots` and is never a cap-drop candidate.
+   * Absent only if the eligible fruit pool is empty for the season.
+   */
+  fruit?: Dish;
 }
 
 export interface GeneratedWeek {
@@ -266,6 +276,34 @@ export function generateWeek(args: GenerateWeekArgs): GeneratedWeek {
   // came from. Drops show up as omissions.
   const cappedDays = projectCapBackToSlots(slotResults, capped.slotsByDay);
 
+  // §3.3 Fruit of the day: one in-season Category=Fruit dish per scheduled day
+  // (Mon-Sat, Saturday included), picked longest-unused. Fruit is recency-exempt
+  // (§4), so the pick reads cross-week `history` only and does NOT consult this
+  // week's earlier fruit picks: a thin pool may therefore repeat the same fruit
+  // across days, which is intended. It is outside the §9 cap, so it is computed
+  // after the cap and attached to the day rather than flowing through `slots`.
+  const fruitEligible = fruitOfDayPool(
+    eligibleDishes({
+      library,
+      history,
+      season,
+      // Fruit is filtered by Category, not by slot day/meal; any scheduled slot
+      // works for the season/active filter eligibleDishes applies.
+      slot: { day: "Mon", meal: "Breakfast" },
+    }),
+  );
+  // Ordered longest-unused first. We rotate through this order across the days
+  // so a rich fruit pool gives variety (Mon gets the longest-unused, Tue the
+  // next, and so on) while a thin pool simply wraps and repeats, which the
+  // recency exemption explicitly allows. Wrapping by day index keeps the pick
+  // deterministic and independent of the breakfast/lunch picks.
+  const fruitByLongestUnused = orderFruitByLongestUnused(fruitEligible, history);
+  if (fruitByLongestUnused.length > 0) {
+    cappedDays.forEach((day, index) => {
+      day.fruit = fruitByLongestUnused[index % fruitByLongestUnused.length];
+    });
+  }
+
   // §6 reconciliation: a planned request placement is only honoured if its
   // dish actually survives into the final week. A composition slot can expose a
   // pool a particular pick branch never draws from (e.g. Menu 1's accompaniment
@@ -394,13 +432,13 @@ function promotePins(ranked: Dish[], pinnedDishIds: number[] | undefined): Dish[
 }
 
 /**
- * §3 breakfast Mon/Wed/Fri: try Option A (complete_meal + fruit) first,
- * then B (complete_carb + accompaniment), then C (dry main + plain carb).
- * The first option whose pools both yield a pick wins.
+ * §3 breakfast Mon/Wed/Fri (savoury only): try Option B (complete_carb +
+ * accompaniment) first, then Option C (dry main + plain carb). The first option
+ * whose pools both yield a pick wins. The fruit-bearing Option A is retired:
+ * fruit is the standalone Fruit of the day (§3.3), picked per day outside the
+ * breakfast/lunch slots.
  */
 function pickBreakfastPair(args: PickSlotArgs, set: BreakfastWeekdayPairCandidateSet): Dish[] {
-  const optionA = tryPair(args, set.optionA.completeMeal, set.optionA.fruit);
-  if (optionA) return optionA;
   const optionB = tryPair(args, set.optionB.completeCarb, set.optionB.accompaniment);
   if (optionB) return optionB;
   const optionC = tryPair(args, set.optionC.dryMain, set.optionC.plainCarb);
@@ -582,6 +620,37 @@ function pickLunchCarbOnly(args: PickSlotArgs, lunchCarbPool: Dish[]): Dish[] {
 
 function compact(dishes: Array<Dish | undefined>): Dish[] {
   return dishes.filter((d): d is Dish => d !== undefined);
+}
+
+/**
+ * §3.3 fruit ranking: order an eligible Category=Fruit pool oldest-last-cooked
+ * first (never cooked counts as longest unused), ties broken by input order for
+ * a stable result. Unlike the §4 step 1 ranker (`byLongestUnused`) this does NOT
+ * honour the fruit recency exemption: the exemption frees fruit to REPEAT within
+ * a week, but the selection of WHICH fruit still wants the longest-unused one, so
+ * the cross-week rotation works. The pool here is already Category=Fruit, so no
+ * non-fruit dish is ever affected.
+ */
+function orderFruitByLongestUnused(pool: Dish[], history: MenuHistoryRow[]): Dish[] {
+  const lastCooked = new Map<number, string>();
+  for (const row of history) {
+    const existing = lastCooked.get(row.dishId);
+    if (existing === undefined || row.weekStart > existing) {
+      lastCooked.set(row.dishId, row.weekStart);
+    }
+  }
+  const decorated = pool.map((dish, index) => ({ dish, index }));
+  decorated.sort((a, b) => {
+    const aDate = lastCooked.get(a.dish.id);
+    const bDate = lastCooked.get(b.dish.id);
+    if (aDate === undefined && bDate === undefined) return a.index - b.index;
+    if (aDate === undefined) return -1;
+    if (bDate === undefined) return 1;
+    if (aDate < bDate) return -1;
+    if (aDate > bDate) return 1;
+    return a.index - b.index;
+  });
+  return decorated.map((d) => d.dish);
 }
 
 function longDay(day: Day): MenuHistoryRow["day"] {
