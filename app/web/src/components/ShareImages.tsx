@@ -54,7 +54,9 @@ function ShareHeading({ title, sub }: { title: string; sub?: string }) {
 
 // One (day, meal) display model for the menu image: the picked dish names in
 // position order. A skipped day renders "Skipped" in place of its meals.
-interface ShareDayModel {
+// Exported so the canvas menu renderer (menuShareCanvas.ts) builds from the same
+// model, keeping the menu image's data shape from drifting off the engine.
+export interface ShareDayModel {
   day: ShortDay;
   short: string;
   dateNum: number;
@@ -78,7 +80,7 @@ function pickName(pick: DishPick): string {
   return "One off";
 }
 
-function buildShareDayModels(week: CurrentWeek): ShareDayModel[] {
+export function buildShareDayModels(week: CurrentWeek): ShareDayModel[] {
   const skipped = new Set<ShortDay>((week.skippedDays ?? []).map((s) => s.day));
   const byDay = new Map<ShortDay, { breakfast: string[]; lunch: string[] }>();
   for (const slot of week.slots) {
@@ -104,46 +106,14 @@ function buildShareDayModels(week: CurrentWeek): ShareDayModel[] {
     });
 }
 
-// Image 1: the week's menu. One card per day, date badge left, meals right.
-export function MenuShareImage({ week }: { week: CurrentWeek }) {
-  const models = buildShareDayModels(week);
-  const range = weekRangeLabel(week.weekStart);
-  return (
-    <ShareFrame>
-      <ShareHeading title="This week" sub={range} />
-      <div className="share-img__days">
-        {models.map((day) => (
-          <div key={day.day} className="share-img__day">
-            <div className="share-img__badge">
-              <div className="share-img__badge-day">{day.short}</div>
-              <div className="share-img__badge-date">{day.dateNum}</div>
-            </div>
-            <div className="share-img__meals">
-              {day.skipped ? (
-                <div className="share-img__skipped">Skipped</div>
-              ) : (
-                <>
-                  {day.breakfast.length > 0 && (
-                    <div className="share-img__meal">
-                      <span className="share-img__meal-label">Breakfast</span>
-                      <span className="share-img__meal-dishes">{day.breakfast.join(", ")}</span>
-                    </div>
-                  )}
-                  {day.lunch.length > 0 && (
-                    <div className="share-img__meal">
-                      <span className="share-img__meal-label">Lunch</span>
-                      <span className="share-img__meal-dishes">{day.lunch.join(", ")}</span>
-                    </div>
-                  )}
-                </>
-              )}
-            </div>
-          </div>
-        ))}
-      </div>
-    </ShareFrame>
-  );
-}
+// Image 1 (the week's menu) is rendered by the canvas renderer in
+// menuShareCanvas.ts, not by a React component. The menu share image overlapped
+// on real iOS Safari when html-to-image re-wrapped its dish text inside a
+// foreignObject (a frozen height plus a re-wrap to more lines spilled onto the
+// next meal). The canvas renderer lays text out manually with measureText, so
+// overlap is structurally impossible. Grocery and recipe stay on html-to-image
+// (they have not shown the bug). buildShareDayModels above is the shared data
+// model both surfaces read.
 
 // Image 2: the grocery list, in the fixed catalog group order the query returns.
 export function GroceryShareImage({

@@ -250,7 +250,7 @@ export const getSlotAlternatives = query({
  *     position: number,
  *     newDishId: number,
  *     version: number,
- *     reason: string,                              // required, trimmed
+ *     reason: string,                              // optional, trimmed; may be empty
  *   }) => { ok: true; version: number }
  *      | { ok: false; reason: "version-mismatch" | "no-current-week"
  *                           | "no-such-slot" | "no-such-position"
@@ -260,7 +260,8 @@ export const getSlotAlternatives = query({
  *
  * Behavior (non-restrictive):
  *   - Validates `author`; missing/empty author throws ConvexError.
- *   - Trims `reason`; empty -> ConvexError("reason must not be empty after trimming").
+ *   - Trims `reason`; an empty reason is allowed and stored as "" (the replace
+ *     flow makes the reason optional).
  *   - Looks up `currentWeek` by `weekStart`. Missing -> `no-current-week`.
  *   - Optimistic concurrency: `row.version !== args.version` ->
  *     `version-mismatch`.
@@ -319,10 +320,10 @@ export const swapDish = mutation({
       }
   > => {
     assertAuthor(args.author);
+    // The reason is optional on a swap (the replace flow shows dish details
+    // first and offers an optional reason; an empty reason still goes through).
+    // We trim and store whatever is given, including an empty string.
     const trimmedReason = args.reason.trim();
-    if (trimmedReason.length === 0) {
-      throw new ConvexError("reason must not be empty after trimming");
-    }
 
     const week = await ctx.db
       .query("currentWeek")

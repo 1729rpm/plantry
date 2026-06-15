@@ -428,7 +428,12 @@ input {
   bottom: 0;
   background: var(--pt-surface);
   border-radius: 24px 24px 0 0;
-  padding: 10px 18px calc(18px + env(safe-area-inset-bottom, 8px));
+  /* Horizontal inset is split between the panel and the scroll box: the scroll
+     box keeps 6px so full-width inputs (search field, reason textarea) sit off
+     its left/right edges and their border + focus outline (outline-offset
+     draws ~3px outside the element) never get clipped. 12 + 6 = 18, the
+     original visual inset, so nothing shifts. */
+  padding: 10px 12px calc(18px + env(safe-area-inset-bottom, 8px));
   max-height: 88%;
   display: flex;
   flex-direction: column;
@@ -444,8 +449,14 @@ input {
 }
 
 .sheet__scroll {
+  /* overflow-y: auto forces the computed overflow-x to a non-visible value,
+     which clips horizontally. The 6px inline padding gives full-width inputs
+     room so their border and focus outline are not cut on the sides. Paired
+     with the panel's reduced 12px so the overall inset is unchanged. */
   overflow-y: auto;
   min-height: 0;
+  padding-left: 6px;
+  padding-right: 6px;
 }
 
 /* Complexity tag (Easy / Medium / Hard mapped to plain labels in code) */
@@ -795,15 +806,6 @@ input {
   min-height: 48px;
 }
 
-.day-screen__comment {
-  text-align: center;
-  font-size: 14px;
-  font-weight: 600;
-  color: var(--pt-sub);
-  padding: 8px 0;
-  min-height: 44px;
-}
-
 .day-screen__skip {
   text-align: center;
   font-size: 14px;
@@ -958,28 +960,58 @@ input {
   min-height: 48px;
 }
 
+/* Gap between the search field (or the one-off button) and the results section
+   label in the swap picker, matching the handoff's 14px top margin. Scoped to
+   the picker so other section labels are untouched. The fixed top margin keeps
+   the gap consistent whether or not the "Use ... as a one off" button is
+   present. */
+.picker__results .section-label {
+  margin-top: 14px;
+  margin-bottom: 2px;
+}
+
+/* Replace-confirm view: dish details first, then an optional reason and the
+   primary "Replace dish" action. Shares the detail body styles with the
+   details sheet. */
+.swap-confirm__head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 4px;
+}
+
+.swap-confirm__back {
+  flex-shrink: 0;
+  font-size: 24px;
+  line-height: 1;
+  color: var(--pt-sub);
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-left: -6px;
+}
+
+.swap-confirm__reason {
+  margin-top: 16px;
+}
+
+.swap-confirm__reason-label {
+  display: block;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--pt-sub);
+}
+
+.swap-confirm__submit {
+  margin-top: 14px;
+}
+
 .add-dish__meals {
   display: flex;
   gap: 8px;
   margin: 10px 0;
-}
-
-/* Comment entries inside the comment sheet */
-.comment-entry {
-  display: flex;
-  gap: 10px;
-  padding: 10px 0;
-  border-top: 1px solid var(--pt-line);
-}
-
-.comment-entry__meta {
-  font-size: 12.5px;
-  color: var(--pt-sub);
-}
-
-.comment-entry__text {
-  font-size: 14.5px;
-  margin-top: 2px;
 }
 
 /* ------------------------------------------------------------------ */
@@ -1122,19 +1154,6 @@ input {
 
 .detail__action-remove {
   flex: 1;
-}
-
-.detail__comment-link {
-  width: 100%;
-  text-align: center;
-  font-size: 13.5px;
-  font-weight: 600;
-  color: var(--pt-sub);
-  padding: 14px 0 4px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  min-height: 44px;
 }
 
 /* Stat tile + search field primitives */
@@ -1451,6 +1470,16 @@ input {
   padding: 18px 16px 14px;
 }
 
+/* The menu slide is a <canvas> (menuShareCanvas.ts). Its backing store is 3x and
+   its inline style sets the logical 360px box; fit it to the rail card by
+   displaying at 100% width with auto height (the backing store keeps it crisp).
+   block removes the inline-element baseline gap so the frame hugs the canvas. */
+.share__menu-canvas {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+
 .share__hint {
   font-size: 12.5px;
   color: var(--pt-sub);
@@ -1491,8 +1520,9 @@ input {
 }
 
 /* ----------------------------------------------------------------------------
-   Include-recipe toggle (slice 8.1), shown in the dish details sheet's recipe
-   section. A share preference, not a menu change (Decision #10).
+   Include-recipe toggle (slice 8.1), shown at the page level of the dish
+   details sheet (above the actions) so it is visible without expanding the
+   cook notes. A share preference, not a menu change (Decision #10).
    ------------------------------------------------------------------------- */
 
 .detail__share-toggle {
@@ -1634,13 +1664,26 @@ input {
 }
 
 .explore-sheet__dislike {
+  display: flex;
+  align-items: center;
+  justify-content: center;
   width: 100%;
+  min-height: 44px;
   text-align: center;
   font-size: 13.5px;
   font-weight: 600;
   color: var(--pt-sub);
   padding: 14px 0 4px;
   font-family: var(--pt-font-sans);
+}
+
+/* The label itself carries a dashed underline so "Not for me" reads as
+   tappable while staying quiet and secondary (it is a records-only
+   affordance). The underline wraps only the text, not the full-width hit
+   area. */
+.explore-sheet__dislike-label {
+  border-bottom: 1px dashed var(--pt-sub);
+  padding-bottom: 1px;
 }
 
 .explore-daypicker {
