@@ -18,7 +18,7 @@ export function IdentityPicker({ onPick }: IdentityPickerProps) {
     <div className="screen">
       <div className="identity">
         <div className="identity__head">
-          <div className="identity__title">Who is this phone?</div>
+          <div className="identity__title">Please select the user</div>
           <div className="identity__hint">Edits and comments carry your name</div>
         </div>
         {PEOPLE.map((person) => (
@@ -31,7 +31,6 @@ export function IdentityPicker({ onPick }: IdentityPickerProps) {
             <Avatar who={person.id} size={44} />
             <div className="identity__option-text">
               <div className="identity__option-name">I am {person.name}</div>
-              <div className="identity__option-sub">Stored on this phone only</div>
             </div>
           </button>
         ))}

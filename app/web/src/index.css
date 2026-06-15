@@ -735,12 +735,6 @@ input {
   font-weight: 600;
 }
 
-.identity__option-sub {
-  font-size: 13px;
-  color: var(--pt-sub);
-  margin-top: 2px;
-}
-
 /* ------------------------------------------------------------------ */
 /* Day screen (the editing family entry, shown over the Menu tab)      */
 /* ------------------------------------------------------------------ */
