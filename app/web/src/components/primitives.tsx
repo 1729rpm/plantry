@@ -353,15 +353,21 @@ const sheetHistory = (() => {
 })();
 
 /** Bottom sheet with a scrim. Children scroll if tall. `tall` raises the panel's
- *  max height for the long pickers (swap, add-a-dish) per the handoff's 92%. */
+ *  max height for the long pickers (swap, add-a-dish) per the handoff's 92%.
+ *  `picker` pins the panel to a STABLE height so the search pickers do not
+ *  resize as their result count changes; the results list scrolls inside it
+ *  instead. Non-picker sheets (reason dialog, dish actions) keep sizing to their
+ *  content. */
 export function Sheet({
   onClose,
   children,
   tall,
+  picker,
 }: {
   onClose: () => void;
   children: ReactNode;
   tall?: boolean;
+  picker?: boolean;
 }) {
   // Lock background scroll while a sheet is open so the page behind the scrim
   // cannot scroll. Save and restore the prior inline value so nested sheets
@@ -408,7 +414,7 @@ export function Sheet({
       <button type="button" className="sheet__scrim" aria-label="Close" onClick={onClose} />
       <div
         ref={panelRef}
-        className={`sheet__panel${tall ? " sheet__panel--tall" : ""}`}
+        className={`sheet__panel${tall ? " sheet__panel--tall" : ""}${picker ? " sheet__panel--picker" : ""}`}
         role="dialog"
         aria-modal="true"
         tabIndex={-1}

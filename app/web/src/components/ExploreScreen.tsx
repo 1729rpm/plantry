@@ -14,6 +14,7 @@ import { anyApi } from "convex/server";
 import type { ExploreAffinityKey } from "@plantry/engine";
 import type { CurrentWeek, Identity, Meal, ShortDay } from "../lib/types.js";
 import { dishById, dishPhotoUrl, exploreCardTags } from "../lib/library.js";
+import { DISH_FILTERS, dishMatchesFilters, type DishFilter } from "../lib/dishFilters.js";
 import { dayLabel } from "../lib/days.js";
 import { Chip, ComplexityTag, MetaTag, Thumb } from "./primitives.js";
 import { ExploreDishSheet } from "./ExploreDishSheet.js";
@@ -31,13 +32,10 @@ interface ExploreFeedDish {
   dominantAffinity: ExploreAffinityKey;
 }
 
-// The four filter chips from the handoff. "Easy to cook" reads the dish
-// complexity; "Healthy" reads the (forward-looking) `healthy` tag (Decision: a
-// filter-only tag, no rule semantics) so the chip is inert until that tag is
-// populated rather than guessing health from other fields; "Breakfast"/"Lunch"
-// read the meal-time.
-const FILTERS = ["Easy to cook", "Healthy", "Breakfast", "Lunch"] as const;
-type Filter = (typeof FILTERS)[number];
+// The four filter chips from the handoff, shared with the picker sheets. See
+// `lib/dishFilters.ts` for the vocabulary and the matching semantics.
+const FILTERS = DISH_FILTERS;
+type Filter = DishFilter;
 
 // Which overlay (if any) is open over the feed. One value keeps the sheet stack
 // to at most one sheet at a time, matching the Day screen.
@@ -52,12 +50,7 @@ type Overlay =
 function matchesFilters(dishId: number, filters: Filter[]): boolean {
   const dish = dishById(dishId);
   if (!dish) return false;
-  if (filters.includes("Easy to cook") && dish.complexity !== "Easy") return false;
-  if (filters.includes("Healthy") && !dish.tags.some((t) => t.toLowerCase() === "healthy"))
-    return false;
-  if (filters.includes("Breakfast") && dish.time !== "Breakfast") return false;
-  if (filters.includes("Lunch") && dish.time !== "Lunch") return false;
-  return true;
+  return dishMatchesFilters(dish, filters);
 }
 
 export function ExploreScreen({ identity }: ExploreScreenProps) {

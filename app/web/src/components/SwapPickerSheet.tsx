@@ -19,8 +19,16 @@ import { anyApi } from "convex/server";
 import type { Dish } from "@plantry/engine";
 import type { Identity, Meal, ShortDay } from "../lib/types.js";
 import { complexityVariant, complexityLabel } from "../lib/library.js";
+import { PICKER_FILTERS, dishMatchesFilters, type DishFilter } from "../lib/dishFilters.js";
 import { dayLabel, mealLabel } from "../lib/days.js";
-import { Sheet, SearchField, SectionLabel, ComplexityTag, PrimaryButton } from "./primitives.js";
+import {
+  Sheet,
+  SearchField,
+  SectionLabel,
+  ComplexityTag,
+  PrimaryButton,
+  Chip,
+} from "./primitives.js";
 import { DishRow } from "./DishRow.js";
 import { DishDetailBody } from "./DishDetailBody.js";
 import { ReasonDialog } from "./ReasonDialog.js";
@@ -65,6 +73,10 @@ export function SwapPickerSheet({
   const addCustomOneOff = useMutation(anyApi.weekMutations.addCustomOneOff);
 
   const [q, setQ] = useState<string>("");
+  // Quick-filter chips, mirroring Explore. The meal is fixed by the slot, so the
+  // Breakfast/Lunch filters would be redundant and are dropped; only the
+  // meal-independent chips ("Easy to cook", "Healthy") show.
+  const [filters, setFilters] = useState<DishFilter[]>([]);
   const [choice, setChoice] = useState<Choice | null>(null);
   const [inFlight, setInFlight] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
@@ -79,13 +91,19 @@ export function SwapPickerSheet({
     setError(null);
   }
 
+  function toggleFilter(f: DishFilter) {
+    setFilters((prev) => (prev.includes(f) ? prev.filter((x) => x !== f) : [...prev, f]));
+  }
+
   const trimmedQuery = q.trim();
   const visible = useMemo(() => {
     const list = alternatives ?? [];
     const needle = trimmedQuery.toLowerCase();
-    if (!needle) return list;
-    return list.filter((d) => d.name.toLowerCase().includes(needle));
-  }, [alternatives, trimmedQuery]);
+    return list.filter(
+      (d) =>
+        (needle === "" || d.name.toLowerCase().includes(needle)) && dishMatchesFilters(d, filters),
+    );
+  }, [alternatives, trimmedQuery, filters]);
 
   async function handleSubmit(reason: string) {
     if (!choice || inFlight) return;
@@ -203,7 +221,7 @@ export function SwapPickerSheet({
   }
 
   return (
-    <Sheet onClose={onClose} tall>
+    <Sheet onClose={onClose} tall picker>
       <div className="reason__title">Replace {outgoingLabel}</div>
       <div className="reason__hint">
         {dayLabel(day)} {mealLabel(meal).toLowerCase()}; pick from the library or use a one off
@@ -214,6 +232,13 @@ export function SwapPickerSheet({
         placeholder="Search, or type a one off dish"
         autoFocus
       />
+      <div className="picker__filters" role="group" aria-label="Filters">
+        {PICKER_FILTERS.map((f) => (
+          <Chip key={f} active={filters.includes(f)} onClick={() => toggleFilter(f)}>
+            {f}
+          </Chip>
+        ))}
+      </div>
       {trimmedQuery.length > 0 && (
         <button
           type="button"
@@ -224,16 +249,29 @@ export function SwapPickerSheet({
         </button>
       )}
       {alternatives === undefined && <div className="picker__hint">Loading dishes...</div>}
-      {alternatives !== undefined && visible.length === 0 && trimmedQuery.length === 0 && (
-        <div className="picker__hint">No alternatives in the library for this meal.</div>
-      )}
-      {alternatives !== undefined && visible.length === 0 && trimmedQuery.length > 0 && (
-        <div className="picker__hint">No dish matches that name.</div>
-      )}
+      {alternatives !== undefined &&
+        visible.length === 0 &&
+        trimmedQuery.length === 0 &&
+        filters.length === 0 && (
+          <div className="picker__hint">No alternatives in the library for this meal.</div>
+        )}
+      {alternatives !== undefined &&
+        visible.length === 0 &&
+        (trimmedQuery.length > 0 || filters.length > 0) && (
+          <div className="picker__hint">
+            {trimmedQuery.length > 0 && filters.length > 0
+              ? "No dish matches your search and filters."
+              : trimmedQuery.length > 0
+                ? "No dish matches your search."
+                : "No dish matches those filters."}
+          </div>
+        )}
       {visible.length > 0 && (
         <div className="picker__results">
           <SectionLabel>
-            {trimmedQuery.length > 0 ? "From the library" : "Suggested for this day"}
+            {trimmedQuery.length === 0 && filters.length === 0
+              ? "Suggested for this day"
+              : "From the library"}
           </SectionLabel>
           {visible.map((d) => (
             <button

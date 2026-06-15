@@ -16,6 +16,7 @@ import { anyApi } from "convex/server";
 import type { Dish } from "@plantry/engine";
 import type { Identity, Meal, ShortDay } from "../lib/types.js";
 import { addablePool, complexityVariant, complexityLabel } from "../lib/library.js";
+import { PICKER_FILTERS, dishMatchesFilters, type DishFilter } from "../lib/dishFilters.js";
 import { dayLabel } from "../lib/days.js";
 import { Sheet, SearchField, SectionLabel, ComplexityTag, Chip } from "./primitives.js";
 import { DishRow } from "./DishRow.js";
@@ -45,16 +46,36 @@ export function AddDishSheet({
     availableMeals.includes("lunch") ? "lunch" : availableMeals[0],
   );
   const [q, setQ] = useState<string>("");
+  // Quick-filter chips, mirroring Explore. Only the non-redundant subset is
+  // shown here: the meal is already chosen via the meal chips above, so the
+  // Breakfast/Lunch filters would be duplicate controls.
+  const [filters, setFilters] = useState<DishFilter[]>([]);
   const [chosen, setChosen] = useState<Dish | null>(null);
   const [inFlight, setInFlight] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
 
+  function toggleFilter(f: DishFilter) {
+    setFilters((prev) => (prev.includes(f) ? prev.filter((x) => x !== f) : [...prev, f]));
+  }
+
+  const trimmedQuery = q.trim();
   const visible = useMemo(() => {
     const pool = addablePool(meal, weekStart);
-    const needle = q.trim().toLowerCase();
-    if (!needle) return pool;
-    return pool.filter((d) => d.name.toLowerCase().includes(needle));
-  }, [meal, weekStart, q]);
+    const needle = trimmedQuery.toLowerCase();
+    return pool.filter(
+      (d) =>
+        (needle === "" || d.name.toLowerCase().includes(needle)) && dishMatchesFilters(d, filters),
+    );
+  }, [meal, weekStart, trimmedQuery, filters]);
+
+  // Empty-state copy reflects what is actually narrowing the list, so a name-only
+  // search does not falsely blame filters (and vice versa).
+  const emptyMessage =
+    trimmedQuery.length > 0 && filters.length > 0
+      ? "No dish matches your search and filters."
+      : trimmedQuery.length > 0
+        ? "No dish matches your search."
+        : "No dish matches those filters.";
 
   async function handleSubmit(reason: string) {
     if (!chosen || inFlight) return;
@@ -103,7 +124,7 @@ export function AddDishSheet({
   }
 
   return (
-    <Sheet onClose={onClose} tall>
+    <Sheet onClose={onClose} tall picker>
       <div className="reason__title">Add a dish</div>
       <div className="reason__hint">To {dayLabel(day)}; pick from the library</div>
       {availableMeals.length > 1 && (
@@ -119,10 +140,17 @@ export function AddDishSheet({
         </div>
       )}
       <SearchField value={q} onChange={setQ} placeholder="Search dishes" autoFocus />
+      <div className="picker__filters" role="group" aria-label="Filters">
+        {PICKER_FILTERS.map((f) => (
+          <Chip key={f} active={filters.includes(f)} onClick={() => toggleFilter(f)}>
+            {f}
+          </Chip>
+        ))}
+      </div>
       {visible.length === 0 ? (
-        <div className="picker__hint">No dish matches that name.</div>
+        <div className="picker__hint">{emptyMessage}</div>
       ) : (
-        <>
+        <div className="picker__results">
           <SectionLabel>Library dishes</SectionLabel>
           {visible.map((d) => (
             <button key={d.id} type="button" className="picker__row" onClick={() => setChosen(d)}>
@@ -145,7 +173,7 @@ export function AddDishSheet({
               />
             </button>
           ))}
-        </>
+        </div>
       )}
     </Sheet>
   );
