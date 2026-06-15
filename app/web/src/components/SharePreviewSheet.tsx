@@ -241,10 +241,10 @@ export function SharePreviewSheet({ week, grocery, onClose }: SharePreviewSheetP
             </div>
             <div className="share__slide-frame">
               {slide.kind === "menu" ? (
-                // The menu canvas: drawn at 3x backing store, displayed at its
-                // logical width (100% of the frame) via inline width/height set
-                // by drawMenuShareCanvas. This is the exact canvas exported, so
-                // the preview and the PNG are one source.
+                // The menu canvas: drawn at 3x backing store, displayed at 100%
+                // of the frame via .share__menu-canvas (width:100%; height:auto)
+                // off the backing store's aspect ratio. This is the exact canvas
+                // exported, so the preview and the PNG are one source.
                 <canvas ref={menuCanvasRef} className="share__menu-canvas" />
               ) : (
                 slide.node
