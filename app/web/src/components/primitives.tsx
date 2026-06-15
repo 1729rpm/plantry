@@ -244,6 +244,114 @@ export function TabBar({ active, onTab }: { active: TabKey; onTab: (tab: TabKey)
   );
 }
 
+// Browser-Back integration for sheets, owned by ONE module-level controller
+// rather than by each Sheet instance.
+//
+// THE PROBLEM WITH PER-SHEET MARKERS
+// ----------------------------------
+// The app's overlay is a single state value, so opening a follow-on sheet
+// unmounts the current Sheet and mounts the new one in the SAME React commit.
+// React runs the unmounting child's cleanup BEFORE the mounting child's setup.
+// If each Sheet pushed its own history entry and popped it on cleanup, the old
+// sheet's cleanup would call history.back() (its marker is still top), then the
+// new sheet would pushState, then the deferred popstate from that back() would
+// land on the new sheet and close it. Net: every sheet-to-sheet transition
+// closes the freshly opened sheet. You also cannot remove a buried entry
+// without disturbing the top one, because history.back() always pops the top.
+//
+// THE MODEL
+// ---------
+// There is exactly ONE history marker for "a sheet is open", regardless of how
+// many sheets are stacked. The controller keeps a stack of open sheets (each
+// with a stable id and a ref to its latest close fn). The marker is pushed when
+// the stack goes empty -> non-empty and is removed when the last sheet closes.
+//  - A real browser Back fires popstate: we mark the marker consumed and close
+//    the TOP sheet. We do not touch history (the browser already popped it). If
+//    sheets remain after that sheet unmounts, we re-push one marker so the next
+//    Back is still caught.
+//  - A programmatic close (scrim / button / onDone) that empties the stack pops
+//    our marker with history.back(), but DEFERRED via queueMicrotask: on a
+//    sibling swap the old sheet unregisters (stack transiently empty) and the
+//    new sheet registers synchronously right after, before the microtask runs,
+//    so the deferred check sees a non-empty stack and does NOT pop. Only a
+//    genuine last-close leaves the stack empty when the microtask runs.
+type SheetCloseRef = { current: () => void };
+type SheetEntry = { id: string; closeRef: SheetCloseRef };
+
+const sheetHistory = (() => {
+  const stack: SheetEntry[] = [];
+  let markerPresent = false;
+  let listening = false;
+  // Set when a popstate (real browser Back) consumed our marker, so the close it
+  // triggers is distinguished from a programmatic close during unregister.
+  let consumedByPopstate = false;
+
+  function onPopState() {
+    consumedByPopstate = true;
+    const top = stack[stack.length - 1];
+    if (top) top.closeRef.current();
+  }
+
+  function addMarker() {
+    window.history.pushState({ plantrySheet: true }, "");
+    markerPresent = true;
+    if (!listening) {
+      window.addEventListener("popstate", onPopState);
+      listening = true;
+    }
+  }
+
+  function removeListener() {
+    if (listening) {
+      window.removeEventListener("popstate", onPopState);
+      listening = false;
+    }
+  }
+
+  function register(entry: SheetEntry) {
+    stack.push(entry);
+    // Push the single marker only when the FIRST sheet opens. If a marker is
+    // already present (subsequent stacked sheet, or a sibling swap whose
+    // deferred pop was cancelled by this very registration), do not push again.
+    if (!markerPresent) addMarker();
+  }
+
+  function unregister(entry: SheetEntry) {
+    const idx = stack.indexOf(entry);
+    if (idx !== -1) stack.splice(idx, 1);
+
+    if (consumedByPopstate) {
+      // This sheet closed because the browser popped our marker. The marker is
+      // already gone from history; do not pop again.
+      consumedByPopstate = false;
+      if (stack.length > 0) {
+        // Other sheets remain open: re-arm a marker so the next Back is caught.
+        addMarker();
+      } else {
+        markerPresent = false;
+        removeListener();
+      }
+      return;
+    }
+
+    // Programmatic close (scrim / button / onDone). If the stack is empty now,
+    // defer the marker removal: a sibling swap will re-register synchronously
+    // before the microtask runs, leaving the stack non-empty and cancelling the
+    // pop. Only a genuine last-close stays empty.
+    if (stack.length === 0 && markerPresent) {
+      queueMicrotask(() => {
+        if (stack.length === 0 && markerPresent && !consumedByPopstate) {
+          markerPresent = false;
+          removeListener();
+          window.history.back();
+        }
+      });
+    }
+  }
+
+  return { register, unregister };
+})();
+
 /** Bottom sheet with a scrim. Children scroll if tall. `tall` raises the panel's
  *  max height for the long pickers (swap, add-a-dish) per the handoff's 92%. */
 export function Sheet({
@@ -268,59 +376,42 @@ export function Sheet({
     };
   }, []);
 
-  // Browser-Back integration. The app uses no history API anywhere else (tab
-  // nav is React state), so on mount each open sheet pushes one marker entry
-  // tagged with a unique id; a Back gesture or button pops it, firing popstate,
-  // which we treat as a close request. Nested or stacked sheets (swap picker ->
-  // confirm, or the Day screen's action -> swap -> reason chain) each push their
-  // own entry, so Back closes the topmost sheet first, then the next.
-  //
-  // `onClose` lives in a ref so this effect runs exactly once per mount (an
-  // onClose identity change must not tear down and re-push the marker).
-  //
-  // Cleanup has two unmount paths:
-  //  - Back already popped our marker (popstate fired): the entry is gone, so we
-  //    must NOT pop again or we would navigate the real app away.
-  //  - Programmatic close (scrim/button/onDone): we pop our marker with
-  //    history.back() so history does not accumulate. But when one sheet is
-  //    swapped for a SIBLING sheet (e.g. action -> swap), React unmounts the old
-  //    Sheet and mounts the new one in the same commit; the new sheet's
-  //    pushState runs synchronously during the old sheet's cleanup, so by the
-  //    time we would pop, OUR marker is no longer the top entry. We therefore
-  //    only pop when our id is still the current history.state, which is true
-  //    exactly when no newer sheet has stacked on top of us. The newer sheet
-  //    owns the top entry and pops itself when it closes.
+  // Browser-Back integration. Register this sheet with the single module-level
+  // controller on mount, unregister on unmount. `onClose` lives in a ref so the
+  // controller always calls the latest close fn and an onClose identity change
+  // does not re-register the sheet (which would push a duplicate marker).
   const onCloseRef = useRef(onClose);
   onCloseRef.current = onClose;
-  const markerIdRef = useRef<string>("");
-  if (markerIdRef.current === "") {
-    markerIdRef.current = `pt-sheet-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
-  }
   useEffect(() => {
-    const markerId = markerIdRef.current;
-    let closedByPopstate = false;
-    const onPopState = () => {
-      closedByPopstate = true;
-      onCloseRef.current();
+    const entry: SheetEntry = {
+      id: `pt-sheet-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+      closeRef: onCloseRef,
     };
-    window.history.pushState({ plantrySheetId: markerId }, "");
-    window.addEventListener("popstate", onPopState);
-    return () => {
-      window.removeEventListener("popstate", onPopState);
-      const state = window.history.state as { plantrySheetId?: string } | null;
-      if (!closedByPopstate && state?.plantrySheetId === markerId) {
-        window.history.back();
-      }
-    };
+    sheetHistory.register(entry);
+    return () => sheetHistory.unregister(entry);
+  }, []);
+
+  // Move focus into the sheet panel on open so keyboard and screen-reader focus
+  // follows the modal (engineering.md §16 invariant). Not a full focus trap: we
+  // only move focus IN, and only if nothing inside the panel already holds it,
+  // so sheets with an autoFocus search field / textarea keep that focus.
+  const panelRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    const panel = panelRef.current;
+    if (panel && !panel.contains(document.activeElement)) {
+      panel.focus();
+    }
   }, []);
 
   return (
     <div className="sheet">
       <button type="button" className="sheet__scrim" aria-label="Close" onClick={onClose} />
       <div
+        ref={panelRef}
         className={`sheet__panel${tall ? " sheet__panel--tall" : ""}`}
         role="dialog"
         aria-modal="true"
+        tabIndex={-1}
       >
         <div className="sheet__grabber" />
         <div className="sheet__scroll">{children}</div>
