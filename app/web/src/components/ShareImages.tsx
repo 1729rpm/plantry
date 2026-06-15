@@ -126,13 +126,13 @@ export function MenuShareImage({ week }: { week: CurrentWeek }) {
                   {day.breakfast.length > 0 && (
                     <div className="share-img__meal">
                       <span className="share-img__meal-label">Breakfast</span>
-                      {day.breakfast.join(", ")}
+                      <span className="share-img__meal-dishes">{day.breakfast.join(", ")}</span>
                     </div>
                   )}
                   {day.lunch.length > 0 && (
                     <div className="share-img__meal">
                       <span className="share-img__meal-label">Lunch</span>
-                      {day.lunch.join(", ")}
+                      <span className="share-img__meal-dishes">{day.lunch.join(", ")}</span>
                     </div>
                   )}
                 </>

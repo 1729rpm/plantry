@@ -207,25 +207,30 @@ export function SharePreviewSheet({ week, grocery, onClose }: SharePreviewSheetP
         ))}
       </div>
 
-      {recipes.length === 0 && (
-        <div className="share__hint">
-          Turn on a dish&rsquo;s &ldquo;include recipe when sharing&rdquo; toggle to add recipe
-          sheets.
-        </div>
-      )}
+      {/* Sticky footer: the status hints/error sit just above the Send button so
+          they stay visible while the rail above scrolls, and Send stays pinned
+          to the bottom of the sheet so it is always reachable. */}
+      <div className="share__footer">
+        {recipes.length === 0 && (
+          <div className="share__hint">
+            Turn on a dish&rsquo;s &ldquo;include recipe when sharing&rdquo; toggle to add recipe
+            sheets.
+          </div>
+        )}
 
-      {status === "error" && (
-        <div className="share__error">Could not build the images. Please try again.</div>
-      )}
-      {status === "downloaded" && (
-        <div className="share__hint">
-          Images saved to this phone. Attach them in WhatsApp to send.
-        </div>
-      )}
+        {status === "error" && (
+          <div className="share__error">Could not build the images. Please try again.</div>
+        )}
+        {status === "downloaded" && (
+          <div className="share__hint">
+            Images saved to this phone. Attach them in WhatsApp to send.
+          </div>
+        )}
 
-      <PrimaryButton className="share__send" onClick={handleSend} disabled={sending}>
-        {sending ? "Preparing images..." : "Send images"}
-      </PrimaryButton>
+        <PrimaryButton className="share__send" onClick={handleSend} disabled={sending}>
+          {sending ? "Preparing images..." : "Send images"}
+        </PrimaryButton>
+      </div>
 
       {/* Hidden capture stage. Each node renders at the share images' true 360px
           width, off-screen, so html-to-image can paint a crisp PNG without the
