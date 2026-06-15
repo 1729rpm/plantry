@@ -1585,10 +1585,9 @@ input {
   display: flex;
   flex-wrap: wrap;
   gap: 5px;
-  /* Cap the pill set at two lines: pill line-height (~17px) + 5px row gap,
-     doubled, so a third line clips rather than pushing the card taller. */
-  max-height: 39px;
-  overflow: hidden;
+  /* exploreCardTags (lib/library.ts) bounds this to at most 3 pills, so the
+     set wraps to at most two lines. No height cap is needed; flex-wrap
+     handles the wrap. */
 }
 
 .explore-sheet__why {
