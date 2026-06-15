@@ -3,7 +3,7 @@
 // components with CSS classes reading the tokens in index.css. Behaviour is the
 // contract, not the prototype's window-global implementation.
 
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 import type { CSSProperties, ReactNode } from "react";
 import type { Identity } from "../lib/types.js";
 import type { ComplexityVariant } from "../lib/library.js";
@@ -265,6 +265,52 @@ export function Sheet({
     document.body.style.overflow = "hidden";
     return () => {
       document.body.style.overflow = previous;
+    };
+  }, []);
+
+  // Browser-Back integration. The app uses no history API anywhere else (tab
+  // nav is React state), so on mount each open sheet pushes one marker entry
+  // tagged with a unique id; a Back gesture or button pops it, firing popstate,
+  // which we treat as a close request. Nested or stacked sheets (swap picker ->
+  // confirm, or the Day screen's action -> swap -> reason chain) each push their
+  // own entry, so Back closes the topmost sheet first, then the next.
+  //
+  // `onClose` lives in a ref so this effect runs exactly once per mount (an
+  // onClose identity change must not tear down and re-push the marker).
+  //
+  // Cleanup has two unmount paths:
+  //  - Back already popped our marker (popstate fired): the entry is gone, so we
+  //    must NOT pop again or we would navigate the real app away.
+  //  - Programmatic close (scrim/button/onDone): we pop our marker with
+  //    history.back() so history does not accumulate. But when one sheet is
+  //    swapped for a SIBLING sheet (e.g. action -> swap), React unmounts the old
+  //    Sheet and mounts the new one in the same commit; the new sheet's
+  //    pushState runs synchronously during the old sheet's cleanup, so by the
+  //    time we would pop, OUR marker is no longer the top entry. We therefore
+  //    only pop when our id is still the current history.state, which is true
+  //    exactly when no newer sheet has stacked on top of us. The newer sheet
+  //    owns the top entry and pops itself when it closes.
+  const onCloseRef = useRef(onClose);
+  onCloseRef.current = onClose;
+  const markerIdRef = useRef<string>("");
+  if (markerIdRef.current === "") {
+    markerIdRef.current = `pt-sheet-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+  }
+  useEffect(() => {
+    const markerId = markerIdRef.current;
+    let closedByPopstate = false;
+    const onPopState = () => {
+      closedByPopstate = true;
+      onCloseRef.current();
+    };
+    window.history.pushState({ plantrySheetId: markerId }, "");
+    window.addEventListener("popstate", onPopState);
+    return () => {
+      window.removeEventListener("popstate", onPopState);
+      const state = window.history.state as { plantrySheetId?: string } | null;
+      if (!closedByPopstate && state?.plantrySheetId === markerId) {
+        window.history.back();
+      }
     };
   }, []);
 

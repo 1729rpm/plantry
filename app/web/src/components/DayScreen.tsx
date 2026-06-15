@@ -1,7 +1,7 @@
 // Day screen. Opened from a Menu day card's Edit button. The single entry point
 // to the editing family: it renders the day's dishes as tappable rows (tap a
 // library dish for details, tap "..." for the action sheet), and the day-level
-// actions (Add a dish, Skip / Restore, Comment on this day). All edits apply to
+// actions (Add a dish, Skip / Restore). All edits apply to
 // the live week immediately through the 4.1 mutations; the Convex subscription
 // streams the new version back so the next edit carries fresh optimistic-
 // concurrency state. Day-level or dish-level only: a meal block is never edited
@@ -19,7 +19,6 @@ import { DishActionSheet } from "./DishActionSheet.js";
 import { DishDetailSheet } from "./DishDetailSheet.js";
 import { SwapPickerSheet } from "./SwapPickerSheet.js";
 import { AddDishSheet } from "./AddDishSheet.js";
-import { CommentSheet, type CommentTarget } from "./CommentSheet.js";
 import { ReasonDialog } from "./ReasonDialog.js";
 
 interface DayScreenProps {
@@ -37,8 +36,7 @@ type Overlay =
   | { kind: "swap"; meal: Meal; position: number }
   | { kind: "add" }
   | { kind: "skip" }
-  | { kind: "restore" }
-  | { kind: "comment"; target: CommentTarget };
+  | { kind: "restore" };
 
 const MEALS: Meal[] = ["breakfast", "lunch"];
 
@@ -205,13 +203,6 @@ export function DayScreen({ day, identity, onBack }: DayScreenProps) {
           )}
           <button
             type="button"
-            className="day-screen__comment"
-            onClick={() => setOverlay({ kind: "comment", target: { kind: "day", weekStart, day } })}
-          >
-            Comment on this day
-          </button>
-          <button
-            type="button"
             className="day-screen__skip"
             onClick={() => setOverlay({ kind: "skip" })}
           >
@@ -267,18 +258,6 @@ export function DayScreen({ day, identity, onBack }: DayScreenProps) {
               }
               onDelete={() =>
                 setOverlay({ kind: "action", meal: overlay.meal, position: overlay.position })
-              }
-              onComment={() =>
-                setOverlay({
-                  kind: "comment",
-                  target: {
-                    kind: "dish",
-                    weekStart,
-                    day,
-                    dishId,
-                    dishLabel: pickLabel(pick),
-                  },
-                })
               }
               onClose={closeOverlay}
             />
@@ -336,10 +315,6 @@ export function DayScreen({ day, identity, onBack }: DayScreenProps) {
           onSubmit={handleRestore}
           onClose={closeOverlay}
         />
-      )}
-
-      {overlay.kind === "comment" && (
-        <CommentSheet target={overlay.target} identity={identity} onClose={closeOverlay} />
       )}
     </div>
   );
