@@ -42,11 +42,25 @@ describe("coverageReport", () => {
     expect(cov.withPhoto).toBe(1);
   });
 
-  it("counts macro coverage only over macro-relevant catalog rows", () => {
+  it("counts macro coverage per family, only over macro-relevant catalog rows", () => {
     const catalog: CatalogIngredient[] = [
       // Macro-relevant (food groups):
-      { ingredient: "Paneer", group: "Proteins and Dairy", unit: "g", proteinPer100g: 18, special: false },
-      { ingredient: "Rice", group: "Pantry", unit: "g", special: false }, // relevant, no macros
+      {
+        ingredient: "Paneer",
+        group: "Proteins and Dairy",
+        unit: "g",
+        proteinPer100g: 18,
+        fatPer100g: 20,
+        special: false,
+      }, // protein + fat, no fibre
+      {
+        ingredient: "Rice",
+        group: "Pantry",
+        unit: "g",
+        carbsPer100g: 78,
+        fiberPer100g: 1.2,
+        special: false,
+      }, // carbs + fibre, no fat
       { ingredient: "Carrot", group: "Vegetables", unit: "g", special: false }, // relevant, no macros
       // Not macro-relevant (aromatics / other), excluded from the denominator:
       { ingredient: "Onion", group: "Aromatics and Herbs", unit: "g", special: false },
@@ -54,15 +68,23 @@ describe("coverageReport", () => {
     ];
     const cov = coverageReport([], catalog);
     expect(cov.macroRelevantCount).toBe(3);
-    expect(cov.macroRelevantWithMacros).toBe(1);
+    // protein/carbs presence: Paneer (protein) + Rice (carbs) = 2.
+    expect(cov.macroRelevantWithMacros).toBe(2);
+    // fat presence: Paneer only.
+    expect(cov.macroRelevantWithFat).toBe(1);
+    // fibre presence: Rice only.
+    expect(cov.macroRelevantWithFiber).toBe(1);
   });
 
   it("reads full macro and enrichment coverage on live data (enrichment complete)", () => {
     const { library, catalog } = loadLiveData();
     const cov = coverageReport(library, catalog);
-    // Every macro-relevant catalog row carries macros (slice 2.2 onward).
+    // Every macro-relevant catalog row carries macros (slice 2.2 onward),
+    // including the fat and fibre columns the calorie and Healthy inputs need.
     expect(cov.macroRelevantCount).toBeGreaterThan(0);
     expect(cov.macroRelevantWithMacros).toBe(cov.macroRelevantCount);
+    expect(cov.macroRelevantWithFat).toBe(cov.macroRelevantCount);
+    expect(cov.macroRelevantWithFiber).toBe(cov.macroRelevantCount);
     // The B1 enrichment track is complete: every active dish carries a
     // description, recipe, and complexity. This now guards that the library
     // STAYS fully enriched — a new dish shipped without these (expansion dishes
