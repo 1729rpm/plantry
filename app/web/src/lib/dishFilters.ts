@@ -2,11 +2,13 @@
 // filter chips: the Explore feed and the two picker sheets (swap, add-a-dish).
 // Keeping the semantics in one place means a chip means exactly the same thing
 // wherever it appears. "Easy to cook" reads the dish complexity; "Healthy"
-// reads the (forward-looking) `healthy` tag (a filter-only tag with no rule
-// semantics, so the chip is inert until that tag is populated rather than
-// guessing health from other fields); "Breakfast"/"Lunch" read the meal-time.
+// reads the engine-derived `healthy` flag (engine.md §11: at least 30 percent
+// of calories from protein AND at least 3 g of fibre per person, calories via
+// Atwater), resolved through dishIsHealthy so the threshold lives only in the
+// engine; "Breakfast"/"Lunch" read the meal-time.
 
 import type { Dish } from "@plantry/engine";
+import { dishIsHealthy } from "./healthy.js";
 
 // The full filter set, mirrored from the Explore feed. Each surface renders the
 // subset that is meaningful there (the pickers drop the meal chips because the
@@ -23,8 +25,7 @@ export const PICKER_FILTERS: DishFilter[] = ["Easy to cook", "Healthy"];
  *  selected chips, matching the Explore feed. */
 export function dishMatchesFilters(dish: Dish, filters: DishFilter[]): boolean {
   if (filters.includes("Easy to cook") && dish.complexity !== "Easy") return false;
-  if (filters.includes("Healthy") && !dish.tags.some((t) => t.toLowerCase() === "healthy"))
-    return false;
+  if (filters.includes("Healthy") && !dishIsHealthy(dish)) return false;
   if (filters.includes("Breakfast") && dish.time !== "Breakfast") return false;
   if (filters.includes("Lunch") && dish.time !== "Lunch") return false;
   return true;
