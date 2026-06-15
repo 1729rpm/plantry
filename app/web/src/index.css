@@ -848,6 +848,17 @@ input {
   max-height: 92%;
 }
 
+/* Search pickers (swap, add-a-dish) pin to a STABLE height so the panel does
+   not jump as the result count changes (down to a single match or none). The
+   header region (title, subtitle, meal chips, search field, quick filters)
+   stays put and the results list absorbs the variation by scrolling inside
+   `.sheet__scroll`. Scoped to the pickers; reason dialogs and the dish action
+   sheet still size to their content. `height` wins over the inherited
+   `max-height`, and 92% matches the tall pickers' ceiling. */
+.sheet__panel--picker {
+  height: 92%;
+}
+
 .reason__title {
   font-family: var(--pt-font-serif);
   font-size: 20px;
@@ -960,12 +971,32 @@ input {
   min-height: 48px;
 }
 
-/* Gap between the search field (or the one-off button) and the results section
-   label in the swap picker, matching the handoff's 14px top margin. Scoped to
-   the picker so other section labels are untouched. The fixed top margin keeps
-   the gap consistent whether or not the "Use ... as a one off" button is
-   present. */
-.picker__results .section-label {
+/* Search picker spacing rhythm (swap, add-a-dish). The subtitle hugs the title
+   (its own 4px top margin) and the search bar gets clear separation above it so
+   the title + subtitle read as one group. The section label below then hugs the
+   results list and sits well clear of the search bar, so the label groups with
+   the list, not the bar. */
+.sheet__panel--picker .search-field {
+  margin-top: 16px;
+}
+
+/* Quick-filter chip row under the search field, reusing the Explore filter-row
+   layout but without Explore's screen padding (the picker provides its own
+   inset). Sits between the search field and the results. */
+.picker__filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 10px;
+}
+
+/* Gap between the search field / filters / one-off button above and the results
+   section label, matching the handoff's 14px top margin. Scoped to the picker
+   so other section labels are untouched. The fixed top margin keeps the gap
+   consistent regardless of what precedes the list, and the 2px bottom margin
+   hugs the list. */
+.picker__results .section-label,
+.sheet__panel--picker .section-label {
   margin-top: 14px;
   margin-bottom: 2px;
 }
@@ -1011,7 +1042,7 @@ input {
 .add-dish__meals {
   display: flex;
   gap: 8px;
-  margin: 10px 0;
+  margin: 10px 0 0;
 }
 
 /* ------------------------------------------------------------------ */
