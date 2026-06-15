@@ -5,10 +5,19 @@
 // client-side and hands the set to the OS share sheet.
 //
 // Rendering (design-revamp §1.7): the slides on screen and the exported PNGs
-// come from the same ShareImages components, so they cannot drift (the
-// DOM-to-image discipline). To export at a crisp 3x without showing a giant
-// off-screen copy, a hidden capture stage holds a 360px-wide render of each
-// slide; html-to-image walks that node and paints it to a PNG at pixelRatio 3.
+// come from the same source, so they cannot drift (the single-source
+// discipline).
+//   - MENU: a <canvas> rendered by menuShareCanvas.ts. The SAME canvas element
+//     is shown in the rail and read for the export blob. The menu used to go
+//     through html-to-image, but that froze each element's height and re-wrapped
+//     the dish text inside an SVG foreignObject; on real iOS Safari it re-wrapped
+//     to more lines than the frozen height allowed and the breakfast list spilled
+//     onto the lunch row. The canvas lays text out manually (measureText +
+//     manual line-breaking), so overlap is structurally impossible.
+//   - GROCERY + RECIPE: still html-to-image. A hidden capture stage holds a
+//     360px-wide render of each; html-to-image walks that node and paints a PNG
+//     at pixelRatio 3. They have not shown the foreignObject bug, so converting
+//     them is out of scope (the shared risk is noted in the PR diagnosis card).
 //
 // Delivery: the Web Share API level 2 (files) opens the native share sheet with
 // all the PNGs attached, which is how an installed PWA shares into WhatsApp on
@@ -16,19 +25,15 @@
 // browsers) the fallback downloads every image so the user can attach them by
 // hand. No server, no Convex action: the whole family is produced on the phone.
 
-import { useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { toBlob } from "html-to-image";
 import type { Dish } from "@plantry/engine";
 import type { CurrentWeek } from "../lib/types.js";
 import { dishById } from "../lib/library.js";
 import { weekRangeLabel } from "../lib/days.js";
 import { Sheet, PrimaryButton } from "./primitives.js";
-import {
-  MenuShareImage,
-  GroceryShareImage,
-  RecipeShareImage,
-  type ShareGroceryGroup,
-} from "./ShareImages.js";
+import { GroceryShareImage, RecipeShareImage, type ShareGroceryGroup } from "./ShareImages.js";
+import { drawMenuShareCanvas, ensureMenuShareFonts, menuCanvasToBlob } from "./menuShareCanvas.js";
 
 interface SharePreviewSheetProps {
   week: CurrentWeek;
@@ -36,11 +41,14 @@ interface SharePreviewSheetProps {
   onClose: () => void;
 }
 
+// A rail slide. The menu slide is the canvas (kind: "menu", no React node); the
+// grocery and recipe slides are html-to-image capture nodes.
 interface Slide {
   id: string;
   label: string;
   fileSlug: string;
-  node: React.ReactNode;
+  kind: "menu" | "capture";
+  node?: React.ReactNode;
 }
 
 // The dishes the week has marked "include recipe when sharing", in week order,
@@ -72,6 +80,8 @@ function safeSlug(name: string): string {
 
 export function SharePreviewSheet({ week, grocery, onClose }: SharePreviewSheetProps) {
   const stageRef = useRef<HTMLDivElement>(null);
+  // The single canvas that backs both the menu preview slide and the menu PNG.
+  const menuCanvasRef = useRef<HTMLCanvasElement>(null);
   const [status, setStatus] = useState<"idle" | "working" | "shared" | "downloaded" | "error">(
     "idle",
   );
@@ -79,53 +89,80 @@ export function SharePreviewSheet({ week, grocery, onClose }: SharePreviewSheetP
   const recipes = useMemo(() => includedDishes(week), [week]);
   const rangeLabel = weekRangeLabel(week.weekStart);
 
+  // Render the menu canvas once the fonts are loaded. measureText/fillText fall
+  // back silently to a system font if the webfont is not yet ready, which would
+  // change wrap points and break the layout->draw contract, so we await the
+  // exact faces/weights/sizes first and only then draw. Re-runs if the week
+  // changes while the sheet is open.
+  useEffect(() => {
+    let cancelled = false;
+    ensureMenuShareFonts().then(() => {
+      if (cancelled) return;
+      const canvas = menuCanvasRef.current;
+      if (canvas) drawMenuShareCanvas(canvas, week);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [week]);
+
   const slides: Slide[] = useMemo(() => {
     const list: Slide[] = [
       {
         id: "menu",
         label: "Menu",
         fileSlug: "menu",
-        node: <MenuShareImage week={week} />,
+        kind: "menu",
       },
       {
         id: "grocery",
         label: "Grocery list",
         fileSlug: "grocery",
+        kind: "capture",
         node: <GroceryShareImage groups={grocery} weekStart={week.weekStart} />,
       },
       ...recipes.map((dish) => ({
         id: `recipe-${dish.id}`,
         label: dish.name,
         fileSlug: `recipe-${safeSlug(dish.name)}`,
+        kind: "capture" as const,
         node: <RecipeShareImage dish={dish} />,
       })),
     ];
     return list;
-  }, [week, grocery, recipes]);
+  }, [grocery, week.weekStart, recipes]);
 
-  // Render each capture node to a PNG File. The nodes live in the hidden stage
-  // below, keyed by slide id; we read them out of the stage in slide order.
+  // Render each slide to a PNG File, in rail order. Per-slide routing:
+  //   - menu   -> the canvas's own toBlob (the same canvas shown in the rail);
+  //              no html-to-image, so no foreignObject reflow.
+  //   - others -> html-to-image walks the hidden capture node at pixelRatio 3.
   async function renderFiles(): Promise<File[]> {
     const stage = stageRef.current;
-    if (!stage) return [];
     const files: File[] = [];
+    const nameFor = (slug: string) =>
+      `plantry-${rangeLabel.replace(/\s+/g, "-").toLowerCase()}-${slug}.png`;
+
     for (const slide of slides) {
-      const node = stage.querySelector<HTMLElement>(`[data-capture="${slide.id}"]`);
-      if (!node) continue;
-      // pixelRatio 3 matches the handoff's "exported at 3x" so the PNG is crisp
-      // on a phone. cacheBust avoids a stale data-URL when the same node renders
-      // twice across share attempts.
-      const blob = await toBlob(node, { pixelRatio: 3, cacheBust: true });
+      let blob: Blob | null = null;
+      if (slide.kind === "menu") {
+        const canvas = menuCanvasRef.current;
+        if (!canvas) continue;
+        // Fonts must be loaded before the canvas is correct. The effect draws on
+        // font-ready, but guard here in case Send fires during a cold start.
+        await ensureMenuShareFonts();
+        drawMenuShareCanvas(canvas, week);
+        blob = await menuCanvasToBlob(canvas);
+      } else {
+        if (!stage) continue;
+        const node = stage.querySelector<HTMLElement>(`[data-capture="${slide.id}"]`);
+        if (!node) continue;
+        // pixelRatio 3 matches the handoff's "exported at 3x" so the PNG is crisp
+        // on a phone. cacheBust avoids a stale data-URL when the same node renders
+        // twice across share attempts.
+        blob = await toBlob(node, { pixelRatio: 3, cacheBust: true });
+      }
       if (!blob) continue;
-      files.push(
-        new File(
-          [blob],
-          `plantry-${rangeLabel.replace(/\s+/g, "-").toLowerCase()}-${slide.fileSlug}.png`,
-          {
-            type: "image/png",
-          },
-        ),
-      );
+      files.push(new File([blob], nameFor(slide.fileSlug), { type: "image/png" }));
     }
     return files;
   }
@@ -202,7 +239,17 @@ export function SharePreviewSheet({ week, grocery, onClose }: SharePreviewSheetP
             <div className="share__slide-label">
               {i + 1} of {slides.length} &middot; {slide.label}
             </div>
-            <div className="share__slide-frame">{slide.node}</div>
+            <div className="share__slide-frame">
+              {slide.kind === "menu" ? (
+                // The menu canvas: drawn at 3x backing store, displayed at its
+                // logical width (100% of the frame) via inline width/height set
+                // by drawMenuShareCanvas. This is the exact canvas exported, so
+                // the preview and the PNG are one source.
+                <canvas ref={menuCanvasRef} className="share__menu-canvas" />
+              ) : (
+                slide.node
+              )}
+            </div>
           </div>
         ))}
       </div>
@@ -232,16 +279,20 @@ export function SharePreviewSheet({ week, grocery, onClose }: SharePreviewSheetP
         </PrimaryButton>
       </div>
 
-      {/* Hidden capture stage. Each node renders at the share images' true 360px
-          width, off-screen, so html-to-image can paint a crisp PNG without the
-          giant render ever being visible. aria-hidden + off-screen, not
-          display:none, because html-to-image needs a laid-out node to walk. */}
+      {/* Hidden capture stage for the html-to-image slides (grocery + recipe).
+          Each node renders at the share images' true 360px width, off-screen, so
+          html-to-image can paint a crisp PNG without the giant render ever being
+          visible. aria-hidden + off-screen, not display:none, because
+          html-to-image needs a laid-out node to walk. The menu is NOT here: it
+          is the canvas in the rail above, which exports itself. */}
       <div ref={stageRef} className="share__stage" aria-hidden="true">
-        {slides.map((slide) => (
-          <div key={slide.id} data-capture={slide.id} className="share__capture">
-            {slide.node}
-          </div>
-        ))}
+        {slides
+          .filter((slide) => slide.kind === "capture")
+          .map((slide) => (
+            <div key={slide.id} data-capture={slide.id} className="share__capture">
+              {slide.node}
+            </div>
+          ))}
       </div>
     </Sheet>
   );
