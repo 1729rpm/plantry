@@ -161,12 +161,18 @@ input {
   font-family: var(--pt-font-sans);
 }
 
-/* Chip / filter pill */
+/* Chip / filter pill. The visible pill is kept short (~34px) so a row of chips
+   (the picker meal toggle and quick filters, the reason quick-chips) does not
+   eat the vertical space a 44px-tall pill did. A transparent ::after overlay
+   extends the tap target back to 44px, centred on the pill and overflowing into
+   the row gap above and below, so the hit area stays accessible while the pill
+   reads shorter. */
 .chip {
+  position: relative;
   font-size: 13px;
   font-weight: 600;
   border-radius: var(--pt-radius-pill);
-  padding: 8px 14px;
+  padding: 6px 14px;
   font-family: var(--pt-font-sans);
   white-space: nowrap;
   background: var(--pt-surface);
@@ -175,7 +181,17 @@ input {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  min-height: 44px;
+  min-height: 34px;
+}
+
+.chip::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 50%;
+  height: 44px;
+  transform: translateY(-50%);
 }
 
 .chip--active {
