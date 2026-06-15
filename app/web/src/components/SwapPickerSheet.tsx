@@ -18,7 +18,8 @@ import { useMutation, useQuery } from "convex/react";
 import { anyApi } from "convex/server";
 import type { Dish } from "@plantry/engine";
 import type { Identity, Meal, ShortDay } from "../lib/types.js";
-import { PICKER_FILTERS, dishMatchesFilters, type DishFilter } from "../lib/dishFilters.js";
+import { swapPickerVisible } from "../lib/library.js";
+import { PICKER_FILTERS, type DishFilter } from "../lib/dishFilters.js";
 import { dayLabel, mealLabel } from "../lib/days.js";
 import { Sheet, SearchField, SectionLabel, PrimaryButton, Chip } from "./primitives.js";
 import { DishRow } from "./DishRow.js";
@@ -30,6 +31,15 @@ import { ReasonDialog } from "./ReasonDialog.js";
 // home for the custom one-off because `addCustomOneOff` replaces a position,
 // exactly what "replace this dish with something not in the library" means.
 type Choice = { kind: "library"; dish: Dish } | { kind: "custom"; label: string };
+
+// The full ranked meal-time pool is requested so name search reaches every
+// alternative, but the no-query default view stays a short "Suggested for this
+// day" list. POOL_LIMIT is set above the largest meal-time pool (the active
+// lunch library is ~167) so getSlotAlternatives' display cap never truncates
+// the search corpus. SUGGESTED_CAP is how many ranked suggestions the default
+// (no-query) view shows.
+const POOL_LIMIT = 250;
+const SUGGESTED_CAP = 12;
 
 interface SwapPickerSheetProps {
   weekStart: string;
@@ -59,7 +69,7 @@ export function SwapPickerSheet({
     day,
     meal,
     position,
-    limit: 60,
+    limit: POOL_LIMIT,
   }) as Dish[] | undefined;
   const swapDish = useMutation(anyApi.swap.swapDish);
   const addCustomOneOff = useMutation(anyApi.weekMutations.addCustomOneOff);
@@ -88,14 +98,17 @@ export function SwapPickerSheet({
   }
 
   const trimmedQuery = q.trim();
-  const visible = useMemo(() => {
-    const list = alternatives ?? [];
-    const needle = trimmedQuery.toLowerCase();
-    return list.filter(
-      (d) =>
-        (needle === "" || d.name.toLowerCase().includes(needle)) && dishMatchesFilters(d, filters),
-    );
-  }, [alternatives, trimmedQuery, filters]);
+  // The corpus for BOTH name search and the quick-filter chips is the FULL
+  // ranked pool (requested with POOL_LIMIT above), so a recently-cooked staple
+  // that ranks at the bottom is still reachable by name and the chips narrow the
+  // whole pool, not just the suggested head. The SUGGESTED_CAP only applies to
+  // the default view, when there is neither a query nor an active filter; any
+  // query or filter returns all matches. Mirrors AddDishSheet's full-pool
+  // filter.
+  const visible = useMemo(
+    () => swapPickerVisible(alternatives ?? [], trimmedQuery, filters, SUGGESTED_CAP),
+    [alternatives, trimmedQuery, filters],
+  );
 
   async function handleSubmit(reason: string) {
     if (!choice || inFlight) return;
