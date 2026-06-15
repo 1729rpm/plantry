@@ -11,7 +11,7 @@ const KEYS = ["1", "2", "3", "4", "5", "6", "7", "8", "9", "", "0", "del"];
 // Behaviour is unchanged from slice 1: the entered code is checked against the
 // configured passcode (`expected`, from VITE_PLANTRY_PASSCODE). The handoff
 // prototype never validated; the real gate does. The code auto-submits once it
-// reaches four digits; a wrong code clears the entry and shows the error.
+// reaches six digits; a wrong code clears the entry and shows the error.
 export function PasscodeGate({ expected, onPass }: PasscodeGateProps) {
   const [code, setCode] = useState("");
   const [error, setError] = useState(false);
@@ -32,11 +32,11 @@ export function PasscodeGate({ expected, onPass }: PasscodeGateProps) {
       return;
     }
     setCode((prev) => {
-      if (prev.length >= 4) return prev;
+      if (prev.length >= 6) return prev;
       const next = prev + key;
       if (error) setError(false);
-      if (next.length === 4) {
-        // Defer so the fourth dot paints before the check.
+      if (next.length === 6) {
+        // Defer so the sixth dot paints before the check.
         setTimeout(() => submit(next), 120);
       }
       return next;
@@ -51,7 +51,7 @@ export function PasscodeGate({ expected, onPass }: PasscodeGateProps) {
           <div className="gate__brand-hint">Enter the kitchen passcode</div>
         </div>
         <div className="gate__dots">
-          {[0, 1, 2, 3].map((i) => (
+          {[0, 1, 2, 3, 4, 5].map((i) => (
             <span key={i} className={`gate__dot${i < code.length ? " gate__dot--filled" : ""}`} />
           ))}
         </div>
