@@ -1038,7 +1038,7 @@ input {
 /* ------------------------------------------------------------------ */
 .detail__photo {
   width: 100%;
-  height: 150px;
+  aspect-ratio: 5 / 2;
   object-fit: cover;
   border-radius: 16px;
   display: block;
