@@ -12,6 +12,10 @@ Brief description in present tense, one to three sentences. Reference the PR.
 
 ---
 
+## 2026-06-15  Explore cards show a multi-tag set (concise difficulty + prep + descriptor)
+
+Each Explore dish card now renders a wrapping pill set instead of one verbose complexity pill, surfacing the details that help someone choose a dish. A pure helper `exploreCardTags(dish)` in `app/web/src/lib/library.ts` maps a `Dish` to an ordered tag list: a concise, colored difficulty pill (`Easy`/`Medium`/`Hard` via new `complexityShortLabel`) always first, a `{prepMinutes} min` pill when prep time is present, and one descriptor by priority (High protein for the `HP` tag, then Complete meal for the category or `complete_meal` tag, then a title-cased cuisine tag, then Filling for High satiety). Dishes with empty `tags` degrade gracefully and never leak a raw code or an empty pill. A neutral `MetaTag` primitive and `.meta-tag` / `.explore-card__tags` CSS render the non-difficulty pills in a quiet style, capped at two lines. New `app/web/test/library.test.ts` covers the helper (vitest wired via `app/web/vitest.config.ts` + `test`/`pretest` scripts). `app/web` only. (#76)
+
 ## 2026-06-15  Bottom nav: distinct line icons per tab
 
 Replaces the bottom nav's single 5px placeholder dot with a distinct minimal line icon per tab: Menu (calendar), Grocery (basket), Explore (compass), Changes (swap arrows). Icons are inline SVGs in `primitives.tsx` (a type-checked `Record<TabKey, ReactNode>` map, no icon library) that inherit the tab button's color via `currentColor`, so they pick up the terracotta accent when active and the muted sub color when inactive with no per-icon color CSS; `.tab-bar__dot` is replaced by a sizing-only `.tab-bar__icon` rule. The design handoff's TabBar uses the same placeholder dot, so the icons are a deliberate, EM-authorized step beyond the handoff (see DECISIONS). Verified by the per-slice full-flow crawl across all four tabs: no overflow, 4 legible icons per tab, active=accent bold, 47px tap targets, clean console. (#74)

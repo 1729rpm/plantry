@@ -9,6 +9,8 @@
     "build": "tsc -b && vite build",
     "preview": "vite preview",
     "typecheck": "tsc -b",
+    "pretest": "npm run bake --workspace @plantry/engine",
+    "test": "vitest run",
     "test:smoke": "node e2e/smoke.mjs"
   },
   "dependencies": {
@@ -23,6 +25,7 @@
     "@vitejs/plugin-react": "^4.3.1",
     "vite": "^5.4.6",
     "vite-plugin-pwa": "^0.20.5",
+    "vitest": "^2.1.1",
     "workbox-window": "^7.1.0"
   },
   "optionalDependencies": {
