@@ -6,7 +6,7 @@ time: Lunch
 tags: []
 primaryIngredient: Cabbage
 preferred: No
-active: No
+active: Yes
 satiety: Low
 prepMinutes: 20
 seasons: All

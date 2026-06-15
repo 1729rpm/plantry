@@ -6,7 +6,7 @@ time: Lunch
 tags: [chinese]
 primaryIngredient: Cabbage
 preferred: No
-active: No
+active: Yes
 satiety: Low
 prepMinutes: 25
 seasons: All

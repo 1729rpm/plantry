@@ -6,7 +6,7 @@ time: Lunch
 tags: []
 primaryIngredient: Tomato
 preferred: No
-active: No
+active: Yes
 satiety: Low
 prepMinutes: 25
 seasons: All

@@ -6,7 +6,7 @@ time: Lunch
 tags: [complete_meal]
 primaryIngredient: Toor Dal
 preferred: No
-active: No
+active: Yes
 satiety: High
 prepMinutes: 45
 seasons: All

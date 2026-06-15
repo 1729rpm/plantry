@@ -6,7 +6,7 @@ time: Breakfast
 tags: [HP]
 primaryIngredient: Egg
 preferred: No
-active: No
+active: Yes
 satiety: High
 prepMinutes: 10
 seasons: All

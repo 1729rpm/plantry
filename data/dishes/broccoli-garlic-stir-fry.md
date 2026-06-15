@@ -6,7 +6,7 @@ time: Lunch
 tags: []
 primaryIngredient: Broccoli
 preferred: No
-active: No
+active: Yes
 satiety: Low
 prepMinutes: 15
 seasons: All

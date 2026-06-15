@@ -6,7 +6,7 @@ time: Lunch
 tags: []
 primaryIngredient: Coconut Milk
 preferred: No
-active: No
+active: Yes
 satiety: Medium
 prepMinutes: 30
 seasons: All

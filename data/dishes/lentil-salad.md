@@ -6,7 +6,7 @@ time: Lunch
 tags: [mediterranean]
 primaryIngredient: Masoor Dal
 preferred: No
-active: No
+active: Yes
 satiety: Medium
 prepMinutes: 25
 seasons: All

@@ -6,7 +6,7 @@ time: Lunch
 tags: [HP]
 primaryIngredient: Chicken
 preferred: No
-active: No
+active: Yes
 satiety: High
 prepMinutes: 40
 seasons: [Winter]

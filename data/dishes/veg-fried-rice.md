@@ -6,7 +6,7 @@ time: Lunch
 tags: [complete_meal, chinese]
 primaryIngredient: Carrot
 preferred: No
-active: No
+active: Yes
 satiety: High
 prepMinutes: 20
 seasons: All

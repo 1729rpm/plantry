@@ -6,7 +6,7 @@ time: Lunch
 tags: [mexican]
 primaryIngredient: Kidney Bean
 preferred: No
-active: No
+active: Yes
 satiety: High
 prepMinutes: 25
 seasons: All

@@ -6,7 +6,7 @@ time: Lunch
 tags: []
 primaryIngredient: Spinach
 preferred: No
-active: No
+active: Yes
 satiety: Medium
 prepMinutes: 20
 seasons: All

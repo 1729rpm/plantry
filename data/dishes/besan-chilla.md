@@ -6,7 +6,7 @@ time: Breakfast
 tags: [complete_carb]
 primaryIngredient: Onion
 preferred: No
-active: No
+active: Yes
 satiety: Medium
 prepMinutes: 20
 seasons: All

@@ -6,7 +6,7 @@ time: Lunch
 tags: []
 primaryIngredient: Moong Dal
 preferred: No
-active: No
+active: Yes
 satiety: Low
 prepMinutes: 15
 seasons: All

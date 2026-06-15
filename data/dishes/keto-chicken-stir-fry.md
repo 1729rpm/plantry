@@ -6,7 +6,7 @@ time: Lunch
 tags: [HP]
 primaryIngredient: Chicken Breast
 preferred: No
-active: No
+active: Yes
 satiety: High
 prepMinutes: 20
 seasons: All

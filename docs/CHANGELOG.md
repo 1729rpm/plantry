@@ -12,6 +12,10 @@ Brief description in present tense, one to three sentences. Reference the PR.
 
 ---
 
+## 2026-06-15 Activate the 50 easy-to-cook expansion dishes
+
+Flips the 50 expansion dishes (ids 222-271) from `active: No` to `active: Yes`, so they enter weekly menu generation; they remain `preferred: No`. The active library grows from 200 to 250 dishes. Two live-data snapshot assertions in `engine/test/data/reports.test.ts` move to match: coverage `withPhoto` 200 to 250 (every activated dish carries a photo), and the special-sourcing report gains Vegetable daliya (Bulgur Wheat) and Lentil salad (Parsley). The three intentionally-retired `active: No` dishes (ids < 222) are untouched. Data plus test only; no engine source, app, rule, or catalog change. (#PR)
+
 ## 2026-06-15 Add 50 easy-to-cook dishes (inactive, photo'd) for review
 
 Adds 50 new easy-to-cook dishes to the library (ids 222-271), each shipping complete (description, numbered recipe, complexity, and an AI-generated photo) but `active: No` and `preferred: No`, so they stay out of the weekly rotation until Rajat reviews and activates them. The dish files are generated through the engine's real `serializeDishFile` (round-trip-clean), slugs resolve via `slugForDishes` over the whole library, and every ingredient row maps to an existing `data/ingredients.md` catalog row (no new catalog entries). Because the 50 are inactive they enter no generation pool and the coverage/pool reports are unchanged. Photos were generated through `scripts/generate-dish-photos.mjs` with 50 new per-dish `data/dish-photos/details.md` correction lines (the established quality workflow that overrides the FLUX ingredient priors). Activation later is a one-line report bump (see DECISIONS.md). Data-only; no app or engine source touched. (#PR)
