@@ -192,7 +192,7 @@ export function ExploreScreen({ identity }: ExploreScreenProps) {
         <div className="screen__subtitle">
           {feed === undefined
             ? "Dishes you have not cooked yet"
-            : `${feed.length} dishes you have not cooked yet`}
+            : `${visible.length} dishes you have not cooked yet`}
         </div>
       </div>
 
