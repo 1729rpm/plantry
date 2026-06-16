@@ -335,12 +335,12 @@ Rajat invokes `/reconcile-ops` after a notable run of CHANGELOG entries, convent
 
 ### 7.5 Per-doc affect map
 
-| CHANGELOG entry touches…                                                          | Update target            |
-| --------------------------------------------------------------------------------- | ------------------------ |
-| Repo orientation, doc hierarchy, working folders, project status (README, CLAUDE) | `/reconcile-ops`         |
+| CHANGELOG entry touches…                                                                | Update target                                           |
+| --------------------------------------------------------------------------------------- | ------------------------------------------------------- |
+| Repo orientation, doc hierarchy, working folders, project status (README, CLAUDE)       | `/reconcile-ops`                                        |
 | Operational specs (the slow loop, reconciliation jobs, retro intake, dish-add playbook) | `/reconcile-ops` (`MAINTENANCE.md`, `ADDING-DISHES.md`) |
-| The design contract (`claude-design.md`)                                          | `/reconcile-ops`         |
-| A slash-command brief's procedure, pointers, or arguments (`.claude/commands/*.md`) | `/reconcile-ops`         |
+| The design contract (`claude-design.md`)                                                | `/reconcile-ops`                                        |
+| A slash-command brief's procedure, pointers, or arguments (`.claude/commands/*.md`)     | `/reconcile-ops`                                        |
 
 Out of scope for `/reconcile-ops`: the canonical specs in `docs/` (owned by `/reconcile-docs`, §2.5), and the append-only ledgers `DECISIONS.md`, `RETRO.md`, `docs/CHANGELOG.md`, and `data/changelog.md`, which are never rewritten by any reconciliation pass.
 
