@@ -41,8 +41,22 @@ Everything outside the slots is the fixed skeleton and must not be reworded betw
 runs (the fixed wording is what holds the look steady).
 
 ```
-A real, candid phone photograph of {dish name}, a home-style {cuisine} dish: {per-dish detail}. Shot from a natural low or three-quarter angle with shallow depth of field, in a real everyday vessel that suits the dish, a softly blurred home or restaurant background, ordinary warm light and gentle natural shadows, honest true-to-life colour with a matte natural finish, true slightly-muted colours, not glossy, not oversaturated, not plastic-looking. The food looks genuinely cooked and a little imperfect with real texture, irregular hand-made shapes, a little oil sheen and uneven edges; any garnish is fresh green coriander (cilantro) leaves, never flat-leaf parsley. Realistic and unstyled, square 1:1.
+A real, candid phone photograph of {dish name}, a home-style {cuisine} dish: {per-dish detail}. Shot from a natural low or three-quarter angle with shallow depth of field, in a real everyday vessel that suits the dish, a softly blurred home or restaurant background, ordinary warm light and gentle natural shadows, honest true-to-life colour with a matte natural finish, true slightly-muted colours, not glossy, not oversaturated, not plastic-looking. The food looks genuinely cooked and a little imperfect with real texture, irregular hand-made shapes, a little oil sheen and uneven edges; {garnish clause}. Realistic and unstyled, square 1:1.
 ```
+
+The `{garnish clause}` is conditional on the dish's detail line. By default it is the
+standing coriander cue, verbatim: "any garnish is fresh green coriander (cilantro)
+leaves, never flat-leaf parsley". When the detail line opts out of garnish (it
+contains the phrase "no garnish", case-insensitive), the builder swaps in a positive
+bare-surface statement instead, "the dish carries no garnish, no herbs, and no green
+leaves", and the named "coriander" token never reaches the model. This is the fix for
+bare categories (a plain bread, a dessert, a fruit, plain rice): FLUX is a
+guidance-distilled model that renders a named token even under a negation, so a
+detail line that merely says "no garnish" while the skeleton still says "coriander"
+gets coriander sprinkled on anyway. Suppressing the clause at the source is the only
+reliable fix; a detail-line negation alone does not work. Convention: **a detail line
+that says "no garnish" suppresses the skeleton's coriander-garnish clause.** Savoury
+dishes (no opt-out) keep the coriander cue unchanged.
 
 The look this prompt aims for: a real, candid food photo, the dish as it actually
 lands on the table, shot at a natural angle (low or three-quarter, not flat
@@ -168,7 +182,12 @@ this section is the human-readable contract, the prompt is the machine input.
     placed in the centre. Where a dish is garnished with green herb leaves, the
     skeleton forces fresh green coriander (cilantro), never flat-leaf parsley:
     the realism audit found flat parsley standing in for coriander was a recurring
-    ingredient tell.
+    ingredient tell. The clause is conditional: **a detail line that says "no
+    garnish" suppresses the skeleton's coriander-garnish clause** (the builder
+    swaps in a bare-surface statement so the "coriander" token never reaches the
+    model). This is required for bare categories (bread, dessert, fruit, plain
+    rice), where FLUX renders the named coriander token even though the detail
+    line negates it.
   - **Props policy:** the vessel and a softly out-of-focus home or restaurant
     background carry the frame. This is enforced **positively** in the prompt, not
     by a list of forbidden objects: the prompt names what is in frame (the dish in
