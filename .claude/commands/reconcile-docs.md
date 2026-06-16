@@ -71,7 +71,7 @@ A single shipped change often touches more than one doc. Keeping cross-doc consi
 
 6. **Update `.maintenance-state`.** Bump `last_reconcile` to today's date in the same PR.
 
-7. **Mechanical checks (per `MAINTENANCE.md` §2.9).** Verify the root inventory: every entry at root must be one of `.gitignore`, `CLAUDE.md`, `MAINTENANCE.md`, `DECISIONS.md`, `.git`, `.claude`, `.github`, `docs/`, `data/`, `features/`, `engine/`, `app/`, `archive/`. Empty-but-anticipated directories carry `.gitkeep`. Folder naming follows the conventions in `docs/engineering.md` §14. Flag mismatches in the PR description; do not move or rename files autonomously.
+7. **Mechanical checks (per `MAINTENANCE.md` §2.9).** Verify the root inventory and folder naming against the authoritative allowlist in `MAINTENANCE.md` §2.9 (which mirrors the enforced list in `.github/workflows/ci.yml`) and the annotated layout in `docs/engineering.md` §14. Empty-but-anticipated directories carry `.gitkeep`. Flag mismatches in the PR description; do not move or rename files autonomously.
 
 8. **Hand off.** Post a one-paragraph status to Rajat: "PR opened, here is the URL, here are the docs touched, here is what I flagged for review."
 

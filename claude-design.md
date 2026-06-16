@@ -38,8 +38,12 @@ Match the current handoff's file structure exactly. On the first commission ther
 - `hifi-tokens.jsx` — design tokens (colors, typography, spacing, radius). Verbatim port target for the CSS variables in `app/web/src/index.css`.
 - `hifi-primitives.jsx` — shared components (buttons, day card, date badge, dish row, bottom sheet, and similar).
 - `hifi-screens.jsx` — composed screens (passcode gate, identity picker, header, current-week view, slot editor, comment composer and list, grocery list, plus any new screens).
-- `hifi-share-image.jsx` — the shareable menu image (PNG) layout. Kept separate because it is a distinct surface with its own constraints.
+- `hifi-overlays.jsx` — sheets and dialogs (bottom sheets, action sheet, reason dialogs, picker overlays).
+- `hifi-share-image.jsx` — the shareable image layout (the menu, grocery, and recipe-sheet family). Kept separate because it is a distinct surface with its own constraints.
+- `hifi-data.js` — the sample dish library and week used by the prototype and the screens canvas.
+- `hifi-app.jsx` — prototype state and navigation that wires the screens and overlays into a clickable app.
 - `Plantry Hi-Fi.html` — live design, openable in a browser.
+- `Plantry Screens Canvas.html` plus `design-canvas.jsx` — every screen and overlay side by side for review (a presentation aid, not a port target).
 - `README.md` — one-page summary: what's in this handoff, what changed since the last one, anything that requires operator decision.
 
 Use these filenames unless the feature genuinely needs a new file category. If it does, name the new file in `README.md`.
