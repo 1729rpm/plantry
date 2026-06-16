@@ -39,7 +39,7 @@ run only reads entries appended since.
 - Recurrence: systemic (every frontend slice this session: #101, #102, #105, #106)
 - Impact: The documented crawl gate does not work as written; had to build each branch locally and crawl the static `dist/` as an unofficial workaround.
 - Proposed level: infra (provision a Vercel "Protection Bypass for Automation" token; Rajat-approved 2026-06-16) + process-doc (engineering.md §16 crawl method, §11 env vars)
-- Status: open
+- Status: fixed (PR #109) — token provisioned as `VERCEL_AUTOMATION_BYPASS_SECRET` and verified (curl 401->200; Playwright 200, title Plantry, no Vercel wall); `smoke.mjs` gained a `CRAWL_URL` + bypass-header remote mode; engineering.md §16/§11 document the method, local `dist/` is the fallback. The two iOS-only checks still need a real device.
 
 ## 2026-06-16  Engineers editing CHANGELOG/DECISIONS cause merge conflicts
 - Area: coordination
