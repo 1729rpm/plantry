@@ -1,6 +1,25 @@
 # Plantry
 
+[![CI](https://github.com/1729rpm/plantry/actions/workflows/ci.yml/badge.svg)](https://github.com/1729rpm/plantry/actions/workflows/ci.yml)
+![PWA](https://img.shields.io/badge/PWA-installable-5A3E2B)
+![TypeScript](https://img.shields.io/badge/TypeScript-5.5-3178C6?logo=typescript&logoColor=white)
+![React](https://img.shields.io/badge/React-18-61DAFB?logo=react&logoColor=black)
+![Vite](https://img.shields.io/badge/Vite-5-646CFF?logo=vite&logoColor=white)
+![Convex](https://img.shields.io/badge/backend-Convex-EE342F)
+
 A weekly meal planner for a small household, built as an installable Progressive Web App (PWA). Every week Plantry reads a fixed dish library and a set of composition rules, generates a Monday-to-Saturday menu of breakfasts and lunches, and produces a shareable menu image and an aggregated grocery list. Sunday is a rest day. In-week edits (swap, add, one-off, skip) are immediate and reversible; deeper changes to the library and rules flow through a separate, human-approved review loop.
+
+## Screenshots
+
+<p align="center">
+  <img src="docs/screenshots/menu.png" alt="Menu tab: the week's generated breakfasts and lunches" width="31%">
+  &nbsp;
+  <img src="docs/screenshots/explore.png" alt="Explore tab: browse familiar-but-new dishes" width="31%">
+  &nbsp;
+  <img src="docs/screenshots/grocery.png" alt="Grocery tab: an aggregated, pack-rounded shopping list" width="31%">
+</p>
+
+<p align="center"><em>The Menu, Explore, and Grocery tabs.</em></p>
 
 ## What it does
 
