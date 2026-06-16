@@ -152,7 +152,9 @@ export default defineSchema({
     // Optional because day-level kinds (skip_day, restore_day, save_next_week)
     // are not scoped to a single (meal, position). Loosening required->optional
     // is additive: existing swap/custom rows still carry both and validate.
-    meal: v.optional(v.union(v.literal("breakfast"), v.literal("lunch"))),
+    // "fruit" is the swap target for the Fruit of the day (docs/engine.md §3.3);
+    // widening the union is additive (existing rows carry breakfast/lunch).
+    meal: v.optional(v.union(v.literal("breakfast"), v.literal("lunch"), v.literal("fruit"))),
     position: v.optional(v.number()),
     changeKind: v.union(
       v.literal("swap"),

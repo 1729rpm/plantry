@@ -10,7 +10,7 @@
 import { useMemo, useState } from "react";
 import { useMutation, useQuery } from "convex/react";
 import { anyApi } from "convex/server";
-import type { CurrentWeek, DishPick, Identity, Meal, ShortDay } from "../lib/types.js";
+import type { CurrentWeek, DishPick, Identity, Meal, MealTime, ShortDay } from "../lib/types.js";
 import { dayLabel, dayDate, mealLabel, mealOrderIndex } from "../lib/days.js";
 import { dishById } from "../lib/library.js";
 import { Card, SectionLabel, PrimaryButton } from "./primitives.js";
@@ -38,7 +38,19 @@ type Overlay =
   | { kind: "skip" }
   | { kind: "restore" };
 
-const MEALS: Meal[] = ["breakfast", "lunch"];
+// Sections the editor renders, in card order via mealOrderIndex: breakfast,
+// lunch, then the Fruit of the day (docs/engine.md §3.3). Fruit is swap-only,
+// so it is shown and tappable here but excluded from the add/delete affordances
+// (gated on MEAL_TIMES below).
+const MEALS: Meal[] = ["breakfast", "lunch", "fruit"];
+// The full-editing meals: add a dish and delete a dish apply to these only. The
+// Fruit of the day is one-per-day and swap-only this PR, so it is left out.
+const MEAL_TIMES: MealTime[] = ["breakfast", "lunch"];
+
+// The Fruit of the day supports swap only; add and delete are out of scope.
+function isMealTime(meal: Meal): meal is MealTime {
+  return meal === "breakfast" || meal === "lunch";
+}
 
 function pickLabel(pick: DishPick): string {
   if (pick.customLabel) return pick.customLabel;
@@ -60,10 +72,9 @@ export function DayScreen({ day, identity, onBack }: DayScreenProps) {
     const slotsByMeal = new Map<Meal, DishPick[]>();
     for (const slot of week.slots) {
       if (slot.day !== day) continue;
-      // The Fruit of the day (docs/engine.md §3.3) is system-picked and not
-      // user-editable, so the day editor skips its slot: only breakfast and lunch
-      // are swappable/addable here.
-      if (slot.meal === "fruit") continue;
+      // Breakfast, lunch, and the Fruit of the day (docs/engine.md §3.3) all
+      // render here. Fruit is shown and swappable; the add/delete affordances
+      // are gated to breakfast/lunch (MEAL_TIMES) so fruit stays swap-only.
       slotsByMeal.set(slot.meal, slot.dishes);
     }
     const skip = (week.skippedDays ?? []).find((s) => s.day === day) ?? null;
@@ -94,7 +105,8 @@ export function DayScreen({ day, identity, onBack }: DayScreenProps) {
   // Meals the day can hold a dish in: Saturday has no breakfast slot at all, so
   // even after a delete leaves a meal empty, the add picker must respect the
   // day's shape. A slot present in the week (even if now empty) is addable.
-  const addableMeals = MEALS.filter((m) => slotsByMeal.has(m));
+  // Fruit is one-per-day and swap-only, so it is never an add target.
+  const addableMeals = MEAL_TIMES.filter((m) => slotsByMeal.has(m));
 
   function closeOverlay() {
     setOverlay({ kind: "none" });
@@ -229,6 +241,7 @@ export function DayScreen({ day, identity, onBack }: DayScreenProps) {
               version={version}
               dishLabel={pickLabel(pick)}
               isLibraryDish={pick.dishId !== null}
+              canDelete={isMealTime(overlay.meal)}
               identity={identity}
               onDetails={() =>
                 setOverlay({ kind: "details", meal: overlay.meal, position: overlay.position })
@@ -256,6 +269,7 @@ export function DayScreen({ day, identity, onBack }: DayScreenProps) {
               version={version}
               dishId={dishId}
               includeRecipe={pick.includeRecipe ?? false}
+              canDelete={isMealTime(overlay.meal)}
               identity={identity}
               onReplace={() =>
                 setOverlay({ kind: "swap", meal: overlay.meal, position: overlay.position })

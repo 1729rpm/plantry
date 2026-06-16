@@ -64,6 +64,10 @@ export function SwapPickerSheet({
   onDone,
   onClose,
 }: SwapPickerSheetProps) {
+  // The Fruit of the day is swap-only (docs/engine.md §3.3): the picker offers
+  // the in-season Category=Fruit pool but no custom one-off (no add/one-off for
+  // fruit this PR). Breakfast/lunch keep the one-off path.
+  const isFruit = meal === "fruit";
   const alternatives = useQuery(anyApi.swap.getSlotAlternatives, {
     weekStart,
     day,
@@ -146,6 +150,8 @@ export function SwapPickerSheet({
         setError("Someone just changed this week. Close and try again.");
       } else if (result.reason === "dish-not-meal-time") {
         setError("That dish belongs to a different meal. Pick another.");
+      } else if (result.reason === "dish-not-fruit") {
+        setError("Pick a fruit for the Fruit of the day.");
       } else if (result.reason === "dish-not-active-or-in-season") {
         setError("That dish is not in season right now. Pick another.");
       } else {
@@ -229,12 +235,15 @@ export function SwapPickerSheet({
     <Sheet onClose={onClose} tall picker>
       <div className="reason__title">Replace {outgoingLabel}</div>
       <div className="reason__hint">
-        {dayLabel(day)} {mealLabel(meal).toLowerCase()}; pick from the library or use a one off
+        {dayLabel(day)} {mealLabel(meal).toLowerCase()};{" "}
+        {isFruit
+          ? "pick a seasonal fruit from the library"
+          : "pick from the library or use a one off"}
       </div>
       <SearchField
         value={q}
         onChange={setQ}
-        placeholder="Search, or type a one off dish"
+        placeholder={isFruit ? "Search fruit" : "Search, or type a one off dish"}
         autoFocus
       />
       <div className="picker__filters" role="group" aria-label="Filters">
@@ -244,7 +253,7 @@ export function SwapPickerSheet({
           </Chip>
         ))}
       </div>
-      {trimmedQuery.length > 0 && (
+      {!isFruit && trimmedQuery.length > 0 && (
         <button
           type="button"
           className="picker__custom"

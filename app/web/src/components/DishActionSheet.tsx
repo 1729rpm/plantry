@@ -21,6 +21,10 @@ interface DishActionSheetProps {
   version: number;
   dishLabel: string;
   isLibraryDish: boolean;
+  // Whether this slot offers Delete. The Fruit of the day is one-per-day and
+  // swap-only (docs/engine.md §3.3), so the day editor passes false for it and
+  // the Delete row is hidden; breakfast/lunch pass true.
+  canDelete: boolean;
   identity: Identity;
   onDetails: () => void;
   onReplace: () => void;
@@ -36,6 +40,7 @@ export function DishActionSheet({
   version,
   dishLabel,
   isLibraryDish,
+  canDelete,
   identity,
   onDetails,
   onReplace,
@@ -106,14 +111,16 @@ export function DishActionSheet({
           <span className="action-sheet__label">Replace</span>
           <span className="action-sheet__hint">Pick another dish</span>
         </button>
-        <button
-          type="button"
-          className="action-sheet__row"
-          onClick={() => setConfirmingDelete(true)}
-        >
-          <span className="action-sheet__label action-sheet__label--danger">Delete</span>
-          <span className="action-sheet__hint">Delete from this day</span>
-        </button>
+        {canDelete && (
+          <button
+            type="button"
+            className="action-sheet__row"
+            onClick={() => setConfirmingDelete(true)}
+          >
+            <span className="action-sheet__label action-sheet__label--danger">Delete</span>
+            <span className="action-sheet__hint">Delete from this day</span>
+          </button>
+        )}
       </div>
     </Sheet>
   );
