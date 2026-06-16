@@ -12,6 +12,14 @@ Brief description in present tense, one to three sentences. Reference the PR.
 
 ---
 
+## 2026-06-16 Tier-3 process changes: /reconcile-ops, feature close-out, canon-to-pointer dedup
+
+Adds the `/reconcile-ops` command and its canonical spec home (`MAINTENANCE.md` §7) for reconciling the operational docs (`README.md`, `CLAUDE.md`, `MAINTENANCE.md`, `ADDING-DISHES.md`, `claude-design.md`) and the `.claude/commands/*.md` briefs against shipped reality, with `last_reconcile_ops` added to `.maintenance-state`. Adds a feature close-out checklist as `docs/development.md` §3 step 8 (archive the feature spec, reset CLAUDE.md "Currently building", run reconciliation) plus a merge-time PR-number backfill note in step 6, and a CLAUDE.md cross-reference. De-duplicates copied canon in the slash commands: `slow-loop.md` and `reconcile-docs.md` now point at the canonical wording in `docs/` and `MAINTENANCE.md` instead of restating it. Docs and command files only; no engine, app, or canonical-data change. (#128)
+
+## 2026-06-16 Documentation-audit corrections (Tier 1+2)
+
+Corrects the `dishDislikes` status across `MAINTENANCE.md` and `slow-loop.md` (the table is a live signal channel; only the dislike write-back mutation remains an open follow-up), fixes the README dish count to roughly 260, de-duplicates the reconcile-docs root allowlist, fixes the slow-loop fixture filenames, completes the engineering §14 data tree, archives `data/menu_images/` and the completed `features/tuhina-feedback.md`, and flags the stale design handoff. Docs only. (#127)
+
 ## 2026-06-16 Activate Pav (id 281)
 
 Flips Pav from `active: No` to `active: Yes`, so it enters weekly menu generation as a breakfast Option C plain carb (the category:Bread plain-carb pool per engine.md §3). The live-data coverage snapshot `cov.withPhoto` moves 259 to 260 (Pav carries its photo); no other report snapshot moves. Data plus test only; no engine source, app, rule, or catalog change. (#122)
