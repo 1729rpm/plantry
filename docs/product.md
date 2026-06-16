@@ -65,7 +65,7 @@ The user-facing output is plain, readable, and uncluttered. No internal jargon, 
 - Save a dish for next week from Explore; the next generation favors it; required reason.
 - Explore browse with familiar-but-new ranking, multi-select filters, and a records-only dislike (optional reason) read only by the slow loop.
 - The grocery list, grouped and skip-aware, plus the share image family (menu, grocery, recipe sheets) over the native share sheet.
-- A library of roughly 200 dishes across roughly ten cuisines (Indian baseline plus international and world cuisines), spanning vegetarian, egg, dairy, seafood, and red-meat (mutton) proteins, each carrying a description, a recipe, complexity, derived macros, and special-sourcing metadata.
+- A library of roughly 260 dishes across roughly ten cuisines (Indian baseline plus international and world cuisines), spanning vegetarian, egg, dairy, seafood, and red-meat (mutton) proteins, each carrying a first-class cuisine, a description, a recipe, complexity, derived macros (including a derived Healthy flag), and special-sourcing metadata.
 - Identity is light: a device-stored "I am Rajat" or "I am Tuhina" profile attributes edits; a shared passcode keeps the URL private. No accounts.
 
 ## 7. Out of scope
@@ -79,7 +79,7 @@ The user-facing output is plain, readable, and uncluttered. No internal jargon, 
 ## 8. Future scope
 
 - **Day-level overrides.** Solves an estimated 80 percent of weekly disruptions (travel, eating out, day swaps) beyond the skip-and-restore that ships today. Data model and UI are designed to accept these without restructuring.
-- **Photo coverage completion (in progress).** Every dish carries a description, recipe, complexity, and derived macros; photos are the one standing gap. A committed style spec (`data/dish-photos/STYLE.md`) fixes the look so photos generated months apart match, and a build-time generation tool produces them from it (`docs/engineering.md` §4). Partial coverage is already live and the no-photo fallback keeps it looking intentional rather than broken; further batches fill the gap over time as generation credits allow.
+- **Photo coverage.** Every active dish carries a description, recipe, complexity, derived macros, and a photo. A committed style spec (`data/dish-photos/STYLE.md`) plus a per-dish detail map fix the look so photos generated months apart match, and a build-time generation tool produces them from it (`docs/engineering.md` §4). The no-photo fallback stays the graceful default for any new dish added before its photo lands, keeping a gap intentional rather than broken; the generation tool fills it in the same content batch that adds the dish.
 - **Swiggy MCP integration (ordering automation).** A future Convex action consumes the engine's structured grocery list and builds a Swiggy cart via the Swiggy MCP, returning a deep link the user opens to checkout. Four design invariants protect this path:
   1. Ingredient names are canonical and machine-resolvable (one name per ingredient, no spelling drift, no inline qualifiers like "(200g)"), enforced by a blocking name-resolution validator.
   2. The grocery list is available as structured data via a dedicated query, not parsed from markdown.
