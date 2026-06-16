@@ -10,6 +10,7 @@ active: Yes
 satiety: Medium
 prepMinutes: 10
 seasons: All
+cuisine: Indian
 complexity: Easy
 prePrep: Sprout the moong over a day or two if not buying it ready-sprouted
 photo: sprouts-salad.jpg

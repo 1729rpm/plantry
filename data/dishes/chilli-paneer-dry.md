@@ -10,6 +10,7 @@ active: Yes
 satiety: High
 prepMinutes: 20
 seasons: All
+cuisine: Indian
 complexity: Medium
 skill: Keep the heat high so the paneer stays dry and the sauce clings
 photo: chilli-paneer-dry.jpg

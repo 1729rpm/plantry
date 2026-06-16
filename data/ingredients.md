@@ -82,10 +82,12 @@ Grouping judgment calls (institutional memory; do not silently re-bucket):
 | Green Chilli | Aromatics and Herbs | pcs | | 5 | | | | | |
 | Green Pea | Pantry | g | | | 5 | 14 | 0.4 | 5 | |
 | Honey | Pantry | g | | | 0.3 | 82 | 0 | 0.2 | |
+| Jamun | Other | g | | | 0.7 | 14 | 0.2 | 0.6 | |
 | Kidney Bean | Pantry | g | | | 24 | 60 | 0.8 | 15 | |
 | Lemon | Aromatics and Herbs | pcs | | 60 | | | | | |
 | Lemongrass | Aromatics and Herbs | g | | | | | | | |
 | Lettuce | Vegetables | g | 100 g | | 1.4 | 3 | 0.2 | 1.3 | |
+| Litchi | Other | g | | | 0.8 | 16.5 | 0.4 | 1.3 | |
 | Mango | Other | g | | | 0.8 | 15 | 0.4 | 1.6 | |
 | Masoor Dal | Pantry | g | | | 25 | 60 | 1.1 | 11 | |
 | Milk | Proteins and Dairy | ml | | | 3.4 | 5 | 3.3 | 0 | |
@@ -104,8 +106,11 @@ Grouping judgment calls (institutional memory; do not silently re-bucket):
 | Parsley | Aromatics and Herbs | g | | | 3 | 6 | 0.8 | 3.3 | Yes |
 | Pasta | Pantry | g | | | 13 | 75 | 1.5 | 3.2 | |
 | Pav Bread | Pantry | pcs | | 40 | 8 | 52 | 3.5 | 2.5 | |
+| Peach | Other | g | | | 0.9 | 9.5 | 0.3 | 1.5 | |
 | Peanut | Pantry | g | | | 26 | 16 | 49 | 8 | |
 | Pineapple | Other | g | | | 0.5 | 13 | 0.1 | 1.4 | |
+| Plum | Other | g | | | 0.7 | 11.4 | 0.3 | 1.4 | |
+| Pomegranate | Other | g | | | 1.7 | 18.7 | 1.2 | 4 | |
 | Pomegranate Molasses | Pantry | ml | | | 0 | 70 | 0 | 0 | Yes |
 | Potato | Vegetables | g | | | 2 | 17 | 0.1 | 2.2 | |
 | Prawn | Proteins and Dairy | g | 500 g | | 20 | 0 | 1.7 | 0 | |

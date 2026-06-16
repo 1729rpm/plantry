@@ -10,6 +10,7 @@ active: Yes
 satiety: High
 prepMinutes: 35
 seasons: All
+cuisine: Indian
 complexity: Medium
 prePrep: Boil the potatoes the night before for a quicker morning
 photo: aloo-puri.jpg

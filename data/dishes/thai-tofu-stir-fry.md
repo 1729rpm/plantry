@@ -3,13 +3,14 @@ id: 178
 name: Thai tofu stir fry
 category: Dry dish
 time: Lunch
-tags: [HP, oriental]
+tags: [HP]
 primaryIngredient: Tofu
 preferred: No
 active: Yes
 satiety: High
 prepMinutes: 20
 seasons: All
+cuisine: Thai
 complexity: Easy
 skill: Press the tofu dry and sear it hard before the sauce goes in so it browns
 photo: thai-tofu-stir-fry.jpg

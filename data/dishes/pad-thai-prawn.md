@@ -3,13 +3,14 @@ id: 162
 name: Pad thai prawn
 category: Complete meal
 time: Lunch
-tags: [HP, oriental, complete_meal]
+tags: [HP, complete_meal]
 primaryIngredient: Prawn
 preferred: No
 active: Yes
 satiety: High
 prepMinutes: 30
 seasons: All
+cuisine: Thai
 complexity: Medium
 skill: Soak the rice noodles soft, then toss fast on high heat so they do not clump
 buySpecially: Cleaned prawns, 200g

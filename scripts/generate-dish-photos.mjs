@@ -99,43 +99,17 @@ function dishSeed(slug) {
   return (h >>> 0) % 1000000;
 }
 
-// --- Cuisine map: single source of truth is data/dish-photos/STYLE.md. This
-// mirrors that table; STYLE.md owns it and any new tag is added there first. The
-// prompt template reads "a dish of {cuisine} home cooking", so the slot is the
-// bare cuisine ADJECTIVE only (no article, no "home-cooked dish" wrapping).
-const CUISINE_MAP = {
-  italian: "Italian",
-  chinese: "Chinese",
-  mexican: "Mexican",
-  greek: "Greek",
-  spanish: "Spanish",
-  korean: "Korean",
-  japanese: "Japanese",
-  continental: "Continental",
-  vietnamese: "Vietnamese",
-  lebanese: "Lebanese",
-  mediterranean: "Mediterranean",
-  oriental: "Thai",
-};
-const FUNCTIONAL_TAGS = new Set(["HP", "complete_meal", "complete_carb", "fruit"]);
-// Slug-level cuisine overrides (STYLE.md): a dish whose first cuisine tag would
-// mislabel it gets its adjective pinned here by slug. Singapore noodles is tagged
-// `oriental` (which defaults to Thai) but is Chinese-Malay, so Rajat pinned it to
-// "Chinese".
-const CUISINE_SLUG_OVERRIDES = {
-  "singapore-noodles": "Chinese",
-};
+// --- Cuisine slot. The prompt template reads "a home-style {cuisine} dish", so
+// the slot is the bare cuisine ADJECTIVE only (no article, no wrapping). The
+// cuisine is the dish's first-class `cuisine` frontmatter field (engine.md §12),
+// the single source of truth for cuisine across the app and this tool; the field
+// already carries the human-readable adjective ("Indian", "Thai", "Chinese", ...)
+// so no decoding map is needed. (Slug-level overrides and the old tag-derivation
+// map are gone: e.g. singapore-noodles is now `cuisine: Chinese` in its file.)
 
-/** Build the cuisine adjective slot ("Thai", "Indian", "Chinese", ...). */
-function cuisinePhrase(slug, tags) {
-  if (CUISINE_SLUG_OVERRIDES[slug]) return CUISINE_SLUG_OVERRIDES[slug];
-  for (const tag of tags) {
-    if (FUNCTIONAL_TAGS.has(tag)) continue;
-    const hit = CUISINE_MAP[tag];
-    if (hit) return hit;
-  }
-  // No cuisine tag -> Indian (the untagged originals).
-  return "Indian";
+/** The cuisine adjective slot, read straight from the dish's cuisine field. */
+function cuisinePhrase(cuisine) {
+  return cuisine && cuisine.trim() ? cuisine.trim() : "Indian";
 }
 
 /** Load the per-dish visual-detail map from data/dish-photos/details.md. Each
@@ -164,7 +138,7 @@ function loadDetails() {
   return map;
 }
 
-/** Minimal dish-file read: frontmatter name + tags, and the first body paragraph. */
+/** Minimal dish-file read: frontmatter name + cuisine, and the first body paragraph. */
 function readDish(slug) {
   const path = resolve(dishesDir, `${slug}.md`);
   if (!existsSync(path)) throw new Error(`dish file not found: ${path}`);
@@ -177,13 +151,10 @@ function readDish(slug) {
   if (!nameLine) throw new Error(`dish "${slug}": no name field`);
   const name = nameLine[1].trim();
 
-  const tagsLine = fm.match(/^tags:\s*\[(.*)\]\s*$/m);
-  const tags = tagsLine
-    ? tagsLine[1]
-        .split(",")
-        .map((t) => t.trim())
-        .filter(Boolean)
-    : [];
+  // Cuisine is the first-class frontmatter field (engine.md §12), the single
+  // source of truth for the photo prompt's cuisine slot.
+  const cuisineLine = fm.match(/^cuisine:\s*(.+)$/m);
+  const cuisine = cuisineLine ? cuisineLine[1].trim() : "Indian";
 
   const hasPhoto = /^photo:\s*.+$/m.test(fm);
 
@@ -198,7 +169,7 @@ function readDish(slug) {
   // Trim to a phrase: drop a trailing period for clean nesting in the parens.
   const description = firstPara.replace(/\.$/, "");
 
-  return { path, raw, name, tags, description, hasPhoto };
+  return { path, raw, name, cuisine, description, hasPhoto };
 }
 
 // NVIDIA's FLUX.1-dev content filter false-positives on a few benign culinary
@@ -256,13 +227,13 @@ function sanitizeFilterTokens(prompt) {
  * a single generic prompt produced (okra as whole cylinders, plain roti garnished,
  * smooth eggs, dry dishes shown saucy). If a slug has no detail line (should not
  * happen: details.md covers all 200), fall back to the dish's first-paragraph
- * description so a new dish still renders. The {cuisine} adjective is derived as
- * before. */
-function buildPrompt(slug, name, tags, description) {
-  const cuisine = cuisinePhrase(slug, tags);
+ * description so a new dish still renders. The {cuisine} adjective comes from the
+ * dish's first-class cuisine field. */
+function buildPrompt(slug, name, cuisine, description) {
+  const cuisineSlot = cuisinePhrase(cuisine);
   const detail = loadDetails()[slug] || description;
   const prompt =
-    `A real, candid phone photograph of ${name}, a home-style ${cuisine} dish: ` +
+    `A real, candid phone photograph of ${name}, a home-style ${cuisineSlot} dish: ` +
     `${detail}. Shot from a natural low or three-quarter angle with shallow depth ` +
     `of field, in a real everyday vessel that suits the dish, a softly blurred home ` +
     `or restaurant background, ordinary warm light and gentle natural shadows, ` +
@@ -645,10 +616,10 @@ function setPhotoField(slug, raw, photoFilename) {
 }
 
 async function processDish(slug, token) {
-  const { path, raw, name, tags, description, hasPhoto } = readDish(slug);
-  const prompt = buildPrompt(slug, name, tags, description);
+  const { path, raw, name, cuisine, description, hasPhoto } = readDish(slug);
+  const prompt = buildPrompt(slug, name, cuisine, description);
   console.log(`\n[${slug}] ${name}`);
-  console.log(`  cuisine slot: ${cuisinePhrase(slug, tags)}`);
+  console.log(`  cuisine slot: ${cuisinePhrase(cuisine)}`);
   if (process.argv.includes("--dry-run")) {
     console.log(`  prompt: ${prompt}`);
     return;

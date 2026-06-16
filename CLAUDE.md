@@ -48,6 +48,8 @@ Code-touching sessions work in their own git worktree. The main directory at `/U
 
 The EM (this session by default) spawns engineers via `/new-stream <branch> <stream>`. Rajat invokes the slow loop via `/slow-loop`. Both commands are defined under `.claude/commands/`.
 
+Because several worktree sessions run at once, the EM keeps a live-session registry at `coordination/active-streams.md` (local, gitignored): every in-flight stream and the file lanes it owns. Read it before spawning any stream or starting code work so two sessions never collide on the same files; if lanes overlap, sequence the streams and record the merge order. The later-merging session always owns the rebase. Full protocol: `docs/development.md` §11.
+
 Full ground rules (session model, branch naming, commit style, definition of done, ship workflow, escalation, anti-patterns) live in `docs/development.md`.
 
 ## Operational docs

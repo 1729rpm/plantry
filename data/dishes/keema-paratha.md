@@ -10,6 +10,7 @@ active: No
 satiety: High
 prepMinutes: 35
 seasons: All
+cuisine: Indian
 complexity: Medium
 skill: Comfortable, sealing the keema filling neatly takes care
 ---

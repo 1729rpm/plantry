@@ -3,13 +3,14 @@ id: 198
 name: Chicken enchilada bowl
 category: Complete meal
 time: Lunch
-tags: [HP, mexican, complete_meal]
+tags: [HP, complete_meal]
 primaryIngredient: Chicken
 preferred: No
 active: Yes
 satiety: High
 prepMinutes: 30
 seasons: All
+cuisine: Mexican
 complexity: Medium
 skill: Reduce the tomato sauce well so the bowl is saucy, not watery
 photo: chicken-enchilada-bowl.jpg

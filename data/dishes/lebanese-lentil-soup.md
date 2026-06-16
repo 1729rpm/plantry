@@ -3,13 +3,14 @@ id: 185
 name: Lebanese lentil soup
 category: Gravy dish
 time: Lunch
-tags: [HP, lebanese]
+tags: [HP]
 primaryIngredient: Masoor Dal
 preferred: No
 active: Yes
 satiety: Medium
 prepMinutes: 30
 seasons: All
+cuisine: Lebanese
 complexity: Easy
 skill: Cook the lentils soft enough to blend smooth for a velvety soup
 photo: lebanese-lentil-soup.jpg

@@ -10,6 +10,7 @@ active: Yes
 satiety: High
 prepMinutes: 30
 seasons: All
+cuisine: Indian
 complexity: Medium
 equipment: Heavy kadhai
 photo: kadai-paneer.jpg

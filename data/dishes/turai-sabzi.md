@@ -10,6 +10,7 @@ active: Yes
 satiety: Low
 prepMinutes: 20
 seasons: [Summer, Monsoon]
+cuisine: Indian
 complexity: Easy
 photo: turai-sabzi.jpg
 ---

@@ -3,13 +3,14 @@ id: 160
 name: Thai red curry tofu
 category: Gravy dish
 time: Lunch
-tags: [HP, oriental]
+tags: [HP]
 primaryIngredient: Tofu
 preferred: No
 active: Yes
 satiety: High
 prepMinutes: 25
 seasons: All
+cuisine: Thai
 complexity: Medium
 skill: Fry the curry paste in the thick coconut cream first so it splits and turns fragrant
 photo: thai-red-curry-tofu.jpg

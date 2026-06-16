@@ -3,13 +3,14 @@ id: 207
 name: Korean japchae
 category: Complete meal
 time: Lunch
-tags: [korean, complete_meal]
+tags: [complete_meal]
 primaryIngredient: Noodles
 preferred: No
 active: Yes
 satiety: Medium
 prepMinutes: 30
 seasons: All
+cuisine: Korean
 complexity: Medium
 skill: Cook each vegetable separately so the colours and textures stay distinct
 photo: korean-japchae.jpg

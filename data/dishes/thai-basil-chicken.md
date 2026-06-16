@@ -3,13 +3,14 @@ id: 163
 name: Thai basil chicken
 category: Dry dish
 time: Lunch
-tags: [HP, oriental]
+tags: [HP]
 primaryIngredient: Chicken
 preferred: No
 active: Yes
 satiety: High
 prepMinutes: 20
 seasons: All
+cuisine: Thai
 complexity: Easy
 skill: Keep the heat high so the chicken browns rather than stews
 buySpecially: Chicken keema or minced chicken, 300g

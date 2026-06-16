@@ -10,6 +10,7 @@ active: Yes
 satiety: High
 prepMinutes: 45
 seasons: All
+cuisine: Indian
 complexity: Medium
 skill: Comfortable, drying off the moisture so the mince stays loose not pasty
 buySpecially: Minced mutton, 300g

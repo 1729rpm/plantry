@@ -10,6 +10,7 @@ active: Yes
 satiety: Low
 prepMinutes: 20
 seasons: [Winter]
+cuisine: Indian
 complexity: Easy
 photo: gajar-matar.jpg
 ---

@@ -10,6 +10,7 @@ active: Yes
 satiety: Low
 prepMinutes: 25
 seasons: [Summer]
+cuisine: Indian
 complexity: Medium
 prePrep: Salt the sliced karela and rest to draw out bitterness
 photo: karela-fry.jpg

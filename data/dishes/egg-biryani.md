@@ -10,6 +10,7 @@ active: Yes
 satiety: High
 prepMinutes: 45
 seasons: All
+cuisine: Indian
 complexity: Hard
 skill: Comfortable, the layering and dum timing matter
 photo: egg-biryani.jpg

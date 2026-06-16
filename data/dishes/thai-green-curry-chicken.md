@@ -3,13 +3,14 @@ id: 161
 name: Thai green curry chicken
 category: Gravy dish
 time: Lunch
-tags: [HP, oriental]
+tags: [HP]
 primaryIngredient: Chicken
 preferred: No
 active: Yes
 satiety: High
 prepMinutes: 30
 seasons: All
+cuisine: Thai
 complexity: Medium
 skill: Fry the green curry paste in coconut cream till it splits before adding liquid
 buySpecially: Boneless chicken, 300g

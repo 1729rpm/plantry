@@ -3,13 +3,14 @@ id: 194
 name: Japanese egg fried rice
 category: Complete meal
 time: Lunch
-tags: [japanese, complete_meal]
+tags: [complete_meal]
 primaryIngredient: Rice
 preferred: No
 active: Yes
 satiety: High
 prepMinutes: 20
 seasons: All
+cuisine: Japanese
 complexity: Easy
 skill: Use cold rice and keep the egg soft so the grains stay light
 photo: japanese-egg-fried-rice.jpg

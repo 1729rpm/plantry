@@ -10,6 +10,7 @@ active: Yes
 satiety: Low
 prepMinutes: 25
 seasons: All
+cuisine: Indian
 complexity: Easy
 photo: tomato-soup.jpg
 ---

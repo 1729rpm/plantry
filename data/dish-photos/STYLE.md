@@ -115,51 +115,28 @@ handled automatically.
 
 ## Cuisine slot
 
-The library spans roughly ten cuisines, so the cuisine phrase is derived per
-dish rather than hardcoded. The `{cuisine}` slot is the bare cuisine adjective
-(the template supplies "a home-style {cuisine} dish", so there is no article to
-pick and no wrapping to fill).
+The library spans roughly a dozen cuisines. The `{cuisine}` slot is the bare
+cuisine adjective (the template supplies "a home-style {cuisine} dish", so there
+is no article to pick and no wrapping to fill).
 
-How to derive the cuisine for a dish:
+The cuisine for a dish is its first-class `cuisine:` frontmatter field (engine.md
+§12), the single source of truth for cuisine across the app and this tool. The
+field already holds the human-readable adjective ("Indian", "Thai", "Chinese",
+"Greek", and so on), so the script reads it straight into the slot with no tag
+scan and no decoding table. A dish whose field is somehow blank falls back to
+**Indian**, the library's default.
 
-1. Take the first cuisine tag in the dish's `tags:` list (tags are ordered;
-   scan left to right and use the first one that is a cuisine tag).
-2. Map it to an adjective via the table below.
-3. If the dish has no cuisine tag, the cuisine is **Indian**. The roughly 110
-   untagged originals are Indian home cooking, which is the library's default.
+The cuisine vocabulary in the library is: Indian (the default for the untagged
+originals and the fruit bowls), Italian, Chinese, Mexican, Greek, Spanish,
+Korean, Japanese, Continental, Vietnamese, Lebanese, Mediterranean, and Thai.
 
-`HP`, `complete_meal`, `complete_carb`, and `fruit` are functional tags, not
-cuisines; never treat them as a cuisine. A dish like `[HP, oriental]` is Thai
-(skip `HP`, the first cuisine tag is `oriental`).
+Notes on two judgment calls baked into the field values:
 
-The cuisine-tag vocabulary in the library is exactly:
-
-| Tag             | Cuisine adjective |
-|-----------------|-------------------|
-| `italian`       | Italian           |
-| `chinese`       | Chinese           |
-| `mexican`       | Mexican           |
-| `greek`         | Greek             |
-| `spanish`       | Spanish           |
-| `korean`        | Korean            |
-| `japanese`      | Japanese          |
-| `continental`   | Continental       |
-| `vietnamese`    | Vietnamese        |
-| `lebanese`      | Lebanese          |
-| `mediterranean` | Mediterranean     |
-| `oriental`      | Thai              |
-| (no cuisine tag)| Indian            |
-
-`oriental` maps to Thai: the dishes tagged `oriental` are Thai (pad thai, the
-Thai curries, Thai basil chicken, Thai pineapple fried rice). The one exception
-is **Singapore noodles** (a Chinese-Malay curry-powder noodle dish, not Thai);
-that dish's cuisine adjective is pinned to **Chinese** so it is not mislabelled
-as Thai (Rajat's call: it is the closest honest single-word cuisine for the
-photo). The pipeline hardcodes this single override by slug.
-
-This table is the single source of truth for the tag-to-cuisine mapping; the
-generation script reads its logic from here, so any future cuisine tag must be
-added to this table first.
+- **Thai**: the dishes that were tagged `oriental` (pad thai, the Thai curries,
+  Thai basil chicken, Thai pineapple fried rice) carry `cuisine: Thai`.
+- **Singapore noodles** is a Chinese-Malay curry-powder noodle dish, not Thai,
+  so it carries `cuisine: Chinese` (Rajat's call: the closest honest single-word
+  cuisine for the photo). This is now a plain field value, not a code override.
 
 ---
 

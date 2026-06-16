@@ -10,6 +10,7 @@ active: Yes
 satiety: Medium
 prepMinutes: 15
 seasons: All
+cuisine: Indian
 complexity: Easy
 photo: curd-rice.jpg
 ---

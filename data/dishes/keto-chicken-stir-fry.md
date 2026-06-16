@@ -10,6 +10,7 @@ active: Yes
 satiety: High
 prepMinutes: 20
 seasons: All
+cuisine: Indian
 complexity: Easy
 buySpecially: Boneless chicken breast, 200g
 photo: keto-chicken-stir-fry.jpg

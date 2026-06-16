@@ -3,13 +3,14 @@ id: 196
 name: Mediterranean couscous bowl
 category: Complete meal
 time: Lunch
-tags: [HP, mediterranean, complete_meal]
+tags: [HP, complete_meal]
 primaryIngredient: Couscous
 preferred: No
 active: Yes
 satiety: High
 prepMinutes: 25
 seasons: All
+cuisine: Mediterranean
 complexity: Easy
 skill: Steam the couscous loose and fluff it so it does not clump
 photo: mediterranean-couscous-bowl.jpg

@@ -3,13 +3,14 @@ id: 164
 name: Singapore noodles
 category: Complete meal
 time: Lunch
-tags: [oriental, complete_meal]
+tags: [complete_meal]
 primaryIngredient: Rice Vermicelli
 preferred: No
 active: Yes
 satiety: High
 prepMinutes: 25
 seasons: All
+cuisine: Chinese
 complexity: Easy
 skill: Toss the curry powder through the noodles off the heat so it does not catch
 photo: singapore-noodles.jpg

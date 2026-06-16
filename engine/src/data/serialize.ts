@@ -115,6 +115,9 @@ export function serializeDishFile(file: DishFile): string {
   fm.push(`satiety: ${dish.satiety}`);
   fm.push(`prepMinutes: ${dish.prepMinutes}`);
   fm.push(`seasons: ${frontmatterSeasons(dish.seasons)}`);
+  // Cuisine: a required single-value display/filter field, emitted right after
+  // seasons (after the rule-input fields, before the optional enrichment block).
+  fm.push(`cuisine: ${dish.cuisine}`);
   // Enrichment frontmatter (design-revamp §1.1, slice 2.1). Emitted in a fixed
   // order, each line only when the field is present, so a dish with none of them
   // (every current file) serializes byte-identically to before.

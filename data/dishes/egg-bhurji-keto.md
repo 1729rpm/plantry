@@ -10,6 +10,7 @@ active: Yes
 satiety: High
 prepMinutes: 15
 seasons: All
+cuisine: Indian
 complexity: Easy
 photo: egg-bhurji-keto.jpg
 ---

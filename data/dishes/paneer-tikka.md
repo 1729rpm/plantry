@@ -10,6 +10,7 @@ active: Yes
 satiety: High
 prepMinutes: 25
 seasons: All
+cuisine: Indian
 complexity: Medium
 buySpecially: Firm paneer block, 250g
 prePrep: Marinate the paneer in spiced curd for at least an hour

@@ -10,6 +10,7 @@ active: Yes
 satiety: High
 prepMinutes: 25
 seasons: All
+cuisine: Indian
 complexity: Easy
 prePrep: Soak the soya chunks in hot water till they swell, then squeeze dry
 photo: soyabean-curry.jpg

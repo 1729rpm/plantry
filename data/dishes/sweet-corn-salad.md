@@ -10,6 +10,7 @@ active: Yes
 satiety: Low
 prepMinutes: 15
 seasons: All
+cuisine: Indian
 complexity: Easy
 photo: sweet-corn-salad.jpg
 ---

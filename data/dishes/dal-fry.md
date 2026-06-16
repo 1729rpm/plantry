@@ -10,6 +10,7 @@ active: Yes
 satiety: Medium
 prepMinutes: 25
 seasons: All
+cuisine: Indian
 complexity: Easy
 photo: dal-fry.jpg
 ---

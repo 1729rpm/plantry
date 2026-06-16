@@ -10,6 +10,7 @@ active: Yes
 satiety: High
 prepMinutes: 60
 seasons: All
+cuisine: Indian
 complexity: Hard
 skill: Layering and timing the dum so the rice and chicken finish together
 buySpecially: Curry cut chicken, 300g

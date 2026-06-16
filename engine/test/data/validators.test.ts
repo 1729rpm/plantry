@@ -36,6 +36,7 @@ describe("validateMenuHistoryAgainstLibrary", () => {
         satiety: "High",
         prepMinutes: 30,
         seasons: "All",
+        cuisine: "Indian",
       },
     ];
     const history: MenuHistoryRow[] = [
@@ -122,6 +123,7 @@ describe("validateDishFiles", () => {
         satiety: "High",
         prepMinutes: 30,
         seasons: "All",
+        cuisine: "Indian",
       },
       ingredients: [],
     };
@@ -139,6 +141,7 @@ describe("validateDishFiles", () => {
       satiety: "High" as const,
       prepMinutes: 30,
       seasons: "All" as const,
+      cuisine: "Indian" as const,
     };
     const files: DishFile[] = [
       { slug: "a", dish: { id: 5, name: "A", ...base }, ingredients: [] },
@@ -185,6 +188,7 @@ describe("validateIngredientNamesResolve", () => {
           satiety: "High",
           prepMinutes: 30,
           seasons: "All",
+          cuisine: "Indian",
         },
         ingredients: [{ ingredient: "Phantom Spice", quantity: 5, unit: "g" }],
       },

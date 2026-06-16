@@ -3,13 +3,14 @@ id: 203
 name: Spanish chickpea spinach stew
 category: Gravy dish
 time: Lunch
-tags: [spanish]
+tags: []
 primaryIngredient: Chickpea
 preferred: No
 active: Yes
 satiety: Medium
 prepMinutes: 25
 seasons: All
+cuisine: Spanish
 complexity: Easy
 skill: Let the tomato base cook down before adding the greens
 photo: spanish-chickpea-spinach-stew.jpg

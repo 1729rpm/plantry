@@ -10,6 +10,7 @@ active: Yes
 satiety: High
 prepMinutes: 60
 seasons: All
+cuisine: Indian
 complexity: Hard
 skill: Cooking the mutton to tender and timing the dum so the rice and meat finish together
 buySpecially: Curry cut mutton, 300g

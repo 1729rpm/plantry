@@ -10,6 +10,7 @@ active: Yes
 satiety: Low
 prepMinutes: 20
 seasons: All
+cuisine: Indian
 complexity: Easy
 photo: beans-onion.jpg
 ---

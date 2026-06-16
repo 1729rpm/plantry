@@ -3,13 +3,14 @@ id: 166
 name: Chicken fried rice
 category: Complete meal
 time: Lunch
-tags: [HP, chinese, complete_meal]
+tags: [HP, complete_meal]
 primaryIngredient: Chicken
 preferred: No
 active: Yes
 satiety: High
 prepMinutes: 20
 seasons: All
+cuisine: Chinese
 complexity: Easy
 skill: Use cold cooked rice so the grains stay separate on high heat
 buySpecially: Boneless chicken, 250g

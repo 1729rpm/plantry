@@ -3,13 +3,14 @@ id: 165
 name: Veg hakka noodles
 category: Complete meal
 time: Lunch
-tags: [chinese, complete_meal]
+tags: [complete_meal]
 primaryIngredient: Noodles
 preferred: No
 active: Yes
 satiety: High
 prepMinutes: 20
 seasons: All
+cuisine: Chinese
 complexity: Easy
 skill: Boil the noodles just under done and oil them so they do not stick
 photo: veg-hakka-noodles.jpg

@@ -10,6 +10,7 @@ active: Yes
 satiety: Medium
 prepMinutes: 20
 seasons: All
+cuisine: Indian
 complexity: Easy
 skill: Toast the rice in oil first so the grains stay separate
 photo: mexican-rice.jpg

@@ -10,6 +10,7 @@ active: Yes
 satiety: High
 prepMinutes: 25
 seasons: All
+cuisine: Indian
 complexity: Medium
 prePrep: Soak and squeeze the soya chunks, then marinate in spiced curd for half an hour
 photo: tandoori-soya-chunks.jpg

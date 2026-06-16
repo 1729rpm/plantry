@@ -10,6 +10,7 @@ active: Yes
 satiety: Low
 prepMinutes: 10
 seasons: [Summer]
+cuisine: Indian
 complexity: Easy
 skill: Use very ripe mango so no extra sugar is needed
 prePrep: Freeze the blended mango for a few hours before serving

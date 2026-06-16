@@ -10,6 +10,7 @@ active: No
 satiety: Medium
 prepMinutes: 10
 seasons: All
+cuisine: Indian
 complexity: Easy
 ---
 

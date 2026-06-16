@@ -13,10 +13,16 @@ import { useMutation, useQuery } from "convex/react";
 import { anyApi } from "convex/server";
 import type { ExploreAffinityKey } from "@plantry/engine";
 import type { CurrentWeek, Identity, Meal, ShortDay } from "../lib/types.js";
+import type { Dish } from "@plantry/engine";
 import { dishById, dishPhotoUrl, exploreCardTags } from "../lib/library.js";
-import { DISH_FILTERS, dishMatchesFilters, type DishFilter } from "../lib/dishFilters.js";
+import {
+  dishMatchesExploreFilter,
+  EMPTY_EXPLORE_FILTER,
+  type ExploreFilterState,
+} from "../lib/dishFilters.js";
 import { dayLabel } from "../lib/days.js";
-import { Chip, ComplexityTag, MetaTag, Thumb } from "./primitives.js";
+import { ComplexityTag, MetaTag, Thumb } from "./primitives.js";
+import { ExploreFilters } from "./ExploreFilters.js";
 import { ExploreDishSheet } from "./ExploreDishSheet.js";
 import { ReasonDialog } from "./ReasonDialog.js";
 import { ExploreDayPicker } from "./ExploreDayPicker.js";
@@ -32,11 +38,6 @@ interface ExploreFeedDish {
   dominantAffinity: ExploreAffinityKey;
 }
 
-// The four filter chips from the handoff, shared with the picker sheets. See
-// `lib/dishFilters.ts` for the vocabulary and the matching semantics.
-const FILTERS = DISH_FILTERS;
-type Filter = DishFilter;
-
 // Which overlay (if any) is open over the feed. One value keeps the sheet stack
 // to at most one sheet at a time, matching the Day screen.
 type Overlay =
@@ -47,10 +48,10 @@ type Overlay =
   | { kind: "next-reason"; dish: ExploreFeedDish }
   | { kind: "dislike"; dish: ExploreFeedDish };
 
-function matchesFilters(dishId: number, filters: Filter[]): boolean {
+function matchesFilters(dishId: number, state: ExploreFilterState): boolean {
   const dish = dishById(dishId);
   if (!dish) return false;
-  return dishMatchesFilters(dish, filters);
+  return dishMatchesExploreFilter(dish, state);
 }
 
 export function ExploreScreen({ identity }: ExploreScreenProps) {
@@ -64,15 +65,19 @@ export function ExploreScreen({ identity }: ExploreScreenProps) {
   const saveForNextWeek = useMutation(anyApi.dayMutations.saveForNextWeek);
   const dislikeDish = useMutation(anyApi.dishDislikes.dislikeDish);
 
-  const [filters, setFilters] = useState<Filter[]>([]);
+  const [filters, setFilters] = useState<ExploreFilterState>(EMPTY_EXPLORE_FILTER);
   const [overlay, setOverlay] = useState<Overlay>({ kind: "none" });
   const [actionError, setActionError] = useState<string | null>(null);
   const [inFlight, setInFlight] = useState<boolean>(false);
   const [toast, setToast] = useState<string | null>(null);
 
-  function toggleFilter(f: Filter) {
-    setFilters((prev) => (prev.includes(f) ? prev.filter((x) => x !== f) : [...prev, f]));
-  }
+  // The eligible Explore pool as full dishes, for the filter sub-panels' counts.
+  // The feed already excludes dishes placed this week or queued for next, so the
+  // counts reflect exactly what the filter can surface.
+  const pool = useMemo<Dish[]>(() => {
+    if (!feed) return [];
+    return feed.map((entry) => dishById(entry.dishId)).filter((d): d is Dish => d !== undefined);
+  }, [feed]);
 
   const visible = useMemo(() => {
     if (!feed) return [];
@@ -191,13 +196,7 @@ export function ExploreScreen({ identity }: ExploreScreenProps) {
         </div>
       </div>
 
-      <div className="explore__filters" role="group" aria-label="Filters">
-        {FILTERS.map((f) => (
-          <Chip key={f} active={filters.includes(f)} onClick={() => toggleFilter(f)}>
-            {f}
-          </Chip>
-        ))}
-      </div>
+      <ExploreFilters state={filters} onChange={setFilters} pool={pool} />
 
       <div className="explore__rubric">Close to your usual, new on the plate</div>
 

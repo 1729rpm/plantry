@@ -10,6 +10,7 @@ active: Yes
 satiety: Medium
 prepMinutes: 20
 seasons: All
+cuisine: Indian
 complexity: Easy
 photo: cabbage-peas-aloo.jpg
 ---

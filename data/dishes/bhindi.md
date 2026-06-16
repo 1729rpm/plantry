@@ -10,6 +10,7 @@ active: Yes
 satiety: Low
 prepMinutes: 20
 seasons: All
+cuisine: Indian
 complexity: Easy
 skill: Keep the heat high so the okra does not turn slimy
 photo: bhindi.jpg

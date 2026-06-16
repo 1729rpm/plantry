@@ -10,6 +10,7 @@ active: Yes
 satiety: High
 prepMinutes: 25
 seasons: All
+cuisine: Indian
 complexity: Medium
 buySpecially: Boneless chicken, 300g
 prePrep: Marinate the chicken in spiced curd for at least an hour

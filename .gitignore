@@ -39,3 +39,6 @@ engine/src/data/history.ts
 .pr-description.md
 .engineer-brief.md
 .vercel
+
+# Live-session registry — local EM coordination state, never travels onto a branch (development.md §11)
+coordination/active-streams.md

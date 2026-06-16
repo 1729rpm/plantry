@@ -10,6 +10,7 @@ active: Yes
 satiety: High
 prepMinutes: 15
 seasons: All
+cuisine: Indian
 complexity: Easy
 buySpecially: Cleaned prawns, 300g
 photo: prawn-stir-fry.jpg

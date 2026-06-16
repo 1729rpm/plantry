@@ -10,6 +10,7 @@ active: Yes
 satiety: High
 prepMinutes: 25
 seasons: All
+cuisine: Indian
 complexity: Easy
 buySpecially: Boneless chicken, 300g
 photo: pepper-chicken-dry.jpg

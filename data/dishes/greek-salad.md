@@ -3,13 +3,14 @@ id: 195
 name: Greek salad
 category: Accompaniment
 time: Lunch
-tags: [greek, mediterranean]
+tags: []
 primaryIngredient: Cucumber
 preferred: No
 active: Yes
 satiety: Low
 prepMinutes: 15
 seasons: All
+cuisine: Greek
 complexity: Easy
 skill: Cut the vegetables chunky so the salad stays crisp and juicy
 photo: greek-salad.jpg

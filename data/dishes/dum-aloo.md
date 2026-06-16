@@ -10,6 +10,7 @@ active: Yes
 satiety: Medium
 prepMinutes: 35
 seasons: All
+cuisine: Indian
 complexity: Medium
 skill: Comfortable, the curd gravy can split if added on high heat
 photo: dum-aloo.jpg

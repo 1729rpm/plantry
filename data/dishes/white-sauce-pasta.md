@@ -3,13 +3,14 @@ id: 254
 name: White sauce pasta
 category: Complete meal
 time: Lunch
-tags: [italian]
+tags: []
 primaryIngredient: Pasta
 preferred: No
 active: Yes
 satiety: High
 prepMinutes: 25
 seasons: All
+cuisine: Italian
 complexity: Easy
 photo: white-sauce-pasta.jpg
 ---

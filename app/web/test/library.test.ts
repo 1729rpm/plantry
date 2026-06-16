@@ -18,6 +18,7 @@ function dish(overrides: Partial<Dish> = {}): Dish {
     satiety: "Medium",
     prepMinutes: 20,
     seasons: "All",
+    cuisine: "Indian",
     complexity: "Easy",
     ...overrides,
   };
@@ -75,9 +76,14 @@ describe("exploreCardTags — descriptor priority", () => {
     expect(labels).toContain("Complete meal");
   });
 
-  it("title-cases a cuisine tag like 'italian' to 'Italian'", () => {
-    const labels = exploreCardTags(dish({ tags: ["italian"] })).map((t) => t.label);
+  it("shows the cuisine field (e.g. 'Italian') as the descriptor", () => {
+    const labels = exploreCardTags(dish({ cuisine: "Italian" })).map((t) => t.label);
     expect(labels).toContain("Italian");
+  });
+
+  it("does NOT show the default Indian cuisine as a descriptor", () => {
+    const labels = exploreCardTags(dish({ cuisine: "Indian", satiety: "Low" })).map((t) => t.label);
+    expect(labels).not.toContain("Indian");
   });
 
   it("maps satiety High to 'Filling'", () => {
@@ -86,11 +92,12 @@ describe("exploreCardTags — descriptor priority", () => {
   });
 
   it("shows only ONE descriptor", () => {
-    // HP, complete_meal, a cuisine tag, and High satiety all apply at once.
+    // HP, complete_meal, an international cuisine, and High satiety all apply.
     const tags = exploreCardTags(
       dish({
-        tags: ["HP", "complete_meal", "italian"],
+        tags: ["HP", "complete_meal"],
         category: "Complete meal",
+        cuisine: "Italian",
         satiety: "High",
       }),
     );
@@ -98,8 +105,8 @@ describe("exploreCardTags — descriptor priority", () => {
     expect(descriptors).toHaveLength(1);
   });
 
-  it("lets HP win over a cuisine tag when both are present", () => {
-    const labels = exploreCardTags(dish({ tags: ["italian", "HP"] })).map((t) => t.label);
+  it("lets HP win over the cuisine field when both apply", () => {
+    const labels = exploreCardTags(dish({ tags: ["HP"], cuisine: "Italian" })).map((t) => t.label);
     expect(labels).toContain("High protein");
     expect(labels).not.toContain("Italian");
   });

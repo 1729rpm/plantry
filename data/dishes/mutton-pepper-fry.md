@@ -10,6 +10,7 @@ active: Yes
 satiety: High
 prepMinutes: 50
 seasons: All
+cuisine: Indian
 complexity: Medium
 skill: Pressure cooking the mutton first, then frying dry with plenty of crushed pepper
 buySpecially: Curry cut mutton, 300g

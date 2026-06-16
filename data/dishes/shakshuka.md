@@ -3,13 +3,14 @@ id: 177
 name: Shakshuka
 category: Gravy dish
 time: Lunch
-tags: [HP, lebanese]
+tags: [HP]
 primaryIngredient: Egg
 preferred: No
 active: Yes
 satiety: High
 prepMinutes: 25
 seasons: All
+cuisine: Lebanese
 complexity: Easy
 skill: Keep the heat low once the eggs go in so the whites set but the yolks stay soft
 photo: shakshuka.jpg

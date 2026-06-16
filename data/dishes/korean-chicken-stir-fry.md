@@ -3,13 +3,14 @@ id: 192
 name: Korean chicken stir fry
 category: Dry dish
 time: Lunch
-tags: [HP, korean]
+tags: [HP]
 primaryIngredient: Chicken
 preferred: No
 active: Yes
 satiety: High
 prepMinutes: 25
 seasons: All
+cuisine: Korean
 complexity: Medium
 skill: Reduce the sauce till it glazes the chicken without burning the sugar
 buySpecially: Boneless chicken, 300g

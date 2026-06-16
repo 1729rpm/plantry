@@ -10,6 +10,7 @@ active: Yes
 satiety: Medium
 prepMinutes: 50
 seasons: [Winter]
+cuisine: Indian
 complexity: Hard
 skill: Patient slow roasting of the dal paste so it turns nutty without burning
 prePrep: Soak the moong dal for a few hours, then grind to a coarse paste

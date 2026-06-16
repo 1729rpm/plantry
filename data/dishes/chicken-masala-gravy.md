@@ -10,6 +10,7 @@ active: Yes
 satiety: High
 prepMinutes: 40
 seasons: All
+cuisine: Indian
 complexity: Medium
 skill: Comfortable, browning the onion masala matters
 equipment: Heavy kadhai

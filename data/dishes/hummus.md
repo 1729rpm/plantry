@@ -3,13 +3,14 @@ id: 174
 name: Hummus
 category: Accompaniment
 time: Lunch
-tags: [lebanese]
+tags: []
 primaryIngredient: Chickpea
 preferred: No
 active: Yes
 satiety: Low
 prepMinutes: 15
 seasons: All
+cuisine: Lebanese
 complexity: Easy
 skill: Blend long with a little iced water so it turns pale and silky
 photo: hummus.jpg
