@@ -1,5 +1,7 @@
 # Plantry design handoff
 
+> Note: this is the first design handoff and is now several features behind the live app (the passcode gate is six digits, the Changes tab shipped, and the share output is a multi-image family). Treat it as a historical style anchor, not current truth, until it is re-commissioned.
+
 Complete design for the Plantry PWA and its shareable output family. There was no prior `app/web/src/` or handoff to anchor on, so this folder also establishes the visual language; the tokens in `hifi-tokens.jsx` are the proposed initial values for `app/web/src/index.css`.
 
 ## What changed since the last handoff
@@ -31,7 +33,7 @@ First handoff; there is no prior folder. Everything here is new, reviewed with t
 - **New library data implied.** Per dish: photo, description line, pre prep note, protein grams, protein to carb ratio, cook time, complexity level, skill note, equipment, special ingredients, recipe steps, healthy tag. Last cooked derives from history. Structural; routes through the slow loop.
 - **"Save for next week" implies a new data home**: a queue the next generation run reads. The engine and spec do not have this yet; it routes through the slow loop. The prototype stores it and logs it to Changes.
 - **Dish-level comments only**, entered from the details sheet. `docs/product.md` §6 says comments attach to a dish or a day; day-level comments now have no entry point. Confirm the spec should narrow to dish-level, or give day comments a home.
-- **Share image change.** `docs/product.md` §3 describes one PNG with the grocery list underneath. This handoff splits menu, grocery, and recipes into separate images. The spec should be updated to match.
+- **Share image change (resolved).** `docs/product.md` §3 described one PNG with the grocery list underneath. This handoff splits menu, grocery, and recipes into separate images. Resolved: the share-image family shipped and `docs/product.md` §3 now describes it.
 - **"Include recipe when sharing" lives on the week**, not the library. It resets each week. Confirm that is the intent.
 - **Ranking heuristics here are design intent**, not engine spec.
 - **Photos are Wikimedia Commons images** (CC licensed, several require attribution). Replace before shipping.
@@ -39,7 +41,7 @@ First handoff; there is no prior folder. Everything here is new, reviewed with t
 
 ## Open questions
 
-- "Changes" is the working name for the record tab; alternatives considered were Logs, Activity, Journal. Pick one and it propagates.
+- "Changes" is the record tab (resolved): alternatives considered were Logs, Activity, Journal; "Changes" is the chosen name and shipped.
 - Saving a dish for next week currently asks for a reason like any other action. Confirm a reason is wanted there.
 - Explore hides dishes already placed in the current week or saved for next week. Confirm.
-- The passcode is not validated in the prototype (any four digits pass). The real passcode lives in configuration.
+- The passcode is not validated in the prototype. Resolved: the live gate is a six-digit passcode (not four), validated against configuration.
