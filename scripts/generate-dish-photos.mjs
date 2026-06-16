@@ -221,6 +221,20 @@ function sanitizeFilterTokens(prompt) {
   return out;
 }
 
+/** Detect whether a dish's detail line opts out of garnish. FLUX is a
+ * guidance-distilled model that barely honours negations: the skeleton's standing
+ * "any garnish is fresh green coriander (cilantro)" clause names the "coriander"
+ * token, and on a bare dish (a plain bread, a dessert, a fruit, plain rice) the
+ * model latches onto that named token and sprinkles coriander even when the detail
+ * line says "no garnish". So we cannot rely on the detail line to negate it; we
+ * suppress the clause at the source. The opt-out is keyed on the natural phrase
+ * such dishes already use ("no garnish") rather than on any dish name or category,
+ * so it generalizes to every non-garnished dish (Principle 2: solve by the
+ * property, not the dish). Case-insensitive. */
+function detailOptsOutOfGarnish(detail) {
+  return /no garnish/i.test(detail);
+}
+
 /** Build the per-dish prompt: a shared realism skeleton plus the dish's own
  * visual-detail line from data/dish-photos/details.md (form, cut, garnish,
  * dry-vs-gravy state, texture). The detail is the fix for ingredient-level errors
@@ -228,10 +242,23 @@ function sanitizeFilterTokens(prompt) {
  * smooth eggs, dry dishes shown saucy). If a slug has no detail line (should not
  * happen: details.md covers all 200), fall back to the dish's first-paragraph
  * description so a new dish still renders. The {cuisine} adjective comes from the
- * dish's first-class cuisine field. */
+ * dish's first-class cuisine field.
+ *
+ * The garnish clause is conditional. By default the skeleton states the standing
+ * coriander-not-parsley garnish cue verbatim (every savoury dish keeps it
+ * unchanged). When the detail line opts out of garnish (says "no garnish"), the
+ * clause is replaced with a positive bare-surface statement so the named
+ * "coriander" token never reaches the model: FLUX renders the named token even
+ * under a negation, so on a bare dish (bread, dessert, fruit, plain rice) the only
+ * reliable fix is to omit the token entirely. */
 function buildPrompt(slug, name, cuisine, description) {
   const cuisineSlot = cuisinePhrase(cuisine);
   const detail = loadDetails()[slug] || description;
+  // Conditional garnish clause: a bare dish (detail line says "no garnish")
+  // never names the "coriander" token; a normal dish keeps the standing cue.
+  const garnishClause = detailOptsOutOfGarnish(detail)
+    ? "the dish carries no garnish, no herbs, and no green leaves"
+    : "any garnish is fresh green coriander (cilantro) leaves, never flat-leaf parsley";
   const prompt =
     `A real, candid phone photograph of ${name}, a home-style ${cuisineSlot} dish: ` +
     `${detail}. Shot from a natural low or three-quarter angle with shallow depth ` +
@@ -240,10 +267,12 @@ function buildPrompt(slug, name, cuisine, description) {
     `honest true-to-life colour with a matte natural finish, true slightly-muted ` +
     `colours, not glossy, not oversaturated, not plastic-looking. The food looks ` +
     `genuinely cooked and a little imperfect with real texture, irregular hand-made ` +
-    `shapes, a little oil sheen and uneven edges; any garnish is fresh green ` +
-    `coriander (cilantro) leaves, never flat-leaf parsley. Realistic and unstyled, ` +
-    `square 1:1.`;
-  // Sanitize the assembled string only; the dish file on disk is untouched.
+    `shapes, a little oil sheen and uneven edges; ${garnishClause}. Realistic and ` +
+    `unstyled, square 1:1.`;
+  // Sanitize the assembled string only; the dish file on disk is untouched. The
+  // "flat-leaf" rewrite is only needed when the coriander clause is present; the
+  // bare-surface clause carries no "flat-leaf" token. (Other rewrites, e.g.
+  // "fried", may still fire on the detail line.)
   return sanitizeFilterTokens(prompt);
 }
 
@@ -778,7 +807,21 @@ async function main() {
   if (failed.length) console.log(`Failed: ${failed.join(", ")}`);
 }
 
-main().catch((err) => {
-  console.error(err);
-  process.exit(1);
-});
+// Run main() only when invoked as a script, not when imported (e.g. by the unit
+// test, which exercises buildPrompt/sanitizeFilterTokens without firing the CLI).
+// Compare resolved filesystem paths (process.argv[1] may be relative and the
+// repo path contains spaces, so a raw string compare against import.meta.url
+// would never match).
+const invokedDirectly =
+  process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url);
+if (invokedDirectly) {
+  main().catch((err) => {
+    console.error(err);
+    process.exit(1);
+  });
+}
+
+// Exported for unit tests. The pure prompt-building helpers carry the
+// behaviour worth asserting (the conditional garnish clause, the filter-token
+// rewrite); the network/IO path is exercised manually against the real provider.
+export { buildPrompt, sanitizeFilterTokens, detailOptsOutOfGarnish, cuisinePhrase };
