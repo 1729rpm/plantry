@@ -17,6 +17,35 @@ import { deriveSummaryLine } from "./ChangesScreen.js";
 import { SharePreviewSheet } from "./SharePreviewSheet.js";
 import type { ShareGroceryGroup } from "./ShareImages.js";
 
+// True only when the device reports a genuinely offline network. Reactive via
+// the browser online/offline events so a mid-session network drop flips it.
+//
+// We deliberately key the offline banner off this rather than off "the Convex
+// query has not resolved yet". On a normal cold open the websocket is still
+// reconnecting, so the cached week renders for a beat before live data lands;
+// keying the banner off the unresolved query made it flash on every online
+// open. navigator.onLine is synchronous on first paint, so the cached week
+// renders silently while online and the banner shows immediately when the
+// phone is actually offline (no flash either way).
+function useIsOffline(): boolean {
+  const [offline, setOffline] = useState(
+    () => typeof navigator !== "undefined" && navigator.onLine === false,
+  );
+  useEffect(() => {
+    const update = () => setOffline(navigator.onLine === false);
+    window.addEventListener("online", update);
+    window.addEventListener("offline", update);
+    // Re-sync once on mount in case the state changed between the lazy
+    // initializer and this effect running.
+    update();
+    return () => {
+      window.removeEventListener("online", update);
+      window.removeEventListener("offline", update);
+    };
+  }, []);
+  return offline;
+}
+
 interface MenuScreenProps {
   identity: Identity;
   onSwitchIdentity: () => void;
@@ -138,6 +167,7 @@ function MenuBody({
 
 export function MenuScreen({ identity, onSwitchIdentity, onEditDay }: MenuScreenProps) {
   const result = useQuery(anyApi.queries.week.getCurrentWeek, {}) as CurrentWeek | null | undefined;
+  const offline = useIsOffline();
 
   const cached = useMemo(() => getCachedWeek(), []);
 
@@ -149,11 +179,16 @@ export function MenuScreen({ identity, onSwitchIdentity, onEditDay }: MenuScreen
 
   if (result === undefined) {
     if (cached) {
+      // The live query has not resolved. Render the cached week so a returning
+      // user sees their menu instantly. The offline banner and the disabled
+      // Edit/Share affordances follow the real offline signal, not this load
+      // window, so a normal online open shows the cached week silently and a
+      // genuinely offline open shows it labelled.
       return (
         <MenuBody
           week={cached.week}
           identity={identity}
-          offline
+          offline={offline}
           onSwitchIdentity={onSwitchIdentity}
           onEditDay={onEditDay}
         />
@@ -183,11 +218,15 @@ export function MenuScreen({ identity, onSwitchIdentity, onEditDay }: MenuScreen
     );
   }
 
+  // Live data resolved. The banner and the disabled Edit/Share still track the
+  // real offline signal: if the network drops while the user is on this live
+  // menu, Convex serves the last value but writes would fail, so the same
+  // honest offline affordance applies.
   return (
     <MenuBody
       week={result}
       identity={identity}
-      offline={false}
+      offline={offline}
       onSwitchIdentity={onSwitchIdentity}
       onEditDay={onEditDay}
     />
