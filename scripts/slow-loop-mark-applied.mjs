@@ -11,9 +11,9 @@
 // Cluster blocks may also carry `next_week_queue_ids:` (consumed nextWeekQueue
 // rows the slow loop decided to drop) and `dislike_ids:` (consumed dishDislikes
 // rows). The queue ids are marked `dropped` via the real mutation. The dislike
-// ids are parsed tolerantly but NOT yet written back: the `dishDislikes` table
-// and its mutation land in slice 7.1, so until then dislike ids are logged and
-// left queued. See MAINTENANCE.md §3 and features/design-revamp.md §6.14.
+// ids are parsed tolerantly but NOT yet written back: the `dishDislikes`
+// write-back mutation is not yet built, so until it lands dislike ids are
+// logged and not written back. See MAINTENANCE.md §3.
 //
 // Run locally for unit testing:
 //   PR_BODY="$(cat sample-pr-body.md)" PR_URL=https://example/pr/1 \
@@ -219,13 +219,12 @@ console.log(
 );
 
 // Dislikes are parsed for forward-compatibility but NOT written back here: the
-// `dishDislikes` table and its mark-applied mutation land in slice 7.1. Until
-// then this is a guarded no-op that logs the ids so a slow-loop PR can already
-// list them; consumed dislikes stay queued and the 7.1 follow-up wires the real
-// mutation. See MAINTENANCE.md §3 and features/design-revamp.md §6.14.
+// `dishDislikes` write-back mutation is not yet built. Until it lands this is a
+// guarded no-op that logs the ids so a slow-loop PR can already list them;
+// consumed dislikes stay queued. See MAINTENANCE.md §3.
 if (dislikeIds.length > 0) {
   console.log(
-    `[slow-loop-mark-applied] dislike ids parsed but NOT marked (dishDislikes table lands in slice 7.1): ${dislikeIds.join(", ")}`,
+    `[slow-loop-mark-applied] dislike ids parsed but NOT marked (dishDislikes write-back not yet built): ${dislikeIds.join(", ")}`,
   );
 }
 

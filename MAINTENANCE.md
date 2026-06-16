@@ -21,7 +21,7 @@ Reactive signals (what the user did or said this week):
 - All `queued` rows in Convex `comments` (via `npx convex run queries/comments:listQueuedComments`).
 - All `queued` rows in Convex `manualChanges` (via `npx convex run queries/manualChanges:listQueuedManualChanges`). These now span swap, custom, delete, add, skip_day, restore_day, and save_next_week kinds; the kind plus `reason` is the signal.
 - All `queued` rows in Convex `nextWeekQueue` (dishes saved from Explore that have not yet been placed by a generation run).
-- All `queued` rows in Convex `dishDislikes` (records-only Explore taps). This table lands in slice 7.1; until it exists, treat it as zero queued dislikes.
+- All `queued` rows in Convex `dishDislikes` (records-only Explore taps). The table is a live signal channel that collects real Explore-tap rows.
 - All open `incidents` from Convex (via `npx convex run queries/incidents:listIncidents`).
 
 Proactive signals (the health of the library itself, independent of any user action):
@@ -44,7 +44,7 @@ Context (read, not clustered on directly):
    - **Adds** (`manualChanges` kind `add`). Repeated manual adds of the same category read as under-generation: the engine is leaving a slot too sparse. The fix mirrors deletes in the opposite direction.
    - **Saves** (`manualChanges` kind `save_next_week`, and `nextWeekQueue` rows). A dish saved repeatedly is a dish the engine under-picks; the right-size answer may be flipping its `preferred` flag or revisiting its recency treatment. Separately, stale queued rows (saved weeks ago, never placed) are signal too: the loop may mark them `dropped` with a reason rather than carry dead intent forward.
    - **Unplaceable requests** (`nextWeekQueue` rows that stay `queued` with an incident trail). A saved dish that composition keeps rejecting means either the dish is mis-categorized or the composition is too rigid. Both are classic right-size calls (a data-row recategorization versus a rule loosening).
-   - **Dislikes** (`dishDislikes` rows). A dish disliked once is no change. A dish disliked repeatedly, or disliked by both household members, is the threshold for a deactivation or an explore down-rank. The optional reason, when present, sharpens which way to go. The fast loop never acts on a dislike; the slow loop is the only path to any consequence. (The `dishDislikes` table lands in slice 7.1; the clustering guidance is documented now and goes live when the table exists.)
+   - **Dislikes** (`dishDislikes` rows). A dish disliked once is no change. A dish disliked repeatedly, or disliked by both household members, is the threshold for a deactivation or an explore down-rank. The optional reason, when present, sharpens which way to go. The fast loop never acts on a dislike; the slow loop is the only path to any consequence.
 
 2. For each cluster, apply right-size discipline (`docs/product.md` §4 Principle 1):
    - Size: one-off, small pattern, structural.
@@ -73,7 +73,7 @@ A GitHub Action posts back to Convex:
 - Marks the consumed `manualChanges` rows with the same outcome per cluster, using the same per-cluster fence section.
 - Marks the corresponding `incidents` as resolved.
 - Marks the consumed `nextWeekQueue` rows `dropped` (the queue's terminal "consumed by the slow loop without placing" state; the generation run owns `placed`, the slow loop owns `dropped`).
-- Records the consumed `dishDislikes` rows (slice 7.1 wires this back; until then dislike ids are listed in the PR but left queued, see §3).
+- Lists the consumed `dishDislikes` rows in the PR but leaves them `queued`: the dislike write-back mutation is not yet wired (see §3).
 
 The action then triggers a redeploy: build emits new typed library/history modules from the updated markdown, Convex picks up the new functions, Vercel rebuilds the frontend. The next generated week uses the new rules.
 
@@ -210,13 +210,13 @@ Six `internalMutation` functions (not exposed to the browser), split across `app
 
 Each mutation handles missing or already-resolved ids by inserting a `warn`-severity `incidents` row noting which id was skipped, then continuing. The mutations never throw; the post-merge step is best-effort and must not block a merge.
 
-**Dislikes are parsed but not yet written back.** The action parses `dislike_ids:` (and the flat `Consumed dislike IDs:` line) and logs them, but does NOT call a mutation: the `dishDislikes` table and its mark-applied mutation land in slice 7.1. Until then a slow-loop PR may already list consumed dislike ids for the human record, but the rows stay `queued`; wiring the real mutation is a tracked 7.1 follow-up (`features/design-revamp.md` §6.12, §6.14).
+**Dislikes are parsed but not yet written back.** The action parses `dislike_ids:` (and the flat `Consumed dislike IDs:` line) and logs them, but does NOT call a mutation: the `dishDislikes` write-back mutation is not yet built. A slow-loop PR may list consumed dislike ids for the human record, but the rows stay `queued` until that mutation lands.
 
 ### 3.3 Debugging a failed run
 
 If the action runs but the next `/slow-loop` invocation still sees stale `queued` comments, follow these steps in order:
 
-1. Open the Actions tab on GitHub, find the `Slow-loop mark applied` run for the merged slow-loop PR, and read the log lines prefixed `[slow-loop-mark-applied]`. They report how many cluster blocks parsed, the applied/reviewed_no_change/incidents/next-week-queue/dislike counts, and any Convex CLI exit codes. The dislike count is logged but no mutation runs for it (the `dishDislikes` table lands in slice 7.1).
+1. Open the Actions tab on GitHub, find the `Slow-loop mark applied` run for the merged slow-loop PR, and read the log lines prefixed `[slow-loop-mark-applied]`. They report how many cluster blocks parsed, the applied/reviewed_no_change/incidents/next-week-queue/dislike counts, and any Convex CLI exit codes. The dislike count is logged but no mutation runs for it (the dislike write-back is not yet built).
 2. If the parse counts read zero clusters and zero flat ids, the slow-loop PR body did not include either section; edit `.claude/commands/slow-loop.md` if `/slow-loop`'s output drifted, or hand-correct the comments via `npx convex run --prod comments:markCommentsApplied '{ "commentIds": ["..."], "resolvedPr": "..." }'`.
 3. If the Convex CLI returned non-zero, check the production deployment (`disciplined-chameleon-263`) for incident rows written by the mutations themselves; they record which ids were skipped and why.
 4. The action skips entirely when `pull_request.merged` is false or the head ref is not `slow-loop/*`; that is by design and not a failure.
