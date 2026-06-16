@@ -23,6 +23,7 @@ function makeDish(name: string): Dish {
     satiety: "Medium",
     prepMinutes: 30,
     seasons: "All",
+    cuisine: "Indian",
   };
 }
 

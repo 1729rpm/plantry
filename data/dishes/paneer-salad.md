@@ -10,6 +10,7 @@ active: Yes
 satiety: Medium
 prepMinutes: 10
 seasons: All
+cuisine: Indian
 complexity: Easy
 photo: paneer-salad.jpg
 ---

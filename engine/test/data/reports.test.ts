@@ -19,6 +19,7 @@ const baseDish = {
   satiety: "High" as const,
   prepMinutes: 30,
   seasons: "All" as const,
+  cuisine: "Indian",
 };
 
 function dish(overrides: Partial<Dish> & { id: number; name: string }): Dish {

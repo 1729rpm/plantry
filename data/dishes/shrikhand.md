@@ -10,6 +10,7 @@ active: Yes
 satiety: Low
 prepMinutes: 20
 seasons: All
+cuisine: Indian
 complexity: Easy
 prePrep: Hang the curd in a muslin cloth for a few hours to drain
 photo: shrikhand.jpg

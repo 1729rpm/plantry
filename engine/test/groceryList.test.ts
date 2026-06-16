@@ -42,6 +42,7 @@ function makeDish(overrides: Partial<Dish> = {}): Dish {
     satiety: "Medium",
     prepMinutes: 30,
     seasons: "All",
+    cuisine: "Indian",
     ...overrides,
   };
 }

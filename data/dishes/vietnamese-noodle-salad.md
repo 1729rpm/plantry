@@ -3,13 +3,14 @@ id: 211
 name: Vietnamese noodle salad
 category: Complete meal
 time: Lunch
-tags: [vietnamese, complete_meal]
+tags: [complete_meal]
 primaryIngredient: Rice Vermicelli
 preferred: No
 active: Yes
 satiety: Medium
 prepMinutes: 25
 seasons: All
+cuisine: Vietnamese
 complexity: Easy
 skill: Dress the salad just before serving so the herbs stay fresh
 photo: vietnamese-noodle-salad.jpg

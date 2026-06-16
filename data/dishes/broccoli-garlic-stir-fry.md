@@ -10,6 +10,7 @@ active: Yes
 satiety: Low
 prepMinutes: 15
 seasons: All
+cuisine: Indian
 complexity: Easy
 photo: broccoli-garlic-stir-fry.jpg
 ---

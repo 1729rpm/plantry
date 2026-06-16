@@ -10,6 +10,7 @@ active: Yes
 satiety: Medium
 prepMinutes: 20
 seasons: All
+cuisine: Indian
 complexity: Easy
 skill: Roast the semolina patiently so the halwa is not raw
 photo: suji-halwa.jpg

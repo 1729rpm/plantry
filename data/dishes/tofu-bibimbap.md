@@ -3,13 +3,14 @@ id: 191
 name: Tofu bibimbap
 category: Complete meal
 time: Lunch
-tags: [HP, korean, complete_meal]
+tags: [HP, complete_meal]
 primaryIngredient: Rice
 preferred: No
 active: Yes
 satiety: High
 prepMinutes: 35
 seasons: All
+cuisine: Korean
 complexity: Medium
 skill: Cook each vegetable separately so the bowl stays colourful and distinct
 photo: tofu-bibimbap.jpg

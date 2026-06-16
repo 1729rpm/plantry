@@ -3,13 +3,14 @@ id: 255
 name: Cheese quesadilla
 category: Complete meal
 time: Lunch
-tags: [mexican]
+tags: []
 primaryIngredient: Tortilla
 preferred: No
 active: Yes
 satiety: High
 prepMinutes: 15
 seasons: All
+cuisine: Mexican
 complexity: Easy
 photo: cheese-quesadilla.jpg
 ---

@@ -10,6 +10,7 @@ active: Yes
 satiety: High
 prepMinutes: 50
 seasons: All
+cuisine: Indian
 complexity: Hard
 prePrep: Soak the chickpeas overnight and prove the bhatura dough ahead
 photo: chole-bhature.jpg

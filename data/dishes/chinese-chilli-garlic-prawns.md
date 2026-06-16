@@ -3,13 +3,14 @@ id: 181
 name: Chinese chilli garlic prawns
 category: Dry dish
 time: Lunch
-tags: [HP, chinese]
+tags: [HP]
 primaryIngredient: Prawn
 preferred: No
 active: Yes
 satiety: High
 prepMinutes: 20
 seasons: All
+cuisine: Chinese
 complexity: Medium
 skill: Cook the prawns fast on high heat so they stay plump and do not toughen
 buySpecially: Cleaned prawns, 300g

@@ -3,13 +3,14 @@ id: 176
 name: Tabbouleh
 category: Accompaniment
 time: Lunch
-tags: [lebanese]
+tags: []
 primaryIngredient: Bulgur Wheat
 preferred: No
 active: Yes
 satiety: Low
 prepMinutes: 20
 seasons: All
+cuisine: Lebanese
 complexity: Easy
 skill: Chop the parsley fine and dry so the salad stays bright, not soggy
 photo: tabbouleh.jpg

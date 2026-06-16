@@ -10,6 +10,7 @@ active: Yes
 satiety: Low
 prepMinutes: 10
 seasons: All
+cuisine: Indian
 complexity: Easy
 photo: peanut-chutney.jpg
 ---

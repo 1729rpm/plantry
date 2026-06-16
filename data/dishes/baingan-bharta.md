@@ -10,6 +10,7 @@ active: Yes
 satiety: Medium
 prepMinutes: 35
 seasons: All
+cuisine: Indian
 complexity: Medium
 skill: Roasting and peeling the brinjal cleanly takes a little patience
 photo: baingan-bharta.jpg

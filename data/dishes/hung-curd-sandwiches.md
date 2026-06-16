@@ -10,6 +10,7 @@ active: No
 satiety: Medium
 prepMinutes: 15
 seasons: All
+cuisine: Indian
 complexity: Easy
 prePrep: Hang the curd overnight to drain
 ---

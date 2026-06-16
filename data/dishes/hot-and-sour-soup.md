@@ -3,13 +3,14 @@ id: 264
 name: Hot and sour soup
 category: Accompaniment
 time: Lunch
-tags: [chinese]
+tags: []
 primaryIngredient: Cabbage
 preferred: No
 active: Yes
 satiety: Low
 prepMinutes: 25
 seasons: All
+cuisine: Chinese
 complexity: Medium
 photo: hot-and-sour-soup.jpg
 ---

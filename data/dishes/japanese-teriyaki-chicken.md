@@ -3,13 +3,14 @@ id: 209
 name: Japanese teriyaki chicken
 category: Dry dish
 time: Lunch
-tags: [HP, japanese]
+tags: [HP]
 primaryIngredient: Chicken
 preferred: No
 active: Yes
 satiety: High
 prepMinutes: 25
 seasons: All
+cuisine: Japanese
 complexity: Easy
 skill: Reduce the sauce till it coats the chicken in a glossy glaze
 photo: japanese-teriyaki-chicken.jpg

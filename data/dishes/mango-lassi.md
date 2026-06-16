@@ -10,6 +10,7 @@ active: Yes
 satiety: Low
 prepMinutes: 10
 seasons: [Summer]
+cuisine: Indian
 complexity: Easy
 photo: mango-lassi.jpg
 ---

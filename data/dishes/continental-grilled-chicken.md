@@ -3,13 +3,14 @@ id: 190
 name: Continental grilled chicken
 category: Dry dish
 time: Lunch
-tags: [HP, continental]
+tags: [HP]
 primaryIngredient: Chicken Breast
 preferred: No
 active: Yes
 satiety: High
 prepMinutes: 30
 seasons: All
+cuisine: Continental
 complexity: Easy
 skill: Rest the chicken after grilling so it stays juicy
 buySpecially: Chicken breast, 250g

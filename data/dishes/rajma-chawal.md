@@ -10,6 +10,7 @@ active: Yes
 satiety: High
 prepMinutes: 40
 seasons: All
+cuisine: Indian
 complexity: Medium
 prePrep: Soak the kidney beans overnight
 photo: rajma-chawal.jpg

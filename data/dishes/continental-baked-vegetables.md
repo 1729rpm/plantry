@@ -3,13 +3,14 @@ id: 206
 name: Continental baked vegetables
 category: Dry dish
 time: Lunch
-tags: [continental]
+tags: []
 primaryIngredient: Mixed Veg
 preferred: No
 active: Yes
 satiety: Medium
 prepMinutes: 35
 seasons: All
+cuisine: Continental
 complexity: Easy
 skill: Parboil the firm vegetables so they finish soft under the cheese
 photo: continental-baked-vegetables.jpg

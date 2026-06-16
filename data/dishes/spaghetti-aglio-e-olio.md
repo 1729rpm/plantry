@@ -3,13 +3,14 @@ id: 171
 name: Spaghetti aglio e olio
 category: Complete meal
 time: Lunch
-tags: [italian, complete_meal]
+tags: [complete_meal]
 primaryIngredient: Spaghetti
 preferred: No
 active: Yes
 satiety: High
 prepMinutes: 20
 seasons: All
+cuisine: Italian
 complexity: Easy
 skill: Warm the garlic gently in oil so it flavours without burning
 photo: spaghetti-aglio-e-olio.jpg

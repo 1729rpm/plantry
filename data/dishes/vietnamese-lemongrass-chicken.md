@@ -3,13 +3,14 @@ id: 212
 name: Vietnamese lemongrass chicken
 category: Dry dish
 time: Lunch
-tags: [HP, vietnamese]
+tags: [HP]
 primaryIngredient: Chicken
 preferred: No
 active: Yes
 satiety: High
 prepMinutes: 30
 seasons: All
+cuisine: Vietnamese
 complexity: Medium
 skill: Mince the lemongrass fine so it cooks into the chicken
 prePrep: Marinate the chicken for an hour if time allows

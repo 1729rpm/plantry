@@ -3,13 +3,14 @@ id: 168
 name: Chilli chicken dry
 category: Dry dish
 time: Lunch
-tags: [HP, chinese]
+tags: [HP]
 primaryIngredient: Chicken
 preferred: No
 active: Yes
 satiety: High
 prepMinutes: 30
 seasons: All
+cuisine: Chinese
 complexity: Medium
 skill: Keep the heat high so the chicken stays dry and the sauce just clings
 buySpecially: Boneless chicken, 300g

@@ -68,6 +68,7 @@ describe("per-dish file round-trip", () => {
       "satiety: High",
       "prepMinutes: 40",
       "seasons: All",
+      "cuisine: Italian",
       "complexity: Medium",
       "skill: Comfortable, browning matters",
       "equipment: Heavy kadhai",
@@ -92,6 +93,7 @@ describe("per-dish file round-trip", () => {
       "",
     ].join("\n");
     const parsed = parseDishFile("test-enriched-dish", original);
+    expect(parsed.dish.cuisine).toBe("Italian");
     expect(parsed.dish.complexity).toBe("Medium");
     expect(parsed.dish.skill).toBe("Comfortable, browning matters");
     expect(parsed.dish.equipment).toBe("Heavy kadhai");
@@ -121,6 +123,7 @@ describe("per-dish file round-trip", () => {
       "satiety: Low",
       "prepMinutes: 20",
       "seasons: All",
+      "cuisine: Indian",
       "---",
       "",
       "A simple everyday dry dish.",
@@ -156,6 +159,7 @@ describe("per-dish file round-trip", () => {
       "satiety: Low",
       "prepMinutes: 20",
       "seasons: [Summer, Monsoon]",
+      "cuisine: Indian",
       "---",
       "",
       "## Ingredients",
@@ -189,6 +193,7 @@ describe("per-dish file round-trip", () => {
       "satiety: High",
       "prepMinutes: 30",
       "seasons: All",
+      "cuisine: Indian",
       "---",
       "",
       "## Ingredients",

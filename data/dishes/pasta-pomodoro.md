@@ -3,13 +3,14 @@ id: 170
 name: Pasta pomodoro
 category: Complete meal
 time: Lunch
-tags: [italian, complete_meal]
+tags: [complete_meal]
 primaryIngredient: Pasta
 preferred: No
 active: Yes
 satiety: High
 prepMinutes: 25
 seasons: All
+cuisine: Italian
 complexity: Easy
 skill: Let the tomato sauce reduce slowly so it turns sweet rather than sharp
 photo: pasta-pomodoro.jpg

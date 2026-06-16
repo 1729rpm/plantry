@@ -10,6 +10,7 @@ active: Yes
 satiety: Medium
 prepMinutes: 30
 seasons: All
+cuisine: Indian
 complexity: Easy
 photo: vegetable-daliya.jpg
 ---

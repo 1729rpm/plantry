@@ -10,6 +10,7 @@ active: Yes
 satiety: High
 prepMinutes: 35
 seasons: All
+cuisine: Indian
 complexity: Medium
 buySpecially: Chicken keema (minced chicken), 300g
 photo: chicken-keema.jpg

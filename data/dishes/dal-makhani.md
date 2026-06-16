@@ -10,6 +10,7 @@ active: Yes
 satiety: High
 prepMinutes: 50
 seasons: All
+cuisine: Indian
 complexity: Medium
 skill: Long slow simmer is what makes it creamy; do not rush
 prePrep: Soak the urad dal and kidney beans overnight

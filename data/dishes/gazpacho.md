@@ -3,13 +3,14 @@ id: 204
 name: Gazpacho
 category: Accompaniment
 time: Lunch
-tags: [spanish]
+tags: []
 primaryIngredient: Tomato
 preferred: No
 active: Yes
 satiety: Low
 prepMinutes: 15
 seasons: [Summer]
+cuisine: Spanish
 complexity: Easy
 skill: Chill it well; the soup is meant to be served cold
 prePrep: Chill the soup for a couple of hours before serving

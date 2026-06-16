@@ -10,6 +10,7 @@ active: Yes
 satiety: Medium
 prepMinutes: 35
 seasons: [Summer, Monsoon]
+cuisine: Indian
 complexity: Easy
 photo: lauki-chana-dal.jpg
 ---

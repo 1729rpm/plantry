@@ -3,13 +3,14 @@ id: 193
 name: Teriyaki tofu rice
 category: Complete meal
 time: Lunch
-tags: [HP, japanese, complete_meal]
+tags: [HP, complete_meal]
 primaryIngredient: Tofu
 preferred: No
 active: Yes
 satiety: High
 prepMinutes: 25
 seasons: All
+cuisine: Japanese
 complexity: Easy
 skill: Reduce the teriyaki till it glazes the tofu in a glossy coat
 photo: teriyaki-tofu-rice.jpg

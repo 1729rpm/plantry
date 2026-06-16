@@ -3,13 +3,14 @@ id: 208
 name: Korean tofu soup
 category: Gravy dish
 time: Lunch
-tags: [korean]
+tags: []
 primaryIngredient: Tofu
 preferred: No
 active: Yes
 satiety: Medium
 prepMinutes: 25
 seasons: All
+cuisine: Korean
 complexity: Medium
 skill: Keep the tofu in soft chunks; do not stir it to pieces
 photo: korean-tofu-soup.jpg

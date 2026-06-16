@@ -10,6 +10,7 @@ active: Yes
 satiety: High
 prepMinutes: 40
 seasons: All
+cuisine: Indian
 complexity: Medium
 skill: Comfortable, browning the masala and simmering the chicken till tender
 buySpecially: Curry cut chicken, 300g

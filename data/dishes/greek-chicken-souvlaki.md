@@ -3,13 +3,14 @@ id: 197
 name: Greek chicken souvlaki
 category: Dry dish
 time: Lunch
-tags: [HP, greek, mediterranean]
+tags: [HP]
 primaryIngredient: Chicken
 preferred: No
 active: Yes
 satiety: High
 prepMinutes: 30
 seasons: All
+cuisine: Greek
 complexity: Medium
 skill: Marinate the chicken well and grill hot so the edges char
 buySpecially: Boneless chicken, 300g

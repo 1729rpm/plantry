@@ -10,6 +10,7 @@ active: Yes
 satiety: High
 prepMinutes: 45
 seasons: All
+cuisine: Indian
 complexity: Medium
 skill: Balancing the cream, butter and tomato so it stays smooth not split
 buySpecially: Boneless chicken, 300g

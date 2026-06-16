@@ -3,13 +3,14 @@ id: 215
 name: Greek yogurt with honey and walnuts
 category: Dessert
 time: Lunch
-tags: [greek, mediterranean]
+tags: []
 primaryIngredient: Curd
 preferred: No
 active: Yes
 satiety: Low
 prepMinutes: 10
 seasons: All
+cuisine: Greek
 complexity: Easy
 skill: Use thick strained curd so it holds the honey on top
 photo: greek-yogurt-with-honey-and-walnuts.jpg

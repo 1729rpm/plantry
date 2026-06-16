@@ -3,13 +3,14 @@ id: 253
 name: Mac and cheese
 category: Complete meal
 time: Lunch
-tags: [continental]
+tags: []
 primaryIngredient: Pasta
 preferred: No
 active: Yes
 satiety: High
 prepMinutes: 25
 seasons: All
+cuisine: Continental
 complexity: Easy
 photo: mac-and-cheese.jpg
 ---

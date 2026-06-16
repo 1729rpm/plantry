@@ -10,6 +10,7 @@ active: Yes
 satiety: High
 prepMinutes: 25
 seasons: All
+cuisine: Indian
 complexity: Medium
 skill: Comfortable, stuffing and rolling without the filling tearing through
 photo: paneer-paratha.jpg

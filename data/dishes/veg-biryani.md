@@ -10,6 +10,7 @@ active: Yes
 satiety: High
 prepMinutes: 50
 seasons: All
+cuisine: Indian
 complexity: Hard
 skill: Layering and timing the dum so the rice and vegetables finish together
 photo: veg-biryani.jpg

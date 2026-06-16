@@ -3,13 +3,14 @@ id: 202
 name: Patatas bravas
 category: Accompaniment
 time: Lunch
-tags: [spanish]
+tags: []
 primaryIngredient: Potato
 preferred: No
 active: Yes
 satiety: Medium
 prepMinutes: 25
 seasons: All
+cuisine: Spanish
 complexity: Easy
 skill: Crisp the potato cubes well before saucing so they stay crunchy
 photo: patatas-bravas.jpg

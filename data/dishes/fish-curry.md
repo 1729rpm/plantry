@@ -10,6 +10,7 @@ active: Yes
 satiety: High
 prepMinutes: 30
 seasons: All
+cuisine: Indian
 complexity: Medium
 skill: Slide the fish in gently so the pieces stay whole
 buySpecially: Fresh fish steaks, 300g

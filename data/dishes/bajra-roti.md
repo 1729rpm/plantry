@@ -10,6 +10,7 @@ active: Yes
 satiety: Medium
 prepMinutes: 25
 seasons: [Winter]
+cuisine: Indian
 complexity: Medium
 skill: Patting the gluten-free dough thin by hand takes a little practice
 photo: bajra-roti.jpg

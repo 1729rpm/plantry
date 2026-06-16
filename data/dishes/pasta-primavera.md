@@ -3,13 +3,14 @@ id: 182
 name: Pasta primavera
 category: Complete meal
 time: Lunch
-tags: [italian, complete_meal]
+tags: [complete_meal]
 primaryIngredient: Pasta
 preferred: No
 active: Yes
 satiety: High
 prepMinutes: 25
 seasons: All
+cuisine: Italian
 complexity: Easy
 skill: Cook the pasta to just firm and keep the vegetables bright and crisp
 photo: pasta-primavera.jpg

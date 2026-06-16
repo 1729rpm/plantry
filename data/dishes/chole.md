@@ -10,6 +10,7 @@ active: Yes
 satiety: High
 prepMinutes: 35
 seasons: All
+cuisine: Indian
 complexity: Medium
 prePrep: Soak the chickpeas overnight
 photo: chole.jpg

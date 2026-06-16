@@ -3,13 +3,14 @@ id: 188
 name: Black bean quesadilla
 category: Complete meal
 time: Lunch
-tags: [HP, mexican, complete_meal]
+tags: [HP, complete_meal]
 primaryIngredient: Tortilla
 preferred: No
 active: Yes
 satiety: High
 prepMinutes: 20
 seasons: All
+cuisine: Mexican
 complexity: Easy
 skill: Toast the tortilla slow so the cheese melts before the outside burns
 photo: black-bean-quesadilla.jpg

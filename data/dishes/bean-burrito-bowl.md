@@ -3,13 +3,14 @@ id: 186
 name: Bean burrito bowl
 category: Complete meal
 time: Lunch
-tags: [HP, mexican, complete_meal]
+tags: [HP, complete_meal]
 primaryIngredient: Kidney Bean
 preferred: No
 active: Yes
 satiety: High
 prepMinutes: 25
 seasons: All
+cuisine: Mexican
 complexity: Easy
 skill: Season the beans and rice well so the bowl is not bland
 photo: bean-burrito-bowl.jpg
