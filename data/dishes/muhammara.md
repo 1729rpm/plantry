@@ -3,13 +3,14 @@ id: 184
 name: Muhammara
 category: Accompaniment
 time: Lunch
-tags: [lebanese]
+tags: []
 primaryIngredient: Capsicum
 preferred: No
 active: Yes
 satiety: Low
 prepMinutes: 20
 seasons: All
+cuisine: Lebanese
 complexity: Easy
 skill: Char the capsicum well so the dip turns smoky and sweet
 photo: muhammara.jpg

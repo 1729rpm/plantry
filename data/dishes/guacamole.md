@@ -3,13 +3,14 @@ id: 200
 name: Guacamole
 category: Accompaniment
 time: Lunch
-tags: [mexican]
+tags: []
 primaryIngredient: Avocado
 preferred: No
 active: Yes
 satiety: Low
 prepMinutes: 10
 seasons: All
+cuisine: Mexican
 complexity: Easy
 skill: Use ripe avocado and mash it chunky, not smooth
 photo: guacamole.jpg

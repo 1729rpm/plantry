@@ -10,6 +10,7 @@ active: Yes
 satiety: High
 prepMinutes: 30
 seasons: [Winter]
+cuisine: Indian
 complexity: Medium
 skill: Comfortable, stuffing without tearing the dough takes a knack
 photo: gobi-paratha.jpg

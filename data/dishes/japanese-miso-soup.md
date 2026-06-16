@@ -3,13 +3,14 @@ id: 210
 name: Japanese miso soup
 category: Accompaniment
 time: Lunch
-tags: [japanese]
+tags: []
 primaryIngredient: Tofu
 preferred: No
 active: Yes
 satiety: Low
 prepMinutes: 15
 seasons: All
+cuisine: Japanese
 complexity: Easy
 skill: Stir the miso in off the heat so it does not boil and turn bitter
 photo: japanese-miso-soup.jpg

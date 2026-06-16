@@ -3,13 +3,14 @@ id: 187
 name: Chicken fajita bowl
 category: Complete meal
 time: Lunch
-tags: [HP, mexican, complete_meal]
+tags: [HP, complete_meal]
 primaryIngredient: Chicken
 preferred: No
 active: Yes
 satiety: High
 prepMinutes: 30
 seasons: All
+cuisine: Mexican
 complexity: Medium
 skill: Char the chicken and peppers hard so they pick up a smoky edge
 buySpecially: Boneless chicken, 300g

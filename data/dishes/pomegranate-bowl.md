@@ -10,6 +10,7 @@ active: Yes
 satiety: Low
 prepMinutes: 5
 seasons: [Monsoon, Winter]
+cuisine: Indian
 complexity: Easy
 photo: pomegranate-bowl.jpg
 ---

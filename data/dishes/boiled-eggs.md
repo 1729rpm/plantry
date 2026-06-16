@@ -10,6 +10,7 @@ active: Yes
 satiety: High
 prepMinutes: 10
 seasons: All
+cuisine: Indian
 complexity: Easy
 photo: boiled-eggs.jpg
 ---

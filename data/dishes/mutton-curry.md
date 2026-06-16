@@ -10,6 +10,7 @@ active: Yes
 satiety: High
 prepMinutes: 55
 seasons: All
+cuisine: Indian
 complexity: Medium
 skill: Comfortable, browning the onion masala and a long simmer matter
 buySpecially: Curry cut mutton, 300g

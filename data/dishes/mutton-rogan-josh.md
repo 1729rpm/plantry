@@ -10,6 +10,7 @@ active: Yes
 satiety: High
 prepMinutes: 55
 seasons: All
+cuisine: Indian
 complexity: Hard
 skill: Browning the mutton and slow simmering so the meat turns tender without drying
 buySpecially: Curry cut mutton, 300g

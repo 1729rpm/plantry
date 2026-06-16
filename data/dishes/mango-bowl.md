@@ -10,6 +10,7 @@ active: Yes
 satiety: Low
 prepMinutes: 5
 seasons: [Summer, Monsoon]
+cuisine: Indian
 complexity: Easy
 photo: mango-bowl.jpg
 ---

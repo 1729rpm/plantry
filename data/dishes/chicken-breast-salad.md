@@ -10,6 +10,7 @@ active: Yes
 satiety: Medium
 prepMinutes: 20
 seasons: All
+cuisine: Indian
 complexity: Easy
 buySpecially: Boneless chicken breast, 200g
 photo: chicken-breast-salad.jpg

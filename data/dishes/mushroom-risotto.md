@@ -3,13 +3,14 @@ id: 189
 name: Mushroom risotto
 category: Complete meal
 time: Lunch
-tags: [continental, complete_meal]
+tags: [complete_meal]
 primaryIngredient: Rice
 preferred: No
 active: Yes
 satiety: High
 prepMinutes: 35
 seasons: All
+cuisine: Continental
 complexity: Medium
 skill: Add the stock a ladle at a time and stir so the rice turns creamy
 photo: mushroom-risotto.jpg

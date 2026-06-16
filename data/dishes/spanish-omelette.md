@@ -3,13 +3,14 @@ id: 201
 name: Spanish omelette
 category: Complete meal
 time: Lunch
-tags: [spanish, complete_meal]
+tags: [complete_meal]
 primaryIngredient: Egg
 preferred: No
 active: Yes
 satiety: High
 prepMinutes: 30
 seasons: All
+cuisine: Spanish
 complexity: Medium
 skill: Cook on a low flame and flip carefully so it sets without browning
 photo: spanish-omelette.jpg

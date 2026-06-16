@@ -10,6 +10,7 @@ active: Yes
 satiety: High
 prepMinutes: 25
 seasons: All
+cuisine: Indian
 complexity: Medium
 skill: Sealing the egg inside the paratha without it leaking takes practice
 photo: anda-paratha.jpg

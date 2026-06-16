@@ -10,6 +10,7 @@ active: Yes
 satiety: High
 prepMinutes: 25
 seasons: All
+cuisine: Indian
 complexity: Easy
 prePrep: Soak the soya chunks in hot water, then squeeze dry
 photo: soya-chunks-masala.jpg

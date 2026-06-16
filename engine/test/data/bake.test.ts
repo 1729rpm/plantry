@@ -127,6 +127,7 @@ describe("bake validator integration", () => {
       "satiety: High",
       "prepMinutes: 30",
       "seasons: All",
+      "cuisine: Indian",
       "---",
       "",
       "## Ingredients",

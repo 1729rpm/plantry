@@ -1639,11 +1639,129 @@ input {
    bits (the "why it fits" line, the explore actions, the dislike link), the
    day picker, and the confirmation toast. Appended to keep concurrent
    app/web slices (6.1 Changes, 8.1 Share) from colliding on shared blocks. */
+/* Nested Explore filter (Tuhina items 5 + 9). Collapsed it is ONE horizontal
+   row that scrolls sideways if it overflows, so it costs a single row of height
+   instead of the old wrapped chip block that grew to two or three rows. The
+   Cuisines / Meal time entry chips open a bottom-sheet sub-panel. */
 .explore__filters {
   display: flex;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
   gap: 8px;
+  align-items: center;
+  overflow-x: auto;
+  scrollbar-width: none;
+  -webkit-overflow-scrolling: touch;
   padding: 4px max(16px, env(safe-area-inset-right)) 12px max(16px, env(safe-area-inset-left));
+}
+
+.explore__filters::-webkit-scrollbar {
+  display: none;
+}
+
+/* Keep each entry from shrinking, so the row scrolls rather than squashing. */
+.explore__filters > .chip {
+  flex: 0 0 auto;
+}
+
+.explore__filters-clear {
+  flex: 0 0 auto;
+  font-family: var(--pt-font-sans);
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--pt-accent);
+  background: none;
+  border: none;
+  padding: 6px 6px;
+  white-space: nowrap;
+}
+
+/* Filter sub-panel (the Cuisines / Meal time bottom sheet). */
+.filter-panel {
+  padding: 4px 4px 8px;
+}
+
+.filter-panel__header {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  margin-bottom: 8px;
+}
+
+.filter-panel__title {
+  font-family: var(--pt-font-serif);
+  font-size: 18px;
+  font-weight: 600;
+  color: var(--pt-ink);
+  margin: 0;
+}
+
+.filter-panel__clear {
+  font-family: var(--pt-font-sans);
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--pt-accent);
+  background: none;
+  border: none;
+  padding: 4px 4px;
+}
+
+.filter-panel__list {
+  list-style: none;
+  margin: 0 0 12px;
+  padding: 0;
+}
+
+.filter-option {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 6px;
+  background: none;
+  border: none;
+  border-bottom: 1px solid var(--pt-line);
+  font-family: var(--pt-font-sans);
+  font-size: 15px;
+  color: var(--pt-ink);
+  text-align: left;
+}
+
+.filter-option:disabled {
+  opacity: 0.4;
+}
+
+.filter-option__check {
+  flex: 0 0 22px;
+  width: 22px;
+  height: 22px;
+  border-radius: 6px;
+  border: 1.5px solid var(--pt-line);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--pt-on-accent);
+}
+
+.filter-option--on .filter-option__check {
+  background: var(--pt-accent);
+  border-color: var(--pt-accent);
+}
+
+.filter-option__label {
+  flex: 1 1 auto;
+}
+
+.filter-option__count {
+  flex: 0 0 auto;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--pt-sub);
+}
+
+.filter-panel__apply {
+  width: 100%;
 }
 
 .explore__rubric {

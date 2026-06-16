@@ -52,6 +52,16 @@ export const DishSchema = z.object({
   satiety: SatietySchema,
   prepMinutes: z.number().int().nonnegative(),
   seasons: SeasonsFieldSchema,
+  /**
+   * Cuisine, a single display/filter value (e.g. "Indian", "Italian", "Thai").
+   * NOT a rule input: the engine never reads it; eligibility, selection, and
+   * composition ignore it entirely. It is the one source of truth for the
+   * Explore cuisine filter, the Explore card's cuisine display, and the cuisine
+   * slot of the dish-photo prompt. Stored as the human-readable name (the
+   * cuisine is itself the label the user sees; there is no separate internal
+   * code to decode, so Principle 7's display/structure split does not apply).
+   */
+  cuisine: z.string().min(1),
   // Enrichment fields (design-revamp §1.1, slice 2.1). All optional during the
   // transition: every current dish file omits them and parses unchanged; the UI
   // degrades gracefully when they are absent (§1.5 coverage ratchet). Population

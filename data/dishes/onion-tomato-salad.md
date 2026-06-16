@@ -10,6 +10,7 @@ active: Yes
 satiety: Low
 prepMinutes: 5
 seasons: All
+cuisine: Indian
 complexity: Easy
 photo: onion-tomato-salad.jpg
 ---

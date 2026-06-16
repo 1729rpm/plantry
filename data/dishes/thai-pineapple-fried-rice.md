@@ -3,13 +3,14 @@ id: 179
 name: Thai pineapple fried rice
 category: Complete meal
 time: Lunch
-tags: [oriental, complete_meal]
+tags: [complete_meal]
 primaryIngredient: Rice
 preferred: No
 active: Yes
 satiety: High
 prepMinutes: 25
 seasons: All
+cuisine: Thai
 complexity: Easy
 skill: Use cold cooked rice so the grains stay separate on high heat
 photo: thai-pineapple-fried-rice.jpg

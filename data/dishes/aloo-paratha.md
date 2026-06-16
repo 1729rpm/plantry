@@ -10,6 +10,7 @@ active: Yes
 satiety: High
 prepMinutes: 30
 seasons: All
+cuisine: Indian
 complexity: Medium
 skill: Rolling a stuffed paratha without tearing takes a steady hand
 photo: aloo-paratha.jpg

@@ -3,13 +3,14 @@ id: 167
 name: Veg manchurian gravy
 category: Gravy dish
 time: Lunch
-tags: [chinese]
+tags: []
 primaryIngredient: Cabbage
 preferred: No
 active: Yes
 satiety: Medium
 prepMinutes: 35
 seasons: All
+cuisine: Chinese
 complexity: Medium
 skill: Fry the vegetable balls firm before they go into the sauce so they hold
 photo: veg-manchurian-gravy.jpg

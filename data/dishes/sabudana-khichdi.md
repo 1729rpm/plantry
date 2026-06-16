@@ -10,6 +10,7 @@ active: Yes
 satiety: Medium
 prepMinutes: 25
 seasons: All
+cuisine: Indian
 complexity: Medium
 prePrep: Soak the sabudana overnight till the pearls swell and separate
 photo: sabudana-khichdi.jpg

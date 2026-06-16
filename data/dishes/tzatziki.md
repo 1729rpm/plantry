@@ -3,13 +3,14 @@ id: 214
 name: Tzatziki
 category: Accompaniment
 time: Lunch
-tags: [greek, mediterranean]
+tags: []
 primaryIngredient: Curd
 preferred: No
 active: Yes
 satiety: Low
 prepMinutes: 10
 seasons: All
+cuisine: Greek
 complexity: Easy
 skill: Squeeze the grated cucumber dry so the dip stays thick
 photo: tzatziki.jpg

@@ -130,30 +130,21 @@ export function complexityShortLabel(complexity: Dish["complexity"]): string {
   return complexity ? COMPLEXITY_SHORT_LABEL[complexity] : "Easy";
 }
 
-// Decode the free-form dish `tags` codes into display strings. The library
-// stores codes, not display text (Principle 7: display decoupled from
-// structure), so this is the one place that knows "HP" reads "High protein" and
-// that cuisine codes ("oriental", "italian") title-case for a pill. An unknown
-// code title-cases as a safe fallback rather than leaking the raw code.
+// Decode the remaining free-form dish `tags` codes into display strings. The
+// library stores codes, not display text (Principle 7: display decoupled from
+// structure), so this is the one place that knows "HP" reads "High protein".
+// Cuisine is no longer a tag: it is the first-class `cuisine` field, which
+// already holds the human-readable name, so it needs no decoding here.
 const TAG_LABELS: Record<string, string> = {
   hp: "High protein",
   complete_meal: "Complete meal",
 };
 
-const CUISINE_CODES = new Set([
-  "oriental",
-  "italian",
-  "mexican",
-  "spanish",
-  "lebanese",
-  "greek",
-  "mediterranean",
-  "fruit",
-]);
-
-function titleCase(code: string): string {
-  return code.charAt(0).toUpperCase() + code.slice(1).toLowerCase();
-}
+// The default cuisine carries no information on a card (most of the library is
+// Indian), so it is not shown as a descriptor pill; only an international cuisine
+// is worth a pill. This mirrors the old behaviour where untagged Indian dishes
+// surfaced no cuisine pill.
+const DEFAULT_CUISINE = "Indian";
 
 /** One pill on an Explore card. `kind` drives the visual style: the difficulty
  *  pill keeps its color semantics (green / amber / red), the rest render in the
@@ -171,7 +162,7 @@ export interface DishTag {
  *   1. Difficulty (always), concise + colored.
  *   2. Prep time, "{n} min", when present.
  *   3. One descriptor, first that applies: High protein (tag HP) -> Complete
- *      meal (category or tag) -> cuisine (first cuisine tag, title-cased) ->
+ *      meal (category or tag) -> cuisine (the `cuisine` field, unless Indian) ->
  *      Filling (satiety High).
  * Capped at four pills so the set never exceeds two lines on the card grid.
  * Dishes with empty `tags` degrade gracefully: they still get difficulty, prep
@@ -202,8 +193,7 @@ function pickDescriptor(dish: Dish, codes: string[]): string | null {
   if (dish.category === "Complete meal" || codes.includes("complete_meal")) {
     return TAG_LABELS.complete_meal;
   }
-  const cuisine = codes.find((c) => CUISINE_CODES.has(c));
-  if (cuisine) return titleCase(cuisine);
+  if (dish.cuisine && dish.cuisine !== DEFAULT_CUISINE) return dish.cuisine;
   if (dish.satiety === "High") return "Filling";
   return null;
 }

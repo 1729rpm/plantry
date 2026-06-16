@@ -10,6 +10,7 @@ active: Yes
 satiety: Medium
 prepMinutes: 40
 seasons: All
+cuisine: Indian
 complexity: Medium
 photo: sambar.jpg
 ---

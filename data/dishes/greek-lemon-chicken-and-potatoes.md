@@ -3,13 +3,14 @@ id: 213
 name: Greek lemon chicken and potatoes
 category: Complete meal
 time: Lunch
-tags: [HP, greek, mediterranean, complete_meal]
+tags: [HP, complete_meal]
 primaryIngredient: Chicken
 preferred: No
 active: Yes
 satiety: High
 prepMinutes: 40
 seasons: All
+cuisine: Greek
 complexity: Easy
 skill: Roast long enough for the potatoes to drink up the lemony juices
 buySpecially: Curry cut chicken, 300g

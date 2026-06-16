@@ -10,6 +10,7 @@ active: Yes
 satiety: Medium
 prepMinutes: 20
 seasons: All
+cuisine: Indian
 complexity: Easy
 prePrep: Soak the moong dal for a few hours, then grind to a batter
 photo: moong-dal-chilla.jpg

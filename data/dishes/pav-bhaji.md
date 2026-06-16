@@ -10,6 +10,7 @@ active: Yes
 satiety: High
 prepMinutes: 40
 seasons: All
+cuisine: Indian
 complexity: Medium
 buySpecially: Pav bread, one packet
 photo: pav-bhaji.jpg

@@ -3,13 +3,14 @@ id: 172
 name: Pesto pasta
 category: Complete meal
 time: Lunch
-tags: [italian, complete_meal]
+tags: [complete_meal]
 primaryIngredient: Pasta
 preferred: No
 active: Yes
 satiety: High
 prepMinutes: 20
 seasons: All
+cuisine: Italian
 complexity: Easy
 skill: Toss the pesto through off the heat so it stays fresh and green
 photo: pesto-pasta.jpg

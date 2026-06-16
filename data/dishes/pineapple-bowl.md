@@ -10,6 +10,7 @@ active: Yes
 satiety: Low
 prepMinutes: 5
 seasons: [Monsoon]
+cuisine: Indian
 complexity: Easy
 photo: pineapple-bowl.jpg
 ---

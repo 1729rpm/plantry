@@ -10,6 +10,7 @@ active: Yes
 satiety: High
 prepMinutes: 40
 seasons: [Winter]
+cuisine: Indian
 complexity: Medium
 skill: Comfortable, balance the methi so it is fragrant not bitter
 buySpecially: Curry cut chicken, 300g

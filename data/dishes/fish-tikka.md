@@ -10,6 +10,7 @@ active: Yes
 satiety: High
 prepMinutes: 25
 seasons: All
+cuisine: Indian
 complexity: Medium
 buySpecially: Firm boneless fish fillets, 300g
 prePrep: Marinate the fish for at least an hour ahead

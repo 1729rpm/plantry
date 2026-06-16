@@ -3,13 +3,14 @@ id: 183
 name: Baked mozzarella pasta
 category: Complete meal
 time: Lunch
-tags: [HP, italian, complete_meal]
+tags: [HP, complete_meal]
 primaryIngredient: Pasta
 preferred: No
 active: Yes
 satiety: High
 prepMinutes: 35
 seasons: All
+cuisine: Italian
 complexity: Medium
 skill: Undercook the pasta slightly so it finishes in the oven without going soft
 photo: baked-mozzarella-pasta.jpg

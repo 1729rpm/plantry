@@ -10,6 +10,7 @@ active: Yes
 satiety: High
 prepMinutes: 25
 seasons: [Winter]
+cuisine: Indian
 complexity: Medium
 skill: Chop the methi fine and squeeze out bitterness before kneading
 photo: methi-paratha.jpg

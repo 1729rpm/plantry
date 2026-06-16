@@ -3,13 +3,14 @@ id: 268
 name: Gobi manchurian
 category: Dry dish
 time: Lunch
-tags: [chinese]
+tags: []
 primaryIngredient: Cauliflower
 preferred: No
 active: Yes
 satiety: Medium
 prepMinutes: 35
 seasons: All
+cuisine: Chinese
 complexity: Medium
 skill: Comfortable, get the cauliflower crisp before tossing in the sauce
 photo: gobi-manchurian.jpg

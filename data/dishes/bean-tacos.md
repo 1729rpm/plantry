@@ -3,13 +3,14 @@ id: 256
 name: Bean tacos
 category: Complete meal
 time: Lunch
-tags: [mexican]
+tags: []
 primaryIngredient: Kidney Bean
 preferred: No
 active: Yes
 satiety: High
 prepMinutes: 25
 seasons: All
+cuisine: Mexican
 complexity: Easy
 photo: bean-tacos.jpg
 ---

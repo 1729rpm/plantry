@@ -3,13 +3,14 @@ id: 263
 name: Sweet corn soup
 category: Accompaniment
 time: Lunch
-tags: [chinese]
+tags: []
 primaryIngredient: Sweet Corn
 preferred: No
 active: Yes
 satiety: Low
 prepMinutes: 20
 seasons: All
+cuisine: Chinese
 complexity: Easy
 photo: sweet-corn-soup.jpg
 ---

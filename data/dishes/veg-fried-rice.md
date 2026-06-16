@@ -3,13 +3,14 @@ id: 246
 name: Veg fried rice
 category: Complete meal
 time: Lunch
-tags: [complete_meal, chinese]
+tags: [complete_meal]
 primaryIngredient: Carrot
 preferred: No
 active: Yes
 satiety: High
 prepMinutes: 20
 seasons: All
+cuisine: Chinese
 complexity: Easy
 photo: veg-fried-rice.jpg
 ---

@@ -10,6 +10,7 @@ active: Yes
 satiety: Medium
 prepMinutes: 15
 seasons: All
+cuisine: Indian
 complexity: Easy
 prePrep: Chill the custard for a few hours before serving
 photo: fruit-custard.jpg

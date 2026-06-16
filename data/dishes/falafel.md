@@ -3,13 +3,14 @@ id: 175
 name: Falafel
 category: Dry dish
 time: Lunch
-tags: [HP, lebanese]
+tags: [HP]
 primaryIngredient: Chickpea
 preferred: No
 active: Yes
 satiety: Medium
 prepMinutes: 30
 seasons: All
+cuisine: Lebanese
 complexity: Medium
 skill: Use soaked raw chickpeas, not boiled, so the patties bind and stay crisp
 prePrep: Soak the chickpeas overnight

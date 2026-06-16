@@ -3,13 +3,14 @@ id: 267
 name: Lentil salad
 category: Accompaniment
 time: Lunch
-tags: [mediterranean]
+tags: []
 primaryIngredient: Masoor Dal
 preferred: No
 active: Yes
 satiety: Medium
 prepMinutes: 25
 seasons: All
+cuisine: Mediterranean
 complexity: Easy
 photo: lentil-salad.jpg
 ---

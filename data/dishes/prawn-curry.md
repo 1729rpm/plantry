@@ -10,6 +10,7 @@ active: Yes
 satiety: High
 prepMinutes: 25
 seasons: All
+cuisine: Indian
 complexity: Medium
 skill: Prawns cook fast, pull them off the heat as soon as they curl
 buySpecially: Cleaned, deveined prawns, 300g

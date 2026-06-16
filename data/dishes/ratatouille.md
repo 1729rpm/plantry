@@ -3,13 +3,14 @@ id: 205
 name: Ratatouille
 category: Dry dish
 time: Lunch
-tags: [continental]
+tags: []
 primaryIngredient: Mixed Veg
 preferred: No
 active: Yes
 satiety: Medium
 prepMinutes: 30
 seasons: All
+cuisine: Continental
 complexity: Easy
 skill: Cook the vegetables in stages so each keeps its shape
 photo: ratatouille.jpg

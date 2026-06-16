@@ -10,6 +10,7 @@ active: Yes
 satiety: High
 prepMinutes: 35
 seasons: All
+cuisine: Indian
 complexity: Easy
 photo: soya-pulao.jpg
 ---

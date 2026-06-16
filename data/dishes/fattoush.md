@@ -3,13 +3,14 @@ id: 266
 name: Fattoush
 category: Accompaniment
 time: Lunch
-tags: [lebanese]
+tags: []
 primaryIngredient: Lettuce
 preferred: No
 active: Yes
 satiety: Low
 prepMinutes: 15
 seasons: All
+cuisine: Lebanese
 complexity: Easy
 photo: fattoush.jpg
 ---

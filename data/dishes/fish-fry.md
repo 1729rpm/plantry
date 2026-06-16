@@ -10,6 +10,7 @@ active: Yes
 satiety: High
 prepMinutes: 20
 seasons: All
+cuisine: Indian
 complexity: Easy
 buySpecially: Fish fillets or steaks, 300g
 prePrep: Marinate the fish for at least 20 minutes

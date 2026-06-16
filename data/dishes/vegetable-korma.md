@@ -10,6 +10,7 @@ active: Yes
 satiety: Medium
 prepMinutes: 35
 seasons: All
+cuisine: Indian
 complexity: Medium
 photo: vegetable-korma.jpg
 ---

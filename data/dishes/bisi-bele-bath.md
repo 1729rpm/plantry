@@ -10,6 +10,7 @@ active: Yes
 satiety: High
 prepMinutes: 45
 seasons: All
+cuisine: Indian
 complexity: Medium
 skill: Comfortable, balancing the bisi bele bath masala and tamarind takes a feel
 photo: bisi-bele-bath.jpg

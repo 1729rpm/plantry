@@ -10,6 +10,7 @@ active: Yes
 satiety: High
 prepMinutes: 45
 seasons: All
+cuisine: Indian
 complexity: Hard
 skill: Comfortable, the koftas must bind so they do not break when fried
 equipment: Heavy kadhai

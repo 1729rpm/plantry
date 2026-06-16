@@ -3,13 +3,14 @@ id: 173
 name: Caprese salad
 category: Accompaniment
 time: Lunch
-tags: [italian]
+tags: []
 primaryIngredient: Tomato
 preferred: No
 active: Yes
 satiety: Low
 prepMinutes: 10
 seasons: All
+cuisine: Italian
 complexity: Easy
 photo: caprese-salad.jpg
 ---

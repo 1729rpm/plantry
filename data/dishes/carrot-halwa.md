@@ -10,6 +10,7 @@ active: Yes
 satiety: Medium
 prepMinutes: 45
 seasons: [Winter]
+cuisine: Indian
 complexity: Medium
 skill: Patient stirring so the milk reduces without catching
 buySpecially: Red winter carrots, 500g

@@ -271,6 +271,7 @@ Alongside the blocking validators (§1, §12), a reporting layer in `engine/src/
 - `satiety`: High, Medium, or Low. Used by §9.
 - `prepMinutes`: estimated active prep time in minutes. Used by §9 tiebreaker.
 - `seasons`: a season list, or `All` for year-round.
+- `cuisine`: a single cuisine, the human-readable name (Indian, Italian, Chinese, Mexican, Greek, Spanish, Korean, Japanese, Continental, Vietnamese, Lebanese, Mediterranean, Thai). A display and filter field, NOT a rule input: eligibility, selection, and composition never read it. It is the single source of truth for the Explore cuisine filter, the Explore card's cuisine display, and the dish-photo prompt's cuisine slot (engineering.md §4). Dishes with no international cuisine are `Indian`. Required on every dish.
 
 Enrichment fields, all optional (absent on a dish parses unchanged; the UI degrades gracefully when missing):
 

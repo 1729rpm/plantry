@@ -10,6 +10,7 @@ active: Yes
 satiety: Low
 prepMinutes: 25
 seasons: [Summer, Monsoon]
+cuisine: Indian
 complexity: Easy
 photo: tinda-masala.jpg
 ---

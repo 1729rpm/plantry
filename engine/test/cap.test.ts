@@ -24,6 +24,7 @@ function makeDish(overrides: Partial<Dish> = {}): SlotPick {
     satiety: "Medium",
     prepMinutes: 30,
     seasons: "All",
+    cuisine: "Indian",
     ...overrides,
   };
 }
