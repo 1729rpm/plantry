@@ -26,6 +26,18 @@
   --pt-font-serif: "Source Serif 4", Georgia, serif; /* dish names, headings, numerals */
   --pt-font-sans: "Source Sans 3", "Helvetica Neue", sans-serif; /* everything else */
 
+  /* layout */
+  /* Single horizontal content gutter for every screen and every sheet. Used as
+     the floor of an explicit longhand padding-left / padding-right that also
+     carries the landscape-notch safe-area inset. Kept as a token so no per
+     container literal can drift and so a future change is one edit. Never put
+     env(safe-area-inset-left|right) inside a padding/margin shorthand: an older
+     iOS Safari can mishandle env() inside a shorthand and drop the whole
+     declaration, collapsing the gutter to 0; longhand is robust there. A
+     stylelint rule (.stylelintrc.json) forbids reintroducing the shorthand
+     form. */
+  --pt-gutter: 20px;
+
   /* radii */
   --pt-radius-card: 18px;
   --pt-radius-control: 14px;
@@ -99,10 +111,15 @@ input {
 }
 
 .screen__header {
-  /* Horizontal padding floors at the design inset but grows to clear a notched
+  /* Horizontal padding floors at the gutter token but grows to clear a notched
      iPhone's side safe area (env(...) is 0 on Android and most upright phones,
-     so this is a no-op there). */
-  padding: 54px max(20px, env(safe-area-inset-right)) 12px max(20px, env(safe-area-inset-left));
+     so this is a no-op there). Vertical and horizontal are split into longhand
+     so the horizontal value never sits in a shorthand with env() (see
+     --pt-gutter note in :root). */
+  padding-top: 54px;
+  padding-bottom: 12px;
+  padding-left: max(var(--pt-gutter), env(safe-area-inset-left, 0px));
+  padding-right: max(var(--pt-gutter), env(safe-area-inset-right, 0px));
 }
 
 .screen__title {
@@ -119,14 +136,20 @@ input {
 }
 
 .screen__list {
-  padding: 4px max(16px, env(safe-area-inset-right)) 16px max(16px, env(safe-area-inset-left));
+  padding-top: 4px;
+  padding-bottom: 16px;
+  padding-left: max(var(--pt-gutter), env(safe-area-inset-left, 0px));
+  padding-right: max(var(--pt-gutter), env(safe-area-inset-right, 0px));
   display: flex;
   flex-direction: column;
   gap: 12px;
 }
 
 .screen__footer {
-  padding: 10px max(16px, env(safe-area-inset-right)) 12px max(16px, env(safe-area-inset-left));
+  padding-top: 10px;
+  padding-bottom: 12px;
+  padding-left: max(var(--pt-gutter), env(safe-area-inset-left, 0px));
+  padding-right: max(var(--pt-gutter), env(safe-area-inset-right, 0px));
   flex-shrink: 0;
 }
 
@@ -376,8 +399,13 @@ input {
   display: flex;
   border-top: 1px solid var(--pt-line);
   background: var(--pt-surface);
-  padding: 10px max(10px, env(safe-area-inset-right)) calc(14px + env(safe-area-inset-bottom, 12px))
-    max(10px, env(safe-area-inset-left));
+  /* Longhand split: the bottom value carries the iOS home-indicator safe area
+     (a vertical env, left in its own longhand) while the horizontal values use
+     the gutter token. No env() ever sits in a padding shorthand here. */
+  padding-top: 10px;
+  padding-bottom: calc(14px + env(safe-area-inset-bottom, 12px));
+  padding-left: max(var(--pt-gutter), env(safe-area-inset-left, 0px));
+  padding-right: max(var(--pt-gutter), env(safe-area-inset-right, 0px));
   flex-shrink: 0;
 }
 
@@ -460,13 +488,27 @@ input {
   bottom: 0;
   background: var(--pt-surface);
   border-radius: 24px 24px 0 0;
-  /* Horizontal inset is split between the panel and the scroll box: the scroll
-     box keeps 6px so full-width inputs (search field, reason textarea) sit off
-     its left/right edges and their border + focus outline (outline-offset
-     draws ~3px outside the element) never get clipped. 12 + 6 = 18, the
-     original visual inset, so nothing shifts. */
-  padding: 10px max(12px, env(safe-area-inset-right)) calc(18px + env(safe-area-inset-bottom, 8px))
-    max(12px, env(safe-area-inset-left));
+  /* The horizontal gutter is split between the panel and the scroll box so the
+     two never double-pad: the scroll box keeps a fixed --pt-sheet-scroll-inset
+     (6px) so full-width inputs (search field, reason textarea) sit off its
+     left/right edges and their border + focus outline (outline-offset draws
+     ~3px outside the element) are never clipped by the scroll box's
+     overflow-x: clip; the panel carries the rest. panel floor + scroll inset =
+     --pt-gutter exactly, so the effective content gutter is one 20px value, not
+     26px. Longhand split keeps env() out of any padding shorthand (see the
+     --pt-gutter note in :root); the bottom value is its own longhand carrying
+     the iOS home-indicator safe area. */
+  --pt-sheet-scroll-inset: 6px;
+  padding-top: 10px;
+  padding-bottom: calc(18px + env(safe-area-inset-bottom, 8px));
+  padding-left: max(
+    calc(var(--pt-gutter) - var(--pt-sheet-scroll-inset)),
+    env(safe-area-inset-left, 0px)
+  );
+  padding-right: max(
+    calc(var(--pt-gutter) - var(--pt-sheet-scroll-inset)),
+    env(safe-area-inset-right, 0px)
+  );
   max-height: 88%;
   display: flex;
   flex-direction: column;
@@ -492,13 +534,14 @@ input {
 
 .sheet__scroll {
   /* overflow-y: auto forces the computed overflow-x to a non-visible value,
-     which clips horizontally. The 6px inline padding gives full-width inputs
-     room so their border and focus outline are not cut on the sides. Paired
-     with the panel's reduced 12px so the overall inset is unchanged. */
+     which clips horizontally. The --pt-sheet-scroll-inset (6px) inline padding
+     gives full-width inputs room so their border and focus outline are not cut
+     on the sides. Paired with the panel's reduced floor so panel + scroll equal
+     one --pt-gutter (20px), not a doubled inset. */
   overflow-y: auto;
   min-height: 0;
-  padding-left: 6px;
-  padding-right: 6px;
+  padding-left: var(--pt-sheet-scroll-inset);
+  padding-right: var(--pt-sheet-scroll-inset);
 }
 
 /* Complexity tag (Easy / Medium / Hard mapped to plain labels in code) */
@@ -644,7 +687,10 @@ input {
 }
 
 .offline-banner {
-  margin: 0 max(16px, env(safe-area-inset-right)) 12px max(16px, env(safe-area-inset-left));
+  margin-top: 0;
+  margin-bottom: 12px;
+  margin-left: max(var(--pt-gutter), env(safe-area-inset-left, 0px));
+  margin-right: max(var(--pt-gutter), env(safe-area-inset-right, 0px));
   background: #f4efd8;
   color: #5b4e1c;
   padding: 8px 12px;
@@ -781,7 +827,10 @@ input {
 /* Day screen (the editing family entry, shown over the Menu tab)      */
 /* ------------------------------------------------------------------ */
 .day-screen__header {
-  padding: 54px max(20px, env(safe-area-inset-right)) 10px max(20px, env(safe-area-inset-left));
+  padding-top: 54px;
+  padding-bottom: 10px;
+  padding-left: max(var(--pt-gutter), env(safe-area-inset-left, 0px));
+  padding-right: max(var(--pt-gutter), env(safe-area-inset-right, 0px));
   display: flex;
   align-items: center;
   gap: 12px;
@@ -809,7 +858,10 @@ input {
 }
 
 .day-screen__body {
-  padding: 6px max(16px, env(safe-area-inset-right)) 16px max(16px, env(safe-area-inset-left));
+  padding-top: 6px;
+  padding-bottom: 16px;
+  padding-left: max(var(--pt-gutter), env(safe-area-inset-left, 0px));
+  padding-right: max(var(--pt-gutter), env(safe-area-inset-right, 0px));
   display: flex;
   flex-direction: column;
   gap: 12px;
@@ -1651,7 +1703,10 @@ input {
   overflow-x: auto;
   scrollbar-width: none;
   -webkit-overflow-scrolling: touch;
-  padding: 4px max(16px, env(safe-area-inset-right)) 12px max(16px, env(safe-area-inset-left));
+  padding-top: 4px;
+  padding-bottom: 12px;
+  padding-left: max(var(--pt-gutter), env(safe-area-inset-left, 0px));
+  padding-right: max(var(--pt-gutter), env(safe-area-inset-right, 0px));
 }
 
 .explore__filters::-webkit-scrollbar {
@@ -1765,7 +1820,10 @@ input {
 }
 
 .explore__rubric {
-  padding: 0 max(16px, env(safe-area-inset-right)) 0 max(16px, env(safe-area-inset-left));
+  padding-top: 0;
+  padding-bottom: 0;
+  padding-left: max(var(--pt-gutter), env(safe-area-inset-left, 0px));
+  padding-right: max(var(--pt-gutter), env(safe-area-inset-right, 0px));
   font-size: 12px;
   letter-spacing: 0.1em;
   text-transform: uppercase;
@@ -1778,7 +1836,10 @@ input {
   grid-template-columns: 1fr 1fr;
   gap: 12px;
   align-content: start;
-  padding: 0 max(16px, env(safe-area-inset-right)) 24px max(16px, env(safe-area-inset-left));
+  padding-top: 0;
+  padding-bottom: 24px;
+  padding-left: max(var(--pt-gutter), env(safe-area-inset-left, 0px));
+  padding-right: max(var(--pt-gutter), env(safe-area-inset-right, 0px));
 }
 
 .explore-card {

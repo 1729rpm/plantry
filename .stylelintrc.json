@@ -19,6 +19,9 @@
     "no-descending-specificity": null,
     "font-family-name-quotes": null,
     "comment-whitespace-inside": null,
-    "number-max-precision": null
+    "number-max-precision": null,
+    "declaration-property-value-disallowed-list": {
+      "/^(padding|margin)$/": ["/env\\(\\s*safe-area-inset-(left|right)/"]
+    }
   }
 }

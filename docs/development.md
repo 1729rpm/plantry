@@ -69,6 +69,8 @@ A PR is done when ALL of:
 - No principle violation: an EM reviewer would not flag anything in `docs/product.md` §4.
 - No `// TODO` left behind without a tracked follow-up in the active feature spec or a new feature doc.
 - For UI changes: the EM has run the full-flow crawl-and-compare pass (§3, `docs/engineering.md` §16) against the preview, covering every flow and every sheet and compared against `design_handoff/`, and linked its result in the PR; any deviation from the design is resolved or explicitly accepted in the diagnosis card. A CSS or shared-primitive change is verified across all tabs, not only the touched screen.
+- For iOS-affecting CSS or layout changes: real-device (iPhone) verification is required before merge. The desktop crawl runs Chromium and WebKit but cannot reproduce a real-iOS-device-only rendering difference, so a green crawl is necessary but not sufficient; Rajat checks the change on his iPhone before it merges.
+- All horizontal container padding goes through the gutter token (`--pt-gutter` in `app/web/src/index.css`): no raw per-container horizontal padding literals, and no `env(safe-area-inset-left|right)` inside a `padding` or `margin` shorthand. Horizontal padding is written as explicit `padding-left` / `padding-right` longhand with the token as the floor and the safe-area inset as a fallback. A stylelint rule blocks the fragile shorthand form.
 
 ## 5. Diagnosis card
 
