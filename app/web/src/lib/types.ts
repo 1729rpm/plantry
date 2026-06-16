@@ -7,18 +7,25 @@ export type Identity = "rajat" | "tuhina";
 
 export type ShortDay = "Mon" | "Tue" | "Wed" | "Thu" | "Fri" | "Sat";
 /**
- * An editable meal slot. Breakfast and lunch are the user-editable meals (swap,
- * add, delete). The Fruit of the day is NOT editable, so it is not a `Meal`; the
- * stored slot type that includes it is `SlotMeal`.
+ * A meal slot the editor can swap a dish in. Breakfast and lunch are the
+ * full-editing meals (swap, add, delete, custom one-off). The Fruit of the day
+ * is swap-only (one fruit per day; no add/delete/one-off), so it is in `Meal`
+ * for the swap flow while the editor gates add/delete on `MealTime` below.
  */
-export type Meal = "breakfast" | "lunch";
+export type Meal = "breakfast" | "lunch" | "fruit";
 /**
- * The meal value a stored `currentWeek` slot can carry. Adds the standalone
- * Fruit of the day (docs/engine.md §3.3): one Category=Fruit dish per day Mon-Sat,
- * its own section outside breakfast/lunch and outside the §9 item cap. It is
- * system-picked and read-only in the UI (the editor only edits breakfast/lunch).
+ * The breakfast/lunch meals: the slots that support the full editing family
+ * (swap, add, delete, custom one-off). The Fruit of the day is deliberately
+ * excluded so add/delete/one-off stay off it (swap only, this PR's scope).
  */
-export type SlotMeal = Meal | "fruit";
+export type MealTime = "breakfast" | "lunch";
+/**
+ * The meal value a stored `currentWeek` slot can carry. Same set as `Meal`: the
+ * standalone Fruit of the day (docs/engine.md §3.3) is one Category=Fruit dish
+ * per day Mon-Sat, its own section outside breakfast/lunch and outside the §9
+ * item cap. System-picked at generation, swappable (only) in the editor.
+ */
+export type SlotMeal = Meal;
 export type SlotSource = "generated" | "swapped" | "custom";
 export type SlotAuthor = "rajat" | "tuhina" | "system";
 

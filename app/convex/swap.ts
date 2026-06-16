@@ -7,7 +7,12 @@ import type { Dish, Season, MenuHistoryRow } from "@plantry/engine";
 import { assertAuthor } from "./lib/author.js";
 
 type ShortDay = "Mon" | "Tue" | "Wed" | "Thu" | "Fri" | "Sat";
+// The breakfast/lunch meals (meal-time pools). The Fruit of the day adds the
+// standalone "fruit" slot (docs/engine.md §3.3); SlotMealValue is the full set a
+// stored slot can carry. Breakfast/lunch are pooled by meal-time; fruit is
+// pooled by Category=Fruit.
 type LowerMeal = "breakfast" | "lunch";
+type SlotMealValue = LowerMeal | "fruit";
 
 type SlotAuthor = "rajat" | "tuhina" | "system";
 type DishPickShape = {
@@ -19,7 +24,7 @@ type DishPickShape = {
 };
 type SlotShape = {
   day: ShortDay;
-  meal: LowerMeal;
+  meal: SlotMealValue;
   dishes: DishPickShape[];
 };
 
@@ -54,7 +59,7 @@ const LONG_DAY: Record<ShortDay, MenuHistoryRow["day"]> = {
  */
 function collectCurrentWeekPicks(
   slots: ReadonlyArray<SlotShape>,
-  exclude: { day: ShortDay; meal: LowerMeal; position: number } | null,
+  exclude: { day: ShortDay; meal: SlotMealValue; position: number } | null,
 ): Dish[] {
   const libraryById = new Map<number, Dish>(dishes.map((d) => [d.id, d]));
   const picks: Dish[] = [];
@@ -85,7 +90,20 @@ function collectCurrentWeekPicks(
  * meal-time dish and §3 eligibility violations are tolerated at swap time so
  * the slow loop can learn from the resulting incidents.
  */
-function broadPool(meal: LowerMeal, season: Season): Dish[] {
+function broadPool(meal: SlotMealValue, season: Season): Dish[] {
+  // The Fruit of the day's pool is category-based, not meal-time based
+  // (docs/engine.md §3.3): every Active, in-season, Category=Fruit dish. This is
+  // the swap-time analogue of the generation-time fruit pool
+  // (engine `fruitOfDayPool`). Fruit dishes carry no meal-time relevance here, so
+  // we do not filter on `d.time`.
+  if (meal === "fruit") {
+    return dishes.filter((d) => {
+      if (d.active !== "Yes") return false;
+      if (d.category !== "Fruit") return false;
+      if (d.seasons === "All") return true;
+      return d.seasons.includes(season);
+    });
+  }
   const engineMeal = meal === "breakfast" ? "Breakfast" : "Lunch";
   return dishes.filter((d) => {
     if (d.active !== "Yes") return false;
@@ -106,13 +124,18 @@ function broadPool(meal: LowerMeal, season: Season): Dish[] {
 function buildSyntheticHistory(
   weekStart: string,
   day: ShortDay,
-  meal: LowerMeal,
+  meal: SlotMealValue,
   currentWeekPicks: Dish[],
 ): MenuHistoryRow[] {
+  // The history row's `meal` field is cosmetic for the recency term (the ranking
+  // keys on dishId + weekStart, not meal), and MenuHistoryRow.meal only admits
+  // Breakfast | Lunch. The fruit slot has no meal-time, so its synthetic rows are
+  // tagged "Breakfast" uniformly; this never affects ordering.
+  const historyMeal = meal === "lunch" ? "Lunch" : "Breakfast";
   return currentWeekPicks.map((d) => ({
     weekStart,
     day: LONG_DAY[day],
-    meal: meal === "breakfast" ? "Breakfast" : "Lunch",
+    meal: historyMeal,
     dishName: d.name,
     dishId: d.id,
   }));
@@ -179,7 +202,7 @@ export const getSlotAlternatives = query({
       v.literal("Fri"),
       v.literal("Sat"),
     ),
-    meal: v.union(v.literal("breakfast"), v.literal("lunch")),
+    meal: v.union(v.literal("breakfast"), v.literal("lunch"), v.literal("fruit")),
     position: v.number(),
     limit: v.optional(v.number()),
   },
@@ -224,7 +247,11 @@ export const getSlotAlternatives = query({
 
     const ranked = rankPickerAlternatives({
       pool,
-      meal: args.meal === "breakfast" ? "Breakfast" : "Lunch",
+      // The engine Meal type is Breakfast | Lunch and the ranking ignores it
+      // (it only orders the pre-filtered pool by recency + protein band; the
+      // pool is already category-filtered for fruit). "Breakfast" is a harmless
+      // placeholder for the fruit slot.
+      meal: args.meal === "lunch" ? "Lunch" : "Breakfast",
       dishesOnDay: dishesOnDay(slots, args.day),
       history: [...history, ...syntheticHistory],
       outgoingDish,
@@ -296,7 +323,7 @@ export const swapDish = mutation({
       v.literal("Fri"),
       v.literal("Sat"),
     ),
-    meal: v.union(v.literal("breakfast"), v.literal("lunch")),
+    meal: v.union(v.literal("breakfast"), v.literal("lunch"), v.literal("fruit")),
     position: v.number(),
     newDishId: v.number(),
     version: v.number(),
@@ -316,6 +343,7 @@ export const swapDish = mutation({
           | "no-such-position"
           | "dish-not-in-library"
           | "dish-not-meal-time"
+          | "dish-not-fruit"
           | "dish-not-active-or-in-season";
       }
   > => {
@@ -351,9 +379,18 @@ export const swapDish = mutation({
       return { ok: false, reason: "dish-not-in-library" };
     }
 
-    const engineMeal = args.meal === "breakfast" ? "Breakfast" : "Lunch";
-    if (newDish.time !== engineMeal) {
-      return { ok: false, reason: "dish-not-meal-time" };
+    // The Fruit of the day's slot validates by Category=Fruit (its analogue of
+    // the meal-time check); breakfast/lunch validate by meal-time. Both keep the
+    // Active + in-season hard filter below.
+    if (args.meal === "fruit") {
+      if (newDish.category !== "Fruit") {
+        return { ok: false, reason: "dish-not-fruit" };
+      }
+    } else {
+      const engineMeal = args.meal === "breakfast" ? "Breakfast" : "Lunch";
+      if (newDish.time !== engineMeal) {
+        return { ok: false, reason: "dish-not-meal-time" };
+      }
     }
     if (newDish.active !== "Yes") {
       return { ok: false, reason: "dish-not-active-or-in-season" };

@@ -14,7 +14,7 @@ import { useMemo, useState } from "react";
 import { useMutation } from "convex/react";
 import { anyApi } from "convex/server";
 import type { Dish } from "@plantry/engine";
-import type { Identity, Meal, ShortDay } from "../lib/types.js";
+import type { Identity, MealTime, ShortDay } from "../lib/types.js";
 import { addablePool } from "../lib/library.js";
 import { PICKER_FILTERS, dishMatchesFilters, type DishFilter } from "../lib/dishFilters.js";
 import { dayLabel } from "../lib/days.js";
@@ -26,7 +26,9 @@ interface AddDishSheetProps {
   weekStart: string;
   day: ShortDay;
   version: number;
-  availableMeals: Meal[];
+  // Add a dish targets breakfast/lunch only; the Fruit of the day is swap-only
+  // (docs/engine.md §3.3), so it is never an add target.
+  availableMeals: MealTime[];
   identity: Identity;
   onDone: () => void;
   onClose: () => void;
@@ -42,7 +44,7 @@ export function AddDishSheet({
   onClose,
 }: AddDishSheetProps) {
   const addDish = useMutation(anyApi.dayMutations.addDish);
-  const [meal, setMeal] = useState<Meal>(
+  const [meal, setMeal] = useState<MealTime>(
     availableMeals.includes("lunch") ? "lunch" : availableMeals[0],
   );
   const [q, setQ] = useState<string>("");
