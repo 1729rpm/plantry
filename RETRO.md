@@ -55,7 +55,7 @@ run only reads entries appended since.
 - Recurrence: systemic (every parallel merge)
 - Impact: A green PR can still break main on merge; only caught by a manual update-and-re-run.
 - Proposed level: process-doc (a written pre-merge true-state gate in development.md §3/§4: update branch, re-run CI, re-bake, re-run count-sensitive tests before every merge)
-- Status: fixed (PR #RECONCILE) — development.md §3 step 4 and the §4 definition of done now require updating the branch onto origin/main and confirming a green engine check on the true merged state (re-bake, re-run count-sensitive tests) immediately before merge, not trusting a stale `mergeable` flag. Reinforces the one-line note already in §11.3.
+- Status: fixed (PR #125) — development.md §3 step 4 and the §4 definition of done now require updating the branch onto origin/main and confirming a green engine check on the true merged state (re-bake, re-run count-sensitive tests) immediately before merge, not trusting a stale `mergeable` flag. Reinforces the one-line note already in §11.3.
 
 ## 2026-06-16  Coverage-ratchet tests hardcode dish counts (local-vs-CI desync)
 - Area: ci-test
@@ -79,4 +79,4 @@ run only reads entries appended since.
 - Recurrence: systemic (every structural slice leaves a residual unverified path)
 - Impact: Each slice ends with a "confirm on real device / after deploy" residual that can be lost if only stated verbally.
 - Proposed level: process-doc (engineering.md §16: document what the crawl cannot verify headless, the seed-a-mock-week pattern, the crawl-after-preview-deploy rule, and a residual-check channel logged in the PR diagnosis card)
-- Status: fixed (PR #RECONCILE) — engineering.md §16 now documents the three paths the crawl cannot close (a new slot type renders only against a seeded/mock week; a backend-dependent flow must be crawled after the preview Convex deploy is live; real-device and after-deploy checks), and the development.md §5 diagnosis card gains a Residual checks field so each open verification item travels with the PR.
+- Status: fixed (PR #125) — engineering.md §16 now documents the three paths the crawl cannot close (a new slot type renders only against a seeded/mock week; a backend-dependent flow must be crawled after the preview Convex deploy is live; real-device and after-deploy checks), and the development.md §5 diagnosis card gains a Residual checks field so each open verification item travels with the PR.
