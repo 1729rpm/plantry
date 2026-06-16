@@ -299,7 +299,7 @@ The shareable output is a family of PNGs sent together, not a single image: a me
 
 **Delivery.** The PNGs are handed to the Web Share API level 2 (files), which opens the native share sheet with all images attached; this is how an installed PWA shares into WhatsApp on both iOS and Android. When file-sharing is unavailable (desktop, older browsers), the fallback downloads every image so the user can attach them by hand.
 
-`data/menu_images/` holds the pre-revamp single-PNG outputs as a historical archive only; nothing in the runtime writes to it.
+`archive/menu_images/` holds the pre-revamp single-PNG outputs as a historical archive only; nothing in the runtime writes to it.
 
 ## 13. Swiggy MCP integration shape (future)
 
@@ -343,10 +343,13 @@ plantry/
   .claude/commands/    # /slow-loop, /new-stream
   scripts/             # build and bake scripts
   docs/                # canonical specs + CHANGELOG
-  data/                # human-edited library, history, structural changelog, menu images
+  data/                # human-edited library, history, structural changelog, slow-loop fixtures
     dishes/            # one file per dish: data/dishes/<slug>.md (frontmatter + ingredient rows)
     dish-photos/       # web-ready dish photos (data/dish-photos/<slug>.jpg) + STYLE.md photo spec + details.md per-dish detail map
     ingredients.md     # ingredient catalog: one row per ingredient (group, unit, pack size)
+    menu_history.md    # history seed read on first deploy
+    changelog.md       # structural-change audit (slow-loop rationale entries)
+    test-fixtures/     # slow-loop dry-run fixtures (data/test-fixtures/slow-loop/*.example.json)
   design_handoff/      # the design handoff (contract, screens, primitives, tokens)
   features/            # active feature spec (one at a time)
   engine/              # TS engine module
