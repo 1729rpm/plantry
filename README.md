@@ -72,4 +72,4 @@ docs/          Canonical specs: product, engine, engineering, development
 
 ## Status
 
-Plantry runs as a live PWA for a single household. The dish library spans roughly 200 dishes across about ten cuisines, each with a description, recipe, complexity marker, derived macros, and sourcing metadata. Future directions include day-level overrides for travel and eating out, calendar-aware generation, and grocery-ordering automation.
+Plantry runs as a live PWA for a single household. The dish library spans roughly 260 dishes across about ten cuisines, each with a description, recipe, complexity marker, derived macros, and sourcing metadata. Future directions include day-level overrides for travel and eating out, calendar-aware generation, and grocery-ordering automation.
