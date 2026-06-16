@@ -30,7 +30,7 @@ Read order by task:
 
 > _none_
 
-When no feature is active, this line reads "_none_".
+When no feature is active, this line reads "_none_". It resets to `_none_` on feature close-out, when the last stream of a feature merges (`docs/development.md` §3 step 8).
 
 ## Working folders
 
