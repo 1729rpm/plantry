@@ -320,10 +320,12 @@ plantry/
   CLAUDE.md            # orientation
   MAINTENANCE.md       # slow loop spec
   DECISIONS.md         # EM autonomy log
+  RETRO.md             # EM friction ledger (append-only; MAINTENANCE.md §6)
   claude-design.md     # design contract (lowercase by convention from the file itself)
   .gitignore
   .githooks/           # pre-commit hook (blocks commits from the main directory)
   .maintenance-state   # last-reconcile marker for the maintenance job
+  .retro-state         # last-retro marker for the process retro intake (MAINTENANCE.md §6)
   .prettierrc          # formatter config
   .prettierignore      # formatter ignore list
   .stylelintrc.json    # CSS lint config (unbalanced/unclosed-brace gate)

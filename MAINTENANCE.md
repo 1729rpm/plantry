@@ -236,3 +236,71 @@ Committed to the repo. The job history becomes part of `git log` and is visible 
 
 - The first `/reconcile-docs` run is a no-op: the canonical docs were written fresh as part of the restructure.
 - The first `/slow-loop` run after the app is live will have zero queued comments (none have been logged yet). The session writes a one-line PR or simply exits with a status report; an empty slow loop is a healthy outcome, not a failure.
+
+## 6. Process retro intake
+
+The slow loop (§1) turns user feedback into product change. This pass turns the EM's own
+process and system friction into process and system change. It is the same machinery
+pointed inward, so the two-loops principle (`docs/product.md` §4) holds: shipping is the
+fast loop; improving how we ship is the slow loop.
+
+### 6.1 Why
+
+Friction the EM hits while running streams (a gate that does not work as documented, a
+recurring merge conflict, a watchdog that kills agents) evaporates at session end unless
+it is captured and triaged. `RETRO.md` is the durable, append-only ledger of that
+friction; this pass is how it converts into fixes instead of being re-discovered every
+session.
+
+### 6.2 Trigger
+
+Runs alongside the existing reconcile/slow-loop cadence (no separate schedule). The EM
+runs it when `RETRO.md` has unhandled entries, conventionally during the same sitting as
+`/reconcile-docs`.
+
+### 6.3 Inputs the session reads
+
+- `RETRO.md` entries with `Status: open` appended since `last_retro` (see §6.6).
+- The canonical docs and operational docs the entries point at (`development.md`,
+  `engineering.md`, the `.claude/commands/` brief templates, the CI workflow).
+
+### 6.4 What the session does
+
+1. Read open entries; cluster by Area and root cause (several entries may share one fix).
+2. Right-size each cluster (Principle 1): pick the smallest level that solves it
+   (brief-template line, process-doc edit, CI/test change, tooling, infra item), or
+   `no-change` with a stated reason. Do not generalize from a single one-off entry;
+   a `one-off` recurrence is usually `no-change`.
+3. Land the fix on the right path: canonical-doc edits go through `/reconcile-docs`
+   (§2); brief-template and CI/test fixes go through a `chore/*` PR; infra items that
+   need Rajat (a secret, a paid tier) are surfaced to him, not actioned silently
+   (`development.md` §7).
+4. Update each consumed entry's `Status` line in place to `fixed (PR #NNN)` or
+   `wont-fix (reason)`. Never rewrite the rest of the entry; the ledger is append-only
+   history.
+
+### 6.5 How EMs file entries
+
+At session close the EM appends a `RETRO.md` entry for each systemic or recurring
+friction (format and the "what to log" test live in `RETRO.md`). One-off self-inflicted
+slips are not logged. The entry's `Proposed level` is the EM's first-cut sizing; the
+intake pass (§6.4) makes the final call.
+
+### 6.6 State
+
+`.retro-state` at root holds the marker for this pass:
+
+```
+last_retro: 2026-07-13
+```
+
+Committed to the repo, like `.maintenance-state` (§4), so the run history is in `git log`.
+
+### 6.7 Anti-patterns
+
+- Logging one-off slips, turning the ledger into noise (the over-broad-ledger failure).
+- Fixing a single entry with a cross-cutting abstraction before two entries need it
+  (Principle 8).
+- Editing canonical docs in this pass directly instead of routing through
+  `/reconcile-docs` (`development.md` §12.4).
+- Silently actioning an infra or cost item that should be surfaced to Rajat.
