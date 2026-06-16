@@ -94,15 +94,15 @@ describe("coverageReport", () => {
     expect(cov.withDescription).toBe(cov.activeDishCount);
     expect(cov.withRecipe).toBe(cov.activeDishCount);
     expect(cov.withComplexity).toBe(cov.activeDishCount);
-    // Photos are a separate (B2) track. The data/photos-5 run regenerated every
-    // active dish from a rewritten candid-home-photo prompt (replacing the prior
-    // styled/CGI look) and force-overwrote the whole library; later batches added
-    // more dishes, each shipped with a photo, so coverage stays complete. This
-    // batch added 7 seasonal fruit dishes (Mango bowl, Litchi bowl, Jamun bowl,
-    // Plum bowl, Peach bowl, Pineapple bowl, Pomegranate bowl), each active and
-    // photo'd, so coverage is now 259 of 259 active dishes carrying a photo. This
-    // snapshot tracks live data; it is a report assertion, not a rule.
-    expect(cov.withPhoto).toBe(260);
+    // Photos are a separate (B2) track, now also complete: every active dish
+    // carries a photo. This guards the invariant (full active photo coverage)
+    // rather than a hardcoded count, so adding a photo'd dish never breaks it,
+    // while an active dish shipped without a photo correctly fails here. Asserting
+    // the exact count instead turned every dish-count change into a CI-only
+    // failure whenever the local baked count was stale (RETRO.md: coverage-ratchet
+    // desync). If a future active dish legitimately ships on the no-photo
+    // fallback, relax this to a tracked count with the bake printing the expected.
+    expect(cov.withPhoto).toBe(cov.activeDishCount);
   });
 });
 
