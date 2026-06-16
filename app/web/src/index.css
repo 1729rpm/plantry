@@ -626,7 +626,7 @@ input {
 .change-summary {
   font-size: 13px;
   color: var(--pt-sub);
-  margin-top: 8px;
+  margin-top: 4px;
 }
 
 /* ------------------------------------------------------------------ */
