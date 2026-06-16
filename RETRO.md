@@ -47,7 +47,7 @@ run only reads entries appended since.
 - Recurrence: recurring (3x this session)
 - Impact: A manual conflict resolution on every parallel branch's rebase.
 - Proposed level: brief-template (strike "append a CHANGELOG entry" from `.claude/commands/new-stream.md` and the engineer brief) + process-doc (reinforce §12.4)
-- Status: open
+- Status: fixed (PR #124) — the process-doc half already shipped: development.md §11.4 (codified in #107) makes CHANGELOG/DECISIONS/feature stream-tables EM-owned and EM-batched. PR #124 adds the matching default brief lines to `new-stream.md` (engineers do not edit those files). The brief had no literal "append a CHANGELOG entry" line left to strike; the positive "do not edit" rule replaces it.
 
 ## 2026-06-16  Behind-branch "MERGEABLE/CLEAN" is not the post-merge truth
 - Area: ci
@@ -55,7 +55,7 @@ run only reads entries appended since.
 - Recurrence: systemic (every parallel merge)
 - Impact: A green PR can still break main on merge; only caught by a manual update-and-re-run.
 - Proposed level: process-doc (a written pre-merge true-state gate in development.md §3/§4: update branch, re-run CI, re-bake, re-run count-sensitive tests before every merge)
-- Status: open
+- Status: fixed (PR #RECONCILE) — development.md §3 step 4 and the §4 definition of done now require updating the branch onto origin/main and confirming a green engine check on the true merged state (re-bake, re-run count-sensitive tests) immediately before merge, not trusting a stale `mergeable` flag. Reinforces the one-line note already in §11.3.
 
 ## 2026-06-16  Coverage-ratchet tests hardcode dish counts (local-vs-CI desync)
 - Area: ci-test
@@ -63,7 +63,7 @@ run only reads entries appended since.
 - Recurrence: recurring (every dish-count change)
 - Impact: Silent until CI; "green locally" did not mean green in CI.
 - Proposed level: ci-test (where 100% coverage is the invariant assert `withPhoto === activeDishCount`; keep exact counts only as a deliberate review signal, with the bake printing the expected value)
-- Status: open
+- Status: fixed (PR #124) — `reports.test.ts` now asserts `withPhoto === activeDishCount` (full active photo coverage), matching the withDescription/withRecipe/withComplexity invariants. A dish-count change no longer flips a hardcoded number; an active dish shipped without a photo correctly fails.
 
 ## 2026-06-16  Subagent watchdog kills long silent commands
 - Area: agent-orchestration
@@ -71,7 +71,7 @@ run only reads entries appended since.
 - Recurrence: recurring (2x this session)
 - Impact: Lost in-flight work; required diagnosing and resuming worktrees.
 - Proposed level: brief-template (make "run installs early, stream output, avoid single long silent commands" a default brief line)
-- Status: open
+- Status: fixed (PR #124) — `new-stream.md` now carries a default brief line: run installs and long test runs early and stream their output, since the watchdog kills ~600s of silence.
 
 ## 2026-06-16  Verification is indirect for several structural paths
 - Area: verification
@@ -79,4 +79,4 @@ run only reads entries appended since.
 - Recurrence: systemic (every structural slice leaves a residual unverified path)
 - Impact: Each slice ends with a "confirm on real device / after deploy" residual that can be lost if only stated verbally.
 - Proposed level: process-doc (engineering.md §16: document what the crawl cannot verify headless, the seed-a-mock-week pattern, the crawl-after-preview-deploy rule, and a residual-check channel logged in the PR diagnosis card)
-- Status: open
+- Status: fixed (PR #RECONCILE) — engineering.md §16 now documents the three paths the crawl cannot close (a new slot type renders only against a seeded/mock week; a backend-dependent flow must be crawled after the preview Convex deploy is live; real-device and after-deploy checks), and the development.md §5 diagnosis card gains a Residual checks field so each open verification item travels with the PR.
