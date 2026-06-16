@@ -12,6 +12,26 @@ Brief description in present tense, one to three sentences. Reference the PR.
 
 ---
 
+## 2026-06-16 Activate Pav (id 281)
+
+Flips Pav from `active: No` to `active: Yes`, so it enters weekly menu generation as a breakfast Option C plain carb (the category:Bread plain-carb pool per engine.md §3). The live-data coverage snapshot `cov.withPhoto` moves 259 to 260 (Pav carries its photo); no other report snapshot moves. Data plus test only; no engine source, app, rule, or catalog change. (#122)
+
+## 2026-06-16 Make the coriander-garnish clause conditional in the photo prompt
+
+`buildPrompt` in `scripts/generate-dish-photos.mjs` now drops the skeleton's standing coriander-garnish clause ("any garnish is fresh green coriander (cilantro) leaves, never flat-leaf parsley") when a dish's detail line contains "no garnish" (case-insensitive), substituting a positive bare-surface statement so the "coriander" token never reaches the model; otherwise the cue is kept verbatim. FLUX barely honours negations, so a bare bread (Pav) had been rendering spurious coriander even with a "no garnish" detail line; the fix is keyed on the property, not the dish slug, so it generalizes to every non-garnished category (bread, dessert, fruit, plain rice). Savoury dishes are unchanged and existing committed photos are untouched (only future regens differ). Adds a vitest covering both directions and an entrypoint guard that makes the script importable and path-resolving even though the repo path contains a space, plus a note in `data/dish-photos/STYLE.md`. (#121)
+
+## 2026-06-16 Add Pav as a permanent library dish (inactive, photo'd)
+
+Promotes Pav from a Wed-lunch one-off into the permanent library as dish id 281: category:Bread, time:Breakfast, cuisine:Indian, reusing the existing `Pav Bread` ingredient-catalog row, shipped `active: No` (the review gate) with an AI photo. Inactive, so it does not yet enter generation. (#120)
+
+## 2026-06-16 Stop the offline banner flashing on online Menu opens
+
+The offline banner had been flashing on the Menu on normal online opens: it inferred "offline" from an unresolved Convex `getCurrentWeek` query, which is also `undefined` during a normal cold-open load, so the cached week rendered with the banner every time. A new `useIsOffline()` hook keyed off `navigator.onLine` (reactive to the `online`/`offline` events) replaces that inference; the banner, Edit, and Share now follow the real offline signal instead of the query's loading state. Frontend-only; no Convex, engine, or data change. (#119)
+
+## 2026-06-16 Tighten the Menu title/subtitle gap
+
+Reduces the gap under the Menu title by changing `.change-summary { margin-top: 8px }` to `4px`. Cosmetic, Menu-only single-use class; no other surface affected. (#118)
+
 ## 2026-06-16 Unify Back/history navigation across the app
 
 The browser/OS Back gesture (and Android hardware Back) now unwinds the user's actual visit order across the whole app: tab switches, the Day editor, and bottom sheets share one history controller (`app/web/src/lib/backStack.ts`) that owns the single popstate listener and the single history-marker discipline. Back from any screen returns to the previously visited screen; with no previous screen it returns to the homepage (Menu tab, no day open); and Back from the homepage is gated behind a "Leave Plantry?" confirm prompt (`ExitConfirmSheet`, reusing the `Sheet` primitive with a `noHistory` opt-out) before leaving. The actual exit is best-effort: a same-document sentinel keeps the at-home Back catchable, and `history.go(-2)` leaves the app where the app was not the first history entry, but is a clean no-op in an installed PWA where no web API can close the tab. The sheet-only controller from #78 (one marker for all stacked sheets, microtask-deferred pop) is generalized into this unified back-stack with its sibling-swap semantics preserved exactly; an `ignoreNextPop` guard suppresses the self-inflicted popstate from the programmatic sheet-marker pop, since the listener now stays armed for the view/home layer underneath. New `app/web/e2e/back-nav.mjs` Playwright suite covers tab unwind, Day-editor exit, sheet close, and the homepage exit prompt. No engine, Convex, or data change. (#111)

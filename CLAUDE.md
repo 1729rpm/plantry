@@ -55,6 +55,7 @@ Full ground rules (session model, branch naming, commit style, definition of don
 ## Operational docs
 
 - `MAINTENANCE.md` — spec for the slow loop and for canonical-doc reconciliation. Read before running `/slow-loop`.
+- `ADDING-DISHES.md` — content-batch playbook for adding a new dish (schema, ingredients, photo prompt-refining, cuisine, the active/inactive review gate, the test snapshots that move). Read before authoring any new dish.
 - `DECISIONS.md` — append-only log of decisions the EM has taken on Rajat's behalf, with reasoning. Scannable.
 - `docs/development.md` — ground rules for making changes in this repo.
 
