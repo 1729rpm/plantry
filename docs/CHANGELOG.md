@@ -12,6 +12,18 @@ Brief description in present tense, one to three sentences. Reference the PR.
 
 ---
 
+## 2026-06-16 Unify Back/history navigation across the app
+
+The browser/OS Back gesture (and Android hardware Back) now unwinds the user's actual visit order across the whole app: tab switches, the Day editor, and bottom sheets share one history controller (`app/web/src/lib/backStack.ts`) that owns the single popstate listener and the single history-marker discipline. Back from any screen returns to the previously visited screen; with no previous screen it returns to the homepage (Menu tab, no day open); and Back from the homepage is gated behind a "Leave Plantry?" confirm prompt (`ExitConfirmSheet`, reusing the `Sheet` primitive with a `noHistory` opt-out) before leaving. The actual exit is best-effort: a same-document sentinel keeps the at-home Back catchable, and `history.go(-2)` leaves the app where the app was not the first history entry, but is a clean no-op in an installed PWA where no web API can close the tab. The sheet-only controller from #78 (one marker for all stacked sheets, microtask-deferred pop) is generalized into this unified back-stack with its sibling-swap semantics preserved exactly; an `ignoreNextPop` guard suppresses the self-inflicted popstate from the programmatic sheet-marker pop, since the listener now stays armed for the view/home layer underneath. New `app/web/e2e/back-nav.mjs` Playwright suite covers tab unwind, Day-editor exit, sheet close, and the homepage exit prompt. No engine, Convex, or data change. (#111)
+
+## 2026-06-16 Explore count respects the active filter
+
+The Explore tab's subtitle count now reflects the filtered (`visible`) dish count rather than the full feed total, so the number matches what the user actually sees once filters are applied. Frontend-only (`ExploreScreen.tsx`); no Convex, engine, or data change. (#112)
+
+## 2026-06-16 Explore cards top-align photo and title in stretched rows
+
+`.explore-card` changes from `display: block` to `display: flex; flex-direction: column`, so the photo and title pin to the top of grid-stretched cards instead of being vertically centered by the native button layout (which left a gap above cards with a single tag line). Frontend-only (`index.css`); no Convex, engine, or data change. (#113)
+
 ## 2026-06-16 Fruit of the day shown and swappable in the day editor
 
 Follow-up to Stream D (Tuhina feedback item 4). The day editor (`DayScreen`) now renders the Fruit of the day as its own section after Lunch (reusing the Menu card's section label and dish row) instead of skipping the `meal: "fruit"` slot, and the fruit dish is tappable and swappable like any breakfast/lunch dish. The swap path is extended end to end: `getSlotAlternatives` builds the fruit slot's candidate pool from Active, in-season, Category=Fruit dishes (the category-based analogue of the meal-time pool) ranked by the existing picker ranking (engine §5); `swapDish` accepts `meal: "fruit"`, validates the picked dish is in the library, Active, in season, and Category=Fruit (new `dish-not-fruit` recoverable reason), and writes the `manualChanges` swap row exactly like other swaps so the slow loop sees it. The frontend `Meal` type widens to include `fruit` while a new `MealTime` type keeps add/delete/one-off gated to breakfast/lunch (scope: swap only, one fruit per day; no add/delete/custom one-off for fruit). The `manualChanges.meal` union widens to include `"fruit"` (additive). No engine.md or product.md edit: the pool branch lives in the Convex query, the §5 ranking is unchanged, and the fruit pool is already specified as Category=Fruit in engine.md §3.3. (#106)
