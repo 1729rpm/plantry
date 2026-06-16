@@ -102,7 +102,7 @@ describe("coverageReport", () => {
     // Plum bowl, Peach bowl, Pineapple bowl, Pomegranate bowl), each active and
     // photo'd, so coverage is now 259 of 259 active dishes carrying a photo. This
     // snapshot tracks live data; it is a report assertion, not a rule.
-    expect(cov.withPhoto).toBe(259);
+    expect(cov.withPhoto).toBe(260);
   });
 });
 
