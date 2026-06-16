@@ -12,6 +12,10 @@ Brief description in present tense, one to three sentences. Reference the PR.
 
 ---
 
+## 2026-06-16 Add 7 seasonal monsoon fruit dishes (active, photo'd)
+
+Deepens the Fruit of the day pool (#103) with 7 net-new Category=Fruit dishes (ids 274-280): Mango bowl, Litchi bowl, Jamun bowl, Plum bowl, Peach bowl, Pineapple bowl, Pomegranate bowl. Each ships complete (description, recipe, complexity Easy) and active-with-photo, and every one includes Monsoon in its `seasons`, so all 7 are eligible this Monsoon season alongside Seasonal fruit, Banana bowl, and Papaya bowl. Adds 5 new `data/ingredients.md` catalog rows (Jamun, Litchi, Peach, Plum, Pomegranate, all Group=Other); Mango and Pineapple reuse existing rows. Live-data snapshots move: coverage `withPhoto` 252 to 259 (active library 252 to 259, all photo'd) and the Summer Fruit pool 3 to 5 (Mango and Litchi are also Summer). No engine, app, or rule change. (#TBD)
+
 ## 2026-06-15 Fruit of the day, breakfast savoury-only
 
 Decouples fruit from breakfast (Tuhina feedback item 4, Stream D). A standalone Fruit of the day is now picked for every day Mon-Sat (Saturday included): exactly one Active, in-season, Category=Fruit dish, selected longest-unused and rotated across the days, recency-exempt so within-week repeats are allowed when the pool is thin. It sits outside the breakfast/lunch composition and outside the §9 item cap. Breakfast Option A (complete_meal + fruit) is retired, so the Mon/Wed/Fri 2-item breakfast is savoury (Option B or C); a consequence is that complete_meal breakfasts now appear only on the Tue/Thu single-item slot. The engine carries the pick as `fruit?` on each generated day; Convex stores it as a `meal: "fruit"` slot (one dish) on `currentWeek` (additive schema-union widening, but a regenerate is required to write the new fruit rows); the Menu day card and the menu share image render a "Fruit of the day" section; the grocery list aggregates fruit ingredients like any day dish. Engine, Convex schema, frontend, share canvas, `engine.md` §2/§3/§3.3/§4/§9/§12 and `product.md` §2. (#103)
