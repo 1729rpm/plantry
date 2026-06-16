@@ -53,7 +53,7 @@ Every code-touching session works in its own git worktree on its own feature bra
 1. Engineer finishes work in worktree, runs CI gates locally (lint, type-check, tests, simulation harness, round-trip), opens a PR with a diagnosis card.
 2. Vercel deploys a preview to `plantry-dev.mudgal.xyz` (aliased to the current PR's preview URL). Convex deploys a preview environment with an isolated DB.
 3. For any slice that touches the app frontend, before approving the merge the EM spins off the in-depth full-flow crawl against the PR preview (`docs/engineering.md` §16): an automated walk of every customer flow across all tabs and every sheet, not just the new feature, capturing a screenshot of each screen and asserting the structural invariants (no horizontal overflow, key elements actually styled, focus moves into a sheet on open, background scroll locks while a sheet is open, tap targets at least 44px, a clean console), and comparing each rendered screen against the matching `design_handoff/` screen. The EM reviews the output and resolves or explicitly accepts every deviation before merge. A CSS or shared-primitive change is whole-app blast radius: it is crawled across all tabs regardless of the slice's nominal scope.
-4. EM reviews the PR against principles and gates. Either merges or sends back with specific notes.
+4. EM reviews the PR against principles and gates. Before merging, the EM confirms the PR's true merged state, not just its reported `mergeable` flag: GitHub can show a branch as mergeable and clean while it is behind `main` and would break once merged, and branch protection does not catch a stale-but-mergeable branch. The EM updates the branch onto `origin/main` (`git fetch && git rebase origin/main` in the worktree, §11.3), re-runs the engine check and re-bakes on that true merged state, and re-runs any count-sensitive tests, then either merges or sends back with specific notes.
 5. On merge to `main`, Vercel and Convex promote to production at `plantry.mudgal.xyz`. The EM verifies the live deploy (open the URL, re-run the crawl's smoke pass across all tabs (every tab renders, no horizontal overflow, a clean console), not only the current week).
 6. EM appends an entry to `docs/CHANGELOG.md` (one line: date + what shipped + PR link).
 7. EM removes the worktree.
@@ -70,6 +70,7 @@ A PR is done when ALL of:
 - No `// TODO` left behind without a tracked follow-up in the active feature spec or a new feature doc.
 - For UI changes: the EM has run the full-flow crawl-and-compare pass (§3, `docs/engineering.md` §16) against the preview, covering every flow and every sheet and compared against `design_handoff/`, and linked its result in the PR; any deviation from the design is resolved or explicitly accepted in the diagnosis card. A CSS or shared-primitive change is verified across all tabs, not only the touched screen.
 - For iOS-affecting CSS or layout changes: real-device (iPhone) verification is required before merge. The desktop crawl runs Chromium and WebKit but cannot reproduce a real-iOS-device-only rendering difference, so a green crawl is necessary but not sufficient; Rajat checks the change on his iPhone before it merges.
+- Merge happens on the true merged state: immediately before merge the branch is updated onto `origin/main` and the engine check is green on that updated state (§3, §11.3), not only on a possibly-stale `mergeable` flag. A green check on a behind-`main` branch is not proof the merge is safe.
 - All horizontal container padding goes through the gutter token (`--pt-gutter` in `app/web/src/index.css`): no raw per-container horizontal padding literals, and no `env(safe-area-inset-left|right)` inside a `padding` or `margin` shorthand. Horizontal padding is written as explicit `padding-left` / `padding-right` longhand with the token as the floor and the safe-area inset as a fallback. A stylelint rule blocks the fragile shorthand form.
 
 ## 5. Diagnosis card
@@ -92,6 +93,7 @@ Every PR description starts with a diagnosis card. Engineer PRs, slow-loop PRs, 
 **Why this level:** <one or two sentences>
 **Generality check:** <does this also unlock other latent improvements, or is it brittle to this one case>
 **Rejected alternatives:** <one or two sentences per rejected level>
+**Residual checks:** <verification the automated crawl and CI could not close and that travels with this PR: real-device (iPhone) sign-off, an after-production-deploy behaviour, a flow that needs a seeded or regenerated week (`docs/engineering.md` §16); or "none">
 ```
 
 For trivial changes (a typo fix, a dep bump) the card is one line: `**Problem size:** trivial; no diagnosis needed.` The EM uses judgment on what counts as trivial.
