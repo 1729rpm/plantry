@@ -223,14 +223,15 @@ If the action runs but the next `/slow-loop` invocation still sees stale `queued
 
 ## 4. State file
 
-`.maintenance-state` at root holds the input-window marker for the reconciliation job:
+`.maintenance-state` at root holds the input-window markers for the maintenance jobs:
 
 ```
 last_reconcile: 2026-07-12
+last_reconcile_ops: 2026-07-12
 last_slow_loop: 2026-07-13
 ```
 
-Committed to the repo. The job history becomes part of `git log` and is visible to anyone who clones.
+`last_reconcile` is the canonical-doc reconciliation marker (§2); `last_reconcile_ops` is the operational-doc reconciliation marker (§7); `last_slow_loop` is the slow-loop marker (§1). Committed to the repo. The job history becomes part of `git log` and is visible to anyone who clones.
 
 ## 5. First run notes
 
@@ -304,3 +305,55 @@ Committed to the repo, like `.maintenance-state` (§4), so the run history is in
 - Editing canonical docs in this pass directly instead of routing through
   `/reconcile-docs` (`development.md` §12.4).
 - Silently actioning an infra or cost item that should be surfaced to Rajat.
+
+## 7. Operational-doc reconciliation
+
+### 7.1 Why
+
+The operational docs at root (`README.md`, `CLAUDE.md`, `MAINTENANCE.md`, `ADDING-DISHES.md`, `claude-design.md`) and the command briefs under `.claude/commands/` describe how the project is oriented, operated, and changed. They drift the same way the canonical docs in `docs/` drift under ship pressure: a feature lands, the chronology goes into the CHANGELOG honestly, but an orientation line, an operational spec, or a command brief keeps the old steady state until someone notices. README drifts fastest of all, because it restates product and engine facts that live canonically in `docs/`, so the same number ends up maintained in two places and one falls behind. This pass keeps the operational layer aligned to shipped reality and to the canonical docs, in present tense, without historical seams.
+
+### 7.2 Trigger
+
+Rajat invokes `/reconcile-ops` after a notable run of CHANGELOG entries, conventionally during the same sitting as `/reconcile-docs`. The session is the trigger; the output is a pull request; the merge is the approval.
+
+### 7.3 Inputs the session reads
+
+- `docs/CHANGELOG.md` entries since the last operational-doc reconciliation (last-run marker `last_reconcile_ops` in `.maintenance-state`, committed; see §4).
+- The current canonical docs in `docs/`, as the source of truth the operational docs summarize and point at. Where an operational doc restates a canonical fact, the canonical doc wins.
+- The current operational docs and command briefs in scope (§7.5), as the style and structure anchor.
+- Current code and data state where an operational claim is checkable.
+
+### 7.4 What the session does
+
+1. Determine the set of CHANGELOG entries since `last_reconcile_ops` (or since the `since:<date>` argument). If none, write a one-line summary, bump the marker to today, and exit. An empty operational reconciliation is a healthy outcome, the same pattern as §2.
+2. For each entry, decide which operational doc(s) or command brief(s) it affects per §7.5.
+3. For each affected doc, rewrite the relevant sections in place, in present tense, so the doc still reads as one coherent spec. Verify factual claims against the canonical docs and against code where checkable.
+4. For README, prefer a pointer over a re-synced number: when an entry changes a product or engine fact that README restates, trim the restated fact to a link into `docs/` rather than copying the new value. A lean README that points at canon does not drift.
+5. For the command briefs, the procedure steps stay aligned to reality and the pointer section-numbers stay valid. The briefs point at canon rather than restating it, so reconciling them means keeping the pointers and the step lists correct, not rewriting the canon they reference.
+6. Run the mechanical repository-structure check (§2.9, against the authoritative allowlist mirrored in `.github/workflows/ci.yml` and the annotated layout in `docs/engineering.md` §14). Flag mismatches in the PR; do not move or rename files autonomously.
+7. Open a PR on a `docs/ops-<date>` branch (per `docs/development.md` §2), bump `last_reconcile_ops` to today in the same PR.
+
+### 7.5 Per-doc affect map
+
+| CHANGELOG entry touches…                                                          | Update target            |
+| --------------------------------------------------------------------------------- | ------------------------ |
+| Repo orientation, doc hierarchy, working folders, project status (README, CLAUDE) | `/reconcile-ops`         |
+| Operational specs (the slow loop, reconciliation jobs, retro intake, dish-add playbook) | `/reconcile-ops` (`MAINTENANCE.md`, `ADDING-DISHES.md`) |
+| The design contract (`claude-design.md`)                                          | `/reconcile-ops`         |
+| A slash-command brief's procedure, pointers, or arguments (`.claude/commands/*.md`) | `/reconcile-ops`         |
+
+Out of scope for `/reconcile-ops`: the canonical specs in `docs/` (owned by `/reconcile-docs`, §2.5), and the append-only ledgers `DECISIONS.md`, `RETRO.md`, `docs/CHANGELOG.md`, and `data/changelog.md`, which are never rewritten by any reconciliation pass.
+
+A single shipped change can touch both layers (a canonical doc and an orientation line that points at it). `/reconcile-docs` owns the canonical side; `/reconcile-ops` owns the operational side; keeping the pointer between them valid is this pass's responsibility.
+
+### 7.6 Style rules
+
+The operational docs read as present-tense steady-state specs with no historical seams, the same standard the canonical docs hold. The style rules in §2.6 and the anti-patterns in §2.7 apply unchanged; reference them rather than re-listing them here. Slash-command briefs keep their imperative step lists, but their descriptive prose follows the same no-historical-seams rule. The slow-loop signal-cluster guidance is canonical in §1.4, and `/slow-loop` points there rather than restating it.
+
+### 7.7 Anti-patterns
+
+- Re-syncing a duplicated product or engine number in README instead of trimming it to a pointer into `docs/`; the duplication is the drift source.
+- Restating canon in a command brief that should point at it (the brief already opens by telling the reader to re-read the spec).
+- Rewriting an append-only ledger (`DECISIONS.md`, `RETRO.md`, `docs/CHANGELOG.md`, `data/changelog.md`); these are out of scope.
+- Editing a canonical doc in `docs/` in this pass; that is `/reconcile-docs`'s lane (§2).
+- Historical seams in the rewrite: "previously", "now also", a stream letter, a date in the doc body (§2.7).
