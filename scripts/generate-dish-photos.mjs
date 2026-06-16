@@ -809,7 +809,12 @@ async function main() {
 
 // Run main() only when invoked as a script, not when imported (e.g. by the unit
 // test, which exercises buildPrompt/sanitizeFilterTokens without firing the CLI).
-if (import.meta.url === `file://${process.argv[1]}`) {
+// Compare resolved filesystem paths (process.argv[1] may be relative and the
+// repo path contains spaces, so a raw string compare against import.meta.url
+// would never match).
+const invokedDirectly =
+  process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url);
+if (invokedDirectly) {
   main().catch((err) => {
     console.error(err);
     process.exit(1);
