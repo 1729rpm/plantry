@@ -2,48 +2,17 @@
 description: Run the slow loop. Reads queued comments, queued manual changes, and incidents from Convex, applies right-size discipline, opens a PR with structural changes (or a no-change-warranted card).
 ---
 
-You are running the slow loop for Plantry. This is a thinking exercise, not a script. The full spec lives in `MAINTENANCE.md` §1. Re-read it now. Read `docs/product.md` §4 (principles) and `docs/development.md` §5 (diagnosis card). The right-size discipline below is restated so this command stands on its own, but the canonical wording lives in those docs.
+You are running the slow loop for Plantry. This is a thinking exercise, not a script. The full spec lives in `MAINTENANCE.md` §1. Re-read it now. Read `docs/product.md` §4 (principles) and `docs/development.md` §5 (diagnosis card).
 
 Slow-loop runs only when Rajat invokes them. Comments, manual changes, saved-for-next-week rows, dislikes, and incidents accumulate during the week; the coverage and pool-coverage reports describe the library's health independent of any user action. This session is the only path by which the dish library (`data/dishes/<slug>.md`), the ingredient catalog (`data/ingredients.md`), `docs/engine.md`, `engine/src/`, and `data/changelog.md` change.
 
-## Right-size discipline (inline, canonical in `docs/product.md` §4 Principle 1)
+## Right-size discipline
 
-Before any change lands, state:
+Right-size discipline is canonical in `docs/product.md` §4 Principle 1, with the slow-loop sizing thresholds in `MAINTENANCE.md` §1; re-read both before any change lands. Do not re-derive the levels or thresholds from memory.
 
-1. **Problem size.** One-off, small pattern, or structural. One comment is usually one-off; two or three comments touching the same property over different weeks is a small pattern; five-plus comments or a recurring incident is structural.
-2. **Smallest level that fixes it.** In ascending invasiveness:
-   - data row (a single value in a dish's `data/dishes/<slug>.md` file or an `data/ingredients.md` catalog row),
-   - new tag (one column value added on a handful of rows, with rule wording that consumes it),
-   - rule edit (wording in `docs/engine.md` plus the matching engine module change plus tests),
-   - engine code (algorithmic or structural change to `engine/src/`),
-   - UI affordance (let the user resolve in-week via swap, one-off, or comment),
-   - infrastructure (tooling, CI, command, schema),
-   - or no change warranted.
-3. **Generality check.** Does the fix unlock other latent improvements, or is it brittle to this one case? A fix that solves only one case in only one direction is usually the wrong level.
+## Diagnosis card
 
-A single-row data fix beats a new column. A new tag beats a new cross-cutting rule. A UI affordance beats a new rule altogether. Three similar rows beat a premature abstraction. Do not generalize from one or two cases. "No change warranted" is a valid output and gets written as an explicit decision, not silence.
-
-## Diagnosis card (one per cluster; canonical in `docs/development.md` §5)
-
-```
-## Diagnosis
-
-**Problem size:** one-off | small pattern | structural
-**Trigger:** comment IDs, manual-change IDs, next-week-queue IDs, dislike IDs, and incident IDs in this cluster (or "reports: <which report>" for a proactive cluster with no consumed rows)
-**Candidate fix levels considered:**
-  - data row: <what would change, or "not applicable" with one reason>
-  - new tag: <what would change, or "not applicable" with one reason>
-  - rule edit: <what would change, or "not applicable" with one reason>
-  - engine code: <what would change, or "not applicable" with one reason>
-  - UI affordance: <what would change, or "not applicable" with one reason>
-  - infrastructure: <what would change, or "not applicable" with one reason>
-**Chosen level:** <one>
-**Why this level:** <one or two sentences>
-**Generality check:** <does this unlock latent improvements, or is it brittle to this case>
-**Rejected alternatives:** <one sentence per rejected level>
-```
-
-For clusters that resolve to no change, the card states problem size, the cluster's consumed IDs (comments, manual changes, queue rows, dislikes, incidents), the levels considered, "no change warranted" as the chosen level, and the reason. The consumed comments and manual changes still get marked `reviewed_no_change` on merge; consumed queue rows are still dropped; consumed incidents are still resolved. (Dislikes are listed for the record but stay queued until the dislike write-back mutation exists.)
+The diagnosis-card format is canonical in `docs/development.md` §5; write one per cluster. Slow-loop-specific field notes: the `Trigger` field carries this cluster's consumed IDs (comments, manual changes, next-week-queue rows, dislikes, incidents), and for a proactive cluster with no consumed rows it cites the report instead ("reports: <which report>"). The per-cluster consumed-id keys (used on merge by the mark-applied action) are detailed in step 9 and `MAINTENANCE.md` §3.1.
 
 ## Arguments
 
@@ -64,13 +33,7 @@ For clusters that resolve to no change, the card states problem size, the cluste
 
 3b. **Proactive read (reports).** Even with zero reactive signals, scan the pool-coverage report for thin pools (slots flagged `<- thin`, two or fewer eligible candidates per season) and the coverage report for gaps. A thin pool or a real gap can justify a proactive cluster: "Monsoon strands the Dessert slot at N candidates, propose activating X and Y" or "the latest expansion batch landed undescribed, here is the enrichment priority". Recipe coverage is currently 100%, so frame coverage proposals around the live gaps (thin pools, or a freshly-landed undescribed batch), not recipes. Activating an existing dish is a slow-loop data-row edit; adding net-new dishes is a B3 expansion content batch the slow loop proposes as a priority rather than authoring. A proactive cluster carries a diagnosis card like any other and consumes no Convex rows.
 
-4. **Cluster.** Group comments, manual changes, queue rows, dislikes, and incidents into themes. State each theme in one short sentence. A theme can be a single row from any table if structural on its own; a theme can also span rows from multiple tables when they touch the same underlying property. A swap from palak paneer to a non-paneer dish with reason "bored of paneer" clusters naturally with a queued comment "palak paneer again, feels like a lot of paneer this week". The manual-changes log, the queue, and dislikes are observed behavior; comments are explicit feedback; incidents are runtime violations. The slow loop does NOT treat a swap or a save or a dislike as a violation; it reads them as signal for what the engine got wrong, then asks whether the rule should change. Per `docs/product.md` §4 Principle 4 the fast loop is permissive; the slow loop redesigns rules so generated picks move closer to what users actually pick. The new signal patterns to look for, each subject to right-size discipline (a single instance is almost always no change; the threshold is a pattern across weeks or across both household members):
-   - **Skips** (`skip_day`): recurring same-day skips are a calendar pattern (three Fridays is a standing override; one is one eat-out night).
-   - **Deletes** (`delete`): repeated deletes from one slot type read as over-generation (an item-cap or composition adjustment, not a per-dish edit).
-   - **Adds** (`add`): repeated manual adds of one category read as under-generation (the mirror of deletes).
-   - **Saves** (`save_next_week` + `nextWeekQueue`): a dish saved repeatedly is under-picked (consider flipping `preferred` or its recency treatment); stale queued rows (saved weeks ago, never placed) may be marked `dropped` with a reason.
-   - **Unplaceable requests** (`nextWeekQueue` rows stuck `queued` with an incident trail): the dish is mis-categorized (data-row recategorization) or the composition is too rigid (rule loosening).
-   - **Dislikes** (`dishDislikes`): one dislike is no change; a dish disliked repeatedly or by both members is a deactivation or explore down-rank candidate. The optional reason sharpens the call. The fast loop never acts on a dislike; the slow loop is the only path to any consequence (Principle 5).
+4. **Cluster.** Group comments, manual changes, queue rows, dislikes, and incidents into themes. State each theme in one short sentence. A theme can be a single row from any table if structural on its own; a theme can also span rows from multiple tables when they touch the same underlying property. A swap from palak paneer to a non-paneer dish with reason "bored of paneer" clusters naturally with a queued comment "palak paneer again, feels like a lot of paneer this week". The loop reads these signals (skips, deletes, adds, saves, unplaceable requests, dislikes) as signal for what the engine got wrong, not as violations; the per-signal clustering guidance and its right-size thresholds are canonical in `MAINTENANCE.md` §1.4. Re-read it before clustering rather than working from memory.
 
 5. **Per cluster, diagnose.** Write the diagnosis card above. Be honest: most one-off comments and most one-off manual changes resolve to no change. Some clusters resolve to a single data row edit. A few resolve to a new tag plus rule wording plus engine plus tests. Very few resolve to an engine code change in a single run.
 

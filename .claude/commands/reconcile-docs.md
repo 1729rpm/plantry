@@ -2,50 +2,23 @@
 description: Run canonical-doc reconciliation. Reads CHANGELOG entries since the last reconcile, identifies which canonical docs are affected, rewrites them in place to match shipped reality, and opens a PR.
 ---
 
-You are running canonical-doc reconciliation for Plantry. This is a thinking exercise, not a script. The full spec lives in `MAINTENANCE.md` §2. Re-read it now. Read `docs/product.md` §4 (principles) and `docs/development.md` §5 (diagnosis card). The style rules below are restated so this command stands on its own; the canonical wording lives in `MAINTENANCE.md` §2.6.
+You are running canonical-doc reconciliation for Plantry. This is a thinking exercise, not a script. The full spec lives in `MAINTENANCE.md` §2. Re-read it now. Read `docs/product.md` §4 (principles) and `docs/development.md` §5 (diagnosis card).
 
 Reconcile-docs runs only when Rajat invokes it. Canonical docs in `docs/` must read as coherent present-tense specs with no historical seams; producing that quality of writing while shipping a feature is unreliable, so reconciliation runs as a separate human-triggered pass.
 
-## Style rules (canonical in `MAINTENANCE.md` §2.6)
+## Style rules and anti-patterns
 
-Apply to every rewrite the reconciliation job produces.
+Apply the style rules canonical in `MAINTENANCE.md` §2.6 and the anti-patterns canonical in `MAINTENANCE.md` §2.7 to every rewrite. Re-read both before writing; they are not restated here. The short of it: present tense, one coherent document, no historical seams (no slice, round, sprint, or date references in the body), no changelog phrasing, no em dashes.
 
-- **Present tense.** "The slow loop runs when Rajat invokes it." Not "The slow loop will run..." or "Slow loop was added in feat/E1...".
-- **One coherent document.** Section order is stable. Updates happen in place.
-- **No slice, round, sprint, or date references** inside the doc body. The reader should not see the historical seams.
-- **No changelog phrasing.** Strip "previously", "now also", "we used to", "this was added because". The CHANGELOG holds the chronology.
-- **Preserve voice.** Each doc has an established register; read the existing sections as a style anchor before writing new ones.
-- **Cross-reference by section number within a doc**, by canonical filename across docs.
-- **No em dashes.** Use commas, parentheses, semicolons, or sentence breaks.
+## Per-doc scope
 
-## Anti-patterns to reject before opening the PR (canonical in `MAINTENANCE.md` §2.7)
+The per-doc scope map (which CHANGELOG entry updates which canonical doc) is canonical in `MAINTENANCE.md` §2.5. A single shipped change often touches more than one doc; keeping cross-doc consistency is the reconciliation job's responsibility.
 
-- "Added in feat/X" or "introduced in slow-loop/2026-..."
-- "Previously X, now Y"
-- `(new)` or `(updated)` markers in headings
-- Inline dates like "(as of 2026-06-08)"
-- Past-tense narrative
+`MAINTENANCE.md` is not a canonical doc; it is the spec for the canonical-doc reconciliation. If the session finds drift in `MAINTENANCE.md` itself (for example, references to functions that were renamed), include the fix in this PR with a clear scope note in the description, but do not let it expand into a broader rewrite. Drift in the other operational docs (`README.md`, `CLAUDE.md`, `ADDING-DISHES.md`, `claude-design.md`, the command briefs) is `/reconcile-ops`'s lane (`MAINTENANCE.md` §7); flag it rather than fixing it here.
 
-If a rewrite needs any of these to make sense, the job is doing it wrong. The doc describes end state; the why goes in the CHANGELOG entry or the (now-archived) feature spec.
+## Conflict handling
 
-## Per-doc scope (canonical in `MAINTENANCE.md` §2.5)
-
-| CHANGELOG entry touches…                                                                                                                              | Update target         |
-| ----------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------- |
-| Product scope, persona, principles, tone, future direction                                                                                            | `docs/product.md`     |
-| Rules, slot composition, selection priority, item cap, ingredient consolidation, field reference                                                      | `docs/engine.md`      |
-| Stack, schema, data layer split, deploy model, hosting, integrations, env vars, image format                                                          | `docs/engineering.md` |
-| Session model, worktree workflow, ship workflow, definition of done, diagnosis card, slow-loop trigger, escalation, commit conventions, anti-patterns | `docs/development.md` |
-
-A single shipped change often touches more than one doc. Keeping cross-doc consistency is the reconciliation job's responsibility.
-
-`MAINTENANCE.md` is not a canonical doc; it is the spec for the canonical-doc reconciliation. If the session finds drift in `MAINTENANCE.md` itself (for example, references to functions that were renamed), include the fix in this PR with a clear scope note in the description, but do not let it expand into a broader rewrite.
-
-## Conflict handling (canonical in `MAINTENANCE.md` §2.8)
-
-- **Two CHANGELOG entries disagree:** latest ships wins; older statement is overwritten in the canonical doc. Flag in PR description.
-- **CHANGELOG disagrees with current code:** code wins; canonical doc updated to match code reality. Flag for human review.
-- **Ambiguous which doc owns a change:** open the PR with the job's best guess; flag for review.
+Conflict handling (two CHANGELOG entries disagree, CHANGELOG disagrees with code, ambiguous ownership) is canonical in `MAINTENANCE.md` §2.8. Follow it and flag the resolution in the PR description.
 
 ## Arguments
 
