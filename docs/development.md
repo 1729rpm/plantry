@@ -169,7 +169,53 @@ When an engineer is blocked, the engineer posts a single comment on the PR addre
 
 The EM either answers or escalates to Rajat. Engineers do not ping Rajat directly.
 
-## 11. Glossary
+## 11. Parallel-session coordination
+
+This repo routinely runs several worktree sessions at once and lands many PRs per hour on the same hotspots (picker components, `data/dishes/`, the CHANGELOG, `DECISIONS.md`, feature stream-tables). §2 isolates each session physically; this section keeps their *merges* clean by pre-planning who owns which files.
+
+### 11.1 The live-session registry
+
+`coordination/active-streams.md` is the single source of truth for what is in flight. It is local and gitignored: it lives only in the main repo dir, the EM edits it by hand, and it never travels onto a branch, so it can never itself become a merge conflict. Worktree sessions read it (the brief carries its absolute path); they do not edit it.
+
+The EM maintains it:
+- **Before spawning a stream:** scan the registry. Choose file lanes no live stream owns. If the new stream must share a lane, do not run it in parallel; either narrow the lane or sequence it and record the merge order in the Hotspot ledger.
+- **On spawn:** add a Live streams row naming the exact owned paths.
+- **On merge:** move the row to Shipped and clear any Hotspot ledger rows it closed.
+
+The `/new-stream` command writes the registry row as part of spawning (see `.claude/commands/new-stream.md`).
+
+### 11.2 Lane discipline
+
+A stream stays inside its declared file lanes. Crossing into another stream's lane is the parallel-work equivalent of scope creep: it is the thing that turns two clean branches into a conflict. If a stream discovers it genuinely needs a file another stream owns, it raises an `EM check needed` note (§10) rather than editing across the lane line; the EM decides whether to widen the lane, resequence, or hand the file off.
+
+Name lanes at real-path granularity so near-neighbours still parallelise: `app/web/src/components/Explore*` and `app/web/src/components/DayEditor*` are different lanes even though both are "the frontend".
+
+### 11.3 Merge ownership: the later-merging session owns the rebase
+
+Branches start from `origin/main`, not a stale local `main` (`/new-stream` fetches first). When two branches converge:
+
+1. Push your branch.
+2. Before merging, `git fetch && git rebase origin/main` inside your worktree.
+3. Resolve conflicts in the worktree.
+4. `git push --force-with-lease` your own branch. **Never force-push `main` or a branch another session is on.**
+5. Merge to `main`.
+
+If session A merges first, session B owns the entire rebase. This is ordinary git etiquette; it is codified because parallel sessions make it routine, and because branch protection will not catch a stale branch that still shows mergeable (re-confirm `mergeable` and a green engine check immediately before every merge).
+
+### 11.4 Hotspot protocol
+
+Some files cannot be lane-partitioned because every stream touches them. Each gets a planned merge order in the registry's Hotspot ledger.
+
+- **`docs/CHANGELOG.md`, `DECISIONS.md`, and feature stream-tables** are EM-owned. Engineers do not edit them. The EM batches CHANGELOG and DECISIONS entries into one docs PR at a checkpoint (the main dir cannot commit, so this matches the repo's existing docs-PR cadence). Append-only; never rewrite an existing entry.
+- **Tree-wide data migrations** (a change that rewrites every file under `data/dishes/`, e.g. adding a field to every dish) merge *last* among the streams that touch that tree, so the migrating stream rebases once onto the others' content rows rather than forcing every content stream to fight a tree-wide rewrite.
+- **Shared UI primitives** (the `Chip`, picker styles, anything under a shared component or global CSS): keep edits inside your own component. Touch the shared primitive only if unavoidable, and add a Hotspot ledger row when you do. A shared-primitive change is whole-app blast radius and gets the full crawl (§3).
+- **Canonical docs** (`docs/product.md`, `docs/engine.md`, `docs/engineering.md`, this file) are reconciled by the maintenance job / `reconcile-docs`, not edited in shipping sessions (see `MAINTENANCE.md`). The one exception is an append-only addition that would otherwise force a renumber of sections other docs cross-reference; append, do not insert.
+
+### 11.5 Staging hygiene
+
+Never `git add -A` or `git add .`. Stage by filename or directory. Worktrees already make cross-session contamination impossible, but staging unrelated changes within your own worktree still produces noisy, hard-to-review commits. One concern per commit (§8).
+
+## 12. Glossary
 
 - **Worktree.** A git feature: multiple working directories sharing one repository, each on a different branch. Lets the EM spawn engineers in parallel without their changes overlapping until merge.
 - **Pre-commit hook.** A script in `.git/hooks/` that runs before every commit and can refuse the commit. Used here to keep commits out of the main coordination directory.
@@ -177,3 +223,6 @@ The EM either answers or escalates to Rajat. Engineers do not ping Rajat directl
 - **Vercel preview deployment.** Same idea, for the frontend. Every PR gets a unique URL.
 - **Squash merge.** Combining all of a PR's commits into one before landing on `main`. Keeps `main` history clean.
 - **CI gate.** A check defined in `.github/workflows/ci.yml` that runs on every PR. Failing any gate blocks merge.
+- **Live-session registry.** A local, gitignored coordination file (`coordination/active-streams.md`) the EM maintains, listing every in-flight stream and the file lanes it owns. Read before spawning any stream so two sessions never collide on the same files. See §11.
+- **File lane.** The concrete set of paths a stream owns for the life of its branch (real paths like `engine/src/nutrition.ts` or `app/web/src/components/Explore*`, not whole areas). Two streams with disjoint lanes can run in parallel safely.
+- **Hotspot.** A file more than one live stream will touch (the CHANGELOG, `DECISIONS.md`, a feature stream-table, a tree-wide data migration, a shared UI primitive). Hotspots get a planned merge order in the registry's Hotspot ledger rather than colliding by accident.
