@@ -6,7 +6,7 @@ time: Breakfast
 tags: []
 primaryIngredient: Pav Bread
 preferred: No
-active: No
+active: Yes
 satiety: Low
 prepMinutes: 5
 seasons: All

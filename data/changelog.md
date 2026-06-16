@@ -63,3 +63,9 @@ Promoted "Pav" (id 281) from an in-week one-off into the permanent library as a 
 - Reuses the existing `Pav Bread` catalog row in `data/ingredients.md` (Pantry, pcs), already used by `data/dishes/pav-bhaji.md` (id 98). No new catalog row; `data/ingredients.md` is untouched. One ingredient row (`Pav Bread | 4 | pcs`), matching pav-bhaji's per-meal quantity for two people. Butter and salt are untracked staples kept in recipe prose only.
 - Photo generated via `scripts/generate-dish-photos.mjs` (FLUX.1-dev / NVIDIA NIM) with a per-dish `data/dish-photos/details.md` line describing soft golden-brown pull-apart ladi pav rolls with a fluffy white crumb; verified visually on the first pass (luminance 91, 103 KB, square 1024).
 - Because Pav is inactive, it enters no generation pool and no coverage / pool / special-sourcing report; the active library stays at 259 and the `engine/test/data/reports.test.ts` live-data snapshots do not move (confirmed green without editing any assertion). No engine, app, rule, or catalog change.
+
+## 2026-06-16  Activate Pav (id 281)  (#TBD)
+
+Flipped "Pav" (id 281, `category: Bread`, `time: Breakfast`) from `active: No` to `active: Yes` after Rajat reviewed the inactive card. It now enters weekly menu generation as a plain breakfast carb in the Mon/Wed/Fri breakfast Option C pool (`docs/engine.md` §3), and becomes visible in Explore and the swap pickers. Stays `preferred: No`. No engine, app, rule, or catalog change; only the dish file's `active` flag.
+
+- Live-data snapshot in `engine/test/data/reports.test.ts` moves: coverage `withPhoto` 259 to 260 (the active library grows by one and Pav carries a photo). The `withDescription` / `withRecipe` / `withComplexity === activeDishCount` assertions auto-track (Pav ships all three) and stay green; no assertion loosened.
