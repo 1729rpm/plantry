@@ -1848,7 +1848,8 @@ input {
   border-radius: var(--pt-radius-card);
   overflow: hidden;
   text-align: left;
-  display: block;
+  display: flex;
+  flex-direction: column;
   padding: 0;
 }
 
