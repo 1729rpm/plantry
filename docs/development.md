@@ -46,7 +46,7 @@ Every code-touching session works in its own git worktree on its own feature bra
 - `data/photos-<n>` for content batches that add or refresh dish photos. Example: `data/photos-0`.
 - `data/expansion-<n>` for content batches that add new dishes to the library. Example: `data/expansion-0`.
 
-**Cleanup:** on merge, the EM removes the worktree (`git worktree remove`) and deletes the local branch.
+**Cleanup:** worktree closure is part of merging, not a later chore. On merge the EM removes the worktree (`git worktree remove`) and deletes the local branch (`git branch -D`) in the same step (§3 step 7). A periodic safety sweep catches any that slipped: `git worktree list` cross-checked against merged PRs, then remove each whose branch has landed.
 
 ## 3. Ship workflow
 
@@ -56,7 +56,7 @@ Every code-touching session works in its own git worktree on its own feature bra
 4. EM reviews the PR against principles and gates. Before merging, the EM confirms the PR's true merged state, not just its reported `mergeable` flag: GitHub can show a branch as mergeable and clean while it is behind `main` and would break once merged, and branch protection does not catch a stale-but-mergeable branch. The EM updates the branch onto `origin/main` (`git fetch && git rebase origin/main` in the worktree, §11.3), re-runs the engine check and re-bakes on that true merged state, and re-runs any count-sensitive tests, then either merges or sends back with specific notes.
 5. On merge to `main`, Vercel and Convex promote to production at `plantry.mudgal.xyz`. The EM verifies the live deploy (open the URL, re-run the crawl's smoke pass across all tabs (every tab renders, no horizontal overflow, a clean console), not only the current week).
 6. EM appends an entry to `docs/CHANGELOG.md` (one line: date + what shipped + PR link).
-7. EM removes the worktree.
+7. EM closes out the worktree as part of the same merge step, not later: `git worktree remove ../plantry-<branch>` and `git branch -D <branch>` (a squash-merge leaves the branch non-ancestor, so `-D` is expected), then moves the stream's registry row to Shipped (§11.1). A merge is not done until its worktree and branch are gone; leaving them is what accumulates stale worktrees across parallel sessions.
 
 ## 4. Definition of done
 
