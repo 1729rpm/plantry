@@ -451,10 +451,20 @@ export function SearchField({
   return (
     <input
       className="search-field"
-      type="text"
+      // type="search" plus the off switches below keep iOS from reading this as
+      // a username / contact / credential field and floating its AutoFill /
+      // key / credit-card toolbar over the dish list. The name is a plain
+      // non-credential token so iOS heuristics never match it to a saved login.
+      type="search"
+      name="dish-search"
       value={value}
       placeholder={placeholder}
       aria-label={placeholder}
+      autoComplete="off"
+      autoCorrect="off"
+      autoCapitalize="none"
+      spellCheck={false}
+      enterKeyHint="search"
       autoFocus={autoFocus}
       onChange={(e) => onChange(e.target.value)}
     />

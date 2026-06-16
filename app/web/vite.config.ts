@@ -28,6 +28,16 @@ export default defineConfig({
       workbox: {
         globPatterns: ["**/*.{js,css,html,svg,png,ico}"],
         navigateFallback: "/index.html",
+        // A new deploy's service worker must take control on the next load
+        // rather than waiting for every tab to close, so a device cannot keep
+        // serving a stale precached CSS bundle after a fix ships. Vite
+        // content-hashes the CSS, so any edit changes the precache manifest;
+        // skipWaiting activates the new worker immediately and clientsClaim
+        // makes it control already-open clients. autoUpdate mode sets these by
+        // default; pinning them here keeps the behaviour explicit so it cannot
+        // silently regress if registerType or strategies change later.
+        skipWaiting: true,
+        clientsClaim: true,
       },
     }),
   ],
