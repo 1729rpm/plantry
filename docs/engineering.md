@@ -44,7 +44,7 @@ currentWeek
   status: "draft" | "final"
   slots: array of {
     day: "Mon" | "Tue" | "Wed" | "Thu" | "Fri" | "Sat"
-    meal: "breakfast" | "lunch"
+    meal: "breakfast" | "lunch" | "fruit"
     dishes: array of {                 # one entry per dish in the meal
       dishId: number | null            # null if custom one-off
       customLabel: string | null       # populated if dishId is null
@@ -63,7 +63,7 @@ currentWeek
   version: number                      # for optimistic concurrency
 ```
 
-Each (day, meal) slot holds the engine's full pick list for that meal. Mon/Wed/Fri breakfast carries 2 dishes; Tue/Thu breakfast carries 1; Mon/Wed/Fri lunch carries 3; Tue/Thu lunch carries 4; Saturday lunch carries 3. Per-dish author and updatedAt let the slow loop attribute who changed which dish in a multi-dish meal. `includeRecipe` marks a dish whose recipe sheet rides along in the shared image family; it lives on the week so it resets when a new week document is generated. `skippedDays` records days the user is eating out or away; the day's dishes stay in `slots` (restore is lossless), and skipped days are excluded from the grocery list and the finalized archive.
+Each (day, meal) slot holds the engine's full pick list for that meal. Mon/Wed/Fri breakfast carries 2 dishes; Tue/Thu breakfast carries 1; Mon/Wed/Fri lunch carries 3; Tue/Thu lunch carries 4; Saturday lunch carries 3. Every day Mon to Sat (Saturday included) also carries a `meal: "fruit"` slot of exactly one dish, the Fruit of the day (`docs/engine.md` §3.3); it sits outside the breakfast and lunch composition and outside the item cap. Per-dish author and updatedAt let the slow loop attribute who changed which dish in a multi-dish meal. `includeRecipe` marks a dish whose recipe sheet rides along in the shared image family; it lives on the week so it resets when a new week document is generated. `skippedDays` records days the user is eating out or away; the day's dishes stay in `slots` (restore is lossless), and skipped days are excluded from the grocery list and the finalized archive.
 
 ```
 weekArchive
@@ -91,7 +91,7 @@ manualChanges                          # append-only log of user edits
   author: "rajat" | "tuhina"
   weekStart: string                    # ISO Monday, mirrors currentWeek
   day?: "Mon" | "Tue" | "Wed" | "Thu" | "Fri" | "Sat"  # absent for day-less kinds (save_next_week)
-  meal?: "breakfast" | "lunch"         # absent for day-level kinds
+  meal?: "breakfast" | "lunch" | "fruit"  # "fruit" for a Fruit-of-the-day swap; absent for day-level kinds
   position?: number                    # index into slots[].dishes; absent for day-level kinds
   changeKind: "swap" | "custom" | "delete" | "add" | "skip_day" | "restore_day" | "save_next_week"
   before: { dishId: number | null, customLabel: string | null }
@@ -103,7 +103,9 @@ manualChanges                          # append-only log of user edits
 
 # One row per user edit to the live week. Dish-level kinds (swap, custom, delete,
 # add) carry meal + position and the before/after pick state; `add` uses a null
-# `before`, `delete` a null `after`. Day-level kinds (skip_day, restore_day) carry
+# `before`, `delete` a null `after`. A Fruit-of-the-day swap is a `swap` row with
+# `meal: "fruit"` and position 0 (the fruit slot holds one dish); the fruit slot
+# takes no add, delete, or custom one-off. Day-level kinds (skip_day, restore_day) carry
 # the day and null before/after. `save_next_week` records the saved dish in
 # `after.dishId` and omits `day` entirely (it targets next week, not a day of
 # this one). This table plus
@@ -160,11 +162,11 @@ Round-trip discipline: the build's parser is the same parser used by the round-t
 
 ### Dish-photo generation
 
-Dish photos are produced by an offline build-time tool, `scripts/generate-dish-photos.mjs`, run by hand outside the app and the CI pipeline. It builds each prompt from a shared realism skeleton with three slots: the dish name, the cuisine, and a per-dish visual-detail line. The cuisine-aware skeleton lives in `data/dish-photos/STYLE.md`; the per-dish detail line comes from `data/dish-photos/details.md`, a committed one-line-per-dish map of form, cut, garnish, dry-versus-gravy state, and texture (a dish with no line falls back to its dish-file first paragraph). The prompt aims for candid realism: a photo that looks like a real person photographed their own meal, shot at a natural angle (low or three-quarter, not flat overhead) with a shallow depth of field, served in a real everyday vessel that suits the dish (a steel katori or thali, a karahi or kadai, a cast-iron pan, or a plain home plate) against a softly out-of-focus home or restaurant background, in ordinary warm light with a matte natural finish and true, slightly-muted colour (not glossy, not oversaturated, not plastic). The decisive cue is that the food looks genuinely cooked and a little imperfect, with the correct real texture for its type: a dry dish stays dry, a gravy is thick, opaque, and oil-flecked with pieces half-submerged, rice is loose separate grains, a pudding is loose and soft; shapes are irregular and hand-made, edges uneven, and any green garnish is scattered fresh coriander (cilantro), never flat-leaf parsley. The prompt is positive-constraint (it names only what is in frame, the dish in its vessel and the blurred context, rather than listing forbidden cutlery, because the FLUX model family barely honours negative instructions); the cuisine comes from the dish's first-class `cuisine` field (engine.md §12) as a bare adjective ("a home-style {cuisine} dish"), Indian by default. Generation parameters are tuned for realism: `cfg_scale` 3.0 (lower guidance renders looser, more natural food and cuts the over-styled gloss), `steps` 40 (more refinement for real texture), 1024² square, and a per-dish base seed derived from each dish's slug so vessels, backgrounds, and angles vary across the library while a re-run reproduces the same set (variety is desired, not uniformity; `IMAGE_SEED` pins every dish to one seed for A/B testing a prompt change). The prompt assembler also substitutes a visually-equivalent synonym for the filter-tripping tokens "fried", "sweet-salty", and "flat-leaf" before sending (for example "fried rice" becomes "stir-fry rice", "fried onions" becomes "golden browned onions", a bare "fried" becomes "pan-cooked", "sweet-salty" becomes "sweet and savoury", and the hyphenated "flat-leaf" becomes "flat leaf" so the coriander-not-parsley cue passes), because the provider's content filter false-positives on those exact tokens and would otherwise reject the render; the substitution touches only the assembled prompt string, never the canonical dish description on disk.
+Dish photos are produced by an offline build-time tool, `scripts/generate-dish-photos.mjs`, run by hand outside the app and the CI pipeline. It builds each prompt from a shared realism skeleton with three slots: the dish name, the cuisine, and a per-dish visual-detail line. The cuisine-aware skeleton lives in `data/dish-photos/STYLE.md`; the per-dish detail line comes from `data/dish-photos/details.md`, a committed one-line-per-dish map of form, cut, garnish, dry-versus-gravy state, and texture (a dish with no line falls back to its dish-file first paragraph). The prompt aims for candid realism: a photo that looks like a real person photographed their own meal, shot at a natural angle (low or three-quarter, not flat overhead) with a shallow depth of field, served in a real everyday vessel that suits the dish (a steel katori or thali, a karahi or kadai, a cast-iron pan, or a plain home plate) against a softly out-of-focus home or restaurant background, in ordinary warm light with a matte natural finish and true, slightly-muted colour (not glossy, not oversaturated, not plastic). The decisive cue is that the food looks genuinely cooked and a little imperfect, with the correct real texture for its type: a dry dish stays dry, a gravy is thick, opaque, and oil-flecked with pieces half-submerged, rice is loose separate grains, a pudding is loose and soft; shapes are irregular and hand-made, edges uneven, and any green garnish is scattered fresh coriander (cilantro), never flat-leaf parsley. The coriander cue is conditional: for a dish whose detail line marks it no-garnish (the bare-surface categories such as bread, dessert, fruit, and plain rice), the skeleton drops the coriander clause and substitutes a positive bare-surface statement, so the garnish token never reaches the model for a dish that should carry none. The prompt is positive-constraint (it names only what is in frame, the dish in its vessel and the blurred context, rather than listing forbidden cutlery, because the FLUX model family barely honours negative instructions); the cuisine comes from the dish's first-class `cuisine` field (engine.md §12) as a bare adjective ("a home-style {cuisine} dish"), Indian by default. Generation parameters are tuned for realism: `cfg_scale` 3.0 (lower guidance renders looser, more natural food and cuts the over-styled gloss), `steps` 40 (more refinement for real texture), 1024² square, and a per-dish base seed derived from each dish's slug so vessels, backgrounds, and angles vary across the library while a re-run reproduces the same set (variety is desired, not uniformity; `IMAGE_SEED` pins every dish to one seed for A/B testing a prompt change). The prompt assembler also substitutes a visually-equivalent synonym for the filter-tripping tokens "fried", "sweet-salty", and "flat-leaf" before sending (for example "fried rice" becomes "stir-fry rice", "fried onions" becomes "golden browned onions", a bare "fried" becomes "pan-cooked", "sweet-salty" becomes "sweet and savoury", and the hyphenated "flat-leaf" becomes "flat leaf" so the coriander-not-parsley cue passes), because the provider's content filter false-positives on those exact tokens and would otherwise reject the render; the substitution touches only the assembled prompt string, never the canonical dish description on disk.
 
 The active provider is FLUX.1-dev via NVIDIA NIM (`ai.api.nvidia.com/v1/genai/black-forest-labs/flux.1-dev`), a JSON endpoint that returns the image as base64 in `artifacts[0].base64`; the tool reads `NVIDIA_API_KEY` from the environment. (A Hugging Face FLUX.1-schnell path is kept in the tool as a dormant fallback, selected with `PROVIDER=hf`.) The decoded image is normalized with macOS `sips` to a square 1024² JPEG under ~300 KB, so there is no npm image library. For each dish the tool writes `data/dish-photos/<slug>.jpg` and sets the dish's `photo:` frontmatter. Generation parallelizes: a bounded concurrency pool (`PHOTO_CONCURRENCY`, default 6 in flight) runs against a client-side sliding-window rate limiter (`PHOTO_MAX_RPM`, default 35, under NVIDIA's ~40/min free-tier cap), with exponential backoff plus jitter and retry on HTTP 429/500/503. A `--all` (alias `--force`) flag regenerates every active dish, overwriting existing photos, so the whole library can be re-shot in one look; the tool also accepts named slugs for targeted re-rolls. A render the provider's safety filter still rejects comes back as a black frame with `finishReason: CONTENT_FILTERED`; the tool detects that (and a luminance check guards against any other all-black frame), skips the dish without writing a file or setting `photo:`, and leaves it for the placeholder.
 
-Coverage is complete: 200 of 200 active dishes carry a photo. The no-photo placeholder (the `Thumb` diagonal-stripe fallback) remains the graceful default for any dish that ships without one or that the provider declines to render.
+Coverage is complete: every active dish carries a photo (a coverage report asserts `withPhoto` equals the active dish count rather than a fixed number, so the library can grow without a brittle count to bump). The no-photo placeholder (the `Thumb` diagonal-stripe fallback) remains the graceful default for any dish that ships without one or that the provider declines to render.
 
 ## 5. Read paths and write paths
 
@@ -176,7 +178,7 @@ Coverage is complete: 200 of 200 active dishes carry a photo. The no-photo place
 
 **Read (swap picker alternatives):**
 1. Frontend calls `getSlotAlternatives({ weekStart, day, meal, position, limit? })`.
-2. The query builds a non-restrictive candidate pool: every dish in the library that is Active, in-season for the current Bangalore season, and matches the meal-time (Breakfast-time dishes for breakfast positions, Lunch-time dishes for lunch positions). No per-position eligibility filter; §3 composition (HP/partner/Option A-B-C/carb-position) is not enforced.
+2. The query builds a non-restrictive candidate pool: every dish in the library that is Active, in-season for the current Bangalore season, and matches the meal-time (Breakfast-time dishes for breakfast positions, Lunch-time dishes for lunch positions). For a fruit slot (`meal: "fruit"`) the pool is category-based rather than meal-time-based: every Active, in-season, Category=Fruit dish, the swap-time analogue of the generation-time fruit pool (`docs/engine.md` §3.3). No per-position eligibility filter; §3 composition (HP/partner/Option A-B-C/carb-position) is not enforced.
 3. The engine ranks the pool by `docs/engine.md` §4 priority (longest-unused first, with the ingredient ledger and same-day-breakfast tilts seeded from the live week's other picks, excluding the slot/position being ranked).
 4. The currently-picked dish at this position is filtered out; the frontend renders the ranked list and the user picks any dish.
 
@@ -194,9 +196,9 @@ Coverage is complete: 200 of 200 active dishes carry a photo. The no-photo place
 
 **Write (swap a dish):**
 1. Frontend optimistically updates the UI.
-2. Convex mutation `swapDish({ author, weekStart, day, meal, position, newDishId, reason, version })` validates: `version` matches the loaded version (optimistic concurrency); the (day, meal) slot exists and `position` is within `slot.dishes`; the new dish is in the library, matches the meal-time, is Active, and is in season; `reason` is non-empty after trim. Per `docs/product.md` §4 Principle 4 the fast loop stays permissive; §3 composition eligibility is not validated at swap time.
+2. Convex mutation `swapDish({ author, weekStart, day, meal, position, newDishId, reason, version })` validates: `version` matches the loaded version (optimistic concurrency); the (day, meal) slot exists and `position` is within `slot.dishes`; the new dish is in the library, is Active, and is in season; for a breakfast or lunch slot it must match the meal-time, and for a fruit slot it must be Category=Fruit instead; `reason` is non-empty after trim. Per `docs/product.md` §4 Principle 4 the fast loop stays permissive; §3 composition eligibility is not validated at swap time.
 3. On success the slot's `dishes[position]` updates to `{ dishId: newDishId, customLabel: null, source: "swapped", author, updatedAt: now }`, `version` increments, and a `manualChanges` row inserts in the same Convex transaction carrying the slot's pre-change `before`, the new `after`, the user's `reason`, `changeKind: "swap"`, and `status: "queued"`. The grocery list is re-derived by the engine on read.
-4. On failure the frontend rolls back. The tagged-union return distinguishes recoverable reasons (`version-mismatch`, `no-current-week`, `no-such-slot`, `no-such-position`, `dish-not-in-library`, `dish-not-meal-time`, `dish-not-active-or-in-season`) the UI handles inline; missing or empty `author` or `reason` throws.
+4. On failure the frontend rolls back. The tagged-union return distinguishes recoverable reasons (`version-mismatch`, `no-current-week`, `no-such-slot`, `no-such-position`, `dish-not-in-library`, `dish-not-meal-time`, `dish-not-fruit`, `dish-not-active-or-in-season`) the UI handles inline; `dish-not-fruit` is the fruit-slot analogue of `dish-not-meal-time`. Missing or empty `author` or `reason` throws.
 
 **Write (custom one-off):**
 1. Frontend calls `addCustomOneOff({ author, weekStart, day, meal, position, customLabel, reason, version })`.
@@ -249,7 +251,7 @@ Each `currentWeek` document carries a `version` field. The frontend includes the
 
 ## 8. Identity and auth
 
-- **URL gate:** a shared passcode on the frontend. Until the passcode is entered, the app stays on a splash. The passcode is stored in the service worker so repeat visits skip the splash. The passcode value lives in the Convex deployment as an env var.
+- **URL gate:** a shared passcode on the frontend. Until the passcode is entered, the app stays on a splash. The passcode value is a frontend build-time environment variable (`VITE_PLANTRY_PASSCODE`, §11); the gate validates entry against it client-side and records a passing entry in `localStorage` (`plantry:auth`) so repeat visits skip the splash. When the variable is unset the gate is off (empty string). It is a light private-URL gate, not an authentication boundary.
 - **Device profile:** after passcode, the user picks "I am Rajat" or "I am Tuhina" once per device. The choice is stored in `userProfiles` and in localStorage. Every mutation reads the local choice and attaches it as `author`. No per-user accounts in v1.
 
 ## 9. Deploy model
@@ -271,12 +273,11 @@ Convex prod and preview each have their own `<deployment>.convex.cloud` URLs; th
 
 ## 11. Environment variables
 
-**Frontend build (`app/web/.env.production`, `.env.preview`):**
+**Frontend build (`app/web/.env.local` locally, Vercel project env in deploy):**
 - `VITE_CONVEX_URL` — the Convex deployment URL.
-- `VITE_APP_PASSCODE_REQUIRED` — boolean; gates the splash.
+- `VITE_PLANTRY_PASSCODE` — the shared passcode the splash gate validates against (§8). Build-time, so it is baked into the bundle; treat it as a private-URL gate, not a secret boundary. Unset means no gate.
 
 **Convex deployment (set via `npx convex env set`):**
-- `APP_PASSCODE` — shared passcode for the splash gate.
 - `SLOW_LOOP_TOKEN` — token the slow-loop session uses to read queued comments without exposing the dashboard.
 - `SWIGGY_MCP_URL` (future) — endpoint of the Swiggy MCP server.
 
@@ -318,8 +319,10 @@ Authoritative root layout. The maintenance job (`MAINTENANCE.md`) verifies it on
 
 ```
 plantry/
+  README.md            # repo readme
   CLAUDE.md            # orientation
-  MAINTENANCE.md       # slow loop spec
+  MAINTENANCE.md       # slow loop + reconciliation + retro-intake spec
+  ADDING-DISHES.md     # add-a-dish content-batch playbook
   DECISIONS.md         # EM autonomy log
   RETRO.md             # EM friction ledger (append-only; MAINTENANCE.md §6)
   claude-design.md     # design contract (lowercase by convention from the file itself)
@@ -352,7 +355,7 @@ plantry/
   archive/             # history (handoffs, retired docs, shipped feature specs)
 ```
 
-Gitignored entries the structure check tolerates but the tree omits: `.git`, `.vercel`, `node_modules`.
+Gitignored entries the structure check tolerates but the tree omits: `.git`, `.vercel`, `node_modules`, and `coordination/` (the EM's local live-session registry, §11.1 in `docs/development.md`; it lives only in the main dir and never travels onto a branch).
 
 Naming:
 - Folder names under `archive/`, `docs/`, `features/`, `app/web/src/components/`: kebab-case.
@@ -385,6 +388,12 @@ Reaching the preview takes one more step: Vercel preview deployments sit behind 
 For each screen the crawl captures a screenshot and asserts structural invariants: no element overflows the viewport horizontally, a minimum left and right content gutter is held (no container collapses its horizontal padding toward zero), key elements are actually styled (computed-style checks, for example a grid resolves to a grid and cards are phone-sized rather than overflowing), focus moves into a sheet when it opens, the page behind a sheet cannot scroll, tap targets are at least 44px, and the console is clean. Each screenshot is compared against the matching screen in `design_handoff/`; a deviation is either fixed or recorded as an accepted difference in the PR's diagnosis card. Because the stylesheet and the shared primitives are global, a CSS or primitive change is crawled across all tabs regardless of which screen the slice nominally touched.
 
 The crawl runs both desktop engines, Chromium and WebKit (the engine behind Safari), at two phone widths, 390 and 412. It opens every bottom sheet and asserts the same invariants on it, at minimum the dish-detail sheet and the swap picker, reporting which sheets it reached and which it could not. Because both engines are desktop, the crawl cannot reproduce a real-iOS-device-only rendering difference (an iPhone on a given iOS Safari version can render CSS differently from desktop WebKit). It catches the broad under-padding and omitted-gutter class deterministically; it is not proof that an iOS-device-specific CSS bug is fixed. iOS-affecting CSS and layout changes therefore require real-device (iPhone) sign-off before merge in addition to a green crawl (see `docs/development.md` §4).
+
+Some paths the crawl cannot close on its own, and each leaves a residual the slice must carry rather than drop:
+
+- **A new slot or section type renders only against data that contains it.** A structural slice that adds a kind of slot (for example the Fruit of the day) will not appear on the crawled week until a week carrying that slot exists; crawling the current live week shows the old shape and a green crawl proves nothing about the new section. Exercise it against a seeded or mock week that already has the new slot, rather than waiting on a real regeneration.
+- **Backend-dependent flows must be crawled after the preview's Convex deploy is live.** A flow that calls a new or changed Convex query or mutation (a new swap pool, a new validation) will be rejected if the crawl runs before the preview deployment finishes; sequence the crawl after the preview Convex deploy, not at PR-open.
+- **Real-device and after-deploy checks the headless crawl cannot reach** (the two iOS-only CSS checks above; a behaviour that only manifests once production has redeployed) are logged as an explicit residual in the PR's diagnosis card (`docs/development.md` §5), so the open verification item travels with the PR instead of living only in chat.
 
 The scriptable floor of this crawl is `app/web/e2e/smoke.mjs` (`npm run test:smoke`): it loads each tab, opens the reachable sheets, and asserts no horizontal overflow, correctly sized cards, and the minimum content gutter, on both desktop engines at both widths. By default it builds and serves `dist/` locally; setting `CRAWL_URL` (plus `VERCEL_AUTOMATION_BYPASS_SECRET` for a protected preview) points it at a deployed URL instead, using the bypass mechanism above. It needs `npx playwright install chromium webkit`; a missing engine is skipped, not failed. The EM runs the fuller in-depth crawl-and-compare per slice.
 
