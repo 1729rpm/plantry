@@ -7,6 +7,7 @@ import { useEffect, useRef } from "react";
 import type { CSSProperties, ReactNode } from "react";
 import type { Identity } from "../lib/types.js";
 import type { ComplexityVariant } from "../lib/library.js";
+import { sheetHistory } from "../lib/backStack.js";
 
 function identityInitial(who: Identity | string | null | undefined): string {
   if (!who) return "?";
@@ -244,113 +245,16 @@ export function TabBar({ active, onTab }: { active: TabKey; onTab: (tab: TabKey)
   );
 }
 
-// Browser-Back integration for sheets, owned by ONE module-level controller
-// rather than by each Sheet instance.
-//
-// THE PROBLEM WITH PER-SHEET MARKERS
-// ----------------------------------
-// The app's overlay is a single state value, so opening a follow-on sheet
-// unmounts the current Sheet and mounts the new one in the SAME React commit.
-// React runs the unmounting child's cleanup BEFORE the mounting child's setup.
-// If each Sheet pushed its own history entry and popped it on cleanup, the old
-// sheet's cleanup would call history.back() (its marker is still top), then the
-// new sheet would pushState, then the deferred popstate from that back() would
-// land on the new sheet and close it. Net: every sheet-to-sheet transition
-// closes the freshly opened sheet. You also cannot remove a buried entry
-// without disturbing the top one, because history.back() always pops the top.
-//
-// THE MODEL
-// ---------
-// There is exactly ONE history marker for "a sheet is open", regardless of how
-// many sheets are stacked. The controller keeps a stack of open sheets (each
-// with a stable id and a ref to its latest close fn). The marker is pushed when
-// the stack goes empty -> non-empty and is removed when the last sheet closes.
-//  - A real browser Back fires popstate: we mark the marker consumed and close
-//    the TOP sheet. We do not touch history (the browser already popped it). If
-//    sheets remain after that sheet unmounts, we re-push one marker so the next
-//    Back is still caught.
-//  - A programmatic close (scrim / button / onDone) that empties the stack pops
-//    our marker with history.back(), but DEFERRED via queueMicrotask: on a
-//    sibling swap the old sheet unregisters (stack transiently empty) and the
-//    new sheet registers synchronously right after, before the microtask runs,
-//    so the deferred check sees a non-empty stack and does NOT pop. Only a
-//    genuine last-close leaves the stack empty when the microtask runs.
-type SheetCloseRef = { current: () => void };
-type SheetEntry = { id: string; closeRef: SheetCloseRef };
-
-const sheetHistory = (() => {
-  const stack: SheetEntry[] = [];
-  let markerPresent = false;
-  let listening = false;
-  // Set when a popstate (real browser Back) consumed our marker, so the close it
-  // triggers is distinguished from a programmatic close during unregister.
-  let consumedByPopstate = false;
-
-  function onPopState() {
-    consumedByPopstate = true;
-    const top = stack[stack.length - 1];
-    if (top) top.closeRef.current();
-  }
-
-  function addMarker() {
-    window.history.pushState({ plantrySheet: true }, "");
-    markerPresent = true;
-    if (!listening) {
-      window.addEventListener("popstate", onPopState);
-      listening = true;
-    }
-  }
-
-  function removeListener() {
-    if (listening) {
-      window.removeEventListener("popstate", onPopState);
-      listening = false;
-    }
-  }
-
-  function register(entry: SheetEntry) {
-    stack.push(entry);
-    // Push the single marker only when the FIRST sheet opens. If a marker is
-    // already present (subsequent stacked sheet, or a sibling swap whose
-    // deferred pop was cancelled by this very registration), do not push again.
-    if (!markerPresent) addMarker();
-  }
-
-  function unregister(entry: SheetEntry) {
-    const idx = stack.indexOf(entry);
-    if (idx !== -1) stack.splice(idx, 1);
-
-    if (consumedByPopstate) {
-      // This sheet closed because the browser popped our marker. The marker is
-      // already gone from history; do not pop again.
-      consumedByPopstate = false;
-      if (stack.length > 0) {
-        // Other sheets remain open: re-arm a marker so the next Back is caught.
-        addMarker();
-      } else {
-        markerPresent = false;
-        removeListener();
-      }
-      return;
-    }
-
-    // Programmatic close (scrim / button / onDone). If the stack is empty now,
-    // defer the marker removal: a sibling swap will re-register synchronously
-    // before the microtask runs, leaving the stack non-empty and cancelling the
-    // pop. Only a genuine last-close stays empty.
-    if (stack.length === 0 && markerPresent) {
-      queueMicrotask(() => {
-        if (stack.length === 0 && markerPresent && !consumedByPopstate) {
-          markerPresent = false;
-          removeListener();
-          window.history.back();
-        }
-      });
-    }
-  }
-
-  return { register, unregister };
-})();
+// Browser-Back integration for sheets now lives in the unified back-stack
+// controller at lib/backStack.ts, which owns the SINGLE popstate listener and
+// the SINGLE history-marker discipline for BOTH in-app view navigation (tab
+// switches, the Day editor) and the bottom sheets. There must never be a second,
+// parallel history system next to it: two independent marker systems is the bug
+// class where a deferred history.back() from one closes the other (PR #78). The
+// sheet single-marker-for-ALL-stacked-sheets + microtask-deferred-pop semantics
+// that keep sibling sheet swaps from self-closing are preserved EXACTLY in
+// backStack.ts; read the long comment block there for the model. Sheets here
+// just register on mount and unregister on unmount via `sheetHistory`.
 
 /** Bottom sheet with a scrim. Children scroll if tall. `tall` raises the panel's
  *  max height for the long pickers (swap, add-a-dish) per the handoff's 92%.
@@ -363,11 +267,18 @@ export function Sheet({
   children,
   tall,
   picker,
+  noHistory,
 }: {
   onClose: () => void;
   children: ReactNode;
   tall?: boolean;
   picker?: boolean;
+  // When set, this Sheet does NOT register in the unified back-stack. It is for
+  // the terminal exit-confirm prompt, whose lifecycle the App owns directly via
+  // the view layer (the at-home Back already pushed a sentinel; the prompt must
+  // not also push a sheet marker, or Leave/Stay would have to untangle two
+  // layers). Everything else (scrim, scroll lock, focus, layout) is identical.
+  noHistory?: boolean;
 }) {
   // Lock background scroll while a sheet is open so the page behind the scrim
   // cannot scroll. Save and restore the prior inline value so nested sheets
@@ -389,13 +300,10 @@ export function Sheet({
   const onCloseRef = useRef(onClose);
   onCloseRef.current = onClose;
   useEffect(() => {
-    const entry: SheetEntry = {
-      id: `pt-sheet-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
-      closeRef: onCloseRef,
-    };
-    sheetHistory.register(entry);
+    if (noHistory) return;
+    const entry = sheetHistory.register(onCloseRef);
     return () => sheetHistory.unregister(entry);
-  }, []);
+  }, [noHistory]);
 
   // Move focus into the sheet panel on open so keyboard and screen-reader focus
   // follows the modal (engineering.md §16 invariant). Not a full focus trap: we
