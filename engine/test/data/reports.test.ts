@@ -96,11 +96,13 @@ describe("coverageReport", () => {
     expect(cov.withComplexity).toBe(cov.activeDishCount);
     // Photos are a separate (B2) track. The data/photos-5 run regenerated every
     // active dish from a rewritten candid-home-photo prompt (replacing the prior
-    // styled/CGI look) and force-overwrote the whole library; the expansion-5
-    // batch then added two more dishes (Steamed rice, Avocado toast), each shipped
-    // with a photo, so coverage stays complete: 252 of 252 active dishes carry a
-    // photo. This snapshot tracks live data; it is a report assertion, not a rule.
-    expect(cov.withPhoto).toBe(252);
+    // styled/CGI look) and force-overwrote the whole library; later batches added
+    // more dishes, each shipped with a photo, so coverage stays complete. This
+    // batch added 7 seasonal fruit dishes (Mango bowl, Litchi bowl, Jamun bowl,
+    // Plum bowl, Peach bowl, Pineapple bowl, Pomegranate bowl), each active and
+    // photo'd, so coverage is now 259 of 259 active dishes carrying a photo. This
+    // snapshot tracks live data; it is a report assertion, not a rule.
+    expect(cov.withPhoto).toBe(259);
   });
 });
 
@@ -119,13 +121,15 @@ describe("poolCoverageReport", () => {
 
   it("surfaces the Fruit pool from live data", () => {
     // The expansion-0 batch deepened this slot from 1 to 3 candidates
-    // (Seasonal fruit, Banana bowl, Papaya bowl). The report tracks live data;
-    // the assertion is the post-expansion floor, not the old thin baseline.
+    // (Seasonal fruit, Banana bowl, Papaya bowl). The seasonal-fruits-7 batch
+    // then added 7 dishes; for Summer it adds Mango bowl and Litchi bowl (both
+    // [Summer, Monsoon]), so the Summer Fruit pool is now 5. The report tracks
+    // live data; the assertion is the current floor, not the old thin baseline.
     const { library } = loadLiveData();
     const pools = poolCoverageReport(library);
     const fruit = pools.find((p) => p.season === "Summer" && p.slot.includes("Fruit"));
     expect(fruit).toBeDefined();
-    expect(fruit!.count).toBe(3);
+    expect(fruit!.count).toBe(5);
   });
 });
 
