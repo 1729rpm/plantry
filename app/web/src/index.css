@@ -1224,6 +1224,21 @@ input {
   min-height: 48px;
 }
 
+/* Meal destination for a custom dish on a both-meals day: a minimal
+   breakfast/lunch choice shown before the reason dialog. A custom dish has no
+   meal-time of its own, so the user picks where it lands. Two stacked primary
+   buttons, spaced clear of the hint above. */
+.custom-meal {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-top: 16px;
+}
+
+.custom-meal__choice {
+  width: 100%;
+}
+
 /* Search picker spacing rhythm (swap, add-a-dish). The subtitle hugs the title
    (its own 4px top margin) and the search bar gets clear separation above it so
    the title + subtitle read as one group. The section label below then hugs the

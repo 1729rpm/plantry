@@ -20,13 +20,13 @@ function pickName(pick: DishPick): string {
   if (pick.dishId !== null) {
     return dishById(pick.dishId)?.name ?? "From the library";
   }
-  return "One off this week";
+  return "Custom dish";
 }
 
 export function DishRow({ pick, compact, onClick, trailing }: DishRowProps) {
   const dish = pick.dishId !== null ? dishById(pick.dishId) : undefined;
   const name = pickName(pick);
-  const meta = pick.customLabel ? "One off this week" : dishMetaLine(dish);
+  const meta = pick.customLabel ? "Custom dish" : dishMetaLine(dish);
   const photo = dishPhotoUrl(dish);
   const showPrep = dishHasPrePrep(dish);
 
