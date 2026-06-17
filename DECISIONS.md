@@ -19,6 +19,24 @@ Decisions Rajat must approve go in the "Open items" list in `features/phase2.md`
 
 ---
 
+## 2026-06-17 11:26 IST Exclude Category=Fruit from the generic breakfast/lunch picker pool
+
+**Stream:** picker-generic-search (S2, backend).
+**Context:** Making the breakfast/lunch swap pool generic across meal-time (feature `picker-generic-search`) raised whether Fruit-category dishes should also surface in a meal slot, now that `d.time` no longer gates the pool. Fruit has its own dedicated swap-only slot (`engine.md` §3.3).
+**Options considered:** (a) include Fruit in the generic meal pool too; (b) exclude Category=Fruit from the breakfast/lunch pool, keeping fruit to its own slot.
+**Chosen:** (b). Fruit-of-the-day is a distinct slot concept with a category-locked pool; surfacing a mango as a lunch main would dilute that concept and the menu's fruit guarantee without useful learning signal. The pool excludes Category=Fruit and `swapDish` rejects a fruit into a meal slot with the new `dish-is-fruit` code (the inverse of the fruit slot's `dish-not-fruit`).
+**Reversibility:** trivial; drop one predicate plus the guard.
+**Right-size check (per `docs/product.md` §4):** small problem (one predicate), contained fix, generalizes via the `category` field, not dish names.
+
+## 2026-06-17 11:26 IST Restrict the Add pool to dishes whose meal-time has a slot that day
+
+**Stream:** picker-generic-search (S1, lib).
+**Context:** Rajat chose that Add routes a chosen dish to the slot its own meal-time names (no destination selector). On a lunch-only day (Saturday) a breakfast dish would then have no slot to route to.
+**Options considered:** (a) show every dish and fail or no-op when a breakfast dish is picked on Saturday; (b) restrict the Add pool to dishes whose meal-time has a slot on the day (the `addableMeals` floor passed into `addablePool`).
+**Chosen:** (b). A structural floor, not a meal-preference filter: a dish appears in Add only when there is a slot it can land in, so the route-by-meal-time rule never dead-ends. Mon-Fri (both slots) still show the full generic pool; Saturday shows lunch-time dishes.
+**Reversibility:** easy; the floor is one `addableMeals.includes` test in `addablePool`.
+**Right-size check (per `docs/product.md` §4):** small, contained in one function, generalizes via the day's available meals.
+
 ## 2026-06-15 17:30 IST Lock dish-photo card crops with `aspect-ratio` (16:9 Explore, 5:2 detail hero)
 
 **Stream:** cross-stream (UI bugfix).
