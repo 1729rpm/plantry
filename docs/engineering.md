@@ -46,7 +46,7 @@ currentWeek
     day: "Mon" | "Tue" | "Wed" | "Thu" | "Fri" | "Sat"
     meal: "breakfast" | "lunch" | "fruit"
     dishes: array of {                 # one entry per dish in the meal
-      dishId: number | null            # null if custom one-off
+      dishId: number | null            # null if custom dish
       customLabel: string | null       # populated if dishId is null
       source: "generated" | "swapped" | "custom"
       author: "rajat" | "tuhina" | "system"
@@ -105,7 +105,7 @@ manualChanges                          # append-only log of user edits
 # add) carry meal + position and the before/after pick state; `add` uses a null
 # `before`, `delete` a null `after`. A Fruit-of-the-day swap is a `swap` row with
 # `meal: "fruit"` and position 0 (the fruit slot holds one dish); the fruit slot
-# takes no add, delete, or custom one-off. Day-level kinds (skip_day, restore_day) carry
+# takes no add, delete, or custom dish. Day-level kinds (skip_day, restore_day) carry
 # the day and null before/after. `save_next_week` records the saved dish in
 # `after.dishId` and omits `day` entirely (it targets next week, not a day of
 # this one). This table plus
@@ -150,7 +150,7 @@ userProfiles
   installedAt: number
 ```
 
-`comments`, `manualChanges`, `incidents`, `nextWeekQueue`, and `dishDislikes` are the signal channels the slow loop consumes. Comments are explicit user feedback. Manual changes are observed behavior, one row per swap, custom one-off, delete, add, day skip, day restore, or save-for-next-week with the user's stated reason. Incidents are runtime violations from the engine or backend. The next-week queue records dishes the user wants the engine to favor. Dislikes record dishes the user does not want, surfaced from Explore. The `status` lifecycle on `comments`, `manualChanges`, and `incidents` is identical so the slow-loop mark-applied action can mark every consumed row uniformly (see `MAINTENANCE.md` §3); `nextWeekQueue` has its own `queued`/`placed`/`dropped` lifecycle driven by generation and the slow loop.
+`comments`, `manualChanges`, `incidents`, `nextWeekQueue`, and `dishDislikes` are the signal channels the slow loop consumes. Comments are explicit user feedback. Manual changes are observed behavior, one row per swap, custom dish, delete, add, day skip, day restore, or save-for-next-week with the user's stated reason. Incidents are runtime violations from the engine or backend. The next-week queue records dishes the user wants the engine to favor. Dislikes record dishes the user does not want, surfaced from Explore. The `status` lifecycle on `comments`, `manualChanges`, and `incidents` is identical so the slow-loop mark-applied action can mark every consumed row uniformly (see `MAINTENANCE.md` §3); `nextWeekQueue` has its own `queued`/`placed`/`dropped` lifecycle driven by generation and the slow loop.
 
 The library + rules are not in Convex. Convex functions load them by importing typed JSON or TS modules emitted at build time from the markdown files (see §4).
 
@@ -184,7 +184,7 @@ Coverage is complete: every active dish carries a photo (a coverage report asser
 
 **Read (grocery list):**
 1. Frontend calls `getGroceryList({ weekStart })`.
-2. The query groups the week's library-dish picks by day and hands the day-tagged shape plus `currentWeek.skippedDays` to the engine aggregator, which drops skipped days (a day the household is eating out is not cooked, so its dishes are not bought) before summing. Custom one-offs (null `dishId`) contribute nothing (their quantities are not in the library). Items carry `ingredient, quantity, unit, tracked, packs, packTotalGrams` in the fixed §3 group order, the structured shape the Swiggy MCP integration (§13) consumes. With no skipped days the output is identical to summing every day's picks flat.
+2. The query groups the week's library-dish picks by day and hands the day-tagged shape plus `currentWeek.skippedDays` to the engine aggregator, which drops skipped days (a day the household is eating out is not cooked, so its dishes are not bought) before summing. Custom dishes (null `dishId`) contribute nothing (their quantities are not in the library). Items carry `ingredient, quantity, unit, tracked, packs, packTotalGrams` in the fixed §3 group order, the structured shape the Swiggy MCP integration (§13) consumes. With no skipped days the output is identical to summing every day's picks flat.
 
 **Read (activity feed):**
 1. Frontend calls `listManualChangesForWeek({ weekStart })`.
@@ -200,9 +200,10 @@ Coverage is complete: every active dish carries a photo (a coverage report asser
 3. On success the slot's `dishes[position]` updates to `{ dishId: newDishId, customLabel: null, source: "swapped", author, updatedAt: now }`, `version` increments, and a `manualChanges` row inserts in the same Convex transaction carrying the slot's pre-change `before`, the new `after`, the user's `reason`, `changeKind: "swap"`, and `status: "queued"`. The grocery list is re-derived by the engine on read.
 4. On failure the frontend rolls back. The tagged-union return distinguishes recoverable reasons (`version-mismatch`, `no-current-week`, `no-such-slot`, `no-such-position`, `dish-not-in-library`, `dish-not-meal-time`, `dish-not-fruit`, `dish-not-active-or-in-season`) the UI handles inline; `dish-not-fruit` is the fruit-slot analogue of `dish-not-meal-time`. Missing or empty `author` or `reason` throws.
 
-**Write (custom one-off):**
-1. Frontend calls `addCustomOneOff({ author, weekStart, day, meal, position, customLabel, reason, version })`.
-2. Patches `slot.dishes[position]` to `{ dishId: null, customLabel, source: "custom", author, updatedAt: now }` and inserts a `manualChanges` row with `changeKind: "custom"` in the same transaction.
+**Write (custom dish):** A custom dish is a free-text dish that is not in the library. It can replace a position or be appended as an extra dish; both record `changeKind: "custom"` and feed the slow loop, which may promote a repeatedly requested custom dish into a library dish.
+1. To replace a position, the frontend calls `addCustomOneOff({ author, weekStart, day, meal, position, customLabel, reason, version })`, which patches `slot.dishes[position]` to `{ dishId: null, customLabel, source: "custom", author, updatedAt: now }`.
+2. To append an extra dish, the frontend calls `appendCustomDish({ author, weekStart, day, meal, customLabel, reason, version })` (no `position`), which pushes the same custom pick onto `slot.dishes` and returns the new `position`. It does not enforce the per-day cap (the cap is a generation-time constraint; the fast loop is permissive, like `addDish`).
+3. Either way `version` increments and a `manualChanges` row with `changeKind: "custom"` inserts in the same Convex transaction; an append carries a null `before`. Recoverable reasons: `version-mismatch`, `no-current-week`, `no-such-slot` (and `no-such-position` for the replace path).
 
 **Write (delete a dish):**
 1. Frontend calls `deleteDish({ author, weekStart, day, meal, position, reason, version })`.
@@ -230,7 +231,7 @@ Coverage is complete: every active dish carries a photo (a coverage report asser
 
 **Write (finalize the week):**
 1. A user finalizes via `finalizeWeek({ author, weekStart, version })` (or a future scheduled action).
-2. Validates `author`, version (optimistic concurrency), that the week exists, and that it is not already `final`. Appends a `weekArchive` row whose `rows` mirror the `menu_history.md` format (long-form day, capitalised meal, dish name from the baked library, dish id), then flips `currentWeek.status` to `"final"` and increments `version`. Skipped days (`currentWeek.skippedDays`) and custom one-offs are excluded from the archive: a skipped day was not cooked, so recency (`docs/engine.md` §4) must not see it, and a one-off has no library id or canonical name. The day's `slots` are untouched (restore stays lossless). With no skipped days every library pick archives, exactly as a week with no skips always has. Recoverable reasons: `version-mismatch`, `no-current-week`, `already-final`.
+2. Validates `author`, version (optimistic concurrency), that the week exists, and that it is not already `final`. Appends a `weekArchive` row whose `rows` mirror the `menu_history.md` format (long-form day, capitalised meal, dish name from the baked library, dish id), then flips `currentWeek.status` to `"final"` and increments `version`. Skipped days (`currentWeek.skippedDays`) and custom dishes are excluded from the archive: a skipped day was not cooked, so recency (`docs/engine.md` §4) must not see it, and a custom dish has no library id or canonical name. The day's `slots` are untouched (restore stays lossless). With no skipped days every library pick archives, exactly as a week with no skips always has. Recoverable reasons: `version-mismatch`, `no-current-week`, `already-final`.
 
 **Generation (consume the next-week queue):**
 1. `generateCurrentWeek({ weekStart, rng?, userRequestedDishId? })`, an `internalMutation` triggered by the EM or a future scheduled action, reads every `queued` `nextWeekQueue` row (createdAt ascending) and passes their `dishId`s to the engine as `requests` (`docs/engine.md` §6).
@@ -350,7 +351,6 @@ plantry/
     menu_history.md    # history seed read on first deploy
     changelog.md       # structural-change audit (slow-loop rationale entries)
     test-fixtures/     # slow-loop dry-run fixtures (data/test-fixtures/slow-loop/*.example.json)
-  design_handoff/      # the design handoff (contract, screens, primitives, tokens)
   features/            # active feature spec (one at a time)
   engine/              # TS engine module
   app/convex/          # Convex schema + functions
@@ -388,7 +388,7 @@ The crawl is Playwright-driven and walks every customer flow, not only the slice
 
 Reaching the preview takes one more step: Vercel preview deployments sit behind deployment protection, so a bare request returns HTTP 401 and the SPA never boots. The crawl passes the project's Protection Bypass for Automation token (`VERCEL_AUTOMATION_BYPASS_SECRET`, §11) as the `x-vercel-protection-bypass` header and opens the first page with `?x-vercel-set-bypass-cookie=true`, which sets the bypass cookie so subsequent asset requests are let through. The localStorage gate-bypass above clears only Plantry's own passcode, not Vercel's edge protection, so both are needed together. Production (`plantry.mudgal.xyz`, a custom domain) is not protected and needs no token. The token lives only in the crawler's environment; it is never committed and never reaches the app bundle. When a token is unavailable or a preview is down, the fallback is to build the PR branch and crawl the static `dist/` locally (`CRAWL_URL` unset), which renders the same build-baked output and is faithful for CSS and shared-primitive slices; the two iOS-only checks (env(safe-area-inset) side padding and the software-keyboard seam) are unverifiable in headless desktop engines either way and go to a real device.
 
-For each screen the crawl captures a screenshot and asserts structural invariants: no element overflows the viewport horizontally, a minimum left and right content gutter is held (no container collapses its horizontal padding toward zero), key elements are actually styled (computed-style checks, for example a grid resolves to a grid and cards are phone-sized rather than overflowing), focus moves into a sheet when it opens, the page behind a sheet cannot scroll, tap targets are at least 44px, and the console is clean. Each screenshot is compared against the matching screen in `design_handoff/`; a deviation is either fixed or recorded as an accepted difference in the PR's diagnosis card. Because the stylesheet and the shared primitives are global, a CSS or primitive change is crawled across all tabs regardless of which screen the slice nominally touched.
+For each screen the crawl captures a screenshot and asserts structural invariants: no element overflows the viewport horizontally, a minimum left and right content gutter is held (no container collapses its horizontal padding toward zero), key elements are actually styled (computed-style checks, for example a grid resolves to a grid and cards are phone-sized rather than overflowing), focus moves into a sheet when it opens, the page behind a sheet cannot scroll, tap targets are at least 44px, and the console is clean. Each screenshot is compared against the matching screen in the active design handoff (the `features/<name>/` folder of the feature in flight); when no feature is active, with no handoff to compare against, the live app is the reference (see `claude-design.md`). A deviation is either fixed or recorded as an accepted difference in the PR's diagnosis card. Because the stylesheet and the shared primitives are global, a CSS or primitive change is crawled across all tabs regardless of which screen the slice nominally touched.
 
 The crawl runs both desktop engines, Chromium and WebKit (the engine behind Safari), at two phone widths, 390 and 412. It opens every bottom sheet and asserts the same invariants on it, at minimum the dish-detail sheet and the swap picker, reporting which sheets it reached and which it could not. Because both engines are desktop, the crawl cannot reproduce a real-iOS-device-only rendering difference (an iPhone on a given iOS Safari version can render CSS differently from desktop WebKit). It catches the broad under-padding and omitted-gutter class deterministically; it is not proof that an iOS-device-specific CSS bug is fixed. iOS-affecting CSS and layout changes therefore require real-device (iPhone) sign-off before merge in addition to a green crawl (see `docs/development.md` §4).
 

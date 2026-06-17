@@ -23,7 +23,7 @@ The Explore tab is a separate surface for browsing dishes the household has not 
 
 ## 3. What Plantry produces
 
-1. **Shared current-week view (Menu tab).** A read-only-by-default page both phones see, with six day cards (Mon to Sat) showing breakfast and lunch dishes with a photo or a quiet no-photo fallback, a plain-language complexity marker per dish, pre-prep markers where a dish needs day-before work, a date badge per day, a week header with the identity avatar, and a one-line change summary (for example "3 swaps, 1 skip this week", or "No changes this week yet"). A skipped day renders as "Skipped". Editing is entered per day from the day's Edit button.
+1. **Shared current-week view (Menu tab).** A read-only-by-default page both phones see. A header carries the Plantry wordmark, the week's date range, and the identity avatar, over six day cards (Mon to Sat) showing breakfast and lunch dishes with a photo or a quiet no-photo fallback, a plain-language complexity marker per dish, pre-prep markers where a dish needs day-before work, and a date badge per day. A day before today collapses to a compact row (its date, a short glance of its dishes, and a View action that opens the same day editor as Edit); today and the days ahead stay open, so attention lands on the present. A skipped day renders as "Skipped". The week's edit count lives on the Changes tab, not on the Menu. Editing is entered per day from the day's Edit button.
 
 2. **Grocery list (Grocery tab).** Grouped in fixed order: Proteins and Dairy, then Pantry, then Vegetables, then Aromatics and Herbs, then Other. Quantities aggregated across the week's dishes. Tracked ingredients (those with a declared pack size) are rounded up to the next pack multiple. Common pantry staples (flour, oil, salt, common spices, base rice) are omitted unless a dish explicitly lists them. The list is skip-aware: a skipped day's dishes contribute nothing.
 
@@ -31,7 +31,7 @@ The Explore tab is a separate surface for browsing dishes the household has not 
 
 4. **Explore feed (Explore tab).** A browse surface ranking the dishes the household has not cooked yet, "familiar but new": novelty that still resembles what the household actually cooks. A nested filter narrows the grid: Easy to cook and Healthy as quick toggles, plus Cuisines and Meal time as multi-select sub-panels (each option shows its dish count, with an Apply button). Filters combine across dimensions and union within a dimension. Dishes already on this week's plan or already saved for next week are hidden, so everything on Explore is genuinely new on the plate. Tapping a dish opens its detail sheet with the recipe visible plus a plain "why it fits" line (no internal labels). From the sheet the user can use the dish this week (pick a day, which adds it like any library dish), save it for next week (which the next generation favors), or dislike it. A dislike records a signal for the slow loop and does nothing in-session: it neither re-ranks Explore nor hides the dish (Principle 5). The reason on a dislike is optional.
 
-5. **Changes feed (Changes tab).** A newest-first record of the week: every menu edit (swap, add, custom dish, delete, skip, restore, save-for-next-week) and every comment, each with its author, timestamp, a plain-language headline, and the quoted reason or comment text. Dish ids resolve to names; no internal label or enum value reaches the screen.
+5. **Changes feed (Changes tab).** A newest-first record of the week: every menu edit (swap, add, custom dish, delete, skip, restore, save-for-next-week) and every comment, each with its author, timestamp, a plain-language headline, and the quoted reason or comment text. The tab subtitle and a badge on the Changes nav icon show the count of this week's edits; comments are feedback, not edits, so they are not counted. Dish ids resolve to names; no internal label or enum value reaches the screen.
 
 6. **History update.** On finalize, the week's cooked dishes append to the historical record, which drives the no-repeat (recency) logic on subsequent weeks. Skipped days and custom dishes are excluded: a skipped day was not cooked, and a custom dish has no library id, so recency must not see either.
 
@@ -56,7 +56,7 @@ The user-facing output is plain, readable, and uncluttered. No internal jargon, 
 ## 6. Scope
 
 - Four tabs: Menu, Grocery, Explore, Changes.
-- Six day cards (Mon to Sat) with breakfast and lunch, photos or a no-photo fallback, complexity and pre-prep markers, and a change-summary line.
+- Six day cards (Mon to Sat) with breakfast and lunch, photos or a no-photo fallback, and complexity and pre-prep markers; past days collapse to a compact row with a View action while today and the days ahead stay open. The Menu leads with the Plantry wordmark and the week's date range; the week's edit count shows on the Changes tab.
 - Dish swap with a generic ranked picker over the active library (every Active, in-season dish, searchable across meal-time; the default view leads with dishes whose meal-time matches the slot); required reason.
 - Add a library dish to any day; required reason.
 - Custom dish entry on any day: a free-text dish not in the library, either replacing a position or appended as an extra dish; required reason.
