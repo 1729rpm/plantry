@@ -2,11 +2,14 @@ import { describe, expect, it } from "vitest";
 import type { Dish } from "@plantry/engine";
 import {
   activeFilterCount,
+  availablePickerFilters,
   cuisineCounts,
   dishInMealTime,
   dishMatchesExploreFilter,
+  dishMatchesPickerFilters,
   EMPTY_EXPLORE_FILTER,
   mealTimeCounts,
+  PICKER_FILTER_PILLS,
   type ExploreFilterState,
 } from "../src/lib/dishFilters.js";
 
@@ -95,11 +98,88 @@ describe("dishMatchesExploreFilter — AND across dimensions, OR within sets", (
       dishMatchesExploreFilter(dish({ cuisine: "Italian", time: "Lunch", complexity: "Hard" }), f),
     ).toBe(false);
     expect(
-      dishMatchesExploreFilter(
-        dish({ cuisine: "Thai", time: "Lunch", complexity: "Easy" }),
-        f,
+      dishMatchesExploreFilter(dish({ cuisine: "Thai", time: "Lunch", complexity: "Easy" }), f),
+    ).toBe(false);
+  });
+});
+
+describe("availablePickerFilters — hides pills with no matching dish", () => {
+  it("keeps both meal pills when both meal-times are present in the corpus", () => {
+    const corpus = [
+      dish({ time: "Breakfast", category: "Chilla" }),
+      dish({ time: "Lunch", category: "Gravy dish" }),
+    ];
+    expect(availablePickerFilters(corpus, PICKER_FILTER_PILLS)).toContain("Breakfast");
+    expect(availablePickerFilters(corpus, PICKER_FILTER_PILLS)).toContain("Lunch");
+  });
+
+  it("hides the Lunch pill when the corpus has no lunch dish", () => {
+    const corpus = [dish({ time: "Breakfast", category: "Chilla" })];
+    const pills = availablePickerFilters(corpus, PICKER_FILTER_PILLS);
+    expect(pills).toContain("Breakfast");
+    expect(pills).not.toContain("Lunch");
+  });
+
+  it("hides a quality pill when nothing in the corpus satisfies it", () => {
+    // All-Hard corpus: the "Easy to cook" pill has no match and is dropped.
+    const corpus = [dish({ complexity: "Hard" }), dish({ complexity: "Medium" })];
+    expect(availablePickerFilters(corpus, ["Easy to cook"])).toEqual([]);
+    expect(availablePickerFilters([dish({ complexity: "Easy" })], ["Easy to cook"])).toEqual([
+      "Easy to cook",
+    ]);
+  });
+
+  it("preserves candidate order and an empty corpus yields no pills", () => {
+    expect(availablePickerFilters([], PICKER_FILTER_PILLS)).toEqual([]);
+  });
+});
+
+describe("dishMatchesPickerFilters — AND across dimensions, OR within meal-time", () => {
+  it("no selection matches everything", () => {
+    expect(dishMatchesPickerFilters(dish(), [])).toBe(true);
+  });
+
+  it("the meal-time dimension is an OR within itself", () => {
+    const sel = ["Breakfast", "Lunch"] as const;
+    expect(
+      dishMatchesPickerFilters(dish({ time: "Breakfast", category: "Chilla" }), [...sel]),
+    ).toBe(true);
+    expect(dishMatchesPickerFilters(dish({ time: "Lunch" }), [...sel])).toBe(true);
+  });
+
+  it("a single meal pill excludes the other meal-time", () => {
+    expect(dishMatchesPickerFilters(dish({ time: "Lunch" }), ["Breakfast"])).toBe(false);
+    expect(
+      dishMatchesPickerFilters(dish({ time: "Breakfast", category: "Chilla" }), ["Breakfast"]),
+    ).toBe(true);
+  });
+
+  it("a meal pill AND a quality pill must both hold", () => {
+    // Breakfast AND Easy to cook: an easy breakfast passes, a hard one does not.
+    const sel = ["Breakfast", "Easy to cook"] as const;
+    expect(
+      dishMatchesPickerFilters(
+        dish({ time: "Breakfast", category: "Chilla", complexity: "Easy" }),
+        [...sel],
+      ),
+    ).toBe(true);
+    expect(
+      dishMatchesPickerFilters(
+        dish({ time: "Breakfast", category: "Chilla", complexity: "Hard" }),
+        [...sel],
       ),
     ).toBe(false);
+    // An easy LUNCH dish fails the Breakfast constraint even though it is easy.
+    expect(dishMatchesPickerFilters(dish({ time: "Lunch", complexity: "Easy" }), [...sel])).toBe(
+      false,
+    );
+  });
+
+  it("the Healthy pill reads the engine-derived flag (live library id)", () => {
+    // id 9 (Mushroom matar) is engine-derived Healthy in the baked library; an
+    // arbitrary fixture id is not, mirroring library.test.ts's Healthy fixture.
+    expect(dishMatchesPickerFilters(dish({ id: 9 }), ["Healthy"])).toBe(true);
+    expect(dishMatchesPickerFilters(dish({ id: 999999 }), ["Healthy"])).toBe(false);
   });
 });
 
@@ -139,7 +219,9 @@ describe("activeFilterCount", () => {
   it("sums toggles and set sizes", () => {
     expect(activeFilterCount(EMPTY_EXPLORE_FILTER)).toBe(0);
     expect(
-      activeFilterCount(filter({ easy: true, healthy: true, cuisines: ["Thai", "Italian"], mealTimes: ["Lunch"] })),
+      activeFilterCount(
+        filter({ easy: true, healthy: true, cuisines: ["Thai", "Italian"], mealTimes: ["Lunch"] }),
+      ),
     ).toBe(5);
   });
 });
