@@ -1,5 +1,7 @@
 # Plantry design handoff
 
+> **ARCHIVED 2026-06-17.** This is the first Plantry design handoff (packaged 2026-06-11). It was re-commissioned and is superseded by the `features/UI Improvements/` handoff, which is level with the live app and adopts the new handoff model: a feature folder under `features/<name>/` with a three-doc set (README/FEATURES/DESIGN) instead of a single root `design_handoff/`. See `claude-design.md` for the current model. Moved to `archive/handoffs/` because the per-slice design-compare gate must now compare against the live `features/UI Improvements/` handoff, and keeping a stale handoff at the repo root invited comparing new work against an out-of-date baseline. Kept for history only; do not read for current truth.
+
 > Note: this is the first design handoff and is now several features behind the live app (the passcode gate is six digits, the Changes tab shipped, and the share output is a multi-image family). Treat it as a historical style anchor, not current truth, until it is re-commissioned.
 
 Complete design for the Plantry PWA and its shareable output family. There was no prior `app/web/src/` or handoff to anchor on, so this folder also establishes the visual language; the tokens in `hifi-tokens.jsx` are the proposed initial values for `app/web/src/index.css`.

@@ -12,6 +12,10 @@ Brief description in present tense, one to three sentences. Reference the PR.
 
 ---
 
+## 2026-06-17 Archive the first design handoff and its catch-up
+
+Moves the superseded first handoff `design_handoff/` to `archive/handoffs/design_handoff/` and the now-folded-in `design-catchup.md` to `archive/handoffs/design-catchup.md`, each with an archival banner explaining the move. The `features/UI Improvements/` handoff (level with the live app) replaces both, so keeping a stale handoff at the repo root no longer serves the per-slice design-compare gate. The eslint ignore follows the move (`design_handoff/**` becomes `archive/**`, so retired reference JSX is not linted). Docs / housekeeping only. (#TBD)
+
 ## 2026-06-17 Collapse past days on the Menu (UI Improvements J2)
 
 Days before today collapse to a compact card: a date-number-only badge, a one-line glance of the day's first two dish names with a "+N more" tail (or "Skipped"), and a "View" pill that opens the same day editor as Edit. Today and upcoming days stay full; today's card carries the accentSoft border. Adds `dayStatus()` (a device-local calendar comparison, unit-tested) and rebrands the Menu loading and empty-state fallback headers to the Plantry wordmark. Frontend only. (#134)
