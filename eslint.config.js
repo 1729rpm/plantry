@@ -15,6 +15,12 @@ export default [
       "**/*.config.js",
       "**/*.config.ts",
       "design_handoff/**",
+      // Design-handoff reference code (the hifi-*.jsx prototypes and hifi-data.js)
+      // ships inside the active feature folder under features/<name>/. It is a
+      // browser-context reference, not build code, so it is not linted (the same
+      // exclusion design_handoff/ had under the previous handoff model).
+      "features/**/*.jsx",
+      "features/**/*.js",
     ],
   },
   js.configs.recommended,
