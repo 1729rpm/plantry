@@ -6,18 +6,24 @@ import type { CatalogIngredient, Ingredient } from "./data/schemas.js";
 /**
  * Picker ranking (docs/engine.md §5 Picker ranking, design-revamp §1.4 item 1).
  *
- * The swap and add pickers rank the broad meal-time pool with their own
- * deterministic rule, distinct from §4 selection priority (which ranks
- * generation candidate sets). The picker answers a different question: given
- * the broad, non-restrictive pool (Active + in-season + meal-time, per
- * Principle 4), which alternatives should surface first when a user opens the
- * "Replace with..." or "Add a dish" sheet?
+ * The swap and add pickers rank the broad pool with their own deterministic
+ * rule, distinct from §4 selection priority (which ranks generation candidate
+ * sets). The picker answers a different question: given the broad,
+ * non-restrictive pool (every Active, in-season dish, per Principle 4 — the meal-
+ * slot pool is generic across meal-time, the fruit-slot pool is Category=Fruit),
+ * which alternatives should surface first when a user opens the "Replace with..."
+ * or "Add a dish" sheet?
+ *
+ * This module does NOT read meal-time: it ignores its `meal` arg and orders the
+ * pre-filtered pool purely on on-the-day vs not-on-the-day, recency, and protein
+ * band. The default lead with slot-meal-matching dishes is a stable partition
+ * the caller (`app/convex/swap.ts` `getSlotAlternatives`) applies after ranking.
  *
  * The ranking is a HEAD followed by a TAIL.
  *
- * HEAD ("fits this day"): dishes whose meal-time matches the slot and that are
- * NOT already placed on that day (so the picker never offers a dish the day
- * already has). Within the head, dishes are ordered by a deterministic
+ * HEAD ("fits this day"): dishes NOT already placed on that day (so the picker
+ * never offers a dish the day already has). Within the head, dishes are ordered
+ * by a deterministic
  * LEXICOGRAPHIC comparison on the tuple
  *
  *   (recencyTier, proteinBandDistanceForSwaps, id)   — lower wins
@@ -45,8 +51,8 @@ import type { CatalogIngredient, Ingredient } from "./data/schemas.js";
  *
  *   - id: dish id ascending, the final total tie-break.
  *
- * TAIL: every other meal-time-matching dish in the pool (i.e. dishes already on
- * the day, which the head excluded). The tail keeps the broad pool complete
+ * TAIL: every other dish in the pool (i.e. dishes already on the day, which the
+ * head excluded). The tail keeps the broad pool complete
  * (Principle 4: the picker is non-restrictive; nothing is dropped) while
  * pushing same-day repeats below fresh options. The tail is ordered by the same
  * tuple comparison so it is internally deterministic too.
@@ -58,7 +64,8 @@ import type { CatalogIngredient, Ingredient } from "./data/schemas.js";
  *   3. dish id ascending (the final, total tie-break)
  *
  * This module ranks; it does NOT filter the pool. The broad-pool eligibility
- * filter (Active + season + meal-time) stays in the caller (`app/convex/swap.ts`
+ * filter (Active + season, plus the meal-slot's non-Fruit / the fruit-slot's
+ * Category=Fruit invariant) stays in the caller (`app/convex/swap.ts`
  * `getSlotAlternatives`), non-restrictive per Principle 4.
  */
 
@@ -68,10 +75,15 @@ export const PROTEIN_BAND_WIDTH_GRAMS = 5;
 export interface PickerRankingArgs {
   /**
    * The broad, non-restrictive pool already filtered by the caller (Active +
-   * in-season + meal-time). This module ranks but never filters it.
+   * in-season, plus the slot's category invariant). This module ranks but never
+   * filters it.
    */
   pool: Dish[];
-  /** The slot's meal-time; defines the head's "fits this day" meal match. */
+  /**
+   * The slot's meal-time. Accepted for signature stability but NOT read: the
+   * head/tail split is purely on-the-day vs not-on-the-day. Meal-time leads are a
+   * caller-side stable partition applied after ranking (`getSlotAlternatives`).
+   */
   meal: Meal;
   /**
    * Dishes already placed on the same day as the slot. Used to split the head
@@ -181,7 +193,8 @@ export function rankPickerAlternatives(args: PickerRankingArgs): Dish[] {
   const onDayIds = new Set(dishesOnDay.map((d) => d.id));
 
   // Split head (not already on the day) from tail (same-day repeats). The pool
-  // is assumed already meal-time-filtered by the caller; we do not re-filter.
+  // is assumed already eligibility-filtered by the caller; we do not re-filter,
+  // and we do not read meal-time (the `meal` arg is unused).
   const head: Dish[] = [];
   const tail: Dish[] = [];
   for (const dish of pool) {

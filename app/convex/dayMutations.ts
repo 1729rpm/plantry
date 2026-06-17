@@ -152,10 +152,14 @@ export const deleteDish = mutation({
 /**
  * Appends a library dish as a new position in one (day, meal) slot of
  * `currentWeek` (before = null, after = the dish). Like `swapDish` this is the
- * non-restrictive picker: meal-time and Active+season are hard filters; §3
- * composition eligibility is NOT enforced (signal for the slow loop, per
- * `docs/product.md` §4 Principle 4). Reason required (Decision #8). Writes a
- * `manualChanges` row with `changeKind: "add"` in the same transaction.
+ * non-restrictive picker. The Add affordance routes a dish to the slot of its
+ * own meal-time: the frontend derives `meal` from the chosen dish's `time`
+ * (`features/picker-generic-search.md` Decision 1), so the meal-time check below
+ * is a safety net the real client never trips, not a filter the user can hit.
+ * Active+season stays a hard filter; §3 composition eligibility is NOT enforced
+ * (signal for the slow loop, per `docs/product.md` §4 Principle 4). Reason
+ * required (Decision #8). Writes a `manualChanges` row with `changeKind: "add"`
+ * in the same transaction.
  *
  *   addDish({ author, weekStart, day, meal, newDishId, version, reason })
  *     => { ok: true; version: number; position: number }
@@ -217,6 +221,10 @@ export const addDish = mutation({
     if (!newDish) {
       return { ok: false, reason: "dish-not-in-library" };
     }
+    // Safety net only: the frontend derives `meal` from the chosen dish's `time`,
+    // so a real client never trips this. Kept so a stale/malicious client cannot
+    // route a dish to the wrong slot (cross-meal placement is the Replace flow's
+    // job, not Add's). See the function doc above.
     const engineMeal = args.meal === "breakfast" ? "Breakfast" : "Lunch";
     if (newDish.time !== engineMeal) {
       return { ok: false, reason: "dish-not-meal-time" };
