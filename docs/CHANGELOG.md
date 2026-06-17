@@ -12,6 +12,14 @@ Brief description in present tense, one to three sentences. Reference the PR.
 
 ---
 
+## 2026-06-17 Generic picker search with dynamic, result-driven filters (UI)
+
+The Add-a-dish and Replace pickers become one generic search over the active library. Add drops its Breakfast/Lunch selector and routes a chosen dish to the slot its own meal-time names (a breakfast dish lands in breakfast, a lunch dish in lunch); Replace surfaces cross-meal dishes, so a breakfast dish like Pav is now reachable from a lunch slot. Both sheets render a single filter row below the search bar whose pills (Breakfast, Lunch, Easy to cook, Healthy) appear only when the current results contain a matching dish and reset when the search text changes; the Fruit slot keeps its quality-only pills. Frontend only; carries the picker-filter lib helpers. (#131)
+
+## 2026-06-17 Generic (non-meal-time) swap pool plus slot-meal-first ordering (backend)
+
+The breakfast/lunch swap pool is no longer hard-filtered by meal-time: it is every Active, in-season, non-Fruit dish, so a cross-meal pick is allowed and the resulting §3 composition mismatch becomes slow-loop signal rather than a blocked action (per `docs/product.md` §4 Principle 4). `getSlotAlternatives` stable-partitions the ranked result so slot-meal-matching dishes lead the default suggested view while the full pool stays reachable by search and filter pills. `swapDish` drops the `dish-not-meal-time` rejection and adds the inverse `dish-is-fruit` guard (a fruit cannot be swapped into a meal slot). Canonical docs (`engine.md` §5, `product.md` §1/§6/Principle 4) and the picker-ranking comments now describe a generic ranked picker over the active library. Convex deploy verified live on prod. (#130)
+
 ## 2026-06-16 Tier-3 process changes: /reconcile-ops, feature close-out, canon-to-pointer dedup
 
 Adds the `/reconcile-ops` command and its canonical spec home (`MAINTENANCE.md` §7) for reconciling the operational docs (`README.md`, `CLAUDE.md`, `MAINTENANCE.md`, `ADDING-DISHES.md`, `claude-design.md`) and the `.claude/commands/*.md` briefs against shipped reality, with `last_reconcile_ops` added to `.maintenance-state`. Adds a feature close-out checklist as `docs/development.md` §3 step 8 (archive the feature spec, reset CLAUDE.md "Currently building", run reconciliation) plus a merge-time PR-number backfill note in step 6, and a CLAUDE.md cross-reference. De-duplicates copied canon in the slash commands: `slow-loop.md` and `reconcile-docs.md` now point at the canonical wording in `docs/` and `MAINTENANCE.md` instead of restating it. Docs and command files only; no engine, app, or canonical-data change. (#128)
