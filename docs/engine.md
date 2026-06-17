@@ -141,11 +141,13 @@ Any value not in the table (Paneer, Egg, Fish, Prawn, Mutton, Tofu, Chickpea, an
 
 ## 5. Picker Ranking
 
-§4 ranks generation candidate sets. The picker is the separate ranking the swap and add affordances use when a user opens "Replace with..." or "Add a dish". It answers a different question: given the broad, non-restrictive pool (every Active, in-season, meal-time-matching dish; `docs/product.md` §6 "a ranked picker over the meal-time-matching library", and Principle 4), which alternatives surface first?
+§4 ranks generation candidate sets. The picker is the separate ranking the swap and add affordances use when a user opens "Replace with..." or "Add a dish". It answers a different question: given the broad, non-restrictive pool (every Active, in-season dish; `docs/product.md` §6 "a generic ranked picker over the active library", and Principle 4), which alternatives surface first?
 
-The picker does not narrow the pool (Principle 4: a swap may land on any meal-time dish; §3 composition violations are signal for the slow loop, not errors the fast loop blocks). It only orders it. The order is a **head** followed by a **tail**.
+For a breakfast/lunch slot the pool is generic across meal-time: every Active, in-season, non-Fruit dish, so a breakfast dish is reachable from a lunch slot and vice versa. The fruit slot keeps its Category=Fruit pool (§3.3). Meal-time is no longer a hard pool filter; it is a swap-time ordering signal (below).
 
-**Head ("fits this day").** Every pool dish whose meal-time matches the slot and that is not already placed on that day. Within the head, dishes are ordered by a deterministic lexicographic comparison on a tuple, lower first:
+The picker does not narrow the pool (Principle 4: a swap may land on any Active, in-season dish, including a cross-meal one; the resulting §3 composition mismatch is signal for the slow loop, not an error the fast loop blocks). It only orders it. The order is a **head** followed by a **tail**, with slot-meal-matching dishes led to the front of the default view.
+
+**Head ("fits this day").** Every pool dish not already placed on that day. Within the head, dishes are ordered by a deterministic lexicographic comparison on a tuple, lower first:
 
 ```
 headOrder(dish) = (recencyTier, proteinBandDistanceForSwaps, id)
@@ -157,7 +159,9 @@ headOrder(dish) = (recencyTier, proteinBandDistanceForSwaps, id)
 
 **Tail.** Every other pool dish (the same-day repeats the head excluded), ordered by the same tuple comparison. The tail keeps the pool complete (nothing is dropped) while pushing dishes the day already has below fresh options.
 
-**Determinism.** No RNG. Every tie resolves through the fixed tuple chain: recencyTier, then protein-band distance (swaps), then dish id ascending. The same inputs always produce the same order, and input order does not affect output.
+**Slot-meal-first default ordering.** After the head/tail ranking, the swap picker stable-partitions the result so dishes whose own meal-time matches the slot lead and cross-meal dishes follow, each group keeping its ranked order. This is a swap-time ordering, not a pool filter: the full ranked pool is still offered (search and filter pills reach every dish), and only the default suggested order leads with slot-meal-matching dishes. The fruit slot's pool is single-purpose and needs no partition. The ranking engine itself is meal-time-blind; this partition is applied by the picker's caller.
+
+**Determinism.** No RNG. Every tie resolves through the fixed tuple chain: recencyTier, then protein-band distance (swaps), then dish id ascending, and the slot-meal-first partition is stable. The same inputs always produce the same order, and input order does not affect output.
 
 ## 6. Requested Dishes
 
