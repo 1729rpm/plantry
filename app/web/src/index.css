@@ -619,7 +619,45 @@ input {
   flex-shrink: 0;
 }
 
+.sheet__close {
+  /* Explicit dismiss control, top-right of the panel. Absolutely positioned so
+     it never consumes a row in the flex column and the scroll content keeps the
+     full width; it floats above the scroll box. Mirrors the design handoff: a
+     ~32px circular surface-fill button with a soft shadow over the sheet. The
+     scroll box reserves headroom (padding-top below) so content never slides
+     under it at a narrow phone width. Reuses onClose via the scrim path; no
+     bespoke close logic. */
+  position: absolute;
+  top: 10px;
+  /* Align to the panel's content edge: the panel pads --pt-gutter minus the
+     scroll inset on each side, the scroll box adds the inset back, so the button
+     sits one --pt-gutter from the panel edge to match the content gutter. */
+  right: var(--pt-sheet-scroll-inset);
+  z-index: 1;
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  border: 1px solid var(--pt-line);
+  border-radius: var(--pt-radius-pill);
+  background: var(--pt-surface);
+  color: var(--pt-sub);
+  /* Soft shadow, matching the codebase's established soft-elevation literal
+     (the dropdown panel / share rail use 0 8px 24px rgba(44,36,27,0.1)). */
+  box-shadow: 0 4px 12px rgba(44, 36, 27, 0.1);
+  cursor: pointer;
+}
+
+.sheet__close:active {
+  background: var(--pt-bg);
+}
+
 .sheet__scroll {
+  /* Reserve headroom so the first line of content clears the floating close
+     button at a narrow phone width (the button is 32px tall at top:10px). */
+  padding-top: 4px;
   /* overflow-y: auto forces the computed overflow-x to a non-visible value,
      which clips horizontally. The --pt-sheet-scroll-inset (6px) inline padding
      gives full-width inputs room so their border and focus outline are not cut
