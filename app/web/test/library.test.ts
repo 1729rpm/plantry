@@ -1,6 +1,11 @@
 import { describe, expect, it } from "vitest";
 import type { Dish } from "@plantry/engine";
-import { complexityShortLabel, exploreCardTags, swapPickerVisible } from "../src/lib/library.js";
+import {
+  addablePool,
+  complexityShortLabel,
+  exploreCardTags,
+  swapPickerVisible,
+} from "../src/lib/library.js";
 
 // A minimal valid Dish; each test overrides only the fields it exercises. The
 // helpers under test read complexity / prepMinutes / tags / category / satiety,
@@ -140,6 +145,55 @@ describe("complexityShortLabel", () => {
   });
 });
 
+describe("addablePool — generic across meal-time, non-fruit, addableMeals-gated", () => {
+  // addablePool reads the live baked library (not an injected fixture), so these
+  // tests assert structural invariants over the real pool rather than exact
+  // counts (counts move as the library grows; the invariants do not). A fixed
+  // in-season date keeps the season filter from varying with the wall clock; the
+  // library's staples are `seasons: "All"`, so they survive any week.
+  const WEEK = "2026-06-15"; // Monsoon in Bangalore; "All"-season dishes always in.
+
+  it("is generic: a both-meals pool contains BOTH breakfast and lunch dishes", () => {
+    const pool = addablePool(WEEK, ["breakfast", "lunch"]);
+    expect(pool.some((d) => d.time === "Breakfast")).toBe(true);
+    expect(pool.some((d) => d.time === "Lunch")).toBe(true);
+  });
+
+  it("excludes the Fruit category from a meal pool", () => {
+    const pool = addablePool(WEEK, ["breakfast", "lunch"]);
+    expect(pool.some((d) => d.category === "Fruit")).toBe(false);
+  });
+
+  it("only ever surfaces Active dishes", () => {
+    const pool = addablePool(WEEK, ["breakfast", "lunch"]);
+    expect(pool.every((d) => d.active === "Yes")).toBe(true);
+  });
+
+  it("stays name-sorted", () => {
+    const pool = addablePool(WEEK, ["breakfast", "lunch"]);
+    const names = pool.map((d) => d.name);
+    expect(names).toEqual([...names].sort((a, b) => a.localeCompare(b)));
+  });
+
+  it("respects addableMeals: a lunch-only day excludes every breakfast dish", () => {
+    // Saturday is lunch-only (decision 4): a breakfast dish has no slot to route
+    // to, so it must not appear. Pav (id 281) is the canonical breakfast carb.
+    const lunchOnly = addablePool(WEEK, ["lunch"]);
+    expect(lunchOnly.every((d) => d.time === "Lunch")).toBe(true);
+    expect(lunchOnly.some((d) => d.id === 281)).toBe(false); // Pav, a breakfast dish
+  });
+
+  it("respects addableMeals: a breakfast-only set excludes every lunch dish", () => {
+    const breakfastOnly = addablePool(WEEK, ["breakfast"]);
+    expect(breakfastOnly.every((d) => d.time === "Breakfast")).toBe(true);
+    expect(breakfastOnly.some((d) => d.id === 281)).toBe(true); // Pav is addable here
+  });
+
+  it("an empty addableMeals set yields an empty pool", () => {
+    expect(addablePool(WEEK, [])).toEqual([]);
+  });
+});
+
 describe("swapPickerVisible — search and filters reach the full pool, suggestions stay short", () => {
   // The ranked pool comes from getSlotAlternatives in recency order. Roti is the
   // recently-cooked staple that ranks LAST, the exact case from the bug report:
@@ -213,6 +267,22 @@ describe("swapPickerVisible — search and filters reach the full pool, suggesti
     // Only id 9 is both Easy (fixture) and engine-derived Healthy (live library).
     const visible = swapPickerVisible(pool, "", ["Easy to cook", "Healthy"], 12);
     expect(visible.map((d) => d.id)).toEqual([9]);
+  });
+
+  it("supports the meal-time pills (the pool is now generic across meal-time)", () => {
+    // The breakfast/lunch picker pool mixes meal-times, so a meal pill is a real
+    // filter. A "Lunch" pill keeps lunch dishes; a "Breakfast" pill keeps only
+    // the lone breakfast dish. (Roti id 103 is breakfast in the live library.)
+    const mixed: Dish[] = [
+      dish({ id: 10, name: "Rajma", time: "Lunch" }),
+      dish({ id: 103, name: "Roti", time: "Breakfast" }),
+    ];
+    expect(swapPickerVisible(mixed, "", ["Lunch"], 12).map((d) => d.id)).toEqual([10]);
+    expect(swapPickerVisible(mixed, "", ["Breakfast"], 12).map((d) => d.id)).toEqual([103]);
+    // Both meal pills selected is an OR within the dimension: everything passes.
+    expect(swapPickerVisible(mixed, "", ["Breakfast", "Lunch"], 12).map((d) => d.id)).toEqual([
+      10, 103,
+    ]);
   });
 
   it("applies the suggested cap only when BOTH query and filters are empty", () => {
