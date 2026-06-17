@@ -323,6 +323,21 @@ input {
   color: var(--pt-sub);
 }
 
+/* Compact badge for a collapsed (past) day: the date number only, no weekday
+   or month. Narrower than the full badge so the collapsed row reads as one
+   quiet line. */
+.date-badge--compact {
+  width: 34px;
+  padding-top: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.date-badge--compact .date-badge__num {
+  font-size: 22px;
+}
+
 /* Card surface */
 .card {
   background: var(--pt-surface);
@@ -336,6 +351,50 @@ input {
   display: flex;
   gap: 14px;
   position: relative;
+}
+
+/* Today's card carries an accentSoft border (the only difference from an
+   upcoming day's line border); no "Today" pill, just the tint. */
+.day-card--today {
+  border-color: var(--pt-accent-soft);
+}
+
+/* Collapsed card for a past day: a low row on the bg surface (quieter than the
+   full surface card), the compact date badge, a one-line glance, and the View
+   pill. Centred so the short badge, glance, and pill align on one line. */
+.day-card--collapsed {
+  padding: 10px 14px;
+  background: var(--pt-bg);
+  align-items: center;
+}
+
+.day-card__glance {
+  flex: 1;
+  min-width: 0;
+  font-size: 13.5px;
+  color: var(--pt-sub);
+  font-family: var(--pt-font-sans);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* View pill: a quiet outlined control (sub-color text, line border) that opens
+   the same day editor as Edit. */
+.day-card__view {
+  flex-shrink: 0;
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--pt-sub);
+  background: transparent;
+  border: 1px solid var(--pt-line);
+  border-radius: var(--pt-radius-pill);
+  padding: 6px 14px;
+  font-family: var(--pt-font-sans);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 36px;
 }
 
 .day-card__body {

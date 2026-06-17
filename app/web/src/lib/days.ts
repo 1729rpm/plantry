@@ -90,6 +90,30 @@ export function dayDate(weekStart: string, day: ShortDay): DayDate {
   return { num: date.getDate(), month: SHORT_MONTHS[date.getMonth()] };
 }
 
+/** How a day sits relative to the device's current local date. */
+export type DayStatus = "past" | "today" | "upcoming";
+
+/**
+ * Classify a day within the week against the device's current local date.
+ * The day's calendar date is resolved with the same local-date pattern as
+ * `dayDate` (split parse, not Date(string), to avoid the IST UTC-midnight
+ * shift), then compared by calendar day, not by clock time: a day earlier in
+ * the local calendar is "past", the device's own date is "today", and any later
+ * date is "upcoming". `new Date()` (real device clock) is the reference, so the
+ * Menu collapses the days already eaten and keeps today and the rest open.
+ */
+export function dayStatus(weekStart: string, day: ShortDay): DayStatus {
+  const monday = parseISODate(weekStart);
+  const offset = dayOrderIndex(day);
+  const date = new Date(monday.getFullYear(), monday.getMonth(), monday.getDate() + offset);
+  const now = new Date();
+  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  const dayMidnight = new Date(date.getFullYear(), date.getMonth(), date.getDate());
+  if (dayMidnight.getTime() < today.getTime()) return "past";
+  if (dayMidnight.getTime() === today.getTime()) return "today";
+  return "upcoming";
+}
+
 /** Human range for the week header, e.g. "Jun 15 to 20" or "Jun 30 to Jul 4". */
 export function weekRangeLabel(weekStart: string): string {
   const monday = parseISODate(weekStart);

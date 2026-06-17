@@ -11,7 +11,7 @@ import { useEffect, useMemo, useState } from "react";
 import { useQuery } from "convex/react";
 import { anyApi } from "convex/server";
 import type { CurrentWeek, Identity, ShortDay } from "../lib/types.js";
-import { dayOrderIndex, weekRangeLabelLong } from "../lib/days.js";
+import { dayOrderIndex, dayStatus, weekRangeLabelLong } from "../lib/days.js";
 import { getCachedWeek, setCachedWeek } from "../lib/storage.js";
 import { Avatar, PrimaryButton } from "./primitives.js";
 import { DayCard, type DayCardModel } from "./DayCard.js";
@@ -131,6 +131,7 @@ function MenuBody({
               key={model.day}
               model={model}
               weekStart={week.weekStart}
+              status={dayStatus(week.weekStart, model.day)}
               onEdit={offline ? undefined : () => onEditDay(model.day)}
             />
           ))}
@@ -189,7 +190,7 @@ export function MenuScreen({ identity, onSwitchIdentity, onEditDay }: MenuScreen
     return (
       <div className="screen__scroll">
         <div className="screen__header">
-          <h1 className="screen__title">This week</h1>
+          <h1 className="menu__brand">Plantry</h1>
         </div>
         <div className="empty-state">Loading menu...</div>
       </div>
@@ -200,7 +201,7 @@ export function MenuScreen({ identity, onSwitchIdentity, onEditDay }: MenuScreen
     return (
       <div className="screen__scroll">
         <div className="screen__header">
-          <h1 className="screen__title">This week</h1>
+          <h1 className="menu__brand">Plantry</h1>
         </div>
         <div className="empty-state">
           <div className="empty-state__title">No menu yet</div>
