@@ -12,6 +12,26 @@ Brief description in present tense, one to three sentences. Reference the PR.
 
 ---
 
+## 2026-06-17 Close out the UI Improvements feature
+
+Archives the UI Improvements design handoff and EM plan (`features/UI Improvements/` to `archive/features/UI Improvements/`, keeping `features/.gitkeep`) and resets the CLAUDE.md "Currently building" line to none, the last step of the feature. Per `claude-design.md`, between features the design reference reverts to the live app until the next handoff is commissioned. Docs / housekeeping only. (#TBD)
+
+## 2026-06-17 Add a custom dish from the Add sheet; rename one-off to custom dish (UI)
+
+The Add-a-dish sheet gains an "Add '{name}' as a custom dish" affordance that appends a custom (free-text, not-in-library) dish as an extra dish on the day, wired to the `appendCustomDish` mutation, with a minimal breakfast/lunch selector for the custom-dish case (auto-routed when the day has a single addable meal) and the required reason. Library dishes still auto-route by their own meal-time. The user-facing "one off" wording is renamed to "custom dish" across the day card, day editor, dish rows, the swap picker, the share image, and the meta-line fallback; the internal `changeKind`/`source` value stays `custom` (Principle 7). Frontend only. (#141)
+
+## 2026-06-17 Note for the weekly review: day-level comment entry returns (UI)
+
+The day editor gains a "Note for the weekly review" card: an always-visible textarea and a Post comment pill (disabled until there is text), wired to the existing `addComment` mutation as a day-attached queued comment. It is record-only with no required reason; it changes nothing in the week and surfaces in the Changes feed (Principle 5). Restores the affordance the #78 UI removal had dropped. Frontend only. (#140)
+
+## 2026-06-17 Append a custom dish as an extra dish (backend)
+
+Adds the `appendCustomDish` Convex mutation: a custom (free-text, not-in-library) dish can be appended as an extra dish to a breakfast or lunch slot, not only replace a position. It mirrors `addDish` (append plus the new position) and `addCustomOneOff` (the custom pick payload), records a `changeKind: "custom"` manual-change row with a null `before`, and does not enforce the per-day item cap (the fast loop is permissive, and the cap is a generation-time constraint only). Reverses the `docs/product.md` §7 "appending is out of scope" stance and aligns the spec's "one-off" wording to "custom dish"; `MAINTENANCE.md` notes that a `custom` row may now be an append. No schema or engine change. Convex deploy verified on prod. (#139)
+
+## 2026-06-17 Explicit close (x) button on the bottom sheet (UI)
+
+Every bottom sheet gains a circular close (x) button at the top-right (surface fill, soft shadow) alongside the drag handle, so a sheet can be dismissed explicitly, not only by drag, scrim tap, or Back. It calls the same `onClose` the scrim uses, so it unwinds through the unified back-stack; no separate dismissal path. Shared `Sheet` primitive, so it appears on every overlay. Frontend only. (#137)
+
 ## 2026-06-17 Re-allow day-level comment entry (product spec)
 
 `docs/product.md` re-introduces day-level comment entry to the day editor (§2 weekly loop, §6 scope): a free-text note about the day that changes nothing in the week and queues for the slow-loop review, record-only and with no required reason (Principle 5). It restores the spec stance that the earlier UI removal (#78) left without an affordance; the queued-comments backend (`addComment`, the `comments` table, and the Changes-tab render) already exists, so this is spec-only. The day-editor UI follows in a separate slice (Stream L). (#138)
