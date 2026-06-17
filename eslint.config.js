@@ -14,7 +14,9 @@ export default [
       "**/coverage/**",
       "**/*.config.js",
       "**/*.config.ts",
-      "design_handoff/**",
+      // Retired history (the old design_handoff/ handoff and its reference JSX
+      // now live here). Archived code is not build code and is not linted.
+      "archive/**",
       // Design-handoff reference code (the hifi-*.jsx prototypes and hifi-data.js)
       // ships inside the active feature folder under features/<name>/. It is a
       // browser-context reference, not build code, so it is not linted (the same
