@@ -1,19 +1,20 @@
 // Menu screen: the shared current week. Ported from the MenuScreen layout in
 // design_handoff/hifi-screens.jsx. Reads the live week from Convex
 // (getCurrentWeek) with the slice-1 offline cache, renders one DayCard per day,
-// a week header with the identity avatar, a change-summary placeholder (the real
-// summary wires in slice 6.1), and a Share button (share family is slice 8.1, so
-// it is inert here). Editing routes through onEditDay into the legacy editor.
+// a brand-led header (the Plantry serif wordmark, the week's full-month date
+// range, and the identity avatar), and a Share button (share family is slice
+// 8.1, so it is inert here). The week's change count lives on the Changes tab
+// (its subtitle and nav badge), not here. Editing routes through onEditDay into
+// the legacy editor.
 
 import { useEffect, useMemo, useState } from "react";
 import { useQuery } from "convex/react";
 import { anyApi } from "convex/server";
 import type { CurrentWeek, Identity, ShortDay } from "../lib/types.js";
-import { dayOrderIndex, weekRangeLabel } from "../lib/days.js";
+import { dayOrderIndex, weekRangeLabelLong } from "../lib/days.js";
 import { getCachedWeek, setCachedWeek } from "../lib/storage.js";
 import { Avatar, PrimaryButton } from "./primitives.js";
 import { DayCard, type DayCardModel } from "./DayCard.js";
-import { deriveSummaryLine } from "./ChangesScreen.js";
 import { SharePreviewSheet } from "./SharePreviewSheet.js";
 import type { ShareGroceryGroup } from "./ShareImages.js";
 
@@ -89,13 +90,6 @@ function MenuBody({
   onEditDay: (day: ShortDay) => void;
 }) {
   const models = useMemo(() => buildDayModels(week), [week]);
-  // The change-summary line reads the same manualChanges feed the Changes tab
-  // does. Offline (no Convex), this stays undefined and the summary degrades to
-  // the no-changes line, which is the honest fallback for a cached menu.
-  const changes = useQuery(anyApi.queries.activity.listManualChangesForWeek, {
-    weekStart: week.weekStart,
-  }) as Parameters<typeof deriveSummaryLine>[0] | undefined;
-  const summaryLine = deriveSummaryLine(changes ?? []);
 
   const [shareOpen, setShareOpen] = useState(false);
 
@@ -113,22 +107,20 @@ function MenuBody({
       <div className="screen__scroll">
         <div className="screen__header">
           <div className="menu__head-row">
-            <h1 className="menu__title">This week</h1>
-            <div className="menu__head-right">
-              <span className="menu__range">{weekRangeLabel(week.weekStart)}</span>
-              <button
-                type="button"
-                className="menu__switch"
-                aria-label="Switch person"
-                onClick={onSwitchIdentity}
-              >
-                <Avatar who={identity} />
-              </button>
-            </div>
+            {/* Brand-led header: the Plantry serif wordmark with the week's
+                full-month date range beneath it. The week's change count now
+                lives on the Changes tab (subtitle + nav badge), not here. */}
+            <h1 className="menu__brand">Plantry</h1>
+            <button
+              type="button"
+              className="menu__switch"
+              aria-label="Switch person"
+              onClick={onSwitchIdentity}
+            >
+              <Avatar who={identity} size={30} />
+            </button>
           </div>
-          {/* Short, plain summary of the week's menu changes, derived from the
-              same manualChanges feed the Changes tab renders (slice 6.1). */}
-          <div className="change-summary">{summaryLine}</div>
+          <div className="menu__subtitle">{weekRangeLabelLong(week.weekStart)} menu</div>
         </div>
         {offline && (
           <div className="offline-banner">Showing the last menu saved on this phone.</div>

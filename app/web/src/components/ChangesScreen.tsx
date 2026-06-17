@@ -156,6 +156,25 @@ export function buildFeed(
   return entries;
 }
 
+// The count of menu edits this week. The manualChanges feed
+// (listManualChangesForWeek) holds only menu edits (swaps, adds, deletes, skips,
+// restores, saves); queued comments live in a separate feed and are feedback,
+// not edits. So the non-`comment` count the Changes tab surfaces is simply the
+// length of this feed. Kept as a named helper so the Changes subtitle and the
+// nav badge read the same number from one place.
+export function changeCount(changes: ManualChangeRow[]): number {
+  return changes.length;
+}
+
+// The Changes-tab subtitle. With at least one edit this week it leads with the
+// count ("3 changes to this week's menu"); with none it keeps the quiet
+// zero-state line. Singular/plural on "change" so a single edit reads naturally.
+// No internal label leaks (Principle 7).
+export function changesSubtitle(count: number): string {
+  if (count <= 0) return "Everything done to this week's menu";
+  return `${count} ${count === 1 ? "change" : "changes"} to this week's menu`;
+}
+
 // The Menu summary line. A short, plain count of the week's menu changes, e.g.
 // "3 swaps, 1 skip this week". Counts the manualChanges feed only (comments are
 // feedback, not edits to the menu). Adds and custom one-offs both read as
@@ -236,11 +255,15 @@ export function ChangesScreen() {
 
   const loading = week === undefined || (weekStart && changes === undefined);
 
+  // The subtitle leads with the count of this week's menu edits (the
+  // manualChanges feed), falling back to the quiet zero-state line at zero.
+  const subtitle = changesSubtitle(changeCount(changes ?? []));
+
   return (
     <div className="screen__scroll">
       <div className="screen__header">
         <h1 className="screen__title">Changes</h1>
-        <div className="screen__subtitle">Everything done to this week&rsquo;s menu</div>
+        <div className="screen__subtitle">{subtitle}</div>
       </div>
       {loading ? (
         <div className="empty-state">Loading changes...</div>

@@ -435,6 +435,34 @@ input {
   display: block;
 }
 
+/* Wraps the tab icon so the count badge can pin to its top-right corner. */
+.tab-bar__icon-wrap {
+  position: relative;
+  display: inline-flex;
+}
+
+/* Count badge on the Changes tab: a small accent circle with onAccent text and
+   a surface ring so it reads as a pip lifted off the icon. Hidden at zero (the
+   element is not rendered then). */
+.tab-bar__badge {
+  position: absolute;
+  top: -6px;
+  left: 100%;
+  margin-left: -8px;
+  min-width: 16px;
+  height: 16px;
+  padding: 0 4px;
+  border-radius: 8px;
+  background: var(--pt-accent);
+  color: var(--pt-on-accent);
+  box-shadow: 0 0 0 2px var(--pt-surface);
+  font-family: var(--pt-font-sans);
+  font-size: 10px;
+  font-weight: 700;
+  line-height: 16px;
+  text-align: center;
+}
+
 /* Buttons */
 .btn-primary {
   background: var(--pt-accent);
@@ -593,25 +621,20 @@ input {
   justify-content: space-between;
 }
 
-.menu__title {
+/* Brand wordmark: the Plantry serif lockup at the top of the Menu screen. */
+.menu__brand {
   font-family: var(--pt-font-serif);
-  font-size: 26px;
+  font-size: 30px;
   font-weight: 700;
   white-space: nowrap;
   margin: 0;
 }
 
-.menu__head-right {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  flex-shrink: 0;
-}
-
-.menu__range {
-  font-size: 13.5px;
+/* Full-month date range beneath the wordmark, e.g. "June 15 to June 20 menu". */
+.menu__subtitle {
+  font-size: 14px;
   color: var(--pt-sub);
-  white-space: nowrap;
+  margin-top: 2px;
 }
 
 .menu__switch {
@@ -620,13 +643,7 @@ input {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-}
-
-/* Change summary line under the menu title */
-.change-summary {
-  font-size: 13px;
-  color: var(--pt-sub);
-  margin-top: 4px;
+  flex-shrink: 0;
 }
 
 /* ------------------------------------------------------------------ */

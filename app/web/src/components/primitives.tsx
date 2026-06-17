@@ -226,21 +226,41 @@ const TAB_ICONS: Record<TabKey, ReactNode> = {
   ),
 };
 
-export function TabBar({ active, onTab }: { active: TabKey; onTab: (tab: TabKey) => void }) {
+export function TabBar({
+  active,
+  onTab,
+  changeCount = 0,
+}: {
+  active: TabKey;
+  onTab: (tab: TabKey) => void;
+  // Count of this week's menu edits, shown as a badge on the Changes tab.
+  // Hidden at zero, so a quiet week shows the plain tab.
+  changeCount?: number;
+}) {
   return (
     <nav className="tab-bar" aria-label="Primary">
-      {TABS.map((tab) => (
-        <button
-          key={tab}
-          type="button"
-          className={`tab-bar__tab${tab === active ? " tab-bar__tab--active" : ""}`}
-          aria-current={tab === active ? "page" : undefined}
-          onClick={() => onTab(tab)}
-        >
-          {TAB_ICONS[tab]}
-          {tab}
-        </button>
-      ))}
+      {TABS.map((tab) => {
+        const badge = tab === "Changes" && changeCount > 0 ? changeCount : 0;
+        return (
+          <button
+            key={tab}
+            type="button"
+            className={`tab-bar__tab${tab === active ? " tab-bar__tab--active" : ""}`}
+            aria-current={tab === active ? "page" : undefined}
+            onClick={() => onTab(tab)}
+          >
+            <span className="tab-bar__icon-wrap">
+              {TAB_ICONS[tab]}
+              {badge > 0 && (
+                <span className="tab-bar__badge" aria-hidden="true">
+                  {badge}
+                </span>
+              )}
+            </span>
+            {tab}
+          </button>
+        );
+      })}
     </nav>
   );
 }
