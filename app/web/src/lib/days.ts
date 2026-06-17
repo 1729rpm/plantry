@@ -52,6 +52,21 @@ const SHORT_MONTHS = [
   "Dec",
 ];
 
+const LONG_MONTHS = [
+  "January",
+  "February",
+  "March",
+  "April",
+  "May",
+  "June",
+  "July",
+  "August",
+  "September",
+  "October",
+  "November",
+  "December",
+];
+
 // weekStart is an ISO date string for the Monday of the week (e.g. "2026-06-15").
 // We parse it as a local calendar date (split, not Date(string), to avoid the
 // UTC-midnight shift that can land the badge on the wrong day in IST).
@@ -88,5 +103,23 @@ export function weekRangeLabel(weekStart: string): string {
   if (startMonth === endMonth) {
     return `${startMonth} ${monday.getDate()} to ${saturday.getDate()}`;
   }
+  return `${startMonth} ${monday.getDate()} to ${endMonth} ${saturday.getDate()}`;
+}
+
+/**
+ * Full-month range for the Menu brand subtitle, e.g. "June 15 to June 20".
+ * Both endpoints carry their full month name (so a month-crossing week reads
+ * "June 29 to July 4"); the literal word "to" joins them (no dash, per the
+ * user-facing copy rule). The caller appends the trailing " menu".
+ */
+export function weekRangeLabelLong(weekStart: string): string {
+  const monday = parseISODate(weekStart);
+  const saturday = new Date(
+    monday.getFullYear(),
+    monday.getMonth(),
+    monday.getDate() + dayOrderIndex("Sat"),
+  );
+  const startMonth = LONG_MONTHS[monday.getMonth()];
+  const endMonth = LONG_MONTHS[saturday.getMonth()];
   return `${startMonth} ${monday.getDate()} to ${endMonth} ${saturday.getDate()}`;
 }

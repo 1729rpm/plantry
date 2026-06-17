@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
-import { useMutation } from "convex/react";
+import { useMutation, useQuery } from "convex/react";
 import { anyApi } from "convex/server";
+import { changeCount } from "./components/ChangesScreen.js";
 import { PasscodeGate } from "./components/PasscodeGate.js";
 import { IdentityPicker } from "./components/IdentityPicker.js";
 import { MenuScreen } from "./components/MenuScreen.js";
@@ -35,6 +36,21 @@ export function App() {
   // back-stack controller's at-home Back branch (requestExitConfirm below).
   const [exitPrompt, setExitPrompt] = useState<boolean>(false);
   const setUserProfile = useMutation(anyApi.users.setUserProfile);
+
+  // The Changes nav badge count: this week's menu edits (the manualChanges
+  // feed). We resolve the current week here so the badge stays live on every
+  // tab, not only when the Changes screen is mounted. "skip" holds the activity
+  // query until the week is known; until both resolve the count is 0 (no badge).
+  const currentWeek = useQuery(anyApi.queries.week.getCurrentWeek, {}) as
+    | { weekStart: string }
+    | null
+    | undefined;
+  const weekStart = currentWeek?.weekStart;
+  const weekChanges = useQuery(
+    anyApi.queries.activity.listManualChangesForWeek,
+    weekStart ? { weekStart } : "skip",
+  ) as Parameters<typeof changeCount>[0] | undefined;
+  const changeBadgeCount = changeCount(weekChanges ?? []);
 
   // Wire the single unified back-stack controller once. The controller owns the
   // ONE popstate listener; it calls back IN here to apply a popped view (Back
@@ -147,7 +163,7 @@ export function App() {
   return (
     <div className="screen">
       {renderActive()}
-      <TabBar active={tab} onTab={handleTab} />
+      <TabBar active={tab} onTab={handleTab} changeCount={changeBadgeCount} />
       {exitPrompt && <ExitConfirmSheet onLeave={handleLeave} onStay={handleStay} />}
     </div>
   );
