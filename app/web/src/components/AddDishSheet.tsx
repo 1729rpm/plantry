@@ -1,22 +1,29 @@
-// Add-a-dish sheet. Appends a library dish to a (day, meal) slot via the 4.1
-// `addDish` mutation (non-restrictive pool: meal-time + Active + season, no
-// composition narrowing). A meal selector switches between breakfast and lunch
-// (breakfast is hidden on a day that has no breakfast slot, e.g. Saturday).
-// Picking a dish opens the shared reason dialog. Ported from the AddDishSheet
-// overlay in design_handoff/hifi-overlays.jsx.
+// Add-a-dish sheet. Appends a library dish to the day via the 4.1 `addDish`
+// mutation (non-restrictive pool: Active + season, no composition narrowing).
+// The picker is a single generic search over the whole addable library
+// (feature picker-generic-search): a breakfast dish and a lunch dish both
+// surface, and the chosen dish routes to the slot its own meal-time names, so
+// there is NO destination control here. Cross-meal placement is done via
+// Replace only (spec decision 1). Picking a dish opens the shared reason dialog.
+// Ported from the AddDishSheet overlay in design_handoff/hifi-overlays.jsx.
 //
 // Custom one-offs are NOT offered here: the only one-off mutation
 // (`addCustomOneOff`) replaces an existing position, so it lives in the Replace
 // flow (SwapPickerSheet). Appending a free-text one-off would need a new Convex
 // mutation, which is out of this slice's scope; see the PR diagnosis card.
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useMutation } from "convex/react";
 import { anyApi } from "convex/server";
 import type { Dish } from "@plantry/engine";
 import type { Identity, MealTime, ShortDay } from "../lib/types.js";
 import { addablePool } from "../lib/library.js";
-import { PICKER_FILTERS, dishMatchesFilters, type DishFilter } from "../lib/dishFilters.js";
+import {
+  PICKER_FILTER_PILLS,
+  availablePickerFilters,
+  dishMatchesPickerFilters,
+  type PickerPill,
+} from "../lib/dishFilters.js";
 import { dayLabel } from "../lib/days.js";
 import { Sheet, SearchField, SectionLabel, Chip } from "./primitives.js";
 import { DishRow } from "./DishRow.js";
@@ -26,8 +33,11 @@ interface AddDishSheetProps {
   weekStart: string;
   day: ShortDay;
   version: number;
-  // Add a dish targets breakfast/lunch only; the Fruit of the day is swap-only
-  // (docs/engine.md §3.3), so it is never an add target.
+  // The day's addable meal-times (breakfast/lunch only; the Fruit of the day is
+  // swap-only per docs/engine.md §3.3, so it is never an add target). Passed to
+  // addablePool as the structural floor: a breakfast dish is only addable on a
+  // day that actually has a breakfast slot (e.g. excluded on Saturday), since it
+  // routes to that slot.
   availableMeals: MealTime[];
   identity: Identity;
   onDone: () => void;
@@ -44,31 +54,61 @@ export function AddDishSheet({
   onClose,
 }: AddDishSheetProps) {
   const addDish = useMutation(anyApi.dayMutations.addDish);
-  const [meal, setMeal] = useState<MealTime>(
-    availableMeals.includes("lunch") ? "lunch" : availableMeals[0],
-  );
   const [q, setQ] = useState<string>("");
-  // Quick-filter chips, mirroring Explore. Only the non-redundant subset is
-  // shown here: the meal is already chosen via the meal chips above, so the
-  // Breakfast/Lunch filters would be duplicate controls.
-  const [filters, setFilters] = useState<DishFilter[]>([]);
+  // The dynamic picker filter row. Unlike the old two-row layout (a meal
+  // selector plus quality chips), this is one row whose pills are driven by what
+  // the current results actually contain (see `pills` below). The meal-time
+  // pills are real filters here because the pool spans both meal-times.
+  const [filters, setFilters] = useState<PickerPill[]>([]);
   const [chosen, setChosen] = useState<Dish | null>(null);
   const [inFlight, setInFlight] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
 
-  function toggleFilter(f: DishFilter) {
+  function toggleFilter(f: PickerPill) {
     setFilters((prev) => (prev.includes(f) ? prev.filter((x) => x !== f) : [...prev, f]));
   }
 
   const trimmedQuery = q.trim();
-  const visible = useMemo(() => {
-    const pool = addablePool(meal, weekStart);
+
+  // Filters get reset whenever the search query changes, so a fresh search
+  // always starts from an unfiltered list (spec "filters get reset when search
+  // is fired"). Trimmed so leading/trailing whitespace edits do not churn it.
+  useEffect(() => {
+    setFilters([]);
+  }, [trimmedQuery]);
+
+  // The whole addable pool for this day (Active + in-season + non-Fruit + a slot
+  // on the day for its meal-time). Generic across meal-time.
+  const pool = useMemo(() => addablePool(weekStart, availableMeals), [weekStart, availableMeals]);
+
+  // The corpus narrowed by the SEARCH TEXT ONLY (ignoring selected pills). This
+  // is the basis for the pill visibility once a query/selection exists, so
+  // selecting Breakfast never hides the Lunch pill: both stay offered as long as
+  // the text matches a dish of each meal-time.
+  const textCorpus = useMemo(() => {
     const needle = trimmedQuery.toLowerCase();
-    return pool.filter(
-      (d) =>
-        (needle === "" || d.name.toLowerCase().includes(needle)) && dishMatchesFilters(d, filters),
-    );
-  }, [meal, weekStart, trimmedQuery, filters]);
+    if (needle === "") return pool;
+    return pool.filter((d) => d.name.toLowerCase().includes(needle));
+  }, [pool, trimmedQuery]);
+
+  // The list actually shown: the text corpus narrowed by the selected pills. The
+  // Add picker has no suggested-head cap (it shows the whole addable library by
+  // name), so pristine and narrowed views are uncapped alike.
+  const visible = useMemo(
+    () => textCorpus.filter((d) => dishMatchesPickerFilters(d, filters)),
+    [textCorpus, filters],
+  );
+
+  // Pills offered: only those with >= 1 match. In the pristine state (no query,
+  // no selection) the basis is the displayed list (here `pool`, since Add shows
+  // the whole pool with no cap), so the row reflects what the slot suggests.
+  // Once a query or a selection exists, the basis is the text corpus so a
+  // selected meal pill never hides its sibling.
+  const pristine = trimmedQuery === "" && filters.length === 0;
+  const pills = useMemo(
+    () => availablePickerFilters(pristine ? pool : textCorpus, PICKER_FILTER_PILLS),
+    [pristine, pool, textCorpus],
+  );
 
   // Empty-state copy reflects what is actually narrowing the list, so a name-only
   // search does not falsely blame filters (and vice versa).
@@ -83,6 +123,10 @@ export function AddDishSheet({
     if (!chosen || inFlight) return;
     setInFlight(true);
     setError(null);
+    // The chosen dish routes to its own meal-time's slot (spec decision 1): a
+    // breakfast dish lands in the breakfast slot, a lunch dish in the lunch
+    // slot. addablePool already guarantees the slot exists on this day.
+    const meal: MealTime = chosen.time === "Breakfast" ? "breakfast" : "lunch";
     try {
       const result = (await addDish({
         author: identity,
@@ -129,26 +173,16 @@ export function AddDishSheet({
     <Sheet onClose={onClose} tall picker>
       <div className="reason__title">Add a dish</div>
       <div className="reason__hint">To {dayLabel(day)}; pick from the library</div>
-      {availableMeals.length > 1 && (
-        <div className="add-dish__meals">
-          {availableMeals.includes("breakfast") && (
-            <Chip active={meal === "breakfast"} onClick={() => setMeal("breakfast")}>
-              Breakfast
+      <SearchField value={q} onChange={setQ} placeholder="Search dishes" autoFocus />
+      {pills.length > 0 && (
+        <div className="picker__filters" role="group" aria-label="Filters">
+          {pills.map((f) => (
+            <Chip key={f} active={filters.includes(f)} onClick={() => toggleFilter(f)}>
+              {f}
             </Chip>
-          )}
-          <Chip active={meal === "lunch"} onClick={() => setMeal("lunch")}>
-            Lunch
-          </Chip>
+          ))}
         </div>
       )}
-      <SearchField value={q} onChange={setQ} placeholder="Search dishes" autoFocus />
-      <div className="picker__filters" role="group" aria-label="Filters">
-        {PICKER_FILTERS.map((f) => (
-          <Chip key={f} active={filters.includes(f)} onClick={() => toggleFilter(f)}>
-            {f}
-          </Chip>
-        ))}
-      </div>
       {visible.length === 0 ? (
         <div className="picker__hint">{emptyMessage}</div>
       ) : (

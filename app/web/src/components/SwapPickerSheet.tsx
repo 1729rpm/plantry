@@ -13,13 +13,18 @@
 // SwapPickerSheet overlay in design_handoff/hifi-overlays.jsx. The ranking
 // lives in Convex, not here.
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useMutation, useQuery } from "convex/react";
 import { anyApi } from "convex/server";
 import type { Dish } from "@plantry/engine";
 import type { Identity, Meal, ShortDay } from "../lib/types.js";
 import { swapPickerVisible } from "../lib/library.js";
-import { PICKER_FILTERS, type DishFilter } from "../lib/dishFilters.js";
+import {
+  PICKER_FILTERS,
+  PICKER_FILTER_PILLS,
+  availablePickerFilters,
+  type PickerPill,
+} from "../lib/dishFilters.js";
 import { dayLabel, mealLabel } from "../lib/days.js";
 import { Sheet, SearchField, SectionLabel, PrimaryButton, Chip } from "./primitives.js";
 import { DishRow } from "./DishRow.js";
@@ -79,10 +84,12 @@ export function SwapPickerSheet({
   const addCustomOneOff = useMutation(anyApi.weekMutations.addCustomOneOff);
 
   const [q, setQ] = useState<string>("");
-  // Quick-filter chips, mirroring Explore. The meal is fixed by the slot, so the
-  // Breakfast/Lunch filters would be redundant and are dropped; only the
-  // meal-independent chips ("Easy to cook", "Healthy") show.
-  const [filters, setFilters] = useState<DishFilter[]>([]);
+  // The dynamic picker filter row. The breakfast/lunch pool is generic across
+  // meal-time (feature picker-generic-search), so those slots offer the
+  // Breakfast/Lunch pills alongside the quality pills; the fruit slot is
+  // category-locked and offers quality pills only (see `candidatePills`). Which
+  // pills actually render is driven by what the current results contain.
+  const [filters, setFilters] = useState<PickerPill[]>([]);
   const [choice, setChoice] = useState<Choice | null>(null);
   const [inFlight, setInFlight] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
@@ -97,11 +104,21 @@ export function SwapPickerSheet({
     setError(null);
   }
 
-  function toggleFilter(f: DishFilter) {
+  function toggleFilter(f: PickerPill) {
     setFilters((prev) => (prev.includes(f) ? prev.filter((x) => x !== f) : [...prev, f]));
   }
 
   const trimmedQuery = q.trim();
+
+  // Filters get reset whenever the search query changes, so a fresh search
+  // always starts from an unfiltered list (spec "filters get reset when search
+  // is fired"). Trimmed so leading/trailing whitespace edits do not churn it.
+  useEffect(() => {
+    setFilters([]);
+  }, [trimmedQuery]);
+
+  const pool = useMemo(() => alternatives ?? [], [alternatives]);
+
   // The corpus for BOTH name search and the quick-filter chips is the FULL
   // ranked pool (requested with POOL_LIMIT above), so a recently-cooked staple
   // that ranks at the bottom is still reachable by name and the chips narrow the
@@ -110,8 +127,32 @@ export function SwapPickerSheet({
   // query or filter returns all matches. Mirrors AddDishSheet's full-pool
   // filter.
   const visible = useMemo(
-    () => swapPickerVisible(alternatives ?? [], trimmedQuery, filters, SUGGESTED_CAP),
-    [alternatives, trimmedQuery, filters],
+    () => swapPickerVisible(pool, trimmedQuery, filters, SUGGESTED_CAP),
+    [pool, trimmedQuery, filters],
+  );
+
+  // The corpus narrowed by the SEARCH TEXT ONLY (ignoring selected pills). Basis
+  // for pill visibility once a query/selection exists, so selecting Breakfast
+  // never hides the Lunch pill.
+  const textCorpus = useMemo(() => {
+    const needle = trimmedQuery.toLowerCase();
+    if (needle === "") return pool;
+    return pool.filter((d) => d.name.toLowerCase().includes(needle));
+  }, [pool, trimmedQuery]);
+
+  // The candidate vocabulary: the fruit slot is category-locked, so it offers
+  // quality pills only (no meal-time dimension); breakfast/lunch offer the full
+  // picker vocabulary (meal-time + quality).
+  const candidatePills: PickerPill[] = isFruit ? PICKER_FILTERS : PICKER_FILTER_PILLS;
+
+  // Pills offered: only those with >= 1 match. Pristine (no query, no selection)
+  // basis is the displayed suggested head (`visible`), so the row reflects what
+  // the slot actually suggests; otherwise the basis is the text corpus so a
+  // selected meal pill never hides its sibling.
+  const pristine = trimmedQuery === "" && filters.length === 0;
+  const pills = useMemo(
+    () => availablePickerFilters(pristine ? visible : textCorpus, candidatePills),
+    [pristine, visible, textCorpus, candidatePills],
   );
 
   async function handleSubmit(reason: string) {
@@ -148,8 +189,11 @@ export function SwapPickerSheet({
       }
       if (result.reason === "version-mismatch") {
         setError("Someone just changed this week. Close and try again.");
-      } else if (result.reason === "dish-not-meal-time") {
-        setError("That dish belongs to a different meal. Pick another.");
+      } else if (result.reason === "dish-is-fruit") {
+        // A Fruit-category dish dropped into a breakfast/lunch slot. Fruit
+        // belongs to its own slot (the pool excludes it), so this only happens
+        // on a stale concurrent edit; guide the user to a meal dish.
+        setError("That dish belongs to the Fruit slot. Pick another.");
       } else if (result.reason === "dish-not-fruit") {
         setError("Pick a fruit for the Fruit of the day.");
       } else if (result.reason === "dish-not-active-or-in-season") {
@@ -246,13 +290,15 @@ export function SwapPickerSheet({
         placeholder={isFruit ? "Search fruit" : "Search, or type a one off dish"}
         autoFocus
       />
-      <div className="picker__filters" role="group" aria-label="Filters">
-        {PICKER_FILTERS.map((f) => (
-          <Chip key={f} active={filters.includes(f)} onClick={() => toggleFilter(f)}>
-            {f}
-          </Chip>
-        ))}
-      </div>
+      {pills.length > 0 && (
+        <div className="picker__filters" role="group" aria-label="Filters">
+          {pills.map((f) => (
+            <Chip key={f} active={filters.includes(f)} onClick={() => toggleFilter(f)}>
+              {f}
+            </Chip>
+          ))}
+        </div>
+      )}
       {!isFruit && trimmedQuery.length > 0 && (
         <button
           type="button"
