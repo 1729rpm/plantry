@@ -14,7 +14,7 @@ Brief description in present tense, one to three sentences. Reference the PR.
 
 ## 2026-06-17 Close out the UI Improvements feature
 
-Archives the UI Improvements design handoff and EM plan (`features/UI Improvements/` to `archive/features/UI Improvements/`, keeping `features/.gitkeep`) and resets the CLAUDE.md "Currently building" line to none, the last step of the feature. Per `claude-design.md`, between features the design reference reverts to the live app until the next handoff is commissioned. Docs / housekeeping only. (#TBD)
+Archives the UI Improvements design handoff and EM plan (`features/UI Improvements/` to `archive/features/UI Improvements/`, keeping `features/.gitkeep`) and resets the CLAUDE.md "Currently building" line to none, the last step of the feature. Per `claude-design.md`, between features the design reference reverts to the live app until the next handoff is commissioned. Docs / housekeeping only. (#142)
 
 ## 2026-06-17 Add a custom dish from the Add sheet; rename one-off to custom dish (UI)
 
