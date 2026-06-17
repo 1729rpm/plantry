@@ -12,6 +12,10 @@ Brief description in present tense, one to three sentences. Reference the PR.
 
 ---
 
+## 2026-06-17 Re-allow day-level comment entry (product spec)
+
+`docs/product.md` re-introduces day-level comment entry to the day editor (§2 weekly loop, §6 scope): a free-text note about the day that changes nothing in the week and queues for the slow-loop review, record-only and with no required reason (Principle 5). It restores the spec stance that the earlier UI removal (#78) left without an affordance; the queued-comments backend (`addComment`, the `comments` table, and the Changes-tab render) already exists, so this is spec-only. The day-editor UI follows in a separate slice (Stream L). (#TBD)
+
 ## 2026-06-17 Archive the first design handoff and its catch-up
 
 Moves the superseded first handoff `design_handoff/` to `archive/handoffs/design_handoff/` and the now-folded-in `design-catchup.md` to `archive/handoffs/design-catchup.md`, each with an archival banner explaining the move. The `features/UI Improvements/` handoff (level with the live app) replaces both, so keeping a stale handoff at the repo root no longer serves the per-slice design-compare gate. The eslint ignore follows the move (`design_handoff/**` becomes `archive/**`, so retired reference JSX is not linted). Docs / housekeeping only. (#136)
