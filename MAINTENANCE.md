@@ -19,7 +19,7 @@ Rajat opens a Claude Code session in the main repo directory and types `/slow-lo
 Reactive signals (what the user did or said this week):
 
 - All `queued` rows in Convex `comments` (via `npx convex run queries/comments:listQueuedComments`).
-- All `queued` rows in Convex `manualChanges` (via `npx convex run queries/manualChanges:listQueuedManualChanges`). These now span swap, custom, delete, add, skip_day, restore_day, and save_next_week kinds; the kind plus `reason` is the signal.
+- All `queued` rows in Convex `manualChanges` (via `npx convex run queries/manualChanges:listQueuedManualChanges`). These now span swap, custom, delete, add, skip_day, restore_day, and save_next_week kinds; the kind plus `reason` is the signal. A `custom` row may be either a replacement of a position or an append of an extra dish; an appended custom dish carries the null `before` (`{ dishId: null, customLabel: null }`), so do not infer "replaced X" from a `custom` row's `before`. The promote-a-repeated-custom-dish-into-a-library-dish path (§1.7) is unchanged.
 - All `queued` rows in Convex `nextWeekQueue` (dishes saved from Explore that have not yet been placed by a generation run).
 - All `queued` rows in Convex `dishDislikes` (records-only Explore taps). The table is a live signal channel that collects real Explore-tap rows.
 - All open `incidents` from Convex (via `npx convex run queries/incidents:listIncidents`).
