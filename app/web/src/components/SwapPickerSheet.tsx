@@ -282,12 +282,12 @@ export function SwapPickerSheet({
         {dayLabel(day)} {mealLabel(meal).toLowerCase()};{" "}
         {isFruit
           ? "pick a seasonal fruit from the library"
-          : "pick from the library or use a one off"}
+          : "pick from the library or use a custom dish"}
       </div>
       <SearchField
         value={q}
         onChange={setQ}
-        placeholder={isFruit ? "Search fruit" : "Search, or type a one off dish"}
+        placeholder={isFruit ? "Search fruit" : "Search, or type a custom dish"}
         autoFocus
       />
       {pills.length > 0 && (
@@ -305,7 +305,7 @@ export function SwapPickerSheet({
           className="picker__custom"
           onClick={() => setChoice({ kind: "custom", label: trimmedQuery })}
         >
-          Use &ldquo;{trimmedQuery}&rdquo; as a one off
+          Use &ldquo;{trimmedQuery}&rdquo; as a custom dish
         </button>
       )}
       {alternatives === undefined && <div className="picker__hint">Loading dishes...</div>}

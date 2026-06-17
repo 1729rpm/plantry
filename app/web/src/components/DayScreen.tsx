@@ -55,7 +55,7 @@ function isMealTime(meal: Meal): meal is MealTime {
 function pickLabel(pick: DishPick): string {
   if (pick.customLabel) return pick.customLabel;
   if (pick.dishId !== null) return dishById(pick.dishId)?.name ?? "From the library";
-  return "One off this week";
+  return "Custom dish";
 }
 
 export function DayScreen({ day, identity, onBack }: DayScreenProps) {

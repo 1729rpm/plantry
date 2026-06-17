@@ -214,7 +214,7 @@ function pickDescriptor(dish: Dish, codes: string[]): string | null {
  * complexity. Degrades to whichever fields are present.
  */
 export function dishMetaLine(dish: Dish | undefined): string {
-  if (!dish) return "One off this week";
+  if (!dish) return "Custom dish";
   const parts: string[] = [];
   if (typeof dish.prepMinutes === "number" && dish.prepMinutes > 0) {
     parts.push(`${dish.prepMinutes} min`);

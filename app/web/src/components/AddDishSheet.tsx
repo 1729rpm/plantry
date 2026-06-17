@@ -1,16 +1,20 @@
-// Add-a-dish sheet. Appends a library dish to the day via the 4.1 `addDish`
-// mutation (non-restrictive pool: Active + season, no composition narrowing).
+// Add-a-dish sheet. Appends a dish to the day. A LIBRARY dish goes through the
+// 4.1 `addDish` mutation (non-restrictive pool: Active + season, no composition
+// narrowing); a CUSTOM (free-text, not-in-library) dish goes through
+// `appendCustomDish`, which pushes a `{ source: "custom" }` pick onto the slot.
 // The picker is a single generic search over the whole addable library
 // (feature picker-generic-search): a breakfast dish and a lunch dish both
-// surface, and the chosen dish routes to the slot its own meal-time names, so
-// there is NO destination control here. Cross-meal placement is done via
-// Replace only (spec decision 1). Picking a dish opens the shared reason dialog.
-// Ported from the AddDishSheet overlay in design_handoff/hifi-overlays.jsx.
+// surface, and the chosen library dish routes to the slot its own meal-time
+// names, so there is NO destination control for library dishes. Cross-meal
+// placement of a library dish is done via Replace only (spec decision 1).
+// Picking a library dish opens the shared reason dialog.
 //
-// Custom one-offs are NOT offered here: the only one-off mutation
-// (`addCustomOneOff`) replaces an existing position, so it lives in the Replace
-// flow (SwapPickerSheet). Appending a free-text one-off would need a new Convex
-// mutation, which is out of this slice's scope; see the PR diagnosis card.
+// A custom dish has no meal-time of its own, so the one destination point is
+// the custom path: when the day has both addable meals it shows a minimal
+// breakfast/lunch selector before the reason dialog; when only one meal is
+// addable (e.g. Saturday = lunch) it routes there with no selector. Both paths
+// require a reason (fast-loop edit) via the shared ReasonDialog.
+// Ported from the AddDishSheet overlay in design_handoff/hifi-overlays.jsx.
 
 import { useEffect, useMemo, useState } from "react";
 import { useMutation } from "convex/react";
@@ -24,10 +28,17 @@ import {
   dishMatchesPickerFilters,
   type PickerPill,
 } from "../lib/dishFilters.js";
-import { dayLabel } from "../lib/days.js";
-import { Sheet, SearchField, SectionLabel, Chip } from "./primitives.js";
+import { dayLabel, mealLabel } from "../lib/days.js";
+import { Sheet, SearchField, SectionLabel, PrimaryButton, Chip } from "./primitives.js";
 import { DishRow } from "./DishRow.js";
 import { ReasonDialog } from "./ReasonDialog.js";
+
+// What the sheet will commit on submit: a library dish (auto-routed by its own
+// meal-time) or a custom free-text dish appended to a chosen meal. The custom
+// path carries no dish, only the typed label and the meal the user picks.
+type Choice =
+  | { kind: "library"; dish: Dish }
+  | { kind: "custom"; label: string; meal: MealTime | null };
 
 interface AddDishSheetProps {
   weekStart: string;
@@ -54,13 +65,14 @@ export function AddDishSheet({
   onClose,
 }: AddDishSheetProps) {
   const addDish = useMutation(anyApi.dayMutations.addDish);
+  const appendCustomDish = useMutation(anyApi.weekMutations.appendCustomDish);
   const [q, setQ] = useState<string>("");
   // The dynamic picker filter row. Unlike the old two-row layout (a meal
   // selector plus quality chips), this is one row whose pills are driven by what
   // the current results actually contain (see `pills` below). The meal-time
   // pills are real filters here because the pool spans both meal-times.
   const [filters, setFilters] = useState<PickerPill[]>([]);
-  const [chosen, setChosen] = useState<Dish | null>(null);
+  const [choice, setChoice] = useState<Choice | null>(null);
   const [inFlight, setInFlight] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -119,21 +131,59 @@ export function AddDishSheet({
         ? "No dish matches your search."
         : "No dish matches those filters.";
 
+  // Begin the custom-dish flow with the typed label. A custom dish has no
+  // meal-time of its own, so the destination is chosen here: if the day has a
+  // single addable meal (e.g. Saturday = lunch) it is routed there with no
+  // selector; if both are addable the meal stays null until the user picks one.
+  function startCustom() {
+    const meal = availableMeals.length === 1 ? availableMeals[0] : null;
+    setError(null);
+    setChoice({ kind: "custom", label: trimmedQuery, meal });
+  }
+
   async function handleSubmit(reason: string) {
-    if (!chosen || inFlight) return;
+    if (!choice || inFlight) return;
     setInFlight(true);
     setError(null);
-    // The chosen dish routes to its own meal-time's slot (spec decision 1): a
-    // breakfast dish lands in the breakfast slot, a lunch dish in the lunch
-    // slot. addablePool already guarantees the slot exists on this day.
-    const meal: MealTime = chosen.time === "Breakfast" ? "breakfast" : "lunch";
     try {
-      const result = (await addDish({
+      if (choice.kind === "library") {
+        // The chosen library dish routes to its own meal-time's slot (spec
+        // decision 1): a breakfast dish lands in the breakfast slot, a lunch
+        // dish in the lunch slot. addablePool already guarantees the slot exists
+        // on this day.
+        const meal: MealTime = choice.dish.time === "Breakfast" ? "breakfast" : "lunch";
+        const result = (await addDish({
+          author: identity,
+          weekStart,
+          day,
+          meal,
+          newDishId: choice.dish.id,
+          version,
+          reason,
+        })) as { ok: true; version: number; position: number } | { ok: false; reason: string };
+        if (result.ok) {
+          onDone();
+          return;
+        }
+        if (result.reason === "version-mismatch") {
+          setError("Someone just changed this week. Close and try again.");
+        } else if (result.reason === "dish-not-active-or-in-season") {
+          setError("That dish is not in season right now. Pick another.");
+        } else {
+          setError("Something is off. Close and try again.");
+        }
+        return;
+      }
+
+      // Custom dish: the meal was resolved before the reason dialog opened
+      // (auto-routed when the day has one addable meal, picked otherwise).
+      if (!choice.meal) return;
+      const result = (await appendCustomDish({
         author: identity,
         weekStart,
         day,
-        meal,
-        newDishId: chosen.id,
+        meal: choice.meal,
+        customLabel: choice.label,
         version,
         reason,
       })) as { ok: true; version: number; position: number } | { ok: false; reason: string };
@@ -143,28 +193,50 @@ export function AddDishSheet({
       }
       if (result.reason === "version-mismatch") {
         setError("Someone just changed this week. Close and try again.");
-      } else if (result.reason === "dish-not-active-or-in-season") {
-        setError("That dish is not in season right now. Pick another.");
       } else {
         setError("Something is off. Close and try again.");
       }
     } catch (err) {
-      console.error("addDish threw", err);
+      console.error("addDish/appendCustomDish threw", err);
       setError("Something is off. Close and try again.");
     } finally {
       setInFlight(false);
     }
   }
 
-  if (chosen) {
+  // Custom dish on a both-meals day: a minimal breakfast/lunch choice before the
+  // reason dialog. Once a meal is set this view falls through to the reason
+  // dialog below. Library dishes never reach here (they auto-route).
+  if (choice && choice.kind === "custom" && !choice.meal) {
+    return (
+      <Sheet onClose={() => (inFlight ? undefined : setChoice(null))} picker>
+        <div className="reason__title">Add &ldquo;{choice.label}&rdquo;</div>
+        <div className="reason__hint">Which meal on {dayLabel(day)}?</div>
+        <div className="custom-meal" role="group" aria-label="Meal">
+          {availableMeals.map((m) => (
+            <PrimaryButton
+              key={m}
+              className="custom-meal__choice"
+              onClick={() => setChoice({ ...choice, meal: m })}
+            >
+              {mealLabel(m)}
+            </PrimaryButton>
+          ))}
+        </div>
+      </Sheet>
+    );
+  }
+
+  if (choice) {
+    const title = choice.kind === "library" ? `Add ${choice.dish.name}` : `Add "${choice.label}"`;
     return (
       <ReasonDialog
-        title={`Add ${chosen.name}`}
+        title={title}
         submitLabel="Add dish"
         inFlight={inFlight}
         error={error}
         onSubmit={handleSubmit}
-        onClose={() => (inFlight ? undefined : setChosen(null))}
+        onClose={() => (inFlight ? undefined : setChoice(null))}
       />
     );
   }
@@ -172,8 +244,15 @@ export function AddDishSheet({
   return (
     <Sheet onClose={onClose} tall picker>
       <div className="reason__title">Add a dish</div>
-      <div className="reason__hint">To {dayLabel(day)}; pick from the library</div>
-      <SearchField value={q} onChange={setQ} placeholder="Search dishes" autoFocus />
+      <div className="reason__hint">
+        To {dayLabel(day)}; pick from the library or add a custom dish
+      </div>
+      <SearchField
+        value={q}
+        onChange={setQ}
+        placeholder="Search, or type a custom dish"
+        autoFocus
+      />
       {pills.length > 0 && (
         <div className="picker__filters" role="group" aria-label="Filters">
           {pills.map((f) => (
@@ -183,13 +262,23 @@ export function AddDishSheet({
           ))}
         </div>
       )}
+      {trimmedQuery.length > 0 && (
+        <button type="button" className="picker__custom" onClick={startCustom}>
+          Add &ldquo;{trimmedQuery}&rdquo; as a custom dish
+        </button>
+      )}
       {visible.length === 0 ? (
         <div className="picker__hint">{emptyMessage}</div>
       ) : (
         <div className="picker__results">
           <SectionLabel>Library dishes</SectionLabel>
           {visible.map((d) => (
-            <button key={d.id} type="button" className="picker__row" onClick={() => setChosen(d)}>
+            <button
+              key={d.id}
+              type="button"
+              className="picker__row"
+              onClick={() => setChoice({ kind: "library", dish: d })}
+            >
               <DishRow
                 pick={{
                   dishId: d.id,

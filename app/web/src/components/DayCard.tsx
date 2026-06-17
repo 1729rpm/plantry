@@ -34,7 +34,7 @@ function pickName(pick: DishPick): string {
   if (pick.dishId !== null) {
     return dishById(pick.dishId)?.name ?? "From the library";
   }
-  return "One off this week";
+  return "Custom dish";
 }
 
 // First two dish names across the day, in meal order (breakfast, lunch, fruit),

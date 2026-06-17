@@ -79,7 +79,7 @@ const SHORT_DAY_LABEL: Record<ShortDay, string> = {
 function pickName(pick: DishPick): string {
   if (pick.customLabel) return pick.customLabel;
   if (pick.dishId !== null) return dishById(pick.dishId)?.name ?? "From the library";
-  return "One off";
+  return "Custom dish";
 }
 
 export function buildShareDayModels(week: CurrentWeek): ShareDayModel[] {
