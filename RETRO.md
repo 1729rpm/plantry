@@ -80,3 +80,19 @@ run only reads entries appended since.
 - Impact: Each slice ends with a "confirm on real device / after deploy" residual that can be lost if only stated verbally.
 - Proposed level: process-doc (engineering.md §16: document what the crawl cannot verify headless, the seed-a-mock-week pattern, the crawl-after-preview-deploy rule, and a residual-check channel logged in the PR diagnosis card)
 - Status: fixed (PR #125) — engineering.md §16 now documents the three paths the crawl cannot close (a new slot type renders only against a seeded/mock week; a backend-dependent flow must be crawled after the preview Convex deploy is live; real-device and after-deploy checks), and the development.md §5 diagnosis card gains a Residual checks field so each open verification item travels with the PR.
+
+## 2026-06-18  Design-compare crawls were static-only until pushed to add behaviour
+- Area: verification
+- What happened: The first design-compare crawls (the Menu header and the past-day collapse) verified static rendering plus DOM assertions but not the behaviour of the new interactive affordances; the operator had to ask why the collapsed-day View action was never click-tested before a click-through was added. Later crawls (sheet close button, day-comment card, custom-dish add) then exercised the affordance end to end.
+- Recurrence: recurring (2x this session before corrected)
+- Impact: A crawl can report "looks right" while leaving a new control's behaviour unverified; an interactive element was nearly merged on a visual-only check.
+- Proposed level: process-doc (engineering.md §16 and the development.md §5 diagnosis card: the crawl exercises every new interactive affordance, clicking the control and asserting the resulting state, not only screenshotting it)
+- Status: open
+
+## 2026-06-18  A new write mutation can only be functionally tested by a live prod write
+- Area: verification
+- What happened: The new `appendCustomDish` mutation had no non-prod path to an end-to-end functional test. The dev Convex deployment is empty (no current week renders), so the UI crawl can exercise a new write only against the live prod week. The prod-write guard correctly blocked it pending explicit per-action approval, and once approved the test still had to append-then-delete to avoid leaving a junk dish on the live week. This is the sharper, new-mutation instance of the 2026-06-16 "verification is indirect" entry.
+- Recurrence: systemic (every new write mutation)
+- Impact: A new mutation's runtime correctness rests on deploy plus code-review unless the operator approves a live prod write, which also pollutes the live week unless manually cleaned up.
+- Proposed level: infra (a seeded non-prod Convex test backend or a designated disposable test week the crawl can write to) + process-doc (extend the engineering.md §16 seed-a-mock-week / crawl-after-deploy pattern to the new-mutation functional path)
+- Status: open
