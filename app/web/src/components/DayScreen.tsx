@@ -224,6 +224,8 @@ export function DayScreen({ day, identity, onBack }: DayScreenProps) {
           >
             Skip this day
           </button>
+
+          <DayCommentCard identity={identity} weekStart={weekStart} day={day} />
         </div>
       )}
 
@@ -361,5 +363,87 @@ function DayHeader({
         <div className="day-screen__sub">Changes apply to this week right away</div>
       </div>
     </div>
+  );
+}
+
+// Note for the weekly review. A record-only comment attached to this day: it
+// changes nothing in the week now, it queues for the slow loop and surfaces in
+// the Changes feed (docs/product.md §2, Principle 5). No required reason; the
+// note text is itself the content. Wraps the shared `addComment` mutation.
+// Ported from the Day editor's comment Card in
+// features/UI Improvements/DESIGN.md §3.
+function DayCommentCard({
+  identity,
+  weekStart,
+  day,
+}: {
+  identity: Identity;
+  weekStart: string;
+  day: ShortDay;
+}) {
+  const addComment = useMutation(anyApi.commentsMutations.addComment);
+  const [text, setText] = useState<string>("");
+  const [inFlight, setInFlight] = useState<boolean>(false);
+  const [queued, setQueued] = useState<boolean>(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const trimmed = text.trim();
+  const canSubmit = trimmed.length > 0 && !inFlight;
+
+  async function handlePost() {
+    if (!canSubmit) return;
+    setInFlight(true);
+    setError(null);
+    try {
+      await addComment({
+        author: identity,
+        attachedTo: { kind: "day", weekStart, day, dishId: null },
+        text: trimmed,
+      });
+      setText("");
+      setQueued(true);
+    } catch (err) {
+      console.error("addComment threw", err);
+      setError("Something is off. Try again.");
+    } finally {
+      setInFlight(false);
+    }
+  }
+
+  return (
+    <Card className="day-comment">
+      <SectionLabel>Note for the weekly review</SectionLabel>
+      <textarea
+        className="day-comment__text"
+        rows={3}
+        value={text}
+        aria-label="Note for the weekly review"
+        placeholder="Leave a comment about this day. It changes nothing now; it queues for the review."
+        onChange={(e) => {
+          setText(e.target.value);
+          if (queued) setQueued(false);
+          if (error) setError(null);
+        }}
+        disabled={inFlight}
+      />
+      {error && (
+        <p className="day-comment__error" role="alert">
+          {error}
+        </p>
+      )}
+      {queued && !error && (
+        <p className="day-comment__queued" role="status">
+          Queued for the review.
+        </p>
+      )}
+      <button
+        type="button"
+        className="day-comment__post"
+        disabled={!canSubmit}
+        onClick={handlePost}
+      >
+        {inFlight ? "Posting..." : "Post comment"}
+      </button>
+    </Card>
   );
 }
