@@ -348,6 +348,20 @@ export function Sheet({
         tabIndex={-1}
       >
         <div className="sheet__grabber" />
+        {/* Explicit close affordance. Calls the SAME onClose the scrim uses so it
+            unwinds through the unified back-stack (sheetHistory); never a second
+            dismissal path or history marker. Sits in the panel's top-right corner
+            above the scroll content. */}
+        <button type="button" className="sheet__close" aria-label="Close" onClick={onClose}>
+          <svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true" focusable="false">
+            <path
+              d="M4 4 L12 12 M12 4 L4 12"
+              stroke="currentColor"
+              strokeWidth="1.75"
+              strokeLinecap="round"
+            />
+          </svg>
+        </button>
         <div className="sheet__scroll">{children}</div>
       </div>
     </div>
