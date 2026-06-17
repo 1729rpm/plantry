@@ -14,7 +14,7 @@ Brief description in present tense, one to three sentences. Reference the PR.
 
 ## 2026-06-17 Re-allow day-level comment entry (product spec)
 
-`docs/product.md` re-introduces day-level comment entry to the day editor (§2 weekly loop, §6 scope): a free-text note about the day that changes nothing in the week and queues for the slow-loop review, record-only and with no required reason (Principle 5). It restores the spec stance that the earlier UI removal (#78) left without an affordance; the queued-comments backend (`addComment`, the `comments` table, and the Changes-tab render) already exists, so this is spec-only. The day-editor UI follows in a separate slice (Stream L). (#TBD)
+`docs/product.md` re-introduces day-level comment entry to the day editor (§2 weekly loop, §6 scope): a free-text note about the day that changes nothing in the week and queues for the slow-loop review, record-only and with no required reason (Principle 5). It restores the spec stance that the earlier UI removal (#78) left without an affordance; the queued-comments backend (`addComment`, the `comments` table, and the Changes-tab render) already exists, so this is spec-only. The day-editor UI follows in a separate slice (Stream L). (#138)
 
 ## 2026-06-17 Archive the first design handoff and its catch-up
 
