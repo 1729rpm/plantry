@@ -191,6 +191,151 @@ export const addCustomOneOff = mutation({
 });
 
 /**
+ * Appends a custom (free-text, not-in-library) dish as an extra dish to one
+ * (day, meal) slot of `currentWeek`. This is `addDish` (append + return the new
+ * position) carrying `addCustomOneOff`'s custom payload: it pushes a new pick
+ * `{ dishId: null, customLabel, source: "custom", ... }` onto `slot.dishes`
+ * rather than replacing a position. The captured label later feeds the slow loop
+ * to become a real library dish (`MAINTENANCE.md` §1.7).
+ *
+ * Signature:
+ *   appendCustomDish({
+ *     author: "rajat" | "tuhina",
+ *     weekStart: string,                     // ISO date of the Monday
+ *     day: "Mon" | "Tue" | "Wed" | "Thu" | "Fri" | "Sat",
+ *     meal: "breakfast" | "lunch",           // fruit is category-locked, no custom dish
+ *     customLabel: string,
+ *     version: number,                       // optimistic concurrency from caller
+ *     reason: string,                        // required, trimmed
+ *   }) => { ok: true; version: number; position: number }
+ *      | { ok: false; reason: "version-mismatch" | "no-current-week"
+ *                           | "no-such-slot" }
+ *
+ * Behavior mirrors `addDish` and `addCustomOneOff`:
+ *   - Validates `author` via `assertAuthor`; rejects with a `ConvexError` otherwise.
+ *   - Trims `customLabel`; empty -> ConvexError("customLabel must not be empty after trimming").
+ *   - Trims `reason`; empty -> ConvexError("reason must not be empty after trimming").
+ *   - Looks up `currentWeek` by `weekStart`; missing -> { ok: false, reason: "no-current-week" }.
+ *   - Optimistic version check; mismatch -> { ok: false, reason: "version-mismatch" }.
+ *   - Locates the `(day, meal)` slot; missing -> { ok: false, reason: "no-such-slot" }.
+ *   - PUSHES `{ dishId: null, customLabel: trimmed, source: "custom", author,
+ *     updatedAt: now }` onto `slot.dishes` (it does not replace, so there is no
+ *     `position` arg and no `no-such-position` failure); bumps `version`.
+ *   - No per-day cap check. The cap (`engine/src/cap.ts`) is enforced ONLY at
+ *     generation time; the fast loop is deliberately permissive (Principle 4),
+ *     and `addDish` already appends past it. Do not add a cap guard here.
+ *   - On success ALSO inserts a `manualChanges` row in the same transaction with
+ *     `changeKind: "custom"` and `before: { dishId: null, customLabel: null }`
+ *     (the append/null convention `addDish` uses, NOT a replaced pick), so the
+ *     slow loop must not read this row's `before` as "replaced X"
+ *     (`MAINTENANCE.md` §1). It renders as "Added {label}" in the Changes feed.
+ *   - Returns `{ ok: true, version: newVersion, position }` (position = new index).
+ */
+export const appendCustomDish = mutation({
+  args: {
+    author: v.string(),
+    weekStart: v.string(),
+    day: v.union(
+      v.literal("Mon"),
+      v.literal("Tue"),
+      v.literal("Wed"),
+      v.literal("Thu"),
+      v.literal("Fri"),
+      v.literal("Sat"),
+    ),
+    meal: v.union(v.literal("breakfast"), v.literal("lunch")),
+    customLabel: v.string(),
+    version: v.number(),
+    reason: v.string(),
+  },
+  handler: async (
+    ctx,
+    args,
+  ): Promise<
+    | { ok: true; version: number; position: number }
+    | {
+        ok: false;
+        reason: "version-mismatch" | "no-current-week" | "no-such-slot";
+      }
+  > => {
+    assertAuthor(args.author);
+    const trimmedLabel = args.customLabel.trim();
+    if (trimmedLabel.length === 0) {
+      throw new ConvexError("customLabel must not be empty after trimming");
+    }
+    const trimmedReason = args.reason.trim();
+    if (trimmedReason.length === 0) {
+      throw new ConvexError("reason must not be empty after trimming");
+    }
+
+    const week = await ctx.db
+      .query("currentWeek")
+      .withIndex("by_weekStart", (q) => q.eq("weekStart", args.weekStart))
+      .unique();
+    if (!week) {
+      return { ok: false, reason: "no-current-week" };
+    }
+    if (week.version !== args.version) {
+      return { ok: false, reason: "version-mismatch" };
+    }
+
+    const slots = week.slots as SlotShape[];
+    const slotIndex = slots.findIndex((s) => s.day === args.day && s.meal === args.meal);
+    if (slotIndex === -1) {
+      return { ok: false, reason: "no-such-slot" };
+    }
+
+    const slot = slots[slotIndex];
+    const now = Date.now();
+    const newPick: DishPickShape = {
+      dishId: null,
+      customLabel: trimmedLabel,
+      source: "custom",
+      author: args.author,
+      updatedAt: now,
+    };
+    const newDishes = [...slot.dishes, newPick];
+    const position = newDishes.length - 1;
+    const newSlot: SlotShape = { ...slot, dishes: newDishes };
+    const newSlots = [...slots];
+    newSlots[slotIndex] = newSlot;
+    const newVersion = week.version + 1;
+
+    await ctx.db.patch(week._id, {
+      slots: newSlots,
+      version: newVersion,
+    });
+
+    // Append-only manual-changes log, same Convex transaction as the patch above.
+    // `before` is the null entry (this is an append, not a replacement), so the
+    // slow loop must not infer "replaced X" from it (`MAINTENANCE.md` §1).
+    await ctx.db.insert("manualChanges", {
+      createdAt: now,
+      author: args.author,
+      weekStart: args.weekStart,
+      day: args.day,
+      meal: args.meal,
+      position,
+      changeKind: "custom",
+      before: {
+        dishId: null,
+        customLabel: null,
+      },
+      after: {
+        dishId: null,
+        customLabel: trimmedLabel,
+      },
+      reason: trimmedReason,
+      status: "queued",
+      resolvedAt: null,
+      resolvedPr: null,
+    });
+
+    return { ok: true, version: newVersion, position };
+  },
+});
+
+/**
  * Finalizes the current week: appends a `weekArchive` row mirroring the
  * `menu_history.md` format and flips `currentWeek.status` to `"final"`. On
  * finalize the week's dishes enter the historical record that drives the §4
