@@ -4,7 +4,7 @@ Read this first.
 
 ## What Plantry is
 
-A weekly meal planner for Rajat and Tuhina in Bangalore. A Progressive Web App reads a fixed dish library and a rules spec, generates a Mon-to-Sat menu (breakfast and lunch) every week, renders a shareable menu image and grocery list, and supports in-week dish swaps, custom one-offs, and queued comments. A separate slow loop turns accumulated comments into structural changes via human-approved pull requests.
+A weekly meal planner for Rajat and Tuhina in Bangalore. A Progressive Web App reads a fixed dish library and a rules spec, generates a Mon-to-Sat menu (breakfast and lunch) every week, renders a shareable menu image and grocery list, and supports in-week dish swaps, custom dishes, and queued comments. A separate slow loop turns accumulated comments into structural changes via human-approved pull requests.
 
 Full product spec: `docs/product.md`.
 
