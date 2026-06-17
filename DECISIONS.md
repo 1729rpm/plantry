@@ -19,6 +19,33 @@ Decisions Rajat must approve go in the "Open items" list in `features/phase2.md`
 
 ---
 
+## 2026-06-17 Fruit of the day stays a normal section (override the handoff's quieter FruitRow)
+
+**Stream:** UI Improvements (feature scoping; handoff override, removes the former item #5).
+**Context:** The `features/UI Improvements/` handoff (DESIGN.md §2) asks for a visually "quieter" Fruit of the day row: a soft swatch tile instead of a photo, an "In season" meta line, and a Swap link. Rajat reviewed it and directed that Fruit of the day needs no special handling beyond the other sections; the only fruit-specific behaviour is that replacing a fruit limits the picker results to fruits (category-locked).
+**Options considered:** (a) build the handoff's quieter FruitRow primitive; (b) keep fruit rendering as a normal `DishRow` section and rely on the existing category-locked fruit picker.
+**Chosen:** (b). The live app already renders fruit through the same meal loop as breakfast/lunch (normal `DishRow`, real photo) and already category-locks the fruit-replace picker to the in-season Category=Fruit pool (`SwapPickerSheet.tsx:75`, engine `dish-not-fruit` guard), so both of Rajat's requirements already hold and there is nothing to build. The handoff's quieter-FruitRow spec is dropped, not implemented. This override is recorded so the next Claude Design commission does not reintroduce it.
+**Reversibility:** trivial; no code changed. Re-scoping a FruitRow later is a fresh slice if ever wanted.
+**Right-size check (per `docs/product.md` §4):** problem size is "design asks for a treatment we do not want"; fix level is scope removal plus a recorded override, no code or data change; generality: the override is logged for the design contract so the divergence persists across future handoffs.
+
+## 2026-06-17 Reframe the "one-off" as a manual dish addition that feeds the library
+
+**Stream:** UI Improvements (feature scoping; gated item #4, Stream M + Phase-0 G2).
+**Context:** The `features/UI Improvements/` handoff asks for a custom one-off to be appendable as an extra dish, not only a position replacement, which reverses `docs/product.md` §7. In scoping, Rajat reframed the concept entirely: a "one-off" should not be a throwaway free-text entry excluded from history. It is a manual dish addition for when the user wants a dish that is not in the library yet; it should feed the slow loop, which adds the dish to the library. The "one-off" name is misleading.
+**Options considered:** (a) build the handoff literally (append a free-text one-off as an extra dish, still excluded from history); (b) reframe it as a manual dish addition that queues to the slow loop and becomes a real library dish on approval, renamed to customer-first copy.
+**Chosen:** (b), with the user-facing copy **"Add a custom dish"** (row marker "Custom dish"), chosen by Rajat from four options. The fast-loop capture stays lightweight (name, day, meal, required reason); the slow loop enriches it (cuisine, macros, recipe) via the `ADDING-DISHES.md` playbook and promotes it to the library. This turns a misleading "add" signal into a real library-growth path and keeps the fast loop simple. Routed through the slow loop: `docs/product.md` §7 (drop the out-of-scope stance) and §6 (history exclusion holds only until promotion), `docs/engine.md` (per-day item cap covers the appended dish), `MAINTENANCE.md` (slow loop treats a custom-dish add as a library candidate), plus a new Convex append mutation. Not yet shipped; Phase-0 G2 lands the spec and backend before Stream M's UI.
+**Reversibility:** moderate. The rename and the UI affordance are easily reverted; the product-spec reversal and the new mutation are a deliberate scope change that the slow loop and human review gate.
+**Right-size check (per `docs/product.md` §4):** problem size is structural (a recurring "the dish I want is not in the library" gap that today's one-off papers over and then discards); fix level is a small pipeline (a lightweight fast-loop capture plus an existing slow-loop enrichment path), not a new cross-cutting rule; generality: every manual addition becomes a reviewable library candidate, so the library grows from real use instead of accumulating dead one-off labels.
+
+## 2026-06-17 Re-allow day-level comment entry in the UI
+
+**Stream:** UI Improvements (feature scoping; gated item #3, Stream L + Phase-0 G1).
+**Context:** The `features/UI Improvements/` handoff reintroduces a "Note for the weekly review" field in the day editor (an always-visible textarea plus a Post comment pill). Day-level and dish-level comment entry were deliberately removed from the UI in PR #78, though the queued-comments backend (`commentsMutations.addComment`, the `comments` table, the Changes-tab render) was left intact.
+**Options considered:** (a) keep comment entry out of the UI (the post-#78 state); (b) restore day-level comment entry only, wired to the existing `addComment` mutation, leaving dish-level entry out.
+**Chosen:** (b), greenlit by Rajat. The backend already exists and validates, so this is a `docs/product.md` reconciliation (the spec's "no comment entry" stance) plus a small frontend slice; no schema change. The comment changes nothing in-session and queues for the slow loop, consistent with the two-loops principle. Routed through the slow loop as a docs change (Phase-0 G1) before Stream L's UI.
+**Reversibility:** trivial; the entry control is one card in the day editor, removable without touching the backend.
+**Right-size check (per `docs/product.md` §4):** problem size is a real missing affordance (users have no way to leave structured feedback in-app); fix level is a UI affordance over an existing mutation, not a new rule or table; generality: the day note reuses the queued-comment path the slow loop already reads.
+
 ## 2026-06-17 11:26 IST Exclude Category=Fruit from the generic breakfast/lunch picker pool
 
 **Stream:** picker-generic-search (S2, backend).
