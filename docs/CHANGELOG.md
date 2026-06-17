@@ -12,6 +12,14 @@ Brief description in present tense, one to three sentences. Reference the PR.
 
 ---
 
+## 2026-06-17 Collapse past days on the Menu (UI Improvements J2)
+
+Days before today collapse to a compact card: a date-number-only badge, a one-line glance of the day's first two dish names with a "+N more" tail (or "Skipped"), and a "View" pill that opens the same day editor as Edit. Today and upcoming days stay full; today's card carries the accentSoft border. Adds `dayStatus()` (a device-local calendar comparison, unit-tested) and rebrands the Menu loading and empty-state fallback headers to the Plantry wordmark. Frontend only. (#134)
+
+## 2026-06-17 Brand-led Menu header, change count moves to the Changes tab (UI Improvements J1)
+
+The Menu header leads with the Plantry serif wordmark and a full-month date subtitle ("June 15 to June 20 menu"); the in-header change-summary line is removed. The week's change count now lives on the Changes tab: its subtitle reads "{n} changes to this week's menu" (n excludes comments, falling back to the quiet zero-state line) and the Changes nav tab carries a matching count badge, hidden at zero. Adds `weekRangeLabelLong()`. Frontend only. (#133)
+
 ## 2026-06-17 Generic picker search with dynamic, result-driven filters (UI)
 
 The Add-a-dish and Replace pickers become one generic search over the active library. Add drops its Breakfast/Lunch selector and routes a chosen dish to the slot its own meal-time names (a breakfast dish lands in breakfast, a lunch dish in lunch); Replace surfaces cross-meal dishes, so a breakfast dish like Pav is now reachable from a lunch slot. Both sheets render a single filter row below the search bar whose pills (Breakfast, Lunch, Easy to cook, Healthy) appear only when the current results contain a matching dish and reset when the search text changes; the Fruit slot keeps its quality-only pills. Frontend only; carries the picker-filter lib helpers. (#131)
