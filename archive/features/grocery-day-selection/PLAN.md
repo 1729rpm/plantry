@@ -40,10 +40,14 @@ this session; ships as Stream A and is **reviewed by Rajat personally** (canonic
 
 | Stream | Scope | File lanes | Depends on | Status |
 |---|---|---|---|---|
-| **0 — docs/handoff** | Land the handoff folder + this PLAN, set CLAUDE.md "Currently building", add the DECISIONS grouping entry, eslint-ignore `features/**/*.{js,jsx}` | `features/design_handoff_grocery_day_selection/**`, `CLAUDE.md`, `DECISIONS.md`, `.github/workflows/ci.yml` (root allowlist if needed), `eslint.config.*` | — | not started |
-| **A — grocery grouping (data + engine)** | New group order, Fruit group, eliminate "Other", Pantry-last + fallback; schema enum; engine tests; docs §6/§3 + ingredients.md header prose | `engine/src/groceryList.ts`, `engine/src/data/schemas.ts`, `data/ingredients.md`, `engine/test/groceryList.test.ts`, `docs/engine.md` §6, `docs/product.md` §3 | — (disjoint from B/C) | not started |
-| **B — day selection (backend + frontend)** | `selectedDays` query arg; `DaySelect` chips; time-aware 2-day default (device clock, 11 AM rule); count/range subtitle + empty state; compact layout (Change 2) | `app/convex/groceryList.ts`, `app/web/src/components/GroceryScreen.tsx`, `app/web/src/index.css` (grocery + day-chip rule blocks only), `app/web/src/lib/days.ts` (additive helpers if needed) | C (shares index.css; B owns rebase), live `header-top-padding-safe-area` (`.screen__header`) | not started |
-| **C — compact past-day tiles (Change 3)** | Slimmer collapsed `DayCard`: bare date number, tighter padding, smaller View pill; keep label "View" | `app/web/src/components/DayCard.tsx`, `app/web/src/index.css` (`.day-card--collapsed`, `.date-badge--compact`, `.day-card__view` rule blocks only) | — | not started |
+| **0 — docs/handoff** | Land the handoff folder + this PLAN, set CLAUDE.md "Currently building", add the DECISIONS grouping entry, eslint-ignore `features/**/*.{js,jsx}` | `features/design_handoff_grocery_day_selection/**`, `CLAUDE.md`, `DECISIONS.md`, `.github/workflows/ci.yml` (root allowlist if needed), `eslint.config.*` | — | merged (#151) |
+| **A — grocery grouping (data + engine)** | New group order, Fruit group, eliminate "Other", Pantry-last + fallback; schema enum; engine tests; docs §6/§3 + ingredients.md header prose | `engine/src/groceryList.ts`, `engine/src/data/schemas.ts`, `data/ingredients.md`, `engine/test/groceryList.test.ts`, `docs/engine.md` §6, `docs/product.md` §3 | — (disjoint from B/C) | merged (#154) |
+| **B — day selection (backend + frontend)** | `selectedDays` query arg; `DaySelect` chips; time-aware 2-day default (device clock, 11 AM rule); count/range subtitle + empty state; compact layout (Change 2) | `app/convex/groceryList.ts`, `app/web/src/components/GroceryScreen.tsx`, `app/web/src/index.css` (grocery + day-chip rule blocks only), `app/web/src/lib/days.ts` (additive helpers if needed) | C (shares index.css; B owns rebase), live `header-top-padding-safe-area` (`.screen__header`) | merged — backend (#156) shipped first, frontend (#155) second |
+| **C — compact past-day tiles (Change 3)** | Slimmer collapsed `DayCard`: bare date number, tighter padding, smaller View pill; keep label "View" | `app/web/src/components/DayCard.tsx`, `app/web/src/index.css` (`.day-card--collapsed`, `.date-badge--compact`, `.day-card__view` rule blocks only) | — | merged (#152) |
+
+### Added in review
+
+- **App-level error boundary (#157)** — added during Stream B review as a deploy-safety measure (so the async Vercel/Convex deploy gap, or any future query/arg drift, degrades to a recoverable single-screen fallback instead of blanking the app). Not in the original stream table; shipped as its own PR.
 
 ### Lane / hotspot notes
 

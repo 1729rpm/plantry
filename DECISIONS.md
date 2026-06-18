@@ -601,3 +601,16 @@ Worktrees: `../plantry-stream-A` (`feat/A-data-history`), `../plantry-stream-B` 
 **Why:** Rajat's intent is a buy list that reads in a few bounded sections; a generic "Other" both adds a section and hides miscategorised items. Folding fruits into their own group and everything else into Pantry achieves that with the existing catalog. Right-size: no new override mechanism before a real item needs it.
 **Scope rippled:** engine/src/groceryList.ts (GROUP_ORDER + Pantry fallback), engine/src/data/schemas.ts (enum), data/ingredients.md (Group column + header prose), docs/engine.md §6 + docs/product.md §3 (fixed-order spec), engine tests. Canonical-data change — reviewed by Rajat personally.
 **Reversibility:** moderate (enum + catalog rows + spec); revert restores "Other". **Right-size:** structural grouping change scoped to grocery-list presentation; no nutrition/engine-logic change (Group is a grocery-bucket label only).
+
+## 2026-06-18  Seasonal fruit deactivated, not deleted (history integrity)  (Grocery Day Selection, #154)
+**Context:** Specific fruit dishes now cover all seasons, so the generic "Seasonal fruit" (id 123) and its "Fruit" placeholder ingredient were to be retired. A clean delete fails the bake's `validateMenuHistoryAgainstLibrary` gate (8 history-seed rows record id 123).
+**Decision (Rajat):** deactivate (`active: No`) instead of deleting. The dish leaves every active-filtered pool (never appears in a menu/Explore/swap again) while the library still resolves id 123, keeping the history seed valid. The dish file, photo, and "Fruit" ingredient row remain. Season coverage holds (Banana + Papaya stay all-season). Active count -1.
+**Reversibility:** trivial (one field). **Right-size:** retire-from-menu via the existing active gate, no history rewrite.
+
+## 2026-06-18  Grocery day-selection shipped backend-first + app error boundary (deploy safety)  (#156, #155, #157)
+**Context:** The new optional `selectedDays` arg on `getGroceryList` is backward-compatible, but Vercel (frontend) and Convex (backend) deploy asynchronously; with no error boundary, the frontend reaching prod before the Convex deploy finished would crash the whole app to a blank screen during the deploy gap.
+**Decision (Rajat):** split the Convex arg into its own PR (#156), merged and deployed FIRST, then the frontend (#155) - eliminating the window; AND add an app-level error boundary (#157) so any future query/arg drift degrades to a recoverable single-screen fallback rather than blanking the app. Matches the repo backend-first pattern (G2->M, S2->S1).
+**Right-size:** the split alone closes this window; the boundary is general future protection.
+
+## 2026-06-18  Collapsed "View" pill accepted below the 44px tap floor  (#152)
+**Decision (Rajat):** the compact past-day "View" pill ships at 28px height (53px wide) per the handoff - a deliberately de-emphasized affordance on finished days, below the usual 44px tap-target floor. Accepted because past days intentionally recede and the pill is horizontally comfortable. Real-iPhone sign-off pending.

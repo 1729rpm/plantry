@@ -12,6 +12,30 @@ Brief description in present tense, one to three sentences. Reference the PR.
 
 ---
 
+## 2026-06-18 App-level error boundary degrades a screen crash gracefully
+
+An app-level error boundary wraps the screen surface, so an unhandled error on any screen degrades to a recoverable fallback (the tab bar survives and the user can switch tabs or retry) instead of blanking the whole app. Frontend only. (#157)
+
+## 2026-06-18 Grocery buy list is now day-selected (frontend)
+
+The Grocery screen gains a day chooser: the household picks which upcoming days to order for and the list totals exactly those days. The default is time-aware off the device clock (today + tomorrow before 11 AM, tomorrow + day-after from 11 AM). Renders in the compact layout so the day chooser and the list read in one glance. Calls the new `selectedDays` arg on `getGroceryList`. Frontend only. (#155)
+
+## 2026-06-18 Day-selected grocery list (backend selectedDays arg)
+
+`getGroceryList` gains an optional `selectedDays` arg so the buy list totals exactly the chosen upcoming days instead of the full week. Backward-compatible (omitting it preserves the prior whole-week behavior); shipped and deployed backend-first, ahead of the frontend, so the new arg exists in prod before any client requests it. Convex only. (#156)
+
+## 2026-06-18 Grocery groups restructured; generic Seasonal fruit deactivated
+
+The grocery list group order becomes `Proteins and Dairy · Fruit · Vegetables · Aromatics and Herbs · Pantry`: Fruit is its own group, the "Other" catch-all is removed, and Pantry renders last and is the fallback bucket for any ungrouped ingredient. The generic "Seasonal fruit" dish (id 123) is deactivated (`active: No`), so it is retired from menus, Explore, and swaps while the library still resolves id 123 for the history seed; specific fruit dishes now cover every season. Structural canonical-data + engine + spec change. (#154)
+
+## 2026-06-18 Menu home: past days render as compact collapsed tiles
+
+Collapsed past-day cards on the Menu render as slimmer compact tiles (bare date number, tighter padding, smaller "View" pill), so finished days recede visually. Frontend only. (#152)
+
+## 2026-06-18 Grocery Day Selection feature baseline / handoff
+
+Lands the Grocery Day Selection + Compact Passes design handoff and the EM stream-state plan, sets the CLAUDE.md "Currently building" line, and records the grouping decision. Docs / housekeeping baseline for the feature. (#151)
+
 ## 2026-06-18 Run the app/web test suite in CI; fix stale Pav meal-time tests
 
 CI now runs `npm test --workspace @plantry/web` as a `Test web` step alongside the engine suite, so the frontend vitest tests (previously never run in CI) are gated on every PR and can no longer rot silently. Fixes the two `app/web/test/library.test.ts` `addableMeals`-gating tests that hard-coded Pav (id 281) as a breakfast dish and broke on the #143 Pav-to-lunch flip, rewriting them as property-based assertions on the gating invariant (the pool is non-empty, every dish matches the requested meal, and no other-meal dish leaks through) so no single dish id can rot them again. Data left correct at lunch; CI config and test logic only. (#150)
