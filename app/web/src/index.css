@@ -115,8 +115,13 @@ input {
      iPhone's side safe area (env(...) is 0 on Android and most upright phones,
      so this is a no-op there). Vertical and horizontal are split into longhand
      so the horizontal value never sits in a shorthand with env() (see
-     --pt-gutter note in :root). */
-  padding-top: 54px;
+     --pt-gutter note in :root). Top padding lands exactly 24px below whatever
+     the device reserves at the very top (status bar / notch / display cutout):
+     env(safe-area-inset-top) is that reserved strip and is 0 on plain browsers,
+     so this degrades to a clean 24px there (was a fixed 54px). Kept as a
+     standalone longhand, never folded into a padding shorthand, for the same
+     env()-in-shorthand reason. */
+  padding-top: calc(env(safe-area-inset-top, 0px) + 24px);
   padding-bottom: 12px;
   padding-left: max(var(--pt-gutter), env(safe-area-inset-left, 0px));
   padding-right: max(var(--pt-gutter), env(safe-area-inset-right, 0px));
@@ -941,7 +946,8 @@ input {
 /* Day screen (the editing family entry, shown over the Menu tab)      */
 /* ------------------------------------------------------------------ */
 .day-screen__header {
-  padding-top: 54px;
+  /* 24px below the top safe-area inset, matching .screen__header (was 54px). */
+  padding-top: calc(env(safe-area-inset-top, 0px) + 24px);
   padding-bottom: 10px;
   padding-left: max(var(--pt-gutter), env(safe-area-inset-left, 0px));
   padding-right: max(var(--pt-gutter), env(safe-area-inset-right, 0px));
