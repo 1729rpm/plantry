@@ -12,6 +12,14 @@ Brief description in present tense, one to three sentences. Reference the PR.
 
 ---
 
+## 2026-06-18 Anchor header top padding to the safe-area inset
+
+Both top headers replace a fixed `padding-top: 54px` with `calc(env(safe-area-inset-top, 0px) + 24px)`, so every device shows exactly 24px below whatever it reserves at the very top (status bar, notch, Dynamic Island, display cutout) and degrades to a clean 24px on browsers with no top inset. `viewport-fit=cover` (already set) makes `env(safe-area-inset-top)` resolve to the real reserved strip. The shared `.screen__header` rule covers all four tab screens (Menu, Explore, Changes, Grocery); `.day-screen__header` covers the day editor. Kept as a standalone longhand, never folded into a padding shorthand (the stylelint env()-in-shorthand guard). Frontend only. (#148)
+
+## 2026-06-18 Correct meal-time labels for Pav (lunch) and boiled eggs (breakfast)
+
+Flips two `time` fields so each dish reads and orders under the correct meal in the swap picker and Explore: `data/dishes/pav.md` Breakfast to Lunch and `data/dishes/boiled-eggs.md` Lunch to Breakfast. Data-only, with no engine rule (offered and declined), so neither dish auto-composes at its new meal: Pav leaves the breakfast Option C carb pool and the lunch-carb rule still reads only Chapati and Rice; boiled eggs leave the lunch Keto pool and breakfast has no Keto slot. Both stay reachable via swap and Explore, which is where the labels were wrong. Reverses the 2026-06-16 `Pav time:Breakfast` decision (#120/#123). Pool safety verified: 13 active Keto-lunch dishes and 15 active breakfast Option-C carbs remain, so nothing strands. (#143)
+
 ## 2026-06-17 Close out the UI Improvements feature
 
 Archives the UI Improvements design handoff and EM plan (`features/UI Improvements/` to `archive/features/UI Improvements/`, keeping `features/.gitkeep`) and resets the CLAUDE.md "Currently building" line to none, the last step of the feature. Per `claude-design.md`, between features the design reference reverts to the live app until the next handoff is commissioned. Docs / housekeeping only. (#142)
