@@ -29,7 +29,7 @@ Each handoff is a **wholesale replacement** of the previous handoff, not a delta
 - The new feature's screens and components in detail.
 - The entire app's updated final state with the feature integrated — every screen, every primitive, the shareable menu image (PNG) layout, including the surfaces the feature did not touch.
 
-The folder lands at `features/<feature name>/` (the repo's active-feature location, e.g. `features/UI Improvements/`), named for the feature the operator commissioned. It supersedes the previous handoff folder wholesale; the operator removes or archives the prior one. (Earlier handoffs lived in a single `design_handoff/` at the repo root; the handoff now ships as a feature folder under `features/` so it sits alongside the EM's feature spec.)
+The folder lands at `features/<feature name>/` (the repo's active-feature location, e.g. `features/UI Improvements/`), named for the feature the operator commissioned. It supersedes the previous handoff folder wholesale; the operator removes or archives the prior one. Shipping the handoff as a feature folder under `features/` sits it alongside the EM's feature spec.
 
 ## Output structure
 
