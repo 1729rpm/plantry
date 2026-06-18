@@ -28,7 +28,7 @@ Read order by task:
 
 ## Currently building
 
-> _none_
+> Grocery Day Selection + Compact Passes — see features/design_handoff_grocery_day_selection/PLAN.md
 
 When no feature is active, this line reads "_none_". It resets to `_none_` on feature close-out, when the last stream of a feature merges (`docs/development.md` §3 step 8).
 
