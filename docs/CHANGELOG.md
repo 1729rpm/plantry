@@ -12,6 +12,10 @@ Brief description in present tense, one to three sentences. Reference the PR.
 
 ---
 
+## 2026-06-18 Grocery card item rows align with their group label
+
+The item rows inside each grocery category card now left-align with the group label, and the dead space below the last row of each card is removed. The list (a `<ul>`) had kept the browser's default list indent and bottom margin, so every item name sat about 40px to the right of its label and each card carried extra padding at the bottom. Frontend only. (#165)
+
 ## 2026-06-18 Menu home: collapsed past-day cards use a chevron, not a "View" pill
 
 Each collapsed past-day card on the Menu home replaces its "View" text pill with a bare iOS-style right-chevron disclosure indicator at the row's right edge: a subtle gray chevron with no border or fill, the way a list row signals "tap to open". It stays a real button with the same tap target and an accessible "View {day}" label, and opens the same day editor; behavior is unchanged. Frontend only. (#160)
