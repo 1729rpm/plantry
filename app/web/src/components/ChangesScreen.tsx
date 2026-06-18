@@ -166,6 +166,39 @@ export function changeCount(changes: ManualChangeRow[]): number {
   return changes.length;
 }
 
+// The Changes nav-badge unread count. Unlike `changeCount` (the week summary the
+// subtitle shows), this is a notification counter: the number of menu edits made
+// by the OTHER user that the viewer has not yet seen. A row counts when its
+// `author` is not the viewer's `identity` AND its `createdAt` is strictly newer
+// than `lastSeenAt` (the high-water mark the viewer marked on their last visit to
+// the Changes tab). Self-authored rows never count; a row exactly at the marker
+// (`createdAt === lastSeenAt`) is already seen, so the boundary is exclusive.
+// `lastSeenAt` of 0 (never visited) counts every other-author row.
+export function unseenOtherCount(
+  changes: Pick<ManualChangeRow, "author" | "createdAt">[],
+  identity: Identity,
+  lastSeenAt: number,
+): number {
+  let count = 0;
+  for (const row of changes) {
+    if (row.author !== identity && row.createdAt > lastSeenAt) count += 1;
+  }
+  return count;
+}
+
+// The largest `createdAt` across the loaded feed, or 0 for an empty feed. Used as
+// the seen high-water mark when the viewer opens the Changes tab: it marks "the
+// newest thing present when I looked", which is robust to device/server clock
+// skew (it reuses the server timestamps already on the rows rather than reading
+// the device clock).
+export function maxCreatedAt(changes: Pick<ManualChangeRow, "createdAt">[]): number {
+  let max = 0;
+  for (const row of changes) {
+    if (row.createdAt > max) max = row.createdAt;
+  }
+  return max;
+}
+
 // The Changes-tab subtitle. With at least one edit this week it leads with the
 // count ("3 changes to this week's menu"); with none it keeps the quiet
 // zero-state line. Singular/plural on "change" so a single edit reads naturally.

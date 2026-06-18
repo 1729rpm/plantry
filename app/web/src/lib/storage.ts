@@ -11,6 +11,11 @@ const IDENTITY_KEY = "plantry:identity";
 // rather than crashing the render that expected the new shape.
 const CACHED_WEEK_KEY = "plantry:lastWeek:v2";
 const DEVICE_ID_KEY = "plantry:deviceId";
+// Per-identity high-water mark for the Changes nav-badge unread counter: the
+// largest manualChanges `createdAt` the viewer had already seen on the Changes
+// tab. Keyed by identity so a shared device tracks each person's seen-state
+// independently. See getChangesSeenAt / setChangesSeenAt below.
+const CHANGES_SEEN_AT_PREFIX = "plantry:changesSeenAt:";
 
 // Auth timeout: a week. Chosen because both phones live with their owner and
 // a personal household app doesn't need session security beyond that.
@@ -73,6 +78,21 @@ export function setIdentity(identity: Identity): void {
 
 export function clearIdentity(): void {
   safeRemove(IDENTITY_KEY);
+}
+
+// The largest manualChanges `createdAt` (a Convex server timestamp, ms) the
+// given identity has already seen on the Changes tab. Absent / unparseable
+// reads as 0, so pre-existing other-author changes count as unseen on first
+// open. Keyed per identity (CHANGES_SEEN_AT_PREFIX + identity).
+export function getChangesSeenAt(identity: Identity): number {
+  const raw = safeGet(CHANGES_SEEN_AT_PREFIX + identity);
+  if (!raw) return 0;
+  const parsed = Number(raw);
+  return Number.isFinite(parsed) ? parsed : 0;
+}
+
+export function setChangesSeenAt(identity: Identity, ms: number): void {
+  safeSet(CHANGES_SEEN_AT_PREFIX + identity, String(ms));
 }
 
 export function getCachedWeek(): CachedWeek | null {
