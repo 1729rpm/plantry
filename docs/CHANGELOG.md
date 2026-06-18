@@ -12,6 +12,14 @@ Brief description in present tense, one to three sentences. Reference the PR.
 
 ---
 
+## 2026-06-18 Run the app/web test suite in CI; fix stale Pav meal-time tests
+
+CI now runs `npm test --workspace @plantry/web` as a `Test web` step alongside the engine suite, so the frontend vitest tests (previously never run in CI) are gated on every PR and can no longer rot silently. Fixes the two `app/web/test/library.test.ts` `addableMeals`-gating tests that hard-coded Pav (id 281) as a breakfast dish and broke on the #143 Pav-to-lunch flip, rewriting them as property-based assertions on the gating invariant (the pool is non-empty, every dish matches the requested meal, and no other-meal dish leaks through) so no single dish id can rot them again. Data left correct at lunch; CI config and test logic only. (#150)
+
+## 2026-06-18 Changes nav badge becomes an unread counter
+
+The Changes tab badge now counts only this week's menu edits made by the other user that the viewer has not yet seen, instead of the never-clearing total of all edits. Opening the Changes tab marks the loaded feed seen at its newest server timestamp, which clears the badge; a later edit by the other user re-raises it; the viewer's own edits never count. The seen marker is stored per identity in local storage. The Changes subtitle and feed are unchanged. Frontend only. (#147)
+
 ## 2026-06-18 Anchor header top padding to the safe-area inset
 
 Both top headers replace a fixed `padding-top: 54px` with `calc(env(safe-area-inset-top, 0px) + 24px)`, so every device shows exactly 24px below whatever it reserves at the very top (status bar, notch, Dynamic Island, display cutout) and degrades to a clean 24px on browsers with no top inset. `viewport-fit=cover` (already set) makes `env(safe-area-inset-top)` resolve to the real reserved strip. The shared `.screen__header` rule covers all four tab screens (Menu, Explore, Changes, Grocery); `.day-screen__header` covers the day editor. Kept as a standalone longhand, never folded into a padding shorthand (the stylelint env()-in-shorthand guard). Frontend only. (#148)
