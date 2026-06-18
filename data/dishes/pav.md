@@ -2,7 +2,7 @@
 id: 281
 name: Pav
 category: Bread
-time: Breakfast
+time: Lunch
 tags: []
 primaryIngredient: Pav Bread
 preferred: No

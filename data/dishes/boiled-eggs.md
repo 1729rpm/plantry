@@ -2,7 +2,7 @@
 id: 30
 name: Boiled eggs
 category: Keto
-time: Lunch
+time: Breakfast
 tags: [HP]
 primaryIngredient: Egg
 preferred: Yes
