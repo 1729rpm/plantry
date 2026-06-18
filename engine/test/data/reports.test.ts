@@ -63,9 +63,9 @@ describe("coverageReport", () => {
         special: false,
       }, // carbs + fibre, no fat
       { ingredient: "Carrot", group: "Vegetables", unit: "g", special: false }, // relevant, no macros
-      // Not macro-relevant (aromatics / other), excluded from the denominator:
+      // Not macro-relevant (aromatics and herbs), excluded from the denominator:
       { ingredient: "Onion", group: "Aromatics and Herbs", unit: "g", special: false },
-      { ingredient: "Fruit", group: "Other", unit: "g", special: false },
+      { ingredient: "Mint Leaf", group: "Aromatics and Herbs", unit: "g", special: false },
     ];
     const cov = coverageReport([], catalog);
     expect(cov.macroRelevantCount).toBe(3);
@@ -123,13 +123,15 @@ describe("poolCoverageReport", () => {
     // The expansion-0 batch deepened this slot from 1 to 3 candidates
     // (Seasonal fruit, Banana bowl, Papaya bowl). The seasonal-fruits-7 batch
     // then added 7 dishes; for Summer it adds Mango bowl and Litchi bowl (both
-    // [Summer, Monsoon]), so the Summer Fruit pool is now 5. The report tracks
-    // live data; the assertion is the current floor, not the old thin baseline.
+    // [Summer, Monsoon]). The generic Seasonal fruit dish (id 123, seasons All)
+    // was later deactivated (active: No), so it leaves every in-season pool: the
+    // Summer Fruit pool is now 4. The report tracks live (active-filtered) data;
+    // the assertion is the current floor, not the old thin baseline.
     const { library } = loadLiveData();
     const pools = poolCoverageReport(library);
     const fruit = pools.find((p) => p.season === "Summer" && p.slot.includes("Fruit"));
     expect(fruit).toBeDefined();
-    expect(fruit!.count).toBe(5);
+    expect(fruit!.count).toBe(4);
   });
 });
 

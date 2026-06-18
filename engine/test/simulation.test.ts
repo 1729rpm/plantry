@@ -95,7 +95,7 @@ describe("forward simulation harness", () => {
 
       // §4 step 5 within-week recency (Cluster A): no non-exempt dish appears
       // 3+ times in any generated week. Only fruit-tagged dishes and lunch carbs
-      // (Chapati, Rice) are exempt and may recur (Seasonal fruit, Roti).
+      // (Chapati, Rice) are exempt and may recur (fruit-tagged dishes, Roti).
       const dishCounts = new Map<number, { count: number; dish: Dish }>();
       for (const day of week.days) {
         for (const slot of day.slots) {

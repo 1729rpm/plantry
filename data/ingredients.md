@@ -1,19 +1,22 @@
 # Ingredient Catalog
 
 One row per canonical ingredient. `Group` is the user-facing grocery-list
-bucket (fixed order: Proteins and Dairy, Pantry, Vegetables, Aromatics and
-Herbs, Other). `Unit` is the canonical measure (g/ml/pcs). `Pack Size`
-present marks a tracked ingredient (used by §6 Ingredient Consolidation and
-rounded up to whole packs on the buy list); blank marks an untracked staple
-bought by weight.
+bucket (fixed order: Proteins and Dairy, Fruit, Vegetables, Aromatics and
+Herbs, Pantry). There is no catch-all section: any ingredient without an
+explicit group falls to Pantry, which renders last. `Unit` is the canonical
+measure (g/ml/pcs). `Pack Size` present marks a tracked ingredient (used by §6
+Ingredient Consolidation and rounded up to whole packs on the buy list); blank
+marks an untracked staple bought by weight.
 
 `Grams per piece` applies only to `pcs`-unit ingredients (an egg is about
 50 g) so macro derivation can convert pieces to grams; blank on every other
 row. `Protein /100g`, `Carbs /100g`, `Fat /100g` and `Fiber /100g` power the
 derived dish macros, calories (Atwater), and the Healthy definition (engine.md
-Nutrition section); a blank cell reads as zero. Only macro-relevant rows (the
-Proteins and Dairy, Pantry and Vegetables groups) carry values; aromatics,
-herbs and the Other group may stay blank.
+Nutrition section); a blank cell reads as zero. The macro-relevant rows (the
+Proteins and Dairy, Pantry and Vegetables food groups) carry values; aromatics
+and herbs may stay blank. Fruit rows carry macros too (Banana, Mango and the
+rest have real values), but the Fruit group is kept out of the coverage-report
+denominator because the generic "Fruit" placeholder row legitimately has none.
 
 `Special` is `Yes` for an ingredient that needs special sourcing (not stocked
 by a regular Bangalore sabziwala/kirana, so a supermarket or specialty-store
@@ -34,13 +37,15 @@ Grouping judgment calls (institutional memory; do not silently re-bucket):
 - Cucumber: Vegetables. Eaten as a vegetable in salads.
 - Coconut Milk: Pantry. A shelf-stable tin/carton, bought rarely, not dairy.
 - Sprout: Pantry. Dry pulse pre-sprouted, slots with the other dry pulses.
-- Fruit: Other. A placeholder ingredient name for the "Seasonal fruit" dish
-  (id 123); it is not a specific item to put on a buy list, so Other keeps it
-  visible without forcing a wrong category.
+- Fruit is its own group. All fruits (Banana, the "Fruit" placeholder, Jamun,
+  Litchi, Mango, Papaya, Peach, Pineapple, Plum, Pomegranate) sit in the Fruit
+  group, rendered second after Proteins and Dairy. The "Fruit" placeholder
+  ingredient name serves the "Seasonal fruit" dish (id 123); it is not a
+  specific buy-list item, but the Fruit group keeps it visible.
 | Ingredient | Group | Unit | Pack Size | Grams per piece | Protein /100g | Carbs /100g | Fat /100g | Fiber /100g | Special |
 |------------|-------|------|-----------|-----------------|---------------|-------------|-----------|-------------|---------|
 | Avocado | Vegetables | g | | | 2 | 9 | 15 | 7 | |
-| Banana | Other | pcs | | 120 | 1.1 | 23 | 0.3 | 2.6 | |
+| Banana | Fruit | pcs | | 120 | 1.1 | 23 | 0.3 | 2.6 | |
 | Basil | Aromatics and Herbs | g | | | | | | | |
 | Bean Sprout | Vegetables | g | | | 3 | 6 | 0.2 | 1.8 | |
 | Bhindi | Vegetables | g | | | 1.9 | 7 | 0.2 | 3.2 | |
@@ -75,20 +80,20 @@ Grouping judgment calls (institutional memory; do not silently re-bucket):
 | Fish | Proteins and Dairy | g | 500 g | | 20 | 0 | 5 | 0 | |
 | Flattened Rice | Pantry | g | | | 7 | 77 | 1.2 | 2.4 | |
 | French Bean | Vegetables | g | | | 1.8 | 7 | 0.2 | 2.7 | |
-| Fruit | Other | pcs | | | | | | | |
+| Fruit | Fruit | pcs | | | | | | | |
 | Garlic | Aromatics and Herbs | g | | | | | | | |
 | Ginger | Aromatics and Herbs | g | | | | | | | |
 | Gochujang | Pantry | g | | | 6 | 35 | 2 | 4 | Yes |
 | Green Chilli | Aromatics and Herbs | pcs | | 5 | | | | | |
 | Green Pea | Pantry | g | | | 5 | 14 | 0.4 | 5 | |
 | Honey | Pantry | g | | | 0.3 | 82 | 0 | 0.2 | |
-| Jamun | Other | g | | | 0.7 | 14 | 0.2 | 0.6 | |
+| Jamun | Fruit | g | | | 0.7 | 14 | 0.2 | 0.6 | |
 | Kidney Bean | Pantry | g | | | 24 | 60 | 0.8 | 15 | |
 | Lemon | Aromatics and Herbs | pcs | | 60 | | | | | |
 | Lemongrass | Aromatics and Herbs | g | | | | | | | |
 | Lettuce | Vegetables | g | 100 g | | 1.4 | 3 | 0.2 | 1.3 | |
-| Litchi | Other | g | | | 0.8 | 16.5 | 0.4 | 1.3 | |
-| Mango | Other | g | | | 0.8 | 15 | 0.4 | 1.6 | |
+| Litchi | Fruit | g | | | 0.8 | 16.5 | 0.4 | 1.3 | |
+| Mango | Fruit | g | | | 0.8 | 15 | 0.4 | 1.6 | |
 | Masoor Dal | Pantry | g | | | 25 | 60 | 1.1 | 11 | |
 | Milk | Proteins and Dairy | ml | | | 3.4 | 5 | 3.3 | 0 | |
 | Mint Leaf | Aromatics and Herbs | g | | | | | | | |
@@ -101,16 +106,16 @@ Grouping judgment calls (institutional memory; do not silently re-bucket):
 | Oats | Pantry | g | | | 13 | 67 | 7 | 10 | |
 | Olive Oil | Pantry | ml | | | 0 | 0 | 100 | 0 | |
 | Onion | Aromatics and Herbs | g | | | | | | | |
-| Papaya | Other | g | | | 0.5 | 11 | 0.3 | 1.7 | |
+| Papaya | Fruit | g | | | 0.5 | 11 | 0.3 | 1.7 | |
 | Paneer | Proteins and Dairy | g | 200 g | | 18 | 4 | 20 | 0 | |
 | Parsley | Aromatics and Herbs | g | | | 3 | 6 | 0.8 | 3.3 | Yes |
 | Pasta | Pantry | g | | | 13 | 75 | 1.5 | 3.2 | |
 | Pav Bread | Pantry | pcs | | 40 | 8 | 52 | 3.5 | 2.5 | |
-| Peach | Other | g | | | 0.9 | 9.5 | 0.3 | 1.5 | |
+| Peach | Fruit | g | | | 0.9 | 9.5 | 0.3 | 1.5 | |
 | Peanut | Pantry | g | | | 26 | 16 | 49 | 8 | |
-| Pineapple | Other | g | | | 0.5 | 13 | 0.1 | 1.4 | |
-| Plum | Other | g | | | 0.7 | 11.4 | 0.3 | 1.4 | |
-| Pomegranate | Other | g | | | 1.7 | 18.7 | 1.2 | 4 | |
+| Pineapple | Fruit | g | | | 0.5 | 13 | 0.1 | 1.4 | |
+| Plum | Fruit | g | | | 0.7 | 11.4 | 0.3 | 1.4 | |
+| Pomegranate | Fruit | g | | | 1.7 | 18.7 | 1.2 | 4 | |
 | Pomegranate Molasses | Pantry | ml | | | 0 | 70 | 0 | 0 | Yes |
 | Potato | Vegetables | g | | | 2 | 17 | 0.1 | 2.2 | |
 | Prawn | Proteins and Dairy | g | 500 g | | 20 | 0 | 1.7 | 0 | |

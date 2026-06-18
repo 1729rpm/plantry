@@ -224,7 +224,10 @@ const ALL_SEASONS: readonly Season[] = ["Summer", "Monsoon", "Winter"];
  * (design-revamp §1.1: "spices and aromatics can stay blank forever, protein
  * sources and staples cannot"). Heuristic, reporting-only: rows in the food
  * groups (Proteins and Dairy, Pantry, Vegetables) are macro-relevant; Aromatics
- * and Herbs and Other are not. Tuning this set never blocks a build.
+ * and Herbs are not, and Fruit is excluded from the coverage denominator too:
+ * its rows mostly carry macros, but the "Fruit" placeholder row (the Seasonal
+ * fruit dish) legitimately has none, so forcing the group into the ratchet would
+ * be wrong. Tuning this set never blocks a build.
  */
 const MACRO_RELEVANT_GROUPS: ReadonlySet<GroceryGroup> = new Set<GroceryGroup>([
   "Proteins and Dairy",

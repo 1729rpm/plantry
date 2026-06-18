@@ -98,7 +98,7 @@ export function proteinFamily(dish: Dish): string {
  * in {Chapati, Rice}) are exempt from both step 1 (longest unused) and step 5
  * (within-week recency). They pass through with a neutral rank so neither step
  * reorders them relative to each other or to non-exempt dishes; this is what
- * lets Seasonal fruit recur Mon/Wed/Fri and Roti recur across lunches.
+ * lets fruit-tagged dishes recur Mon/Wed/Fri and Roti recur across lunches.
  */
 function isRecencyExempt(dish: Dish): boolean {
   if (dish.tags.includes("fruit")) return true;

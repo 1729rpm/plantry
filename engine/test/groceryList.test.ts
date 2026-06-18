@@ -4,9 +4,10 @@ import type { CatalogIngredient, Dish, Ingredient, PackSizeHeader } from "../src
 
 // Test catalog: the grocery group + unit for every ingredient these tests use.
 // Mirrors the live ingredient catalog (data/ingredients.md Group column). An
-// ingredient deliberately absent here ("Dragonfruit") exercises the "Other"
-// fallback, which the live name-resolution validator makes unreachable for
-// real dishes but the aggregator still guards.
+// ingredient deliberately absent here ("Dragonfruit") exercises the Pantry
+// fallback (there is no "Other" catch-all any more), which the live
+// name-resolution validator makes unreachable for real dishes but the
+// aggregator still guards. "Mango" exercises the Fruit group.
 const CATALOG: CatalogIngredient[] = [
   {
     ingredient: "Paneer",
@@ -16,6 +17,7 @@ const CATALOG: CatalogIngredient[] = [
     special: false,
   },
   { ingredient: "Curd", group: "Proteins and Dairy", unit: "g", packSize: "500 g", special: false },
+  { ingredient: "Mango", group: "Fruit", unit: "g", special: false },
   { ingredient: "Mushroom", group: "Vegetables", unit: "g", packSize: "200 g", special: false },
   { ingredient: "Chickpea", group: "Pantry", unit: "g", special: false },
   { ingredient: "Coconut Milk", group: "Pantry", unit: "ml", special: false },
@@ -179,7 +181,7 @@ describe("aggregateGroceryList — docs/product.md §3 item 3", () => {
     expect(onion).not.toHaveProperty("packTotalGrams");
   });
 
-  it("falls back to 'Other' for an ingredient absent from GROCERY_GROUPS", () => {
+  it("falls back to Pantry for an ingredient absent from the catalog (no 'Other' catch-all)", () => {
     const dish = makeDish({ name: "Exotic" });
     const ingredients: Ingredient[] = [row(dish.id, dish.name, "Dragonfruit", 1, "pcs")];
     const result = aggregateGroceryList({
@@ -188,9 +190,11 @@ describe("aggregateGroceryList — docs/product.md §3 item 3", () => {
       packSizes: PACK_SIZES_ALL,
       catalog: CATALOG,
     });
-    const other = result.groups.find((g) => g.group === "Other");
-    expect(other).toBeDefined();
-    expect(other!.items[0]).toMatchObject({
+    // The eliminated "Other" group must never appear.
+    expect(result.groups.map((g) => g.group)).not.toContain("Other");
+    const pantry = result.groups.find((g) => g.group === "Pantry");
+    expect(pantry).toBeDefined();
+    expect(pantry!.items[0]).toMatchObject({
       ingredient: "Dragonfruit",
       quantity: 1,
       unit: "pcs",
@@ -198,14 +202,30 @@ describe("aggregateGroceryList — docs/product.md §3 item 3", () => {
     });
   });
 
-  it("emits groups in the §3 fixed order, omitting empty ones", () => {
+  it("places a fruit ingredient in the Fruit group", () => {
+    const dish = makeDish({ name: "Mango bowl", primaryIngredient: "Mango" });
+    const ingredients: Ingredient[] = [row(dish.id, dish.name, "Mango", 150)];
+    const result = aggregateGroceryList({
+      weekPicks: [dish],
+      ingredients,
+      packSizes: PACK_SIZES_ALL,
+      catalog: CATALOG,
+    });
+    const fruit = result.groups.find((g) => g.group === "Fruit");
+    expect(fruit).toBeDefined();
+    expect(fruit!.items.map((i) => i.ingredient)).toContain("Mango");
+  });
+
+  it("emits groups in the §3 fixed order (Fruit second, Pantry last), omitting empty ones", () => {
     const proteinDish = makeDish();
     const pantryDish = makeDish();
     const aromaticDish = makeDish();
     const ingredients: Ingredient[] = [
-      row(proteinDish.id, proteinDish.name, "Paneer", 100),
+      // Deliberately built in non-canonical order to prove the §3 ordering, not
+      // insertion order, drives the output.
       row(pantryDish.id, pantryDish.name, "Chickpea", 150),
       row(aromaticDish.id, aromaticDish.name, "Onion", 80),
+      row(proteinDish.id, proteinDish.name, "Paneer", 100),
     ];
     const result = aggregateGroceryList({
       weekPicks: [proteinDish, pantryDish, aromaticDish],
@@ -213,11 +233,39 @@ describe("aggregateGroceryList — docs/product.md §3 item 3", () => {
       packSizes: PACK_SIZES_ALL,
       catalog: CATALOG,
     });
+    // Pantry sinks to last even though it was the first ingredient added.
     expect(result.groups.map((g) => g.group)).toEqual([
       "Proteins and Dairy",
-      "Pantry",
       "Aromatics and Herbs",
+      "Pantry",
     ]);
+  });
+
+  it("orders all five groups Proteins and Dairy, Fruit, Vegetables, Aromatics and Herbs, Pantry", () => {
+    const dish = makeDish();
+    const ingredients: Ingredient[] = [
+      // Added out of order; the engine resorts to the fixed §3 order.
+      row(dish.id, dish.name, "Chickpea", 100), // Pantry
+      row(dish.id, dish.name, "Onion", 80), // Aromatics and Herbs
+      row(dish.id, dish.name, "Mushroom", 100), // Vegetables
+      row(dish.id, dish.name, "Mango", 100), // Fruit
+      row(dish.id, dish.name, "Paneer", 100), // Proteins and Dairy
+    ];
+    const result = aggregateGroceryList({
+      weekPicks: [dish],
+      ingredients,
+      packSizes: PACK_SIZES_ALL,
+      catalog: CATALOG,
+    });
+    expect(result.groups.map((g) => g.group)).toEqual([
+      "Proteins and Dairy",
+      "Fruit",
+      "Vegetables",
+      "Aromatics and Herbs",
+      "Pantry",
+    ]);
+    // The eliminated catch-all must never appear.
+    expect(result.groups.map((g) => g.group)).not.toContain("Other");
   });
 
   it("sorts items alphabetically inside each group", () => {
@@ -301,7 +349,7 @@ describe("aggregateGroceryList — docs/product.md §3 item 3", () => {
       row(d2.id, d2.name, "Chickpea", 150),
       row(d2.id, d2.name, "Lemon", 1, "pcs"),
       row(d2.id, d2.name, "Coconut Milk", 100, "ml"),
-      row(d2.id, d2.name, "Dragonfruit", 1, "pcs"), // falls into Other
+      row(d2.id, d2.name, "Dragonfruit", 1, "pcs"), // unknown -> Pantry fallback
     ];
     const result = aggregateGroceryList({
       weekPicks: [d1, d2],
