@@ -111,10 +111,10 @@ export type PackSizeHeader = z.infer<typeof PackSizeHeaderSchema>;
  */
 export const GroceryGroupSchema = z.enum([
   "Proteins and Dairy",
-  "Pantry",
+  "Fruit",
   "Vegetables",
   "Aromatics and Herbs",
-  "Other",
+  "Pantry",
 ]);
 export type GroceryGroup = z.infer<typeof GroceryGroupSchema>;
 
