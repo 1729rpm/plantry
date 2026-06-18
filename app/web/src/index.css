@@ -805,6 +805,25 @@ input {
   margin-bottom: 6px;
 }
 
+/* Error-boundary fallback. Reuses .empty-state for the calm centered copy, then
+   adds flex so the card fills the screen region above the tab bar and centers,
+   and caps the Reload button so .btn-primary's full width does not stretch edge
+   to edge. Self-contained: no token changes, no other rule touched. */
+.error-fallback {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+
+.error-fallback__reload {
+  width: auto;
+  min-width: 160px;
+  margin-top: 8px;
+}
+
 .offline-banner {
   margin-top: 0;
   margin-bottom: 12px;
