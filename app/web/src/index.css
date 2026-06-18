@@ -328,21 +328,6 @@ input {
   color: var(--pt-sub);
 }
 
-/* Compact badge for a collapsed (past) day: the date number only, no weekday
-   or month. Narrower than the full badge so the collapsed row reads as one
-   quiet line. */
-.date-badge--compact {
-  width: 34px;
-  padding-top: 0;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.date-badge--compact .date-badge__num {
-  font-size: 22px;
-}
-
 /* Card surface */
 .card {
   background: var(--pt-surface);
@@ -364,19 +349,34 @@ input {
   border-color: var(--pt-accent-soft);
 }
 
-/* Collapsed card for a past day: a low row on the bg surface (quieter than the
-   full surface card), the compact date badge, a one-line glance, and the View
-   pill. Centred so the short badge, glance, and pill align on one line. */
+/* Collapsed card for a past day: a slim row on the bg surface (quieter than the
+   full surface card), a bare date number, a one-line glance, and the View pill.
+   Tighter padding and gap than the full card so finished days recede. Centred so
+   the date, glance, and pill align on one line. */
 .day-card--collapsed {
-  padding: 10px 14px;
+  padding: 5px 12px;
+  gap: 10px;
   background: var(--pt-bg);
   align-items: center;
+}
+
+/* Bare serif date number for the collapsed card: no badge chrome (no weekday or
+   month), just a quiet number narrow enough to keep the row to one line. */
+.day-card__date {
+  width: 26px;
+  flex-shrink: 0;
+  text-align: center;
+  font-family: var(--pt-font-serif);
+  font-size: 16px;
+  font-weight: 600;
+  line-height: 1;
+  color: var(--pt-sub);
 }
 
 .day-card__glance {
   flex: 1;
   min-width: 0;
-  font-size: 13.5px;
+  font-size: 13px;
   color: var(--pt-sub);
   font-family: var(--pt-font-sans);
   overflow: hidden;
@@ -384,22 +384,22 @@ input {
   white-space: nowrap;
 }
 
-/* View pill: a quiet outlined control (sub-color text, line border) that opens
-   the same day editor as Edit. */
+/* View pill: a quiet outlined control (sub-color text, line border, surface
+   fill) that opens the same day editor as Edit. */
 .day-card__view {
   flex-shrink: 0;
-  font-size: 12.5px;
+  font-size: 12px;
   font-weight: 600;
   color: var(--pt-sub);
-  background: transparent;
+  background: var(--pt-surface);
   border: 1px solid var(--pt-line);
   border-radius: var(--pt-radius-pill);
-  padding: 6px 14px;
+  padding: 4px 13px;
   font-family: var(--pt-font-sans);
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  min-height: 36px;
+  min-height: 28px;
 }
 
 .day-card__body {

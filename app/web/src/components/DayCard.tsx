@@ -2,7 +2,7 @@
 // design_handoff/hifi-primitives.jsx. A today or upcoming day renders the full
 // card: a date badge, each non-empty meal as a labelled list of dish rows, and
 // an Edit button that routes into the legacy editor. A past day renders a
-// collapsed card instead: a compact date-number badge, a one-line glance of the
+// collapsed card instead: a bare date number, a one-line glance of the
 // day's first two dish names, and a "View" pill that opens the same editor as
 // Edit. A skipped day shows its reason (full) or reads "Skipped" (collapsed).
 
@@ -64,9 +64,7 @@ export function DayCard({ model, weekStart, status, onEdit }: DayCardProps) {
     const glance = model.skipReason !== null ? "Skipped" : dishGlance(meals);
     return (
       <Card className="day-card day-card--collapsed">
-        <div className="date-badge date-badge--compact">
-          <div className="date-badge__num">{num}</div>
-        </div>
+        <div className="day-card__date">{num}</div>
         <div className="day-card__glance">{glance}</div>
         {onEdit && (
           <button
