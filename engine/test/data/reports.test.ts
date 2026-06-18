@@ -63,9 +63,9 @@ describe("coverageReport", () => {
         special: false,
       }, // carbs + fibre, no fat
       { ingredient: "Carrot", group: "Vegetables", unit: "g", special: false }, // relevant, no macros
-      // Not macro-relevant (aromatics / other), excluded from the denominator:
+      // Not macro-relevant (aromatics and herbs), excluded from the denominator:
       { ingredient: "Onion", group: "Aromatics and Herbs", unit: "g", special: false },
-      { ingredient: "Fruit", group: "Other", unit: "g", special: false },
+      { ingredient: "Mint Leaf", group: "Aromatics and Herbs", unit: "g", special: false },
     ];
     const cov = coverageReport([], catalog);
     expect(cov.macroRelevantCount).toBe(3);
