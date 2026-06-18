@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { useMutation, useQuery } from "convex/react";
 import { anyApi } from "convex/server";
-import { changeCount } from "./components/ChangesScreen.js";
+import { maxCreatedAt, unseenOtherCount } from "./components/ChangesScreen.js";
 import { PasscodeGate } from "./components/PasscodeGate.js";
 import { IdentityPicker } from "./components/IdentityPicker.js";
 import { MenuScreen } from "./components/MenuScreen.js";
@@ -14,10 +14,12 @@ import { TabBar, type TabKey } from "./components/primitives.js";
 import { viewHistory, type ViewState } from "./lib/backStack.js";
 import {
   clearIdentity,
+  getChangesSeenAt,
   getIdentity,
   getOrCreateDeviceId,
   isAuthValid,
   markAuthPassed,
+  setChangesSeenAt,
   setIdentity,
 } from "./lib/storage.js";
 import type { Identity, ShortDay } from "./lib/types.js";
@@ -37,10 +39,12 @@ export function App() {
   const [exitPrompt, setExitPrompt] = useState<boolean>(false);
   const setUserProfile = useMutation(anyApi.users.setUserProfile);
 
-  // The Changes nav badge count: this week's menu edits (the manualChanges
-  // feed). We resolve the current week here so the badge stays live on every
-  // tab, not only when the Changes screen is mounted. "skip" holds the activity
-  // query until the week is known; until both resolve the count is 0 (no badge).
+  // The Changes nav badge: an unread/notification counter, not a week total. It
+  // counts this week's menu edits (the manualChanges feed) made by the OTHER
+  // user that the viewer has not yet seen. We resolve the current week here so
+  // the badge stays live on every tab, not only when the Changes screen is
+  // mounted. "skip" holds the activity query until the week is known; until both
+  // resolve the feed is treated as empty (no badge).
   const currentWeek = useQuery(anyApi.queries.week.getCurrentWeek, {}) as
     | { weekStart: string }
     | null
@@ -49,8 +53,38 @@ export function App() {
   const weekChanges = useQuery(
     anyApi.queries.activity.listManualChangesForWeek,
     weekStart ? { weekStart } : "skip",
-  ) as Parameters<typeof changeCount>[0] | undefined;
-  const changeBadgeCount = changeCount(weekChanges ?? []);
+  ) as Parameters<typeof unseenOtherCount>[0] | undefined;
+
+  // The seen high-water mark for the current identity. Seeded from localStorage
+  // on identity change; advanced to the newest loaded change while the viewer is
+  // on the Changes tab (see the mark-seen effect below). State (not a bare read)
+  // so advancing it re-renders the badge to 0 without a remount.
+  const [changesSeenAt, setChangesSeenAtState] = useState<number>(() => {
+    const who = getIdentity();
+    return who ? getChangesSeenAt(who) : 0;
+  });
+  useEffect(() => {
+    if (identity) setChangesSeenAtState(getChangesSeenAt(identity));
+  }, [identity]);
+
+  // Mark the loaded feed as seen while the viewer sits on the Changes tab: set
+  // the marker to the newest loaded change's `createdAt`. Reusing the server
+  // timestamp (not Date.now()) keeps the marker robust to device/server clock
+  // skew. Runs on entering the tab and whenever a new change arrives while the
+  // viewer watches the live feed, so the badge stays 0 in both cases. Only
+  // advances (never rewinds), and only persists/re-renders on a real change.
+  useEffect(() => {
+    if (tab !== "Changes" || !identity || weekChanges === undefined) return;
+    const highWater = maxCreatedAt(weekChanges);
+    if (highWater > changesSeenAt) {
+      setChangesSeenAt(identity, highWater);
+      setChangesSeenAtState(highWater);
+    }
+  }, [tab, identity, weekChanges, changesSeenAt]);
+
+  const changeBadgeCount = identity
+    ? unseenOtherCount(weekChanges ?? [], identity, changesSeenAt)
+    : 0;
 
   // Wire the single unified back-stack controller once. The controller owns the
   // ONE popstate listener; it calls back IN here to apply a popped view (Back
