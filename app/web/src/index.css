@@ -716,16 +716,6 @@ input {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  /* The 44px avatar button sizes this row 11px taller than the 33px wordmark
-     line-box; with the wordmark bottom-aligned (.menu__brand align-self:
-     flex-end, which holds the title->subtitle gap at 0), all 11px of that slack
-     sits above the wordmark, pushing the Menu top whitespace ~5.5px past the
-     other three tab screens. Pull the whole header block back up by half the
-     slack so the wordmark-top offset matches the pre-flex-end (centered) look
-     while the subtitle stays flush. The row top still sits ~18.5px below the
-     header's safe-area-inset top padding, so the avatar never clips the inset
-     and its 44px tap target is unchanged. */
-  margin-top: -5.5px;
 }
 
 /* Brand wordmark: the Plantry serif lockup at the top of the Menu screen. */
@@ -736,11 +726,6 @@ input {
   line-height: 1.1;
   white-space: nowrap;
   margin: 0;
-  /* Bottom-align the wordmark within the 44px head-row (sized by the centered
-     avatar button), so the subtitle sits flush beneath it and the Menu
-     title->subtitle gap matches the other three tab screens (0px) instead of
-     leaving the centered wordmark's row slack as an extra ~5.5px gap. */
-  align-self: flex-end;
 }
 
 /* Full-month date range beneath the wordmark, e.g. "June 15 to June 20 menu". */
@@ -750,6 +735,17 @@ input {
   margin-top: 0;
 }
 
+/* The avatar button is a 44px tap target, 11px taller than the 33px wordmark
+   line-box. Without correction it would size .menu__head-row to 44px, leaving
+   ~5.5px of slack above the (centered) wordmark and pushing the Menu title
+   ~5.5px lower than the other three tab screens. Collapse the avatar's
+   margin-box back to the 33px wordmark line-box with a negative block margin of
+   half the slack ((44 - 33) / 2 = 5.5px) on each edge: the row hugs the
+   wordmark, so the wordmark sits flush at the header top (offset 0, matching the
+   other three) and the subtitle stays flush (gap 0). The 44px border-box tap
+   target is unchanged; the avatar overflows ~5.5px symmetrically, staying
+   vertically centered on the wordmark. The 5.5px top overflow lands inside the
+   header's 24px top padding, so it never clips the safe-area inset. */
 .menu__switch {
   min-width: 44px;
   min-height: 44px;
@@ -757,6 +753,7 @@ input {
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
+  margin-block: -5.5px;
 }
 
 /* ------------------------------------------------------------------ */
