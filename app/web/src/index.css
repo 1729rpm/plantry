@@ -384,22 +384,16 @@ input {
   white-space: nowrap;
 }
 
-/* View pill: a quiet outlined control (sub-color text, line border, surface
-   fill) that opens the same day editor as Edit. */
+/* View chevron: a bare iOS-style right-chevron disclosure indicator (no pill
+   chrome) that opens the same day editor as Edit. */
 .day-card__view {
   flex-shrink: 0;
-  font-size: 12px;
-  font-weight: 600;
   color: var(--pt-sub);
-  background: var(--pt-surface);
-  border: 1px solid var(--pt-line);
-  border-radius: var(--pt-radius-pill);
-  padding: 4px 13px;
-  font-family: var(--pt-font-sans);
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  min-height: 28px;
+  min-height: 30px;
+  min-width: 30px;
 }
 
 .day-card__body {

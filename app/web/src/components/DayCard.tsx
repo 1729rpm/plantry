@@ -3,8 +3,9 @@
 // card: a date badge, each non-empty meal as a labelled list of dish rows, and
 // an Edit button that routes into the legacy editor. A past day renders a
 // collapsed card instead: a bare date number, a one-line glance of the
-// day's first two dish names, and a "View" pill that opens the same editor as
-// Edit. A skipped day shows its reason (full) or reads "Skipped" (collapsed).
+// day's first two dish names, and a bare right-chevron disclosure button that
+// opens the same editor as Edit. A skipped day shows its reason (full) or
+// reads "Skipped" (collapsed).
 
 import type { DishPick, ShortDay, WeekSlot } from "../lib/types.js";
 import { dayDate, dayLabel, type DayStatus, mealLabel, mealOrderIndex } from "../lib/days.js";
@@ -73,7 +74,16 @@ export function DayCard({ model, weekStart, status, onEdit }: DayCardProps) {
             aria-label={`View ${dayLabel(model.day)}`}
             onClick={onEdit}
           >
-            View
+            <svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true" focusable="false">
+              <path
+                d="M6 4 L11 9 L6 14"
+                stroke="currentColor"
+                fill="none"
+                strokeWidth="1.75"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              />
+            </svg>
           </button>
         )}
       </Card>
