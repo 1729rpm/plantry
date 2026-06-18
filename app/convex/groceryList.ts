@@ -14,10 +14,9 @@ import {
  * shape the future Swiggy MCP integration (per `docs/engineering.md` §13) will
  * consume.
  *
- * Per `docs/product.md` §3 item 3: groups in fixed order
- * (Proteins and Dairy, Pantry, Vegetables, Aromatics and Herbs, Other),
- * quantities aggregated across the week, tracked items rounded to the next
- * pack multiple. Pantry staples (flour, oil, salt, common spices, base rice)
+ * Per `docs/product.md` §3 item 3: groups in the catalog's fixed group order,
+ * quantities aggregated across the selected days, tracked items rounded to the
+ * next pack multiple. Pantry staples (flour, oil, salt, common spices, base rice)
  * are omitted unless a dish lists them explicitly. Here every ingredient that
  * a picked dish lists (in its `data/dishes/<slug>.md` Ingredients table) is
  * listed; the slow loop is the path that prunes an ingredient row out of a dish
@@ -36,6 +35,16 @@ import {
  * drops the skipped days before summing. When no days are skipped the output is
  * byte-identical to grouping all picks flat, so the current frontend (which
  * calls this query with only `{ weekStart }`) is unaffected.
+ *
+ * `selectedDays` (optional, short day names "Mon".."Sat") narrows the list to a
+ * household-chosen window. The Grocery screen lets the household pick which
+ * upcoming days to order for (a shopping run covers the next day or two, not the
+ * whole week), so when `selectedDays` is provided the query keeps only those
+ * days after grouping and dropping skips, then aggregates just that subset. When
+ * `selectedDays` is absent or undefined the behavior is the whole non-skipped
+ * week as before, so any caller that omits it (and the future Swiggy MCP) is
+ * unaffected. A `selectedDays` entry that is itself skipped or has no library
+ * dishes contributes nothing, so passing it is harmless.
  */
 
 type ShortDay = "Mon" | "Tue" | "Wed" | "Thu" | "Fri" | "Sat";
@@ -62,7 +71,10 @@ type SkippedDayShape = {
  * `getCurrentWeek` has returned null.
  */
 export const getGroceryList = query({
-  args: { weekStart: v.string() },
+  args: {
+    weekStart: v.string(),
+    selectedDays: v.optional(v.array(v.string())),
+  },
   handler: async (ctx, args): Promise<GroceryList> => {
     const week = await ctx.db
       .query("currentWeek")
@@ -87,10 +99,16 @@ export const getGroceryList = query({
         else dishesByDay.set(slot.day, [dish]);
       }
     }
-    const days: GroceryDayPicks[] = [...dishesByDay.entries()].map(([day, dishList]) => ({
-      day,
-      dishes: dishList,
-    }));
+    // When the household has chosen a window, keep only those days before
+    // summing; otherwise the whole grouped (non-skipped) week stands. The
+    // skip-aware drop still happens inside the engine aggregator below.
+    const selected = args.selectedDays ? new Set(args.selectedDays) : null;
+    const days: GroceryDayPicks[] = [...dishesByDay.entries()]
+      .filter(([day]) => selected === null || selected.has(day))
+      .map(([day, dishList]) => ({
+        day,
+        dishes: dishList,
+      }));
 
     // Skipped days drop out before summing. The list resets weekly with the
     // week document, so absent `skippedDays` (the common case) means none.
