@@ -131,13 +131,14 @@ input {
   font-family: var(--pt-font-serif);
   font-size: 30px;
   font-weight: 700;
+  line-height: 1.1;
   margin: 0;
 }
 
 .screen__subtitle {
   font-size: 14px;
   color: var(--pt-sub);
-  margin-top: 12px;
+  margin-top: 0;
 }
 
 .screen__list {
@@ -722,15 +723,21 @@ input {
   font-family: var(--pt-font-serif);
   font-size: 30px;
   font-weight: 700;
+  line-height: 1.1;
   white-space: nowrap;
   margin: 0;
+  /* Bottom-align the wordmark within the 44px head-row (sized by the centered
+     avatar button), so the subtitle sits flush beneath it and the Menu
+     title->subtitle gap matches the other three tab screens (0px) instead of
+     leaving the centered wordmark's row slack as an extra ~5.5px gap. */
+  align-self: flex-end;
 }
 
 /* Full-month date range beneath the wordmark, e.g. "June 15 to June 20 menu". */
 .menu__subtitle {
   font-size: 14px;
   color: var(--pt-sub);
-  margin-top: 12px;
+  margin-top: 0;
 }
 
 .menu__switch {
