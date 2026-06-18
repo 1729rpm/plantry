@@ -52,3 +52,6 @@ jobs:
 
       - name: Test engine
         run: npm test --workspace @plantry/engine
+
+      - name: Test web
+        run: npm test --workspace @plantry/web

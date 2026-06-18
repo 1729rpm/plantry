@@ -177,16 +177,26 @@ describe("addablePool — generic across meal-time, non-fruit, addableMeals-gate
 
   it("respects addableMeals: a lunch-only day excludes every breakfast dish", () => {
     // Saturday is lunch-only (decision 4): a breakfast dish has no slot to route
-    // to, so it must not appear. Pav (id 281) is the canonical breakfast carb.
+    // to, so it must not appear. Assert the gating invariant structurally rather
+    // than against a hard-coded dish id (a single dish's meal-time can flip; the
+    // invariant does not): the lunch-only pool is non-empty AND every dish in it
+    // is a lunch dish (i.e. no breakfast dish survives the gate).
     const lunchOnly = addablePool(WEEK, ["lunch"]);
+    expect(lunchOnly.length).toBeGreaterThan(0);
+    expect(lunchOnly.some((d) => d.time === "Lunch")).toBe(true);
     expect(lunchOnly.every((d) => d.time === "Lunch")).toBe(true);
-    expect(lunchOnly.some((d) => d.id === 281)).toBe(false); // Pav, a breakfast dish
+    expect(lunchOnly.some((d) => d.time === "Breakfast")).toBe(false);
   });
 
   it("respects addableMeals: a breakfast-only set excludes every lunch dish", () => {
+    // Symmetric to the lunch-only case: the breakfast-only pool is non-empty AND
+    // every dish in it is a breakfast dish, so no lunch dish leaks through the
+    // gate. Property-based, so a single dish's meal-time flip cannot rot it.
     const breakfastOnly = addablePool(WEEK, ["breakfast"]);
+    expect(breakfastOnly.length).toBeGreaterThan(0);
+    expect(breakfastOnly.some((d) => d.time === "Breakfast")).toBe(true);
     expect(breakfastOnly.every((d) => d.time === "Breakfast")).toBe(true);
-    expect(breakfastOnly.some((d) => d.id === 281)).toBe(true); // Pav is addable here
+    expect(breakfastOnly.some((d) => d.time === "Lunch")).toBe(false);
   });
 
   it("an empty addableMeals set yields an empty pool", () => {
