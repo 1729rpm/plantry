@@ -12,6 +12,14 @@ Brief description in present tense, one to three sentences. Reference the PR.
 
 ---
 
+## 2026-06-18 Menu home: collapsed past-day cards use a chevron, not a "View" pill
+
+Each collapsed past-day card on the Menu home replaces its "View" text pill with a bare iOS-style right-chevron disclosure indicator at the row's right edge: a subtle gray chevron with no border or fill, the way a list row signals "tap to open". It stays a real button with the same tap target and an accessible "View {day}" label, and opens the same day editor; behavior is unchanged. Frontend only. (#160)
+
+## 2026-06-18 Unified title and subtitle styling across the four tab screens
+
+The Menu, Explore, Grocery, and Changes screens now share one title treatment: a 30px/700 serif title with a 12px gap to a 14px subtitle, so the four bottom-nav screens read as one family instead of the Menu wordmark sitting larger than the rest. Frontend only. (#161)
+
 ## 2026-06-18 App-level error boundary degrades a screen crash gracefully
 
 An app-level error boundary wraps the screen surface, so an unhandled error on any screen degrades to a recoverable fallback (the tab bar survives and the user can switch tabs or retry) instead of blanking the whole app. Frontend only. (#157)
