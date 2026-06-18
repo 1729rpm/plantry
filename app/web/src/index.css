@@ -751,6 +751,122 @@ input {
 /* ------------------------------------------------------------------ */
 /* Grocery screen                                                      */
 /* ------------------------------------------------------------------ */
+
+/* The day chooser sits directly above the list (Change 2: compact layout, no
+   helper paragraph between chooser and list). The green "Order for" label then
+   the chip row. Horizontal padding floors at the gutter token and grows to clear
+   a notched iPhone's side safe area; split into longhand so the horizontal value
+   never sits in a shorthand with env() (see --pt-gutter note in :root). */
+.grocery-chooser {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding-top: 0;
+  padding-bottom: 14px;
+  padding-left: max(var(--pt-gutter), env(safe-area-inset-left, 0px));
+  padding-right: max(var(--pt-gutter), env(safe-area-inset-right, 0px));
+}
+
+.grocery-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding-top: 0;
+  padding-bottom: 16px;
+  padding-left: max(var(--pt-gutter), env(safe-area-inset-left, 0px));
+  padding-right: max(var(--pt-gutter), env(safe-area-inset-right, 0px));
+}
+
+/* The count in the subtitle is tabular so it does not jump as the total changes. */
+.grocery-count {
+  font-variant-numeric: tabular-nums;
+}
+
+/* Day chips: one equal-flex row, 6px gap. */
+.day-select {
+  display: flex;
+  gap: 6px;
+}
+
+/* Each chip is a two-line button (relative tag over the date number), centred. */
+.day-chip {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1px;
+  padding: 8px 0 7px;
+  border-radius: var(--pt-radius-chip);
+  background: var(--pt-surface);
+  border: 1.5px solid var(--pt-line);
+  cursor: pointer;
+}
+
+.day-chip__tag {
+  font-size: 9.5px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--pt-sub);
+  font-family: var(--pt-font-sans);
+}
+
+.day-chip__date {
+  font-family: var(--pt-font-serif);
+  font-size: 18px;
+  font-weight: 600;
+  line-height: 1.2;
+  color: var(--pt-ink);
+}
+
+/* Selected (on, not disabled): soft accent fill, accent border and text. */
+.day-chip--selected {
+  background: var(--pt-accent-soft);
+  border-color: var(--pt-accent);
+}
+
+.day-chip--selected .day-chip__tag,
+.day-chip--selected .day-chip__date {
+  color: var(--pt-accent);
+}
+
+/* Disabled (past or skipped): muted, struck date, not tappable. */
+.day-chip--disabled {
+  background: var(--pt-bg);
+  border-color: var(--pt-line);
+  opacity: 0.5;
+  cursor: default;
+}
+
+.day-chip--disabled .day-chip__tag,
+.day-chip--disabled .day-chip__date {
+  color: var(--pt-sub);
+}
+
+.day-chip--disabled .day-chip__date {
+  text-decoration: line-through;
+}
+
+/* Empty state: no days chosen. One centred card prompting a pick. */
+.grocery-empty {
+  padding: 28px 20px;
+  text-align: center;
+}
+
+.grocery-empty__title {
+  font-family: var(--pt-font-serif);
+  font-size: 19px;
+  font-weight: 700;
+  color: var(--pt-ink);
+}
+
+.grocery-empty__body {
+  font-size: 13.5px;
+  color: var(--pt-sub);
+  line-height: 1.5;
+  margin-top: 6px;
+}
+
 .grocery-card {
   padding: 14px 16px;
 }
