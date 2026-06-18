@@ -12,9 +12,21 @@ Brief description in present tense, one to three sentences. Reference the PR.
 
 ---
 
+## 2026-06-18 Menu title aligns flush to the top of its header
+
+The Menu wordmark now sits flush at the top of its header, level with the Explore, Grocery, and Changes titles, instead of a few pixels lower. The avatar button keeps its 44px tap target and reads centered on the wordmark. Frontend only. (#168, #169)
+
+## 2026-06-18 Close the tab title-to-subtitle gap to zero
+
+The space between the title and the subtitle on all four tab screens (Menu, Explore, Grocery, Changes) closes from a loose gap to flush, so the subtitle sits directly beneath the title. Frontend only. (#166)
+
 ## 2026-06-18 Grocery card item rows align with their group label
 
 The item rows inside each grocery category card now left-align with the group label, and the dead space below the last row of each card is removed. The list (a `<ul>`) had kept the browser's default list indent and bottom margin, so every item name sat about 40px to the right of its label and each card carried extra padding at the bottom. Frontend only. (#165)
+
+## 2026-06-18 Drop the archived design_handoff path from the CI repo-structure allowlist
+
+The repo-structure CI check no longer lists the old root-level `design_handoff/` path, which was archived earlier; the allowlist now matches the actual tree. Tooling only. (#164)
 
 ## 2026-06-18 Menu home: collapsed past-day cards use a chevron, not a "View" pill
 
