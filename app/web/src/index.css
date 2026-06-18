@@ -716,6 +716,16 @@ input {
   display: flex;
   align-items: center;
   justify-content: space-between;
+  /* The 44px avatar button sizes this row 11px taller than the 33px wordmark
+     line-box; with the wordmark bottom-aligned (.menu__brand align-self:
+     flex-end, which holds the title->subtitle gap at 0), all 11px of that slack
+     sits above the wordmark, pushing the Menu top whitespace ~5.5px past the
+     other three tab screens. Pull the whole header block back up by half the
+     slack so the wordmark-top offset matches the pre-flex-end (centered) look
+     while the subtitle stays flush. The row top still sits ~18.5px below the
+     header's safe-area-inset top padding, so the avatar never clips the inset
+     and its 44px tap target is unchanged. */
+  margin-top: -5.5px;
 }
 
 /* Brand wordmark: the Plantry serif lockup at the top of the Menu screen. */
