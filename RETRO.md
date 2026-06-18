@@ -112,3 +112,11 @@ run only reads entries appended since.
 - Impact: A new mutation's runtime correctness rests on deploy plus code-review unless the operator approves a live prod write, which also pollutes the live week unless manually cleaned up.
 - Proposed level: infra (a seeded non-prod Convex test backend or a designated disposable test week the crawl can write to) + process-doc (extend the engineering.md §16 seed-a-mock-week / crawl-after-deploy pattern to the new-mutation functional path)
 - Status: open
+
+## 2026-06-18  Empty dev Convex also blocks visually verifying the Grocery list (a read-path CSS bug shipped)
+- Area: verification
+- What happened: #155's grocery card shipped with an unreset item-list `<ul>` (kept the browser-default 40px indent + ~16px bottom margin), so every item row sat ~40px right of its group label with dead space under each card. It escaped review because the Grocery list never renders during a crawl: the list needs a hydrated week and the dev Convex deployment is empty, so the populated list is never seen (the screen only shows "Loading grocery list..."). The operator caught it by comparing the live screen to the design. The fix (#165) was verified instead with a static render of `app/web/src/index.css` over a hand-built grocery DOM with mock data. This is the read-path / CSS-regression sibling of the same-day "new write mutation needs a live prod write" entry and the 2026-06-16 "verification is indirect" entry — same empty-dev-Convex root.
+- Recurrence: systemic (every Grocery UI change needing visual verification)
+- Impact: A grocery-card CSS regression can ship unseen; #155's misaligned rows reached prod and only an operator eyeball caught it.
+- Proposed level: infra (a seeded non-prod Convex test week the crawl can render) + process-doc (until then, record in engineering.md §16 the static-`index.css`-render-of-a-mock-grocery-DOM technique as the way to verify Grocery-list CSS)
+- Status: open
