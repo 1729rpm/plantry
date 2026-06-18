@@ -81,6 +81,22 @@ run only reads entries appended since.
 - Proposed level: process-doc (engineering.md §16: document what the crawl cannot verify headless, the seed-a-mock-week pattern, the crawl-after-preview-deploy rule, and a residual-check channel logged in the PR diagnosis card)
 - Status: fixed (PR #125) — engineering.md §16 now documents the three paths the crawl cannot close (a new slot type renders only against a seeded/mock week; a backend-dependent flow must be crawled after the preview Convex deploy is live; real-device and after-deploy checks), and the development.md §5 diagnosis card gains a Residual checks field so each open verification item travels with the PR.
 
+## 2026-06-18  smoke.mjs crawl harness false-positives on the Grocery feature
+- Area: tooling
+- What happened: Two harness artifacts surfaced while crawling the Grocery Day Selection feature, neither a product defect. (a) A websocket-timing race: the harness asserts after `networkidle` plus a fixed ~400ms delay, which fires before the live Convex data hydrates over the socket, so tabs intermittently report "can't be found" (a longer settle wait then finds them). (b) `SCREEN_GUTTER_CANDIDATES` is stale: it predates the Grocery rewrite and omits `.grocery-chooser` and `.grocery-list`, so the gutter check misfires on the Grocery tab.
+- Recurrence: recurring (2x this feature: the timing race and the stale gutter list)
+- Impact: A crawl can report a false "tab not found" or a false gutter miss on a tab that is actually correct, eroding trust in the gate and costing a re-run to disambiguate.
+- Proposed level: tooling (settle on a real readiness signal in `smoke.mjs` instead of `networkidle` plus a fixed delay; refresh `SCREEN_GUTTER_CANDIDATES` to include the current Grocery selectors)
+- Status: open
+
+## 2026-06-18  Fresh worktree needs `npm run bake` before typecheck/build/tests
+- Area: tooling
+- What happened: A freshly created git worktree fails `typecheck`/`build`/tests if run before `npm run bake`, because `engine/src/data/library.ts` and `engine/src/data/history.ts` are generated-and-gitignored (emitted by the bake from the markdown library). CI handles this via its bake step, but an engineer spawned into a fresh worktree who runs typecheck first hits a confusing "missing module" failure with no obvious cause.
+- Recurrence: systemic (every fresh worktree that skips bake)
+- Impact: A confusing first-run failure that looks like a broken checkout; time lost diagnosing a non-bug.
+- Proposed level: brief-template (a one-line "run `npm install && npm run bake` before typecheck/build/tests" note in the engineer onboarding / `new-stream.md` brief; optionally a matching note in development.md)
+- Status: open
+
 ## 2026-06-18  Design-compare crawls were static-only until pushed to add behaviour
 - Area: verification
 - What happened: The first design-compare crawls (the Menu header and the past-day collapse) verified static rendering plus DOM assertions but not the behaviour of the new interactive affordances; the operator had to ask why the collapsed-day View action was never click-tested before a click-through was added. Later crawls (sheet close button, day-comment card, custom-dish add) then exercised the affordance end to end.
