@@ -129,15 +129,15 @@ input {
 
 .screen__title {
   font-family: var(--pt-font-serif);
-  font-size: 26px;
+  font-size: 30px;
   font-weight: 700;
   margin: 0;
 }
 
 .screen__subtitle {
-  font-size: 13.5px;
+  font-size: 14px;
   color: var(--pt-sub);
-  margin-top: 2px;
+  margin-top: 12px;
 }
 
 .screen__list {
@@ -736,7 +736,7 @@ input {
 .menu__subtitle {
   font-size: 14px;
   color: var(--pt-sub);
-  margin-top: 2px;
+  margin-top: 12px;
 }
 
 .menu__switch {
