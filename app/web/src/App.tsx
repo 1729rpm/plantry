@@ -10,6 +10,7 @@ import { ChangesScreen } from "./components/ChangesScreen.js";
 import { ExploreScreen } from "./components/ExploreScreen.js";
 import { DayScreen } from "./components/DayScreen.js";
 import { ExitConfirmSheet } from "./components/ExitConfirmSheet.js";
+import { ErrorBoundary } from "./components/ErrorBoundary.js";
 import { TabBar, type TabKey } from "./components/primitives.js";
 import { viewHistory, type ViewState } from "./lib/backStack.js";
 import {
@@ -196,7 +197,11 @@ export function App() {
 
   return (
     <div className="screen">
-      {renderActive()}
+      {/* Wrap only the active screen, not the tab bar: a single-screen render or
+          query error degrades to a recoverable fallback while navigation
+          survives. The key on the boundary resets it when the user switches
+          tab/editor, so a Reload-free retry is just navigating away and back. */}
+      <ErrorBoundary key={`${tab}:${editingDay ?? ""}`}>{renderActive()}</ErrorBoundary>
       <TabBar active={tab} onTab={handleTab} changeCount={changeBadgeCount} />
       {exitPrompt && <ExitConfirmSheet onLeave={handleLeave} onStay={handleStay} />}
     </div>
