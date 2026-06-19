@@ -71,6 +71,20 @@ const distDir = resolve(webRoot, "dist");
 
 const STRICT = process.env.STRICT === "1";
 const TABS = ["Menu", "Grocery", "Explore", "Changes"];
+// Per-tab readiness signal: an element that only exists once that tab's content
+// has actually hydrated over the Convex websocket. `networkidle` plus a fixed
+// delay fires before the live data arrives, so a tab can read as "not found"
+// while it is merely still hydrating; waiting on a real post-hydration selector
+// removes that race. Each is best-effort (a genuinely empty tab never renders
+// it), so the wait is bounded and non-fatal; the gutter check already tolerates
+// a loading/empty state.
+const TAB_READY = {
+  Menu: ".day-card",
+  Grocery: ".grocery-list",
+  Explore: ".explore-card",
+  Changes: ".screen__list",
+};
+const TAB_READY_TIMEOUT = 8000;
 // Two phone widths: 390 (iPhone 12/13/14 class) and 412 (common Android /
 // larger iPhone). The reported gutter bug showed at both.
 const WIDTHS = [390, 412];
@@ -233,7 +247,13 @@ const GUTTER_PROBE = ({ candidates }) => {
 // Per-context candidate gutter-bearing containers. Whichever are present on the
 // screen / sheet are measured; the smallest effective gutter must clear the
 // floor.
-const SCREEN_GUTTER_CANDIDATES = [".screen__list", ".day-screen__body", ".explore__grid"];
+const SCREEN_GUTTER_CANDIDATES = [
+  ".screen__list",
+  ".day-screen__body",
+  ".explore__grid",
+  ".grocery-chooser",
+  ".grocery-list",
+];
 const SHEET_GUTTER_CANDIDATES = [".sheet__panel", ".sheet__scroll"];
 
 async function checkOverflow(page, label, failures) {
@@ -328,7 +348,16 @@ async function runEngine(engineName, launcher, width, failures, coverage) {
         continue;
       }
       await btn.first().click();
-      await page.waitForTimeout(400);
+      // Wait for a real post-hydration signal for this tab rather than a fixed
+      // delay, so the asserts below do not fire while live Convex data is still
+      // arriving over the websocket. Best-effort: a genuinely empty tab never
+      // renders the signal, so the bounded wait simply falls through.
+      const readySel = TAB_READY[tab];
+      if (readySel) {
+        await page
+          .waitForSelector(readySel, { timeout: TAB_READY_TIMEOUT })
+          .catch(() => {});
+      }
 
       await checkOverflow(page, `${tag} ${tab}`, failures);
 
