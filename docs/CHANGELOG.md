@@ -12,6 +12,22 @@ Brief description in present tense, one to three sentences. Reference the PR.
 
 ---
 
+## 2026-06-19 Crawl-harness readiness wait + Grocery gutter selectors
+
+The `app/web/e2e/smoke.mjs` crawl now waits on a per-tab post-hydration selector (Menu `.day-card`, Grocery `.grocery-list`, Explore `.explore-card`, Changes `.screen__list`) after each tab click instead of a fixed delay after `networkidle`, so the asserts no longer fire before live Convex data hydrates over the websocket and a tab stops reporting a false "not found." `SCREEN_GUTTER_CANDIDATES` adds the current `.grocery-chooser` and `.grocery-list`, which it had been missing since the Grocery rewrite. RETRO intake. (#174)
+
+## 2026-06-19 Seeded dev Convex test week for UI verification
+
+`scripts/seed-dev-week.mjs` seeds the dev Convex deployment (`lovely-curlew-631`, never prod) with a real generated current week by running `generateWeek:generateCurrentWeek`, so the UI crawl can render the read-path screens (Grocery, the Menu week) and exercise new write mutations against a live-shaped week instead of an empty deployment. It reuses the real generation path so it cannot drift from the schema, and is idempotent. RETRO intake. (#174)
+
+## 2026-06-19 Crawl exercises affordance behaviour; §16 documents the seeded week
+
+`docs/engineering.md` §16 and `docs/development.md` §3 now state the verification crawl clicks every new interactive affordance and asserts the resulting state, not only screenshots it. §16's residual bullet documents that the dev Convex carries a seeded test week the crawl renders read-path screens (Grocery) and exercises new write mutations against, with the static-`index.css`-render of a hand-built grocery DOM as the fallback for verifying Grocery-list CSS when a seeded week is unavailable. RETRO intake. (#174)
+
+## 2026-06-19 Engineer brief: bake a fresh worktree before typecheck/build/test
+
+`.claude/commands/new-stream.md` gains a default brief line instructing engineers to run `npm install && npm run bake` before any typecheck/build/test, because `engine/src/data/library.ts` and `history.ts` are generated-and-gitignored and a fresh worktree otherwise hits a confusing "missing module" failure. RETRO intake. (#174)
+
 ## 2026-06-18 Menu title aligns flush to the top of its header
 
 The Menu wordmark now sits flush at the top of its header, level with the Explore, Grocery, and Changes titles, instead of a few pixels lower. The avatar button keeps its 44px tap target and reads centered on the wordmark. Frontend only. (#168, #169)

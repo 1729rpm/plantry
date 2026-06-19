@@ -87,7 +87,7 @@ run only reads entries appended since.
 - Recurrence: recurring (2x this feature: the timing race and the stale gutter list)
 - Impact: A crawl can report a false "tab not found" or a false gutter miss on a tab that is actually correct, eroding trust in the gate and costing a re-run to disambiguate.
 - Proposed level: tooling (settle on a real readiness signal in `smoke.mjs` instead of `networkidle` plus a fixed delay; refresh `SCREEN_GUTTER_CANDIDATES` to include the current Grocery selectors)
-- Status: open
+- Status: fixed (PR #174) — `smoke.mjs` now waits on a per-tab post-hydration selector instead of a fixed delay after `networkidle`, and `SCREEN_GUTTER_CANDIDATES` includes `.grocery-chooser` and `.grocery-list`.
 
 ## 2026-06-18  Fresh worktree needs `npm run bake` before typecheck/build/tests
 - Area: tooling
@@ -95,7 +95,7 @@ run only reads entries appended since.
 - Recurrence: systemic (every fresh worktree that skips bake)
 - Impact: A confusing first-run failure that looks like a broken checkout; time lost diagnosing a non-bug.
 - Proposed level: brief-template (a one-line "run `npm install && npm run bake` before typecheck/build/tests" note in the engineer onboarding / `new-stream.md` brief; optionally a matching note in development.md)
-- Status: open
+- Status: fixed (PR #174) — `new-stream.md` now carries a default brief line: run `npm install && npm run bake` before any typecheck/build/test, because the baked `library.ts`/`history.ts` are generated-and-gitignored.
 
 ## 2026-06-18  Design-compare crawls were static-only until pushed to add behaviour
 - Area: verification
@@ -103,7 +103,7 @@ run only reads entries appended since.
 - Recurrence: recurring (2x this session before corrected)
 - Impact: A crawl can report "looks right" while leaving a new control's behaviour unverified; an interactive element was nearly merged on a visual-only check.
 - Proposed level: process-doc (engineering.md §16 and the development.md §5 diagnosis card: the crawl exercises every new interactive affordance, clicking the control and asserting the resulting state, not only screenshotting it)
-- Status: open
+- Status: fixed (PR #174) — engineering.md §16 and development.md §3 now state the crawl clicks every new interactive affordance and asserts the resulting state, not only screenshots it. (The §5 card's Residual checks field already covers verification gaps, so §5 was left unchanged.)
 
 ## 2026-06-18  A new write mutation can only be functionally tested by a live prod write
 - Area: verification
@@ -111,7 +111,7 @@ run only reads entries appended since.
 - Recurrence: systemic (every new write mutation)
 - Impact: A new mutation's runtime correctness rests on deploy plus code-review unless the operator approves a live prod write, which also pollutes the live week unless manually cleaned up.
 - Proposed level: infra (a seeded non-prod Convex test backend or a designated disposable test week the crawl can write to) + process-doc (extend the engineering.md §16 seed-a-mock-week / crawl-after-deploy pattern to the new-mutation functional path)
-- Status: open
+- Status: fixed (PR #174) — `scripts/seed-dev-week.mjs` seeds the dev deployment with a real generated current week the crawl can exercise write mutations against, and engineering.md §16 documents it. The seed was run against dev and verified (Menu + Grocery read paths populated; updated smoke crawl passes).
 
 ## 2026-06-18  Empty dev Convex also blocks visually verifying the Grocery list (a read-path CSS bug shipped)
 - Area: verification
@@ -119,4 +119,4 @@ run only reads entries appended since.
 - Recurrence: systemic (every Grocery UI change needing visual verification)
 - Impact: A grocery-card CSS regression can ship unseen; #155's misaligned rows reached prod and only an operator eyeball caught it.
 - Proposed level: infra (a seeded non-prod Convex test week the crawl can render) + process-doc (until then, record in engineering.md §16 the static-`index.css`-render-of-a-mock-grocery-DOM technique as the way to verify Grocery-list CSS)
-- Status: open
+- Status: fixed (PR #174) — `scripts/seed-dev-week.mjs` seeds a dev current week the crawl renders the Grocery read path against; engineering.md §16 documents both the seeded week and the static-`index.css`-render-of-a-mock-grocery-DOM fallback. Seed run against dev and verified (Grocery list populated; updated smoke crawl passes on the real Grocery selectors).
