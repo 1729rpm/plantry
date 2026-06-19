@@ -25,6 +25,7 @@ You are spawning a new engineer for a Plantry stream. Read `CLAUDE.md`, `docs/de
    - **Merge ownership** (`docs/development.md` §11.3): branch is off `origin/main`; the later-merging session owns the rebase; `--force-with-lease` your own branch only, never `main`.
    - **Do not edit `docs/CHANGELOG.md`, `DECISIONS.md`, or feature stream-tables.** These are EM-owned and EM-batched (`docs/development.md` §11.4); engineers appending their own CHANGELOG entry is a recurring merge-conflict source. Describe what shipped in the PR body; the EM writes the CHANGELOG line.
    - **Run installs and long commands early, and stream their output.** Run `npm install` / `npm test` up front, not buried mid-task, and avoid a single long silent command: the subagent watchdog kills a stream after about 600s with no output, so a silent `npm install` or full test run can lose in-flight work. Break long runs up or emit progress as they go.
+   - **Run `npm install && npm run bake` before any typecheck / build / test.** A fresh worktree has no `engine/src/data/library.ts` or `engine/src/data/history.ts`; the bake generates them from the markdown library (they are gitignored), so a typecheck or test run before the bake fails with a confusing "missing module" error that looks like a broken checkout, not a real defect.
    - The definition of done (`docs/development.md` §4).
    - The diagnosis card format (`docs/development.md` §5).
    - The CI gates (`docs/engineering.md` §15).
