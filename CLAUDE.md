@@ -28,7 +28,7 @@ Read order by task:
 
 ## Currently building
 
-> **Composition from feedback** (`features/composition-from-feedback.md`) — encode Rajat's 2026-06-22 manual menu edits as engine rules: context-dependent sides (R1), international curation (R2), breakfast protein floor (R3), lunch thali partner (R4). Streams A (composition), B (§4), C (data).
+> _none_
 
 When no feature is active, this line reads "_none_". It resets to `_none_` on feature close-out, when the last stream of a feature merges (`docs/development.md` §3 step 8).
 
