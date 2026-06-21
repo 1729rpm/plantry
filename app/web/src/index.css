@@ -1865,6 +1865,13 @@ input {
   scroll-snap-align: center;
 }
 
+/* When the family is a single image (the menu, no recipe sheets) there is
+   nothing to swipe to, so the lone slide takes the full rail width edge to edge
+   instead of the 82% peek. Multi-slide rails keep the 82% next-slide peek. */
+.share__rail--single .share__slide {
+  width: 100%;
+}
+
 .share__slide-label {
   font-size: 11px;
   letter-spacing: 0.08em;

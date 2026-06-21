@@ -227,7 +227,7 @@ export function SharePreviewSheet({ week, onClose }: SharePreviewSheetProps) {
         check them.
       </div>
 
-      <div className="share__rail">
+      <div className={`share__rail${slides.length === 1 ? " share__rail--single" : ""}`}>
         {slides.map((slide, i) => (
           <div key={slide.id} className="share__slide">
             <div className="share__slide-label">
