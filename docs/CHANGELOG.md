@@ -12,6 +12,10 @@ Brief description in present tense, one to three sentences. Reference the PR.
 
 ---
 
+## 2026-06-21 Within-week cuisine diversity (§4 step 5): menu leans slightly less Indian
+
+A soft, target-gated §4 selection step nudges the generated week toward a small, fixed number of non-Indian dishes (`cuisine !== "Indian"`) on a standing basis without flipping the menu international. While fewer than `WEEKLY_NON_INDIAN_TARGET` (3) non-Indian dishes have been placed in the week being generated, non-Indian candidates rank above Indian ones in each slot's pool; once the target is met the step is a no-op. It sits after Preferred=Yes and before the two terminal within-week partitions (recency, protein diversity), so it can promote a non-Indian dish over a Preferred Indian one but never forces a dish repeat or HP-protein clash. Soft with a fresh-alternative fallback (an all-Indian lunch-carb or fruit pool is a no-op), so it never narrows §3 eligibility. This turns `cuisine` into a §4 rule input (§1 eligibility and §3 composition still never read it); `docs/engine.md` §4 and §12 updated. The five simulated weeks move from 0 to 4-5 non-Indian dishes each. Closes the Cuisine diversity feature (single stream A). (#175)
+
 ## 2026-06-19 Crawl-harness readiness wait + Grocery gutter selectors
 
 The `app/web/e2e/smoke.mjs` crawl now waits on a per-tab post-hydration selector (Menu `.day-card`, Grocery `.grocery-list`, Explore `.explore-card`, Changes `.screen__list`) after each tab click instead of a fixed delay after `networkidle`, so the asserts no longer fire before live Convex data hydrates over the websocket and a tab stops reporting a false "not found." `SCREEN_GUTTER_CANDIDATES` adds the current `.grocery-chooser` and `.grocery-list`, which it had been missing since the Grocery rewrite. RETRO intake. (#174)
