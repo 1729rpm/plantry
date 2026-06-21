@@ -12,6 +12,10 @@ Brief description in present tense, one to three sentences. Reference the PR.
 
 ---
 
+## 2026-06-22 Promote two in-week custom dishes into the library
+
+Two dishes Rajat added as in-week custom one-offs ("beetroot roti", "cucumber tomato salad") are promoted into the permanent library so they stop being free-text customs: Beetroot roti (id 282, Chapati, Lunch, with a new Beetroot ingredient catalog row) and Cucumber tomato salad (id 283, Accompaniment, Lunch, reusing existing catalog ingredients). Both ship active and year-round (seasons: All) with photos. The live week's two custom slots were then retargeted onto the new dishes via swapDish (Mon lunch -> 282, Sat lunch -> 283), so no custom entry remains. (#187)
+
 ## 2026-06-22 Engine structure cleanups: shared helpers, one slot-ranking derivation, a serialize guard
 
 Behavior-preserving structure pass from the engine review. A local `excluding(pool, ...chosen)` helper replaces nine open-coded same-id filters across the pick functions; a single `deriveSlotRankingInputs` is now the one source of truth for the per-slot ranking inputs, shared by the generation loop and the swap-slot ranker (`rankCandidatesForSlot`), with the existing swap-time omission of §4 step 7 preserved and explicitly documented at the call site; `WEEKDAYS`/`ALL_DAYS` move to their type owner `eligibility.ts`; and a new guard test asserts every `DishSchema` field is covered by the serializer, so a future field can no longer be silently dropped on round-trip. Simulation and round-trip unchanged. (#190)
