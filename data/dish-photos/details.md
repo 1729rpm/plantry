@@ -19,6 +19,7 @@ bean-burrito-bowl | Composed bowl with distinct sections: white rice, dark-red s
 bean-tacos | Folded soft tortillas filled with thick mashed reddish kidney beans, shredded green lettuce, diced tomato and onion at the opening; fresh and loose, lemon sheen; held open to show filling; no melted-cheese flood.
 beans-onion | Dry stir-fry: very finely chopped green beans with soft onion bits, glistening with oil, faint turmeric tint, slightly browned. No gravy, no garnish.
 beans-poriyal | Dry South Indian wok-tossed very finely chopped green beans (short fine pieces) with carrot flecks and curry leaves, soft and dry, light turmeric tint, mustard seeds; no gravy, no coconut heap. No garnish.
+beetroot-roti | thin flat round wheat flatbread tinted deep magenta-pink from grated beetroot kneaded into the dough, not puffy, not naan, plain, no garnish
 begun-bhaja | Bengali pan-crisped brinjal rounds (flat thick discs) on a plate, golden-brown crisp edges with deeper char, soft purple-edged flesh, turmeric-chilli rub visible; dry, no gravy, no garnish.
 besan-chilla | Flat round yellow gram-flour pancake, lightly browned mottled surface, studded with diced onion, tomato and green flecks; folded or flat on a plate; a thin flat savoury pancake, not bready or puffy; no garnish.
 besan-paneer-chilla | Flat round yellow gram-flour pancake, lightly browned mottled surface, studded with visible white paneer crumbs, onion and green flecks. Folded or flat on plate. No garnish. A thin flat savoury pancake, not bready or puffy.
@@ -67,6 +68,7 @@ continental-grilled-chicken | Whole grilled chicken breast fillet, golden with d
 coriander-chutney | Smooth bright vivid green chutney, thick spoonable paste texture (not runny), uniform green from ground coriander and chilli, in a small bowl, no chunks, no garnish.
 cucumber-raita | Thin off-white whisked curd, slightly runny not thick, with finely grated cucumber suspended throughout and a dusting of roasted cumin; pale and cooling in a small bowl; coriander fleck.
 cucumber-salad | Diced or sliced raw cucumber (pale green skin, white flesh) with thin onion slivers and chopped coriander, dry-fresh and crunchy, lightly dressed with lemon, no creamy dressing.
+cucumber-tomato-salad | fresh diced cucumber, red tomato and thin sliced onion, light and dry with no dressing pooling, scattered with a little fresh coriander
 curd-rice | Soft white rice mashed into thick creamy curd (slightly loose, not dry), pale, topped with a mustard-seed and curry-leaf tempering, sometimes flecks of green chilli and ginger, no yellow turmeric base.
 dal-fry | Thick pourable golden-yellow toor dal with visible soft onion-tomato bits, mildly textured not pureed; oil sheen on top; scattered fresh coriander; no cream, no whole spices floating. A thick dal with visible cooked lentils and grainy texture, not a smooth pureed soup.
 dal-makhani | Dark brownish-maroon, very thick glossy creamy dal with whole black urad beans and a few kidney beans visible; a swirl of cream on top, butter sheen; NOT bright orange or smooth. A thick dal with visible cooked lentils and grainy texture, not a smooth pureed soup.
