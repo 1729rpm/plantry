@@ -10,12 +10,13 @@
 // done). Groups render in whatever order the query returns; the screen stays
 // agnostic to group names and order (the engine owns those).
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import type { ReactNode } from "react";
 import { useQuery } from "convex/react";
 import { anyApi } from "convex/server";
 import type { CurrentWeek, ShortDay } from "../lib/types.js";
 import { dayDate, dayOrderIndex } from "../lib/days.js";
+import { getGroceryDays, setGroceryDays } from "../lib/storage.js";
 import { Card } from "./primitives.js";
 
 interface GroceryItem {
@@ -118,6 +119,18 @@ export function rangeLabel(chosen: DayChip[]): string {
   return `${first.day} ${first.dateNum} to ${last.day} ${last.dateNum}`;
 }
 
+/**
+ * Sanitise a stored day selection against the live chips: keep only days that
+ * still have a selectable (not past, not skipped) chip this week, preserving the
+ * stored order. A stored day that has since become past or skipped is dropped so
+ * a disabled day is never resurrected as "selected". Pure (no storage/clock), so
+ * the seed logic is unit-testable.
+ */
+export function filterSeed(stored: ShortDay[], chips: DayChip[]): ShortDay[] {
+  const selectable = new Set(selectableDays(chips).map((c) => c.day));
+  return stored.filter((d) => selectable.has(d));
+}
+
 const WEEK_DAYS: ShortDay[] = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 
 /**
@@ -211,18 +224,36 @@ export function GroceryScreen() {
     [chips, week],
   );
 
-  // `selected` is null until the household first toggles; before that the
-  // time-aware default drives the screen. Seeding lazily keeps the very first
-  // render already carrying the default.
+  // `selected` is null until the household first toggles (or a stored explicit
+  // choice is seeded); while null the time-aware default drives the screen.
   const [selected, setSelected] = useState<ShortDay[] | null>(null);
   const effectiveSelected = selected ?? initialSelection;
+
+  const weekStart = week?.weekStart;
+
+  // Seed an explicit stored selection once per weekStart: a choice persisted
+  // before a page switch / app-background wins over the time-aware default on
+  // return. Stored days that have since become past or skipped are filtered out.
+  // A different weekStart's entry is ignored by the storage layer, so a fresh
+  // week starts clean on the default. The ref guards against re-seeding (and
+  // stomping a fresh toggle) on later renders of the same week.
+  const seededFor = useRef<string | null>(null);
+  useEffect(() => {
+    if (!weekStart || seededFor.current === weekStart) return;
+    seededFor.current = weekStart;
+    const stored = getGroceryDays(weekStart);
+    if (stored) setSelected(filterSeed(stored, chips));
+  }, [weekStart, chips]);
 
   const toggle = (day: ShortDay) => {
     const chip = chips.find((c) => c.day === day);
     if (!chip || isDisabled(chip)) return; // no-op on past/skipped
     setSelected((prev) => {
       const base = prev ?? initialSelection;
-      return base.includes(day) ? base.filter((d) => d !== day) : [...base, day];
+      const next = base.includes(day) ? base.filter((d) => d !== day) : [...base, day];
+      // Persist the now-explicit selection so it survives unmount / eviction.
+      if (weekStart) setGroceryDays(weekStart, next);
+      return next;
     });
   };
 
@@ -233,7 +264,6 @@ export function GroceryScreen() {
     .sort((a, b) => dayOrderIndex(a.day) - dayOrderIndex(b.day));
   const chosenDays = chosen.map((c) => c.day);
 
-  const weekStart = week?.weekStart;
   const grocery = useQuery(
     anyApi.groceryList.getGroceryList,
     weekStart && chosenDays.length > 0 ? { weekStart, selectedDays: chosenDays } : "skip",
