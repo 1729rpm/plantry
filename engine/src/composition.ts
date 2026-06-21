@@ -1,6 +1,7 @@
 import type { Dish, DishTag, MenuHistoryRow, Season } from "./data/schemas.js";
 import type { Day } from "./eligibility.js";
 import { eligibleDishes } from "./eligibility.js";
+import { lastCookedMap } from "./historyRows.js";
 import type { SlotPlan } from "./schedule.js";
 
 /**
@@ -466,17 +467,6 @@ function formFor(dish: Dish): WeekdaySubstitutionForm {
 
 function pickEarliestSubstitutionDay(): WeekdaySubstitutionDay {
   return WEEKDAYS_FOR_SUBSTITUTION[0];
-}
-
-function lastCookedMap(history: MenuHistoryRow[]): Map<number, string> {
-  const map = new Map<number, string>();
-  for (const row of history) {
-    const existing = map.get(row.dishId);
-    if (existing === undefined || row.weekStart > existing) {
-      map.set(row.dishId, row.weekStart);
-    }
-  }
-  return map;
 }
 
 function pickLongestUnused(pool: Dish[], lastCooked: Map<number, string>): Dish | null {
