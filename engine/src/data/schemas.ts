@@ -40,12 +40,39 @@ export type SeasonsField = z.infer<typeof SeasonsFieldSchema>;
 export const ComplexitySchema = z.enum(["Easy", "Medium", "Hard"]);
 export type Complexity = z.infer<typeof ComplexitySchema>;
 
+/**
+ * Dish tags, the closed set documented in docs/engine.md §12. These are rule
+ * inputs (`HP`, `complete_meal`, `complete_carb` drive §3 composition; `fruit`
+ * drives §3.3), so a mistyped tag would silently change the menu. The enum makes
+ * §12 the enforced source of truth: an unknown tag fails the build, not the menu.
+ */
+export const DishTagSchema = z.enum(["HP", "complete_meal", "complete_carb", "fruit"]);
+export type DishTag = z.infer<typeof DishTagSchema>;
+
+/** Cuisine, the closed set documented in docs/engine.md §12. */
+export const CuisineSchema = z.enum([
+  "Indian",
+  "Italian",
+  "Chinese",
+  "Mexican",
+  "Greek",
+  "Spanish",
+  "Korean",
+  "Japanese",
+  "Continental",
+  "Vietnamese",
+  "Lebanese",
+  "Mediterranean",
+  "Thai",
+]);
+export type Cuisine = z.infer<typeof CuisineSchema>;
+
 export const DishSchema = z.object({
   id: z.number().int().positive(),
   name: z.string().min(1),
   category: DishCategorySchema,
   time: MealTimeSchema,
-  tags: z.array(z.string().min(1)),
+  tags: z.array(DishTagSchema),
   primaryIngredient: z.string().min(1),
   preferred: YesNoSchema,
   active: YesNoSchema,
@@ -62,7 +89,7 @@ export const DishSchema = z.object({
    * the user sees; there is no separate internal code to decode, so Principle
    * 7's display/structure split does not apply).
    */
-  cuisine: z.string().min(1),
+  cuisine: CuisineSchema,
   // Enrichment fields (docs/engine.md §12). All optional: a dish file may omit
   // them and parses unchanged; the UI degrades gracefully when they are absent
   // (§11.1 coverage ratchet).

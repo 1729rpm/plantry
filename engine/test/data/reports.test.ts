@@ -7,19 +7,24 @@ import {
   HP_PROTEIN_THRESHOLD_PER_PERSON,
 } from "../../src/data/validators.js";
 import { loadLiveData } from "../loadLive.js";
-import type { CatalogIngredient, Dish, Ingredient } from "../../src/data/schemas.js";
+import type {
+  CatalogIngredient,
+  Dish,
+  DishTag,
+  Ingredient,
+} from "../../src/data/schemas.js";
 
 const baseDish = {
   category: "Gravy dish" as const,
   time: "Lunch" as const,
-  tags: [] as string[],
+  tags: [] as DishTag[],
   primaryIngredient: "Chicken",
   preferred: "Yes" as const,
   active: "Yes" as const,
   satiety: "High" as const,
   prepMinutes: 30,
   seasons: "All" as const,
-  cuisine: "Indian",
+  cuisine: "Indian" as const,
 };
 
 function dish(overrides: Partial<Dish> & { id: number; name: string }): Dish {
