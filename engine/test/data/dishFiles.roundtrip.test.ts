@@ -3,7 +3,12 @@ import { readFileSync, readdirSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { basename, dirname, resolve } from "node:path";
 import { parseDishFile, parseIngredientCatalog } from "../../src/data/parse.js";
-import { serializeDishFile, serializeIngredientCatalog } from "../../src/data/serialize.js";
+import {
+  serializeDishFile,
+  serializeIngredientCatalog,
+  SERIALIZED_DISH_FIELDS,
+} from "../../src/data/serialize.js";
+import { DishSchema } from "../../src/data/schemas.js";
 
 const here = dirname(fileURLToPath(import.meta.url));
 const dataDir = resolve(here, "../../../data");
@@ -203,6 +208,36 @@ describe("per-dish file round-trip", () => {
       "",
     ].join("\n");
     expect(() => parseDishFile("bad-dish", malformed)).toThrow(/bad-dish/);
+  });
+});
+
+describe("serialize stays in sync with DishSchema", () => {
+  // The serializer's emitted-field set (SERIALIZED_DISH_FIELDS) is hand-maintained
+  // separately from DishSchema. A new schema field that nobody taught
+  // serializeDishFile to emit would silently drop on round-trip, caught only
+  // indirectly by the byte-exact round-trip test (and only if a live dish
+  // actually carries the field). This guard turns that silent-drop risk into a
+  // direct, fast failure: every DishSchema key must be accounted for by the
+  // serializer's known-field list.
+  it("every DishSchema field is covered by the serializer's known-field list", () => {
+    const schemaKeys = Object.keys(DishSchema.shape);
+    const known = new Set<string>(SERIALIZED_DISH_FIELDS);
+    const missing = schemaKeys.filter((key) => !known.has(key));
+    expect(
+      missing,
+      `DishSchema field(s) not handled by serializeDishFile (add the emission + ` +
+        `SERIALIZED_DISH_FIELDS entry): ${missing.join(", ")}`,
+    ).toEqual([]);
+  });
+
+  it("the serializer's known-field list carries no field absent from DishSchema", () => {
+    // Keeps the list honest in the other direction: a stale entry (a field
+    // renamed or removed from the schema) is also a defect worth surfacing.
+    const schemaKeys = new Set(Object.keys(DishSchema.shape));
+    const stale = SERIALIZED_DISH_FIELDS.filter((field) => !schemaKeys.has(field));
+    expect(stale, `SERIALIZED_DISH_FIELDS entr(y/ies) not in DishSchema: ${stale.join(", ")}`).toEqual(
+      [],
+    );
   });
 });
 

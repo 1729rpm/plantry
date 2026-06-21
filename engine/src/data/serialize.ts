@@ -90,6 +90,39 @@ export function serializeMenuHistory(rows: MenuHistoryRow[]): string {
 
 const DISH_INGREDIENT_HEADERS = ["Ingredient", "Quantity", "Unit"];
 
+/**
+ * Every `DishSchema` field `serializeDishFile` knows how to emit. The frontmatter
+ * block emits the first group (id..cuisine plus the optional enrichment lines),
+ * and `description` and `recipe` round-trip through the body prose. This list is
+ * the serializer's source of truth for "fields the round-trip covers"; the
+ * serialize/schema sync guard test asserts it stays a superset of
+ * `Object.keys(DishSchema.shape)`, so a new schema field that nobody taught the
+ * serializer to emit fails loudly there instead of silently dropping on
+ * round-trip. Keep it in sync with the `fm.push(...)` / body emission below.
+ */
+export const SERIALIZED_DISH_FIELDS = [
+  "id",
+  "name",
+  "category",
+  "time",
+  "tags",
+  "primaryIngredient",
+  "preferred",
+  "active",
+  "satiety",
+  "prepMinutes",
+  "seasons",
+  "cuisine",
+  "complexity",
+  "skill",
+  "equipment",
+  "buySpecially",
+  "prePrep",
+  "photo",
+  "description",
+  "recipe",
+] as const;
+
 function flowList(values: string[]): string {
   return "[" + values.join(", ") + "]";
 }
