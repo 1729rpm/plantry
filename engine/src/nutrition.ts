@@ -1,7 +1,7 @@
 import type { CatalogIngredient, Ingredient } from "./data/schemas.js";
 
 /**
- * Nutrition derivation (docs/engine.md Nutrition section, design-revamp §1.2).
+ * Nutrition derivation (docs/engine.md §11 Nutrition).
  *
  * Per-dish macros are DERIVED, never hand-stored. There is no per-dish protein
  * or carb field and deliberately no override (Principle 8): the single source of

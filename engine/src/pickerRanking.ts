@@ -4,7 +4,7 @@ import { deriveDishMacros } from "./nutrition.js";
 import type { CatalogIngredient, Ingredient } from "./data/schemas.js";
 
 /**
- * Picker ranking (docs/engine.md §5 Picker ranking, design-revamp §1.4 item 1).
+ * Picker ranking (docs/engine.md §5 Picker ranking).
  *
  * The swap and add pickers rank the broad pool with their own deterministic
  * rule, distinct from §4 selection priority (which ranks generation candidate

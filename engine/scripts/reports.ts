@@ -15,7 +15,7 @@ import {
 } from "../src/data/validators.js";
 import { loadDishFiles } from "./bake.js";
 
-// Non-blocking reporting driver (design-revamp §1.3, slice 2.1). Mirrors
+// Non-blocking reporting driver (docs/engine.md §11.1 coverage and reports). Mirrors
 // bake.ts's load path so the reports read the same live data the engine bakes.
 // This script NEVER exits non-zero on a coverage gap or a thin pool: coverage
 // and pool health are judgment the slow loop acts on, not a CI gate. It exits
