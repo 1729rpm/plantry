@@ -282,8 +282,9 @@ describe("specialSourcingReport", () => {
     // The active dishes needing a special trip, with their precise sets:
     //   Hummus -> Tahini; Tabbouleh -> Bulgur Wheat + Parsley (sorted);
     //   Muhammara -> Pomegranate Molasses; Tofu bibimbap + Korean chicken
-    //   stir fry + Korean tofu soup -> Gochujang; Japanese miso soup ->
-    //   Miso Paste; Vegetable daliya -> Bulgur Wheat; Lentil salad ->
+    //   stir fry -> Gochujang (Korean tofu soup 208 also uses Gochujang but was
+    //   deactivated, so it drops out of this active-only report); Japanese miso
+    //   soup -> Miso Paste; Vegetable daliya -> Bulgur Wheat; Lentil salad ->
     //   Parsley (the last two from the activated easy-to-cook expansion).
     expect(report).toEqual([
       { dishId: 174, dishName: "Hummus", ingredients: ["Tahini"] },
@@ -291,7 +292,6 @@ describe("specialSourcingReport", () => {
       { dishId: 184, dishName: "Muhammara", ingredients: ["Pomegranate Molasses"] },
       { dishId: 191, dishName: "Tofu bibimbap", ingredients: ["Gochujang"] },
       { dishId: 192, dishName: "Korean chicken stir fry", ingredients: ["Gochujang"] },
-      { dishId: 208, dishName: "Korean tofu soup", ingredients: ["Gochujang"] },
       { dishId: 210, dishName: "Japanese miso soup", ingredients: ["Miso Paste"] },
       { dishId: 250, dishName: "Vegetable daliya", ingredients: ["Bulgur Wheat"] },
       { dishId: 267, dishName: "Lentil salad", ingredients: ["Parsley"] },
