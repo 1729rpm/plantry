@@ -13,6 +13,8 @@ import {
   shouldSubstituteWeekday,
   excludeHpIfMealHasHp,
   isHp,
+  isSelfSufficientMain,
+  isStandaloneBreakfastBread,
 } from "../src/composition.js";
 import type {
   BreakfastWeekdayPairCandidateSet,
@@ -151,6 +153,58 @@ describe("composition — docs/engine.md §3", () => {
       const out = breakfastSinglePick([lunchCm]);
       expect(out.pool).toEqual([]);
     });
+
+    it("§3 R3 ketoCompanion pool is the HP Category=Keto breakfast dishes", () => {
+      const hpKeto = makeDish({
+        time: "Breakfast",
+        category: "Keto",
+        tags: ["HP"],
+        primaryIngredient: "Egg",
+      });
+      const nonHpKeto = makeDish({ time: "Breakfast", category: "Keto" });
+      const hpLunchKeto = makeDish({ time: "Lunch", category: "Keto", tags: ["HP"] });
+      const cc = makeDish({ time: "Breakfast", category: "Paratha", tags: ["complete_carb"] });
+      const out = breakfastSinglePick([hpKeto, nonHpKeto, hpLunchKeto, cc]);
+      // Only the HP, Breakfast, Category=Keto dish qualifies as a companion.
+      expect(out.ketoCompanion).toEqual([hpKeto]);
+    });
+  });
+
+  describe("§3 R1 self-sufficient main signals", () => {
+    it("isSelfSufficientMain is the union of complete_meal-tag and Category=Complete meal", () => {
+      const tagged = makeDish({ category: "Gravy dish", tags: ["complete_meal"] });
+      const categoried = makeDish({ category: "Complete meal", tags: [] });
+      const both = makeDish({ category: "Complete meal", tags: ["complete_meal"] });
+      const neither = makeDish({ category: "Gravy dish", tags: [] });
+      expect(isSelfSufficientMain(tagged)).toBe(true);
+      // White-sauce-pasta case: Category=Complete meal but NOT complete_meal-tagged.
+      expect(isSelfSufficientMain(categoried)).toBe(true);
+      expect(isSelfSufficientMain(both)).toBe(true);
+      expect(isSelfSufficientMain(neither)).toBe(false);
+    });
+
+    it("isStandaloneBreakfastBread is true only for a Category=Bread complete_carb", () => {
+      const bread = makeDish({
+        time: "Breakfast",
+        category: "Bread",
+        tags: ["complete_carb"],
+      });
+      const paratha = makeDish({
+        time: "Breakfast",
+        category: "Paratha",
+        tags: ["complete_carb"],
+      });
+      const chilla = makeDish({
+        time: "Breakfast",
+        category: "Chilla",
+        tags: ["complete_carb"],
+      });
+      const plainBread = makeDish({ time: "Breakfast", category: "Bread" });
+      expect(isStandaloneBreakfastBread(bread)).toBe(true);
+      expect(isStandaloneBreakfastBread(paratha)).toBe(false);
+      expect(isStandaloneBreakfastBread(chilla)).toBe(false);
+      expect(isStandaloneBreakfastBread(plainBread)).toBe(false);
+    });
   });
 
   describe("§3 Menu 1 (Mon/Wed/Fri lunch)", () => {
@@ -175,38 +229,43 @@ describe("composition — docs/engine.md §3", () => {
       expect(out.hp).toEqual([hpGravy, hpDry]);
     });
 
-    it("partner pool when HP is Dry is non-HP Gravy; when HP is Gravy is non-HP Accompaniment", () => {
+    it("§3 R4 partner pool: HP Dry main → non-HP Gravy; HP Gravy main → non-HP Dry sabzi", () => {
       const nonHpGravy = makeDish({ time: "Lunch", category: "Gravy dish" });
       const hpGravy = makeDish({
         time: "Lunch",
         category: "Gravy dish",
         tags: ["HP"],
       });
+      const nonHpDry = makeDish({ time: "Lunch", category: "Dry dish" });
       const acc = makeDish({ time: "Lunch", category: "Accompaniment" });
-      const out = menu1([nonHpGravy, hpGravy, acc], []);
+      const out = menu1([nonHpGravy, hpGravy, nonHpDry, acc], []);
+      // Dry main keeps its non-HP Gravy (a dal); Gravy main now pairs a non-HP
+      // Dry sabzi (R4), and the Accompaniment moves to the thin-pool fallback.
       expect(out.partnerWhenHpIsDry).toEqual([nonHpGravy]);
-      expect(out.partnerWhenHpIsGravy).toEqual([acc]);
+      expect(out.partnerWhenHpIsGravy).toEqual([nonHpDry]);
+      expect(out.partnerWhenHpIsGravyFallback).toEqual([acc]);
     });
 
-    it("§3 Menu 1 one-HP-per-meal: the Accompaniment partner pool excludes HP-tagged dishes", () => {
+    it("§3 R4 + one-HP-per-meal: the Gravy-branch Dry-sabzi partner pool excludes HP-tagged dishes", () => {
       // The Menu 1 main is the HP pick, so the partner is non-HP. An HP-tagged
-      // Accompaniment (e.g. Chicken salad tagged HP) must not be eligible as the
+      // Dry sabzi (e.g. Chicken bhuna tagged HP) must not be eligible as the
       // partner of an HP Gravy main: a meal carries one HP source, not two.
       const hpGravy = makeDish({ time: "Lunch", category: "Gravy dish", tags: ["HP"] });
-      const hpAccompaniment = makeDish({
+      const hpDry = makeDish({
         time: "Lunch",
-        category: "Accompaniment",
+        category: "Dry dish",
         tags: ["HP"],
         primaryIngredient: "Chicken",
       });
-      const plainAccompaniment = makeDish({ time: "Lunch", category: "Accompaniment" });
-      const out = menu1([hpGravy, hpAccompaniment, plainAccompaniment], []);
-      // Filtered partner excludes the HP accompaniment; the fallback keeps it.
-      expect(out.partnerWhenHpIsGravy).toEqual([plainAccompaniment]);
-      expect(out.partnerWhenHpIsGravyFallback).toEqual([hpAccompaniment, plainAccompaniment]);
+      const plainDry = makeDish({ time: "Lunch", category: "Dry dish" });
+      const acc = makeDish({ time: "Lunch", category: "Accompaniment" });
+      const out = menu1([hpGravy, hpDry, plainDry, acc], []);
+      // The R4 partner pool keeps only the non-HP Dry sabzi.
+      expect(out.partnerWhenHpIsGravy).toEqual([plainDry]);
+      expect(out.partnerWhenHpIsGravy.some((d) => d.tags.includes("HP"))).toBe(false);
     });
 
-    it("§3 Menu 1 one-HP-per-meal is property-based: a paneer HP accompaniment is excluded too", () => {
+    it("§3 R4 partner is property-based: a paneer HP dry sabzi is excluded too", () => {
       // Proves the exclusion keys on the HP tag, not on names: a paneer-on-paneer
       // pairing is blocked exactly as chicken-on-chicken is.
       const hpPaneerGravy = makeDish({
@@ -215,30 +274,29 @@ describe("composition — docs/engine.md §3", () => {
         tags: ["HP"],
         primaryIngredient: "Paneer",
       });
-      const hpPaneerAccompaniment = makeDish({
+      const hpPaneerDry = makeDish({
         time: "Lunch",
-        category: "Accompaniment",
+        category: "Dry dish",
         tags: ["HP"],
         primaryIngredient: "Paneer",
       });
-      const plainAccompaniment = makeDish({ time: "Lunch", category: "Accompaniment" });
-      const out = menu1([hpPaneerGravy, hpPaneerAccompaniment, plainAccompaniment], []);
-      expect(out.partnerWhenHpIsGravy).toEqual([plainAccompaniment]);
+      const plainDry = makeDish({ time: "Lunch", category: "Dry dish" });
+      const out = menu1([hpPaneerGravy, hpPaneerDry, plainDry], []);
+      expect(out.partnerWhenHpIsGravy).toEqual([plainDry]);
       expect(out.partnerWhenHpIsGravy.some((d) => d.tags.includes("HP"))).toBe(false);
     });
 
-    it("§3 Menu 1 fallback pool keeps HP accompaniments for the thin-pool fallback", () => {
-      // When every Accompaniment is HP-tagged, the filtered pool is empty but the
-      // fallback retains them so pickMenu1 can still fill the slot.
+    it("§3 R4 thin-pool fallbacks: non-HP Accompaniment, then the unfiltered last resort", () => {
+      // No non-HP Dry sabzi → the partner falls back to a non-HP Accompaniment
+      // (a salad). The last-resort pool keeps every Accompaniment (HP included)
+      // so pickMenu1 can still fill the slot when even the non-HP salad is gone.
       const hpGravy = makeDish({ time: "Lunch", category: "Gravy dish", tags: ["HP"] });
-      const hpAccompaniment = makeDish({
-        time: "Lunch",
-        category: "Accompaniment",
-        tags: ["HP"],
-      });
-      const out = menu1([hpGravy, hpAccompaniment], []);
-      expect(out.partnerWhenHpIsGravy).toEqual([]);
-      expect(out.partnerWhenHpIsGravyFallback).toEqual([hpAccompaniment]);
+      const nonHpAcc = makeDish({ time: "Lunch", category: "Accompaniment" });
+      const hpAcc = makeDish({ time: "Lunch", category: "Accompaniment", tags: ["HP"] });
+      const out = menu1([hpGravy, nonHpAcc, hpAcc], []);
+      expect(out.partnerWhenHpIsGravy).toEqual([]); // no Dry sabzi at all
+      expect(out.partnerWhenHpIsGravyFallback).toEqual([nonHpAcc]); // non-HP salad
+      expect(out.partnerWhenHpIsGravyLastResort).toEqual([nonHpAcc, hpAcc]); // unfiltered
     });
 
     it("lunchCarb pool defaults to Chapati and includes Rice when not already used this week", () => {

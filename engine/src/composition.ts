@@ -24,6 +24,15 @@ export interface BreakfastWeekdayPairCandidateSet {
 export interface BreakfastSinglePickCandidateSet {
   kind: "breakfast-single";
   pool: Dish[];
+  /**
+   * §3 R3 breakfast protein floor companion pool: HP Category=Keto breakfast
+   * dishes (boiled eggs, keto bhurji). When the picked single main carries no
+   * `HP` tag, `pickBreakfastSingle` appends the top-ranked companion here,
+   * making a 2-item breakfast. Empty pool → the floor degrades to the 1-item
+   * breakfast. Picked from this pool only at HP count 0, so it never produces
+   * two HP in the meal (it composes with one-HP-per-meal).
+   */
+  ketoCompanion: Dish[];
 }
 
 export interface Menu1CandidateSet {
@@ -31,15 +40,28 @@ export interface Menu1CandidateSet {
   hp: Dish[];
   /** Non-HP Gravy partner used when the HP main is a Dry dish. */
   partnerWhenHpIsDry: Dish[];
-  /** Non-HP Accompaniment partner used when the HP main is a Gravy dish. */
+  /**
+   * §3 R4 thali partner: a non-HP Dry sabzi, used when the HP main is a Gravy
+   * dish, so an Indian lunch always carries both a gravy and a dry dish around
+   * its protein. Replaces the former non-HP Accompaniment partner.
+   */
   partnerWhenHpIsGravy: Dish[];
   /**
-   * Unfiltered Accompaniment pool (HP-tagged included). The §3 rule keeps the
-   * partner non-HP, but if that empties the filtered Gravy-branch partner pool,
-   * pickMenu1 falls back to this so the slot still fills (one HP-main meal with
-   * a second HP side beats an incomplete meal). Broad live pools make this rare.
+   * §3 R4 thin-pool fallback for the Gravy branch: the non-HP Accompaniment
+   * pool, used only when the non-HP Dry-sabzi pool is empty, so the slot still
+   * fills (a salad beside the gravy beats an incomplete meal). Broad live pools
+   * make this rare. Still non-HP (one HP source per meal); the unfiltered
+   * Accompaniment pool below covers the case where even that empties.
    */
   partnerWhenHpIsGravyFallback: Dish[];
+  /**
+   * Unfiltered Accompaniment pool (HP-tagged included). The §3 rule keeps the
+   * partner non-HP, but if both the non-HP Dry-sabzi pool and the non-HP
+   * Accompaniment fallback are empty, pickMenu1 falls back to this so the slot
+   * still fills (one HP-main meal with a second HP side beats an incomplete
+   * meal). Broad live pools make this rare.
+   */
+  partnerWhenHpIsGravyLastResort: Dish[];
   lunchCarb: Dish[];
 }
 
@@ -122,9 +144,15 @@ export function candidateSetPools(set: CandidateSet): Dish[][] {
         set.optionC.plainCarb,
       ];
     case "breakfast-single":
-      return [set.pool];
+      return [set.pool, set.ketoCompanion];
     case "menu-1":
-      return [set.hp, set.partnerWhenHpIsDry, set.partnerWhenHpIsGravy, set.lunchCarb];
+      return [
+        set.hp,
+        set.partnerWhenHpIsDry,
+        set.partnerWhenHpIsGravy,
+        set.partnerWhenHpIsGravyFallback,
+        set.lunchCarb,
+      ];
     case "menu-2":
       return [set.keto, set.nonHpGravy, set.nonHpDry, set.lunchCarb];
     case "menu-3":
@@ -145,6 +173,27 @@ function hasTag(dish: Dish, tag: string): boolean {
 /** True when the dish carries the high-protein tag (§3 one-HP-per-meal input). */
 export function isHp(dish: Dish): boolean {
   return hasTag(dish, "HP");
+}
+
+/**
+ * §3 self-sufficient main signal. A dish that fills its slot alone, taking no
+ * separate carb and no accompaniment. The union is required: White sauce pasta
+ * is Category=Complete meal but is NOT `complete_meal`-tagged, so the tag alone
+ * misses it. Keyed on tag/category, never on dish names.
+ */
+export function isSelfSufficientMain(dish: Dish): boolean {
+  return hasTag(dish, "complete_meal") || dish.category === "Complete meal";
+}
+
+/**
+ * §3 R1 breakfast Option B served-alone signal. A `complete_carb` lead is
+ * served without its accompaniment only when it is a Category=Bread dish
+ * (avocado toast, masala toast). A Chilla or Paratha `complete_carb` keeps its
+ * accompaniment (garlic chutney with cheela, etc.). Keyed on category, never on
+ * dish names.
+ */
+export function isStandaloneBreakfastBread(dish: Dish): boolean {
+  return hasTag(dish, "complete_carb") && dish.category === "Bread";
 }
 
 /**
@@ -221,13 +270,18 @@ export function fruitOfDayPool(eligible: Dish[]): Dish[] {
   return eligible.filter((d) => d.category === "Fruit");
 }
 
-/** §3 Breakfast Tue/Thu single pick: complete_meal OR complete_carb. */
+/**
+ * §3 Breakfast Tue/Thu single pick: complete_meal OR complete_carb, plus the §3
+ * R3 protein-floor companion pool (HP Category=Keto breakfast dishes). The main
+ * is picked from `pool`; if it carries no `HP` tag, `pickBreakfastSingle`
+ * appends one companion from `ketoCompanion` for a 2-item breakfast.
+ */
 export function breakfastSinglePick(eligible: Dish[]): BreakfastSinglePickCandidateSet {
+  const breakfast = eligible.filter((d) => d.time === "Breakfast");
   return {
     kind: "breakfast-single",
-    pool: eligible.filter(
-      (d) => d.time === "Breakfast" && (hasTag(d, "complete_meal") || hasTag(d, "complete_carb")),
-    ),
+    pool: breakfast.filter((d) => hasTag(d, "complete_meal") || hasTag(d, "complete_carb")),
+    ketoCompanion: breakfast.filter((d) => isHp(d) && d.category === "Keto"),
   };
 }
 
@@ -235,12 +289,15 @@ export function breakfastSinglePick(eligible: Dish[]): BreakfastSinglePickCandid
  * §3 Menu 1 (Mon/Wed/Fri lunch): HP dish + partner (HP-dependent) + lunch carb.
  *
  * The Menu 1 main is always the HP pick, and a meal carries one HP source, not
- * two, so both partner pools exclude HP-tagged dishes (keyed on the `HP` tag,
+ * two, so every partner pool excludes HP-tagged dishes (keyed on the `HP` tag,
  * not on dish names, so it holds for any HP protein: chicken on chicken, paneer
- * on paneer). The Dry→Gravy partner was already non-HP; the Gravy→Accompaniment
- * partner now drops HP-tagged Accompaniments too. The graceful fallback for an
- * empty filtered pool lives in `pickMenu1` (it needs to know which branch the
- * picked main took), not here.
+ * on paneer). §3 R4 complements the main's form: a Dry HP main pairs a non-HP
+ * Gravy (a dal, unchanged); a Gravy HP main pairs a non-HP Dry sabzi (replacing
+ * the former Accompaniment), so an Indian lunch always carries both a gravy and
+ * a dry dish around its protein. The two thin-pool fallbacks for the Gravy
+ * branch (non-HP Accompaniment, then the unfiltered Accompaniment pool) live in
+ * `pickMenu1`, which knows which branch the picked main took. Menu 1 stays 3
+ * items either way, so the §9 weekday cap of 5 holds.
  */
 export function menu1(eligible: Dish[], weekLunchCarbs: Dish[]): Menu1CandidateSet {
   const lunch = eligible.filter((d) => d.time === "Lunch");
@@ -250,8 +307,11 @@ export function menu1(eligible: Dish[], weekLunchCarbs: Dish[]): Menu1CandidateS
       (d) => hasTag(d, "HP") && (d.category === "Gravy dish" || d.category === "Dry dish"),
     ),
     partnerWhenHpIsDry: lunch.filter((d) => !hasTag(d, "HP") && d.category === "Gravy dish"),
-    partnerWhenHpIsGravy: lunch.filter((d) => !hasTag(d, "HP") && d.category === "Accompaniment"),
-    partnerWhenHpIsGravyFallback: lunch.filter((d) => d.category === "Accompaniment"),
+    partnerWhenHpIsGravy: lunch.filter((d) => !hasTag(d, "HP") && d.category === "Dry dish"),
+    partnerWhenHpIsGravyFallback: lunch.filter(
+      (d) => !hasTag(d, "HP") && d.category === "Accompaniment",
+    ),
+    partnerWhenHpIsGravyLastResort: lunch.filter((d) => d.category === "Accompaniment"),
     lunchCarb: lunchCarbPool(eligible, weekLunchCarbs),
   };
 }

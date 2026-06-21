@@ -33,30 +33,34 @@ At most one weekday lunch per week may substitute Menu 3 or Menu 4 for its defau
 
 **One HP source per meal (all forms).** A single meal (a day's breakfast or a day's lunch) contains at most one HP-tagged dish. Each meal form below picks its protein main first; once an HP dish occupies the meal, the meal's remaining (non-main) positions exclude HP-tagged dishes. This is keyed on the `HP` tag, never on dish names, so it holds for any HP protein (chicken on chicken, paneer on paneer) and across every form: a "Chicken biryani" complete_meal never sits beside a "Chicken salad" HP accompaniment in one Saturday Menu 3. Thin-pool fallback: if excluding HP-tagged dishes would empty a non-main position pool, the unfiltered pool is used so the slot still fills (one HP-main meal with a second HP side beats an incomplete meal). This is rare given the broad companion pools and surfaces as composition signal for the slow loop, not a hard error.
 
+**Self-sufficient mains (all forms).** A self-sufficient main (tagged `complete_meal`, or Category=Complete meal) fills its slot alone: no separate carb, no accompaniment. The signal is the union of the tag and the category, because a dish can be Category=Complete meal without the `complete_meal` tag (White sauce pasta), and the tag alone would miss it. In breakfast Option B a Category=Bread `complete_carb` is served without the accompaniment; a Chilla or Paratha `complete_carb` keeps it. A non-complete-meal gravy that is itself filling (e.g. kadhi) is not structurally distinguishable from a gravy that wants a sabzi, so it carries no suppression and is left to in-week manual swap.
+
 ### Breakfast
 
 Breakfast is savoury only: the Fruit of the day (§3.3) is its own section, never a breakfast item.
 
 Mon, Wed, Fri (2 items), pick exactly one option per day:
 
-- Option B: 1 dish with `complete_carb` tag, plus 1 breakfast accompaniment (Category=Accompaniment, Time=Breakfast)
+- Option B: 1 dish with `complete_carb` tag, plus 1 breakfast accompaniment (Category=Accompaniment, Time=Breakfast). A Category=Bread `complete_carb` lead (avocado toast, masala toast) is self-sufficient: it is served without the accompaniment, a 1-item breakfast. A Chilla or Paratha `complete_carb` keeps its accompaniment.
 - Option C: 1 breakfast main (Category=Dry dish, Time=Breakfast), plus 1 plain breakfast carb (Time=Breakfast, Category in {Bread, Paratha, Chilla}, without `complete_carb` tag)
 
 The fruit-bearing Option A is retired (fruit is now §3.3), so both 2-item options are savoury. A consequence: a `complete_meal` breakfast dish, which Option A used to lead, now appears only on the Tue/Thu single-item slot below.
 
-Tue, Thu (1 item):
+Tue, Thu (1 item, plus the protein floor below):
 
 - 1 dish with `complete_meal` OR `complete_carb` tag (no accompaniment)
+
+Breakfast protein floor (Tue/Thu single pick): when the single breakfast main carries no `HP` tag, the slot adds one HP Category=Keto companion (e.g. boiled eggs), making a 2-item breakfast. It fires only on a no-HP breakfast, so it never conflicts with the one-HP-per-meal cap; an empty companion pool falls back to a 1-item breakfast. Mon/Wed/Fri, already two items, are left to in-week manual addition.
 
 ### Lunch
 
 **Menu 1 (Mon, Wed, Fri), 3 items:**
 
 - 1 HP dish (Category=Gravy dish or Dry dish)
-- 1 partner: if HP is Dry, pick a non-HP Gravy dish; if HP is Gravy, pick a non-HP Accompaniment
+- 1 partner that complements the main's form: if the HP main is Dry, pick a non-HP Gravy dish (a dal); if the HP main is Gravy, pick a non-HP Dry sabzi
 - 1 lunch carb (see §3.1)
 
-The partner is always non-HP: this is the one-HP-source-per-meal rule (above) applied to Menu 1. The Menu 1 main is the meal's HP pick, so the partner pool (the non-HP Gravy when the main is Dry, the Accompaniment when the main is Gravy) excludes any dish carrying the HP tag, with the same thin-pool fallback.
+Menu 1's partner complements the main's form, so an Indian lunch always carries both a gravy and a dry dish around its protein. The partner is always non-HP: this is the one-HP-source-per-meal rule (above) applied to Menu 1, so the partner pool excludes any dish carrying the HP tag. The Gravy-main branch has a thin-pool fallback chain: a non-HP Accompaniment (a salad) when no non-HP Dry sabzi is eligible, then the unfiltered Accompaniment pool when even that is empty, so the slot always fills. Menu 1 stays 3 items, so the §9 weekday cap of 5 holds. Complete_meal lunches are exempt (a self-sufficient main fills its slot alone; see Self-sufficient mains above), so they reach the Menu 3 / Menu 4 forms rather than this partner rule. Pairing a sabzi with a self-sufficient gravy such as kadhi is left to in-week manual swap.
 
 **Menu 2 (Tue, Thu), 4 items:**
 
