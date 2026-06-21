@@ -1,7 +1,7 @@
 import type { Dish, Ingredient, MenuHistoryRow, PackSizeHeader, Season } from "./data/schemas.js";
 import type { Day, Meal } from "./eligibility.js";
 import { weekSchedule, type SlotPlan } from "./schedule.js";
-import { eligibleDishes } from "./eligibility.js";
+import { eligibleDishes, ALL_DAYS } from "./eligibility.js";
 import {
   composeSlot,
   candidateSetPools,
@@ -88,9 +88,6 @@ export interface GeneratedWeek {
   /** Human-readable warnings ("Friday over cap (5), dropped: ..."). */
   incidents: string[];
 }
-
-const WEEKDAYS: Day[] = ["Mon", "Tue", "Wed", "Thu", "Fri"];
-const ALL_DAYS: Day[] = [...WEEKDAYS, "Sat"];
 
 /**
  * Top-level engine entry point. Composes the pipeline §2 → §3 → §4 → §10 → §9
