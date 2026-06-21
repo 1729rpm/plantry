@@ -21,6 +21,7 @@ import {
   rankCandidates,
   withinWeekRecencySet,
   proteinFamiliesUsedAsHpMain,
+  placedNonIndianCount,
   type ConsolidationContext,
 } from "./priority.js";
 import { applyPick, emptyLedger, type IngredientLedger } from "./consolidation.js";
@@ -190,11 +191,16 @@ export function generateWeek(args: GenerateWeekArgs): GeneratedWeek {
       ledger,
       ingredients,
     };
-    // §4 step 5: non-exempt dishes already placed this week sink below fresh
+    // §4 step 5 within-week cuisine diversity: how many non-Indian dishes the
+    // week has placed so far. Recomputed each slot so the step stops promoting
+    // non-Indian candidates once the week hits WEEKLY_NON_INDIAN_TARGET. Soft,
+    // target-gated; below target it ranks non-Indian candidates above Indian.
+    const placedNonIndian = placedNonIndianCount(weekPicks);
+    // §4 step 6: non-exempt dishes already placed this week sink below fresh
     // alternatives for this slot's ranking. Recomputed each slot from the
     // running picks so each subsequent slot sees the latest placements.
     const withinWeekDishIds = withinWeekRecencySet(weekPicks);
-    // §4 step 6 (Cluster E): protein families already spent on an HP main this
+    // §4 step 7 (Cluster E): protein families already spent on an HP main this
     // week. Recomputed each slot so a later HP-main slot prefers a fresh protein
     // over one the week has already used (chicken, paneer). Soft, HP-main-only.
     const usedHpMainProteinFamilies = proteinFamiliesUsedAsHpMain(weekPicks);
@@ -203,6 +209,7 @@ export function generateWeek(args: GenerateWeekArgs): GeneratedWeek {
       candidateSet,
       compositionHistory,
       consolidationContext,
+      placedNonIndianCount: placedNonIndian,
       withinWeekDishIds,
       usedHpMainProteinFamilies,
       sameDayBreakfastPrimaryIngredient:
@@ -339,13 +346,20 @@ interface PickSlotArgs {
   compositionHistory: MenuHistoryRow[];
   consolidationContext: ConsolidationContext;
   /**
-   * §4 step 5 within-week recency: ids of non-exempt dishes already placed this
+   * §4 step 5 within-week cuisine diversity: the count of non-Indian dishes
+   * already placed this week. Threaded into every rankCandidates call for this
+   * slot so, while the week is below WEEKLY_NON_INDIAN_TARGET, non-Indian
+   * candidates rank above Indian ones (soft, with a fresh-alternative fallback).
+   */
+  placedNonIndianCount?: number;
+  /**
+   * §4 step 6 within-week recency: ids of non-exempt dishes already placed this
    * week. Threaded into every rankCandidates call for this slot so a dish picked
    * in an earlier slot sinks below fresh alternatives here.
    */
   withinWeekDishIds?: ReadonlySet<number>;
   /**
-   * §4 step 6 within-week protein diversity (Cluster E): protein families
+   * §4 step 7 within-week protein diversity (Cluster E): protein families
    * already spent on an HP main this week. Applied only when ranking an HP-main
    * position pool (`rankHpMain`), so a non-main companion pool is never reordered
    * by protein. Soft with fallback.
@@ -388,13 +402,14 @@ function rank(args: PickSlotArgs, pool: Dish[]): Dish[] {
     history: args.compositionHistory,
     sameDayBreakfastPrimaryIngredient: args.sameDayBreakfastPrimaryIngredient,
     consolidationContext: args.consolidationContext,
+    placedNonIndianCount: args.placedNonIndianCount,
     withinWeekDishIds: args.withinWeekDishIds,
   });
   return promotePins(ranked, args.pinnedDishIds);
 }
 
 /**
- * Rank an HP-main position pool, applying §4 step 6 within-week protein
+ * Rank an HP-main position pool, applying §4 step 7 within-week protein
  * diversity on top of the §4 steps `rank` applies. Used for the protein-main
  * position of each meal form (Menu 1 HP, Menu 2 Keto, Menu 3 complete_meal+HP,
  * Menu 4 Keto, and any HP breakfast main). Companion positions still call
@@ -406,6 +421,7 @@ function rankHpMain(args: PickSlotArgs, pool: Dish[]): Dish[] {
     history: args.compositionHistory,
     sameDayBreakfastPrimaryIngredient: args.sameDayBreakfastPrimaryIngredient,
     consolidationContext: args.consolidationContext,
+    placedNonIndianCount: args.placedNonIndianCount,
     withinWeekDishIds: args.withinWeekDishIds,
     usedHpMainProteinFamilies: args.usedHpMainProteinFamilies,
   });
@@ -794,7 +810,11 @@ export function rankCandidatesForSlot(args: RankCandidatesForSlotArgs): Dish[] {
 
   const context: ConsolidationContext = { ledger, ingredients };
 
-  // §4 step 5: the same within-week demotion set generateWeek builds, derived
+  // §4 step 5: the same placed-non-Indian count generateWeek builds, so the swap
+  // picker's cuisine-diversity nudge matches generation: while the week is below
+  // WEEKLY_NON_INDIAN_TARGET, non-Indian alternatives surface above Indian ones.
+  const placedNonIndian = placedNonIndianCount(currentWeekPicks);
+  // §4 step 6: the same within-week demotion set generateWeek builds, derived
   // from the dishes already placed this week (exempt dishes excluded by the
   // shared helper), so the swap picker ranks an already-placed dish below fresh
   // alternatives exactly as generation does.
@@ -809,6 +829,7 @@ export function rankCandidatesForSlot(args: RankCandidatesForSlotArgs): Dish[] {
       history: [...history, ...inWeekHistory],
       sameDayBreakfastPrimaryIngredient: sameDayPrimary,
       consolidationContext: context,
+      placedNonIndianCount: placedNonIndian,
       withinWeekDishIds,
     });
     for (const dish of r) {
