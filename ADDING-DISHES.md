@@ -70,7 +70,7 @@ Field traps that have actually bitten us:
 
 ### Cuisine taxonomy (exactly one, required)
 
-`Indian` (default for any dish with no international cuisine), `Italian`, `Chinese`, `Mexican`, `Greek`, `Spanish`, `Korean`, `Japanese`, `Continental`, `Vietnamese`, `Lebanese`, `Mediterranean`, `Thai`. It is a display/filter field only: no eligibility, selection, or composition rule reads it. It feeds the Explore cuisine filter and the photo prompt's cuisine slot.
+`Indian` (default for any dish with no international cuisine), `Italian`, `Chinese`, `Mexican`, `Greek`, `Spanish`, `Korean`, `Japanese`, `Continental`, `Vietnamese`, `Lebanese`, `Mediterranean`, `Thai`. Selection reads it for the §4 within-week cuisine-diversity step (which leans the week slightly less Indian and surfaces preferred international dishes first); eligibility (§1) and composition (§3) never read it. It also feeds the Explore cuisine filter and the photo prompt's cuisine slot.
 
 ## 3. Ingredients (catalog-first)
 
