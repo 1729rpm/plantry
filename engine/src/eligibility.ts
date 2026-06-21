@@ -3,6 +3,12 @@ import type { Dish, MenuHistoryRow, Season } from "./data/schemas.js";
 export type Day = "Mon" | "Tue" | "Wed" | "Thu" | "Fri" | "Sat";
 export type Meal = "Breakfast" | "Lunch";
 
+/** The five scheduled weekdays, Mon-Fri, in schedule order (§2). */
+export const WEEKDAYS: Day[] = ["Mon", "Tue", "Wed", "Thu", "Fri"];
+
+/** Every scheduled day, Mon-Sat, in schedule order (§2). Sunday is unscheduled. */
+export const ALL_DAYS: Day[] = [...WEEKDAYS, "Sat"];
+
 export interface Slot {
   day: Day;
   meal: Meal;

@@ -1,4 +1,5 @@
 import type { Day, Meal } from "./eligibility.js";
+import { WEEKDAYS } from "./eligibility.js";
 
 export type LunchMenu = 1 | 2 | 3 | 4;
 
@@ -14,8 +15,6 @@ export interface WeekScheduleArgs {
   lastSaturdayMenu?: 3 | 4 | null;
   rng?: () => number;
 }
-
-const WEEKDAYS: Day[] = ["Mon", "Tue", "Wed", "Thu", "Fri"];
 
 const ISO_MONDAY = /^\d{4}-\d{2}-\d{2}$/;
 

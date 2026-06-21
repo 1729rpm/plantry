@@ -1,7 +1,7 @@
 import type { Dish, Ingredient, MenuHistoryRow, PackSizeHeader, Season } from "./data/schemas.js";
 import type { Day, Meal } from "./eligibility.js";
 import { weekSchedule, type SlotPlan } from "./schedule.js";
-import { eligibleDishes } from "./eligibility.js";
+import { eligibleDishes, ALL_DAYS } from "./eligibility.js";
 import {
   composeSlot,
   candidateSetPools,
@@ -89,8 +89,95 @@ export interface GeneratedWeek {
   incidents: string[];
 }
 
-const WEEKDAYS: Day[] = ["Mon", "Tue", "Wed", "Thu", "Fri"];
-const ALL_DAYS: Day[] = [...WEEKDAYS, "Sat"];
+/** Inputs both ranking paths derive identically from the dishes placed so far. */
+interface SlotRankingInputs {
+  /**
+   * §10 consolidation ledger after applying every placed pick in order. A pure
+   * fold of `applyPick`, so deriving it from the picks equals advancing it
+   * incrementally pick-by-pick.
+   */
+  ledger: IngredientLedger;
+  /**
+   * §3.1 lunch carbs placed this week (Category in {Chapati, Rice}). Filtered
+   * straight from the picks: breakfast composition never yields a Chapati/Rice
+   * category dish, so this equals the main loop's lunch-only accumulation.
+   */
+  weekLunchCarbs: Dish[];
+  /**
+   * Synthetic within-week history: one row per placed pick, all dated
+   * `weekStart`, so §4 step 1 (and the composed history) treat this-week picks
+   * as most-recently cooked. Only `weekStart` and `dishId` feed any consumer
+   * (`lastCookedMap` keys on those; composition ignores history rows), so the
+   * `day`/`meal`/`dishName` carried here are inert for ranking. That is why both
+   * paths can share one row shape even though they label the day/meal
+   * differently: the labels never reach a comparison.
+   */
+  inWeekHistory: MenuHistoryRow[];
+  /** §4 step 5 within-week cuisine-diversity count of placed non-Indian dishes. */
+  placedNonIndianCount: number;
+  /** §4 step 6 within-week recency: ids of non-exempt dishes already placed. */
+  withinWeekDishIds: ReadonlySet<number>;
+  /**
+   * §4 step 7 within-week protein diversity: protein families already spent on
+   * an HP main this week. Derived here for both paths, but ONLY the main
+   * generation loop threads it into ranking; `rankCandidatesForSlot`
+   * deliberately omits it (see its call site), so the swap ranker keeps its
+   * existing step-7-free behaviour.
+   */
+  usedHpMainProteinFamilies: ReadonlySet<string>;
+}
+
+interface DeriveSlotRankingInputsArgs {
+  /** Dishes placed earlier in the week, in pick order. */
+  picks: Dish[];
+  weekStart: string;
+  /** Cross-week history seed; combine with `inWeekHistory` for composition/§4. */
+  ingredients: Ingredient[];
+  packSizes: PackSizeHeader[];
+}
+
+/**
+ * Single definition of "derive the per-slot ranking inputs from this week's
+ * placed picks", shared by the main generation loop (`generateWeek`) and the
+ * swap-time ranker (`rankCandidatesForSlot`) so the two paths cannot silently
+ * drift. Every field is a pure function of `picks` plus the static inputs, which
+ * is why the main loop can call this fresh each slot instead of threading the
+ * accumulators by hand: the ledger fold, the lunch-carb filter, and the
+ * synthetic history all reproduce the incremental state exactly.
+ *
+ * Note the deliberate asymmetry at the two call sites: this helper computes
+ * `usedHpMainProteinFamilies` for both, but `rankCandidatesForSlot` does not
+ * pass it on (§4 step 7 stays off for swaps). Computing it here is inert for
+ * that path and keeps the derivation in one place.
+ */
+function deriveSlotRankingInputs(args: DeriveSlotRankingInputsArgs): SlotRankingInputs {
+  const { picks, weekStart, ingredients, packSizes } = args;
+
+  let ledger: IngredientLedger = emptyLedger(packSizes);
+  const inWeekHistory: MenuHistoryRow[] = [];
+  for (const dish of picks) {
+    ledger = applyPick(ledger, dish, ingredients);
+    inWeekHistory.push({
+      weekStart,
+      day: toLongDay("Mon"),
+      meal: "Breakfast",
+      dishName: dish.name,
+      dishId: dish.id,
+    });
+  }
+  const weekLunchCarbs = picks.filter(
+    (d) => d.category === "Chapati" || d.category === "Rice",
+  );
+
+  return {
+    ledger,
+    weekLunchCarbs,
+    inWeekHistory,
+    placedNonIndianCount: placedNonIndianCount(picks),
+    withinWeekDishIds: withinWeekRecencySet(picks),
+    usedHpMainProteinFamilies: proteinFamiliesUsedAsHpMain(picks),
+  };
+}
 
 /**
  * Top-level engine entry point. Composes the pipeline §2 → §3 → §4 → §10 → §9
@@ -161,61 +248,47 @@ export function generateWeek(args: GenerateWeekArgs): GeneratedWeek {
     pinsBySlot.set(key, list);
   }
 
-  // Mutable accumulators threaded through the slot loop.
-  let ledger: IngredientLedger = emptyLedger(packSizes);
-  const weekLunchCarbs: Dish[] = [];
   const slotResults: GeneratedWeekSlot[] = [];
-  // Every dish placed so far this week, in pick order. Feeds two things: the
-  // synthetic within-week history below (step 1's date view of the in-progress
-  // week) and the §4 step 5 within-week demotion set (`withinWeekRecencySet`),
-  // which is the dominant signal that actually keeps a broad pool from picking
-  // the same dish every Mon/Wed/Fri.
+  // Every dish placed so far this week, in pick order. This is the single source
+  // of truth for the per-slot ranking inputs: `deriveSlotRankingInputs` rebuilds
+  // the §10 ledger, §3.1 lunch carbs, the synthetic within-week history, and the
+  // §4 step 5/6/7 accumulators from it each slot. Keeping these derived (rather
+  // than threading separate mutable accumulators) is what lets the swap ranker
+  // (`rankCandidatesForSlot`) share the exact same derivation.
   const weekPicks: Dish[] = [];
-  // Synthetic history for within-week recency: picks made earlier in the week
-  // record a virtual cooking on `weekStart`, so §4 step 1 treats them as the
-  // most recently cooked. Step 1 alone is not enough (steps 3 and 4 can
-  // re-promote a placed dish), which is why §4 step 5 demotes them outright;
-  // this synthetic history keeps step 1's ordering consistent with that. Lunch
-  // carbs and fruit are recency-exempt in priority.ts, so neither over-filters.
-  const inWeekHistory: MenuHistoryRow[] = [];
   // Same-day breakfast primary ingredient, set when we pick breakfast and
   // consumed by the same day's lunch slot to feed §4 step 2.
   const sameDayBreakfastPrimary = new Map<Day, string>();
 
   for (const slot of schedule) {
-    const compositionHistory: MenuHistoryRow[] = [...history, ...inWeekHistory];
+    const rankingInputs = deriveSlotRankingInputs({
+      picks: weekPicks,
+      weekStart,
+      ingredients,
+      packSizes,
+    });
+    const compositionHistory: MenuHistoryRow[] = [...history, ...rankingInputs.inWeekHistory];
     const candidateSet = composeSlot({
       slot,
       library,
       history: compositionHistory,
       season,
-      weekLunchCarbs,
+      weekLunchCarbs: rankingInputs.weekLunchCarbs,
     });
     const consolidationContext: ConsolidationContext = {
-      ledger,
+      ledger: rankingInputs.ledger,
       ingredients,
     };
-    // §4 step 5 within-week cuisine diversity: how many non-Indian dishes the
-    // week has placed so far. Recomputed each slot so the step stops promoting
-    // non-Indian candidates once the week hits WEEKLY_NON_INDIAN_TARGET. Soft,
-    // target-gated; below target it ranks non-Indian candidates above Indian.
-    const placedNonIndian = placedNonIndianCount(weekPicks);
-    // §4 step 6: non-exempt dishes already placed this week sink below fresh
-    // alternatives for this slot's ranking. Recomputed each slot from the
-    // running picks so each subsequent slot sees the latest placements.
-    const withinWeekDishIds = withinWeekRecencySet(weekPicks);
-    // §4 step 7 (Cluster E): protein families already spent on an HP main this
-    // week. Recomputed each slot so a later HP-main slot prefers a fresh protein
-    // over one the week has already used (chicken, paneer). Soft, HP-main-only.
-    const usedHpMainProteinFamilies = proteinFamiliesUsedAsHpMain(weekPicks);
     const picks = pickSlot({
       slot,
       candidateSet,
       compositionHistory,
       consolidationContext,
-      placedNonIndianCount: placedNonIndian,
-      withinWeekDishIds,
-      usedHpMainProteinFamilies,
+      placedNonIndianCount: rankingInputs.placedNonIndianCount,
+      withinWeekDishIds: rankingInputs.withinWeekDishIds,
+      // §4 step 7 protein diversity IS applied in generation (the main loop):
+      // a later HP-main slot prefers a protein the week has not used yet.
+      usedHpMainProteinFamilies: rankingInputs.usedHpMainProteinFamilies,
       sameDayBreakfastPrimaryIngredient:
         slot.meal === "Lunch" ? sameDayBreakfastPrimary.get(slot.day) : undefined,
       substitutionLeadDishId:
@@ -225,26 +298,9 @@ export function generateWeek(args: GenerateWeekArgs): GeneratedWeek {
       pinnedDishIds: pinsBySlot.get(slotKey(slot.day, slot.meal)),
     });
 
-    // Update ledger and within-week recency on each pick.
+    // Record each pick into the running week so the next slot's derivation sees it.
     for (const dish of picks) {
-      ledger = applyPick(ledger, dish, ingredients);
       weekPicks.push(dish);
-      inWeekHistory.push({
-        weekStart,
-        day: toLongDay(slot.day),
-        meal: slot.meal,
-        dishName: dish.name,
-        dishId: dish.id,
-      });
-    }
-
-    // Track lunch carbs for §3.1 across the week.
-    if (slot.meal === "Lunch") {
-      for (const dish of picks) {
-        if (dish.category === "Chapati" || dish.category === "Rice") {
-          weekLunchCarbs.push(dish);
-        }
-      }
     }
 
     // Wire same-day breakfast primary ingredient to lunch's §4 step 2.
@@ -483,10 +539,7 @@ function tryPair(args: PickSlotArgs, leadPool: Dish[], partnerPool: Dish[]): Dis
   // the same dish across positions when pools overlap.
   const partnerRanked = rank(
     args,
-    excludeHpIfMealHasHp(
-      partnerPool.filter((d) => d.id !== lead.id),
-      isHp(lead),
-    ),
+    excludeHpIfMealHasHp(excluding(partnerPool, lead), isHp(lead)),
   );
   if (partnerRanked.length === 0) return null;
   return [lead, partnerRanked[0]];
@@ -504,10 +557,7 @@ function pickBreakfastSingle(args: PickSlotArgs, set: BreakfastSinglePickCandida
   // one-HP-per-meal and never produces two HP. An empty companion pool degrades
   // gracefully to the 1-item breakfast.
   if (!isHp(main)) {
-    const companionRanked = rank(
-      args,
-      set.ketoCompanion.filter((d) => d.id !== main.id),
-    );
+    const companionRanked = rank(args, excluding(set.ketoCompanion, main));
     if (companionRanked.length > 0) return [main, companionRanked[0]];
   }
   return [main];
@@ -547,10 +597,7 @@ function pickMenu1(args: PickSlotArgs, set: Menu1CandidateSet): Dish[] {
       partnerPool = set.partnerWhenHpIsGravyLastResort;
     }
   }
-  const partnerRanked = rank(
-    args,
-    partnerPool.filter((d) => d.id !== hp.id),
-  );
+  const partnerRanked = rank(args, excluding(partnerPool, hp));
   const partner = partnerRanked[0];
   const carbRanked = rank(args, set.lunchCarb);
   const carb = carbRanked[0];
@@ -562,15 +609,13 @@ function pickMenu2(args: PickSlotArgs, set: Menu2CandidateSet): Dish[] {
   // diversity. The non-HP Gravy/Dry companions do not (they are not HP mains).
   const ketoRanked = rankHpMain(args, set.keto);
   const keto = ketoRanked[0];
-  const gravyRanked = rank(
-    args,
-    set.nonHpGravy.filter((d) => keto && d.id !== keto.id),
-  );
+  // Exact-preserving note: the gravy pool empties when the Keto lead did not
+  // resolve (`keto` undefined). This differs from `excluding`'s "undefined leads
+  // ignored" contract, so we keep the original guard for the no-keto case rather
+  // than flattening it: when there is no keto lead, no gravy is picked either.
+  const gravyRanked = rank(args, keto ? excluding(set.nonHpGravy, keto) : []);
   const gravy = gravyRanked[0];
-  const dryRanked = rank(
-    args,
-    set.nonHpDry.filter((d) => (!keto || d.id !== keto.id) && (!gravy || d.id !== gravy.id)),
-  );
+  const dryRanked = rank(args, excluding(set.nonHpDry, keto, gravy));
   const dry = dryRanked[0];
   const carbRanked = rank(args, set.lunchCarb);
   const carb = carbRanked[0];
@@ -594,17 +639,11 @@ function pickMenu3(args: PickSlotArgs, set: Menu3CandidateSet): Dish[] {
   const mealHasHp = lead ? isHp(lead) : false;
   const acc = rank(
     args,
-    excludeHpIfMealHasHp(
-      set.accompaniment.filter((d) => !lead || d.id !== lead.id),
-      mealHasHp,
-    ),
+    excludeHpIfMealHasHp(excluding(set.accompaniment, lead), mealHasHp),
   )[0];
   const dessert = rank(
     args,
-    excludeHpIfMealHasHp(
-      set.dessert.filter((d) => !lead || d.id !== lead.id),
-      mealHasHp,
-    ),
+    excludeHpIfMealHasHp(excluding(set.dessert, lead), mealHasHp),
   )[0];
   return compact([lead, acc, dessert]);
 }
@@ -623,18 +662,12 @@ function pickMenu4(args: PickSlotArgs, set: Menu4CandidateSet): Dish[] {
   let mealHasHp = lead ? isHp(lead) : false;
   const keto = rankHpMain(
     args,
-    excludeHpIfMealHasHp(
-      set.keto.filter((d) => !lead || d.id !== lead.id),
-      mealHasHp,
-    ),
+    excludeHpIfMealHasHp(excluding(set.keto, lead), mealHasHp),
   )[0];
   if (keto && isHp(keto)) mealHasHp = true;
   const acc = rank(
     args,
-    excludeHpIfMealHasHp(
-      set.accompaniment.filter((d) => !lead || d.id !== lead.id),
-      mealHasHp,
-    ),
+    excludeHpIfMealHasHp(excluding(set.accompaniment, lead), mealHasHp),
   )[0];
   return compact([lead, keto, acc]);
 }
@@ -665,6 +698,25 @@ function pickLunchCarbOnly(args: PickSlotArgs, lunchCarbPool: Dish[]): Dish[] {
 
 function compact(dishes: Array<Dish | undefined>): Dish[] {
   return dishes.filter((d): d is Dish => d !== undefined);
+}
+
+/**
+ * Filter `pool` down to dishes whose id matches none of the already-`chosen`
+ * dishes, so overlapping position pools never double-pick one dish across a
+ * meal's positions. Undefined `chosen` entries (a lead/companion that did not
+ * resolve) are ignored, matching the per-site null-guards the pick functions
+ * previously open-coded. Behaviour-identical to the inline
+ * `pool.filter((d) => d.id !== a.id && (!b || d.id !== b.id))` shapes it
+ * replaces: the same ids are excluded and an undefined chosen dish excludes
+ * nothing.
+ */
+function excluding(pool: Dish[], ...chosen: Array<Dish | undefined>): Dish[] {
+  const excludedIds = new Set<number>();
+  for (const dish of chosen) {
+    if (dish) excludedIds.add(dish.id);
+  }
+  if (excludedIds.size === 0) return pool;
+  return pool.filter((d) => !excludedIds.has(d.id));
 }
 
 /**
@@ -788,48 +840,31 @@ export function rankCandidatesForSlot(args: RankCandidatesForSlotArgs): Dish[] {
   const slot = schedule.find((s) => s.day === day && s.meal === meal);
   if (!slot) return [];
 
-  // Rebuild a ledger and weekLunchCarbs from currentWeekPicks.
-  let ledger: IngredientLedger = emptyLedger(packSizes);
-  for (const dish of currentWeekPicks) {
-    ledger = applyPick(ledger, dish, ingredients);
-  }
-  const weekLunchCarbs = currentWeekPicks.filter(
-    (d) => d.category === "Chapati" || d.category === "Rice",
-  );
-
-  // Synthetic within-week history so already-picked dishes rank as recently
-  // cooked. The caller is responsible for not double-counting the slot being
-  // ranked (i.e. not including its current pick in currentWeekPicks).
-  const inWeekHistory: MenuHistoryRow[] = currentWeekPicks.map((d) => ({
+  // Rebuild every per-slot ranking input from currentWeekPicks via the SAME
+  // helper the main generation loop uses, so the swap picker's §10 ledger, §3.1
+  // lunch carbs, synthetic within-week history, and §4 step 5/6 inputs cannot
+  // drift from generation. The caller is responsible for not double-counting the
+  // slot being ranked (i.e. not including its current pick in currentWeekPicks).
+  const rankingInputs = deriveSlotRankingInputs({
+    picks: currentWeekPicks,
     weekStart,
-    day: toLongDay(day),
-    meal,
-    dishName: d.name,
-    dishId: d.id,
-  }));
+    ingredients,
+    packSizes,
+  });
+  const compositionHistory: MenuHistoryRow[] = [...history, ...rankingInputs.inWeekHistory];
 
   const candidateSet = composeSlot({
     slot,
     library,
-    history: [...history, ...inWeekHistory],
+    history: compositionHistory,
     season,
-    weekLunchCarbs,
+    weekLunchCarbs: rankingInputs.weekLunchCarbs,
   });
 
   const sameDayPrimary =
     meal === "Lunch" && sameDayBreakfastPick ? sameDayBreakfastPick.primaryIngredient : undefined;
 
-  const context: ConsolidationContext = { ledger, ingredients };
-
-  // §4 step 5: the same placed-non-Indian count generateWeek builds, so the swap
-  // picker's cuisine-diversity nudge matches generation: while the week is below
-  // WEEKLY_NON_INDIAN_TARGET, non-Indian alternatives surface above Indian ones.
-  const placedNonIndian = placedNonIndianCount(currentWeekPicks);
-  // §4 step 6: the same within-week demotion set generateWeek builds, derived
-  // from the dishes already placed this week (exempt dishes excluded by the
-  // shared helper), so the swap picker ranks an already-placed dish below fresh
-  // alternatives exactly as generation does.
-  const withinWeekDishIds = withinWeekRecencySet(currentWeekPicks);
+  const context: ConsolidationContext = { ledger: rankingInputs.ledger, ingredients };
 
   const pools = candidateSetPools(candidateSet);
   const ranked: Dish[] = [];
@@ -837,11 +872,20 @@ export function rankCandidatesForSlot(args: RankCandidatesForSlotArgs): Dish[] {
   for (const pool of pools) {
     const r = rankCandidates({
       pool,
-      history: [...history, ...inWeekHistory],
+      history: compositionHistory,
       sameDayBreakfastPrimaryIngredient: sameDayPrimary,
       consolidationContext: context,
-      placedNonIndianCount: placedNonIndian,
-      withinWeekDishIds,
+      placedNonIndianCount: rankingInputs.placedNonIndianCount,
+      withinWeekDishIds: rankingInputs.withinWeekDishIds,
+      // §4 step 7 (within-week protein diversity) is DELIBERATELY OMITTED here.
+      // The swap-time ranker has never applied step 7, while the main generation
+      // loop does (it threads usedHpMainProteinFamilies into rankHpMain). That
+      // divergence is intentional and preserved: a swap offers alternatives by
+      // recency/consolidation/cuisine without also re-spreading proteins across
+      // the week. `deriveSlotRankingInputs` still computes
+      // rankingInputs.usedHpMainProteinFamilies (one shared derivation), but it
+      // is not passed on here. Leaving it off is the documented choice, not an
+      // oversight; pass it through only if step 7 is intentionally added to swaps.
     });
     for (const dish of r) {
       if (seen.has(dish.id)) continue;
