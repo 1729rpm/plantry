@@ -19,6 +19,15 @@ Decisions Rajat must approve go in the "Open items" list in `features/phase2.md`
 
 ---
 
+## 2026-06-22 03:30 IST  Expansion-8: ship the two promoted customs active, and add a Beetroot catalog row
+
+**Stream:** data/expansion-8 (content batch, #187)
+**Context:** Rajat added two in-week custom one-offs ("beetroot roti", "cucumber tomato salad") to the 2026-06-22 menu. Promoting them into the library (so the live slots hold real dishes, not free-text customs) needs two judgment calls: the active/inactive review gate, and a new ingredient catalog row for beetroot.
+**Options considered:** (a) ship `active: No` behind the ADDING-DISHES.md §6 review gate and flip later, or (b) ship `active: Yes` directly. For beetroot: (a) treat it as an untracked staple, or (b) add a tracked Vegetables catalog row.
+**Chosen:** (b) on both. Ship active because both are small, confidently-correct, year-round dishes that mirror existing cousins (Missi/Bajra roti; Cucumber/Onion-tomato salad), so the review gate adds no safety, and because active + in-season is required for `swapDish` to accept them when retargeting the live slots (the whole point of the task). Add a Beetroot catalog row (Vegetables group, real macros, not Special) because grated beetroot is the defining grocery item of the roti and must appear on the buy list; the roti's wheat flour stays an untracked staple, matching plain Roti.
+**Reversibility:** easy. A later `active: No` flip is one line per file; the Beetroot row is additive (only beetroot-roti uses it).
+**Right-size check (per `docs/product.md` §4):** problem size is two real recurring dishes Rajat cooked; fix level is data rows (two dish files + one catalog row + photos), no engine or rule change; generality: handled as a normal content-batch add, not a special case.
+
 ## 2026-06-17 Fruit of the day stays a normal section (override the handoff's quieter FruitRow)
 
 **Stream:** UI Improvements (feature scoping; handoff override, removes the former item #5).
