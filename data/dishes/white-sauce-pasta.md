@@ -5,7 +5,7 @@ category: Complete meal
 time: Lunch
 tags: []
 primaryIngredient: Pasta
-preferred: No
+preferred: Yes
 active: Yes
 satiety: High
 prepMinutes: 25
