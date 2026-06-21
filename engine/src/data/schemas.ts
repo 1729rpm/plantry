@@ -54,18 +54,18 @@ export const DishSchema = z.object({
   seasons: SeasonsFieldSchema,
   /**
    * Cuisine, a single display/filter value (e.g. "Indian", "Italian", "Thai").
-   * NOT a rule input: the engine never reads it; eligibility, selection, and
-   * composition ignore it entirely. It is the one source of truth for the
-   * Explore cuisine filter, the Explore card's cuisine display, and the cuisine
-   * slot of the dish-photo prompt. Stored as the human-readable name (the
-   * cuisine is itself the label the user sees; there is no separate internal
-   * code to decode, so Principle 7's display/structure split does not apply).
+   * Read by §4 step 5 (within-week cuisine diversity), which tests
+   * `cuisine !== "Indian"`; §1 eligibility and §3 composition still never read
+   * it. It is also the one source of truth for the Explore cuisine filter, the
+   * Explore card's cuisine display, and the cuisine slot of the dish-photo
+   * prompt. Stored as the human-readable name (the cuisine is itself the label
+   * the user sees; there is no separate internal code to decode, so Principle
+   * 7's display/structure split does not apply).
    */
   cuisine: z.string().min(1),
-  // Enrichment fields (design-revamp §1.1, slice 2.1). All optional during the
-  // transition: every current dish file omits them and parses unchanged; the UI
-  // degrades gracefully when they are absent (§1.5 coverage ratchet). Population
-  // is slice 2.2.
+  // Enrichment fields (docs/engine.md §12). All optional: a dish file may omit
+  // them and parses unchanged; the UI degrades gracefully when they are absent
+  // (§11.1 coverage ratchet).
   /** Cooking complexity enum; the UI renders the plain-language label. */
   complexity: ComplexitySchema.optional(),
   /** Free-text skill note (e.g. "Comfortable, browning matters"). */
@@ -76,7 +76,7 @@ export const DishSchema = z.object({
   buySpecially: z.string().min(1).optional(),
   /** Free-text day-before prep; present only when day-before work exists. */
   prePrep: z.string().min(1).optional(),
-  /** Photo filename under data/dish-photos/; CI validates existence in 2.x. */
+  /** Photo filename under data/dish-photos/; CI validates its existence. */
   photo: z.string().min(1).optional(),
   // Body-prose conventions (parsed from the markdown body, not frontmatter).
   /** One-line description: the first body paragraph before `## Ingredients`. */
@@ -121,7 +121,7 @@ export type GroceryGroup = z.infer<typeof GroceryGroupSchema>;
 /**
  * One row of the ingredient catalog (data/ingredients.md). One row per
  * canonical ingredient. `packSize` present marks a tracked ingredient (the
- * pack-rounded buy unit used by §6 consolidation); absent marks an untracked
+ * pack-rounded buy unit used by §10 consolidation); absent marks an untracked
  * staple bought by weight. `group` is the user-facing grocery-list bucket.
  */
 export const CatalogIngredientSchema = z.object({
@@ -129,9 +129,8 @@ export const CatalogIngredientSchema = z.object({
   group: GroceryGroupSchema,
   unit: IngredientUnitSchema,
   packSize: z.string().min(1).optional(),
-  // Macro columns (design-revamp §1.1, slice 2.1). Schema only this slice;
-  // every cell ships blank and population is slice 2.2. A blank cell reads as
-  // absent here and as zero in nutrition derivation (engine/src/nutrition.ts).
+  // Macro columns (docs/engine.md §11). A blank cell reads as absent here and as
+  // zero in nutrition derivation (engine/src/nutrition.ts).
   /**
    * Grams per piece, for `pcs`-unit ingredients only (an egg is about 50 g), so
    * macro math can convert pieces to grams. Blank/absent for non-pcs rows.
