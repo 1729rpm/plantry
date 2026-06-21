@@ -24,7 +24,7 @@ A weekly meal planner for a small household, built as an installable Progressive
 ## What it does
 
 - **Generates a full week.** A deterministic TypeScript engine reads the dish library, the rules, the current season, and recent history, then produces a valid Mon-to-Sat menu plus a grocery list. Each day also carries an in-season "fruit of the day".
-- **Stays shareable.** The week renders to a family of images (a menu card per day, the grocery list, and per-dish recipe sheets) that go out through the phone's native share sheet, so the plan lands in a chat at the start of the week.
+- **Stays shareable.** The week renders to a family of images (a menu image and per-dish recipe sheets) that go out through the phone's native share sheet, so the plan lands in a chat at the start of the week.
 - **Builds the grocery list automatically.** Ingredients are aggregated across the week, grouped in a fixed shopping order, and rounded up to whole pack sizes. Common pantry staples are omitted unless a dish explicitly needs them. The list is skip-aware: a skipped day contributes nothing.
 - **Supports in-week edits.** Either user can swap a dish (via a ranked picker over the matching library), add a dish, drop in a custom dish, delete a dish, skip a whole day and restore it later, or save a dish for next week. Every edit records an author, a timestamp, and a reason.
 - **Surfaces new dishes.** An Explore feed ranks dishes the household has not cooked yet, "familiar but new": novelty that still resembles what the household actually cooks. Multi-select filters narrow the grid, and anything already planned or saved is hidden.
