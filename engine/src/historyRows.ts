@@ -70,3 +70,22 @@ export function deriveHistoryRows(args: DeriveHistoryRowsArgs): MenuHistoryRow[]
   }
   return rows;
 }
+
+/**
+ * Last-cooked weekStart per dish id, taken from the most recent matching history
+ * row (the largest `weekStart` seen for that id). This is the recency primitive
+ * the §4 selection ranker (`priority.byLongestUnused`), the §5 picker recency
+ * tier (`pickerRanking`), the composition substitution scan, and the §3.3 fruit
+ * rotation all build on, so it lives in one place. A dish absent from the map has
+ * never been cooked; callers treat "no entry" as longest unused.
+ */
+export function lastCookedMap(history: MenuHistoryRow[]): Map<number, string> {
+  const map = new Map<number, string>();
+  for (const row of history) {
+    const existing = map.get(row.dishId);
+    if (existing === undefined || row.weekStart > existing) {
+      map.set(row.dishId, row.weekStart);
+    }
+  }
+  return map;
+}

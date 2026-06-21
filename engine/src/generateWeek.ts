@@ -28,6 +28,7 @@ import {
 import { applyPick, emptyLedger, type IngredientLedger } from "./consolidation.js";
 import { applyCap } from "./cap.js";
 import { planRequests, slotKey } from "./requests.js";
+import { lastCookedMap } from "./historyRows.js";
 
 export interface GenerateWeekArgs {
   /** ISO date of the Monday that anchors the week. */
@@ -676,13 +677,7 @@ function compact(dishes: Array<Dish | undefined>): Dish[] {
  * non-fruit dish is ever affected.
  */
 function orderFruitByLongestUnused(pool: Dish[], history: MenuHistoryRow[]): Dish[] {
-  const lastCooked = new Map<number, string>();
-  for (const row of history) {
-    const existing = lastCooked.get(row.dishId);
-    if (existing === undefined || row.weekStart > existing) {
-      lastCooked.set(row.dishId, row.weekStart);
-    }
-  }
+  const lastCooked = lastCookedMap(history);
   const decorated = pool.map((dish, index) => ({ dish, index }));
   decorated.sort((a, b) => {
     const aDate = lastCooked.get(a.dish.id);

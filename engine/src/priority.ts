@@ -4,6 +4,7 @@ import {
   rankByConsolidation,
   type IngredientLedger,
 } from "./consolidation.js";
+import { lastCookedMap } from "./historyRows.js";
 
 /**
  * Context for §4 step 3 (delegates to §10 ingredient consolidation). When
@@ -151,18 +152,6 @@ export function withinWeekRecencySet(picks: Dish[]): Set<number> {
     if (!isRecencyExempt(dish)) set.add(dish.id);
   }
   return set;
-}
-
-/** Last-cooked date per dish id, taken from the most recent matching history row. */
-function lastCookedMap(history: MenuHistoryRow[]): Map<number, string> {
-  const map = new Map<number, string>();
-  for (const row of history) {
-    const existing = map.get(row.dishId);
-    if (existing === undefined || row.weekStart > existing) {
-      map.set(row.dishId, row.weekStart);
-    }
-  }
-  return map;
 }
 
 /**
