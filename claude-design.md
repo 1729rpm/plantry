@@ -47,7 +47,7 @@ Then the reference implementation and review aids:
 - `hifi-primitives.jsx` — shared components (buttons, day card, date badge, dish row, fruit row, bottom sheet, and similar).
 - `hifi-screens.jsx` — composed screens (passcode gate, identity picker, menu header, current-week view, day editor, grocery list, Explore, Changes, plus any new screens).
 - `hifi-overlays.jsx` — sheets and dialogs (bottom sheets, action sheet, reason dialogs, picker overlays).
-- `hifi-share-image.jsx` — the shareable image layout (the menu, grocery, and recipe-sheet family). Kept separate because it is a distinct surface with its own constraints.
+- `hifi-share-image.jsx` — the shareable image layout (the menu and recipe-sheet family). Kept separate because it is a distinct surface with its own constraints.
 - `hifi-data.js` — the sample dish library, fruit set, week, grocery, and activity used by the prototype and the screens canvas, each record shaped like the live data model.
 - `hifi-app.jsx` — prototype state and navigation that wires the screens and overlays into a clickable app.
 - `Plantry Hi-Fi.html` — the interactive prototype, openable in a browser; the behavioural source of truth.
