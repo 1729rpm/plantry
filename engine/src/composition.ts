@@ -1,4 +1,4 @@
-import type { Dish, MenuHistoryRow, Season } from "./data/schemas.js";
+import type { Dish, DishTag, MenuHistoryRow, Season } from "./data/schemas.js";
 import type { Day } from "./eligibility.js";
 import { eligibleDishes } from "./eligibility.js";
 import type { SlotPlan } from "./schedule.js";
@@ -174,7 +174,7 @@ function isBigBreakfastDay(day: Day): boolean {
   return day === "Mon" || day === "Wed" || day === "Fri";
 }
 
-function hasTag(dish: Dish, tag: string): boolean {
+function hasTag(dish: Dish, tag: DishTag): boolean {
   return dish.tags.includes(tag);
 }
 
