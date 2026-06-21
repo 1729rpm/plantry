@@ -1,9 +1,8 @@
-// Share-image components. The shareable output family (slice 8.1): a menu image,
-// a grocery image, and one recipe sheet per dish marked "include recipe when
-// sharing". These are a separate surface from the PWA chrome: calm, label-free,
-// legible at phone size on WhatsApp, rendered on a warm cream card. Ported from
-// design_handoff/hifi-share-image.jsx, with the prototype's inline styles moved
-// to namespaced CSS classes (share-img__*) appended to index.css.
+// Share-image components. The shareable output family is the menu image plus one
+// recipe sheet per dish marked "include recipe when sharing". These are a
+// separate surface from the PWA chrome: calm, label-free, legible at phone size
+// on WhatsApp, rendered on a warm cream card. The grocery list is internal only
+// and is not part of this family.
 //
 // Both the swipe-rail preview (SharePreviewSheet) and the exported PNGs render
 // from these same components, so the preview and the shared image cannot drift
@@ -14,25 +13,8 @@
 import type { ReactNode } from "react";
 import type { Dish } from "@plantry/engine";
 import type { CurrentWeek, DishPick, ShortDay } from "../lib/types.js";
-import { dayOrderIndex, dayDate, weekRangeLabel } from "../lib/days.js";
+import { dayOrderIndex, dayDate } from "../lib/days.js";
 import { dishById } from "../lib/library.js";
-
-// One grocery group as the skip-aware query returns it (mirrors GroceryScreen's
-// local shape and the engine GroceryList). The preview passes the live result
-// straight through, so the share image and the Grocery tab show the same list.
-export interface ShareGroceryItem {
-  ingredient: string;
-  quantity: number;
-  unit: "g" | "ml" | "pcs";
-  tracked: boolean;
-  packs?: number;
-  packTotalGrams?: number;
-}
-
-export interface ShareGroceryGroup {
-  group: string;
-  items: ShareGroceryItem[];
-}
 
 function ShareFrame({ children }: { children: ReactNode }) {
   return (
@@ -119,41 +101,7 @@ export function buildShareDayModels(week: CurrentWeek): ShareDayModel[] {
 // (they have not shown the bug). buildShareDayModels above is the shared data
 // model both surfaces read.
 
-// Image 2: the grocery list, in the fixed catalog group order the query returns.
-export function GroceryShareImage({
-  groups,
-  weekStart,
-}: {
-  groups: ShareGroceryGroup[];
-  weekStart: string;
-}) {
-  const nonEmpty = groups.filter((g) => g.items.length > 0);
-  return (
-    <ShareFrame>
-      <ShareHeading title="Groceries" sub={weekRangeLabel(weekStart)} />
-      {nonEmpty.length === 0 ? (
-        <div className="share-img__empty">Nothing to buy this week.</div>
-      ) : (
-        <div className="share-img__groups">
-          {nonEmpty.map((g) => (
-            <div key={g.group} className="share-img__group">
-              <div className="share-img__group-label">{g.group}</div>
-              <div className="share-img__group-items">
-                {g.items.map((it) => (
-                  <div key={it.ingredient} className="share-img__group-item">
-                    {it.ingredient}
-                  </div>
-                ))}
-              </div>
-            </div>
-          ))}
-        </div>
-      )}
-    </ShareFrame>
-  );
-}
-
-// Image 3+: one recipe sheet per dish marked "include recipe when sharing". The
+// Image 2+: one recipe sheet per dish marked "include recipe when sharing". The
 // cook fields and recipe steps degrade gracefully when a dish lacks them (the
 // enrichment coverage ramp, §1.5): the sheet only renders the rows it has.
 export function RecipeShareImage({ dish }: { dish: Dish }) {

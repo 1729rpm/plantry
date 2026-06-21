@@ -16,7 +16,6 @@ import { getCachedWeek, setCachedWeek } from "../lib/storage.js";
 import { Avatar, PrimaryButton } from "./primitives.js";
 import { DayCard, type DayCardModel } from "./DayCard.js";
 import { SharePreviewSheet } from "./SharePreviewSheet.js";
-import type { ShareGroceryGroup } from "./ShareImages.js";
 
 // True only when the device reports a genuinely offline network. Reactive via
 // the browser online/offline events so a mid-session network drop flips it.
@@ -92,16 +91,6 @@ function MenuBody({
   const models = useMemo(() => buildDayModels(week), [week]);
 
   const [shareOpen, setShareOpen] = useState(false);
-
-  // The grocery list backing the share family's grocery image. Same skip-aware
-  // query the Grocery tab uses, so the shared image matches the Grocery screen.
-  // Only requested when online (offline shows the cached week without a live
-  // grocery query) and only when the share sheet is open, to avoid a query on
-  // every Menu visit. Falls back to an empty list until it resolves.
-  const grocery = useQuery(
-    anyApi.groceryList.getGroceryList,
-    !offline && shareOpen ? { weekStart: week.weekStart } : "skip",
-  ) as { groups: ShareGroceryGroup[] } | undefined;
   return (
     <>
       <div className="screen__scroll">
@@ -139,21 +128,13 @@ function MenuBody({
       </div>
       <div className="screen__footer">
         {/* Share opens the swipe-rail preview, which renders the image family
-            (menu, grocery, one recipe sheet per included dish) and sends them
-            via the OS share sheet. Offline shows the cached week, so the live
-            grocery query the share image needs is not available; keep Share off
-            until the real week is back. */}
-        <PrimaryButton disabled={offline} onClick={() => setShareOpen(true)}>
-          Share this week
-        </PrimaryButton>
+            (the menu image, then one recipe sheet per included dish) and sends
+            them via the OS share sheet. The family is a pure function of the
+            week, so Share works offline from the cached week (it no longer needs
+            a live grocery query). */}
+        <PrimaryButton onClick={() => setShareOpen(true)}>Share this week</PrimaryButton>
       </div>
-      {shareOpen && (
-        <SharePreviewSheet
-          week={week}
-          grocery={grocery?.groups ?? []}
-          onClose={() => setShareOpen(false)}
-        />
-      )}
+      {shareOpen && <SharePreviewSheet week={week} onClose={() => setShareOpen(false)} />}
     </>
   );
 }

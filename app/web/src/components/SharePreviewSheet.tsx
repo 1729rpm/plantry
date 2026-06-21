@@ -1,8 +1,9 @@
 // Share preview + send. Opened from the Menu's "Share this week" button. Shows
-// the shareable image family as a horizontal swipe rail (menu, grocery, then one
-// recipe sheet per dish marked "include recipe when sharing"), the way the
+// the shareable image family as a horizontal swipe rail (the menu image, then
+// one recipe sheet per dish marked "include recipe when sharing"), the way the
 // images arrive on WhatsApp, and a Send button that renders each slide to a PNG
-// client-side and hands the set to the OS share sheet.
+// client-side and hands the set to the OS share sheet. The grocery list is
+// internal only and is not part of this family.
 //
 // Rendering (design-revamp §1.7): the slides on screen and the exported PNGs
 // come from the same source, so they cannot drift (the single-source
@@ -14,10 +15,11 @@
 //     to more lines than the frozen height allowed and the breakfast list spilled
 //     onto the lunch row. The canvas lays text out manually (measureText +
 //     manual line-breaking), so overlap is structurally impossible.
-//   - GROCERY + RECIPE: still html-to-image. A hidden capture stage holds a
-//     360px-wide render of each; html-to-image walks that node and paints a PNG
-//     at pixelRatio 3. They have not shown the foreignObject bug, so converting
-//     them is out of scope (the shared risk is noted in the PR diagnosis card).
+//   - RECIPE: still html-to-image. A hidden capture stage holds a 360px-wide
+//     render of each; html-to-image walks that node and paints a PNG at
+//     pixelRatio 3. Recipe sheets have not shown the foreignObject bug, so
+//     converting them is out of scope (the shared risk is noted in the PR
+//     diagnosis card).
 //
 // Delivery: the Web Share API level 2 (files) opens the native share sheet with
 // all the PNGs attached, which is how an installed PWA shares into WhatsApp on
@@ -32,17 +34,16 @@ import type { CurrentWeek } from "../lib/types.js";
 import { dishById } from "../lib/library.js";
 import { weekRangeLabel } from "../lib/days.js";
 import { Sheet, PrimaryButton } from "./primitives.js";
-import { GroceryShareImage, RecipeShareImage, type ShareGroceryGroup } from "./ShareImages.js";
+import { RecipeShareImage } from "./ShareImages.js";
 import { drawMenuShareCanvas, ensureMenuShareFonts, menuCanvasToBlob } from "./menuShareCanvas.js";
 
 interface SharePreviewSheetProps {
   week: CurrentWeek;
-  grocery: ShareGroceryGroup[];
   onClose: () => void;
 }
 
 // A rail slide. The menu slide is the canvas (kind: "menu", no React node); the
-// grocery and recipe slides are html-to-image capture nodes.
+// recipe slides are html-to-image capture nodes.
 interface Slide {
   id: string;
   label: string;
@@ -78,7 +79,7 @@ function safeSlug(name: string): string {
   );
 }
 
-export function SharePreviewSheet({ week, grocery, onClose }: SharePreviewSheetProps) {
+export function SharePreviewSheet({ week, onClose }: SharePreviewSheetProps) {
   const stageRef = useRef<HTMLDivElement>(null);
   // The single canvas that backs both the menu preview slide and the menu PNG.
   const menuCanvasRef = useRef<HTMLCanvasElement>(null);
@@ -114,13 +115,6 @@ export function SharePreviewSheet({ week, grocery, onClose }: SharePreviewSheetP
         fileSlug: "menu",
         kind: "menu",
       },
-      {
-        id: "grocery",
-        label: "Grocery list",
-        fileSlug: "grocery",
-        kind: "capture",
-        node: <GroceryShareImage groups={grocery} weekStart={week.weekStart} />,
-      },
       ...recipes.map((dish) => ({
         id: `recipe-${dish.id}`,
         label: dish.name,
@@ -130,7 +124,7 @@ export function SharePreviewSheet({ week, grocery, onClose }: SharePreviewSheetP
       })),
     ];
     return list;
-  }, [grocery, week.weekStart, recipes]);
+  }, [recipes]);
 
   // Render each slide to a PNG File, in rail order. Per-slide routing:
   //   - menu   -> the canvas's own toBlob (the same canvas shown in the rail);
@@ -279,7 +273,7 @@ export function SharePreviewSheet({ week, grocery, onClose }: SharePreviewSheetP
         </PrimaryButton>
       </div>
 
-      {/* Hidden capture stage for the html-to-image slides (grocery + recipe).
+      {/* Hidden capture stage for the html-to-image slides (the recipe sheets).
           Each node renders at the share images' true 360px width, off-screen, so
           html-to-image can paint a crisp PNG without the giant render ever being
           visible. aria-hidden + off-screen, not display:none, because
