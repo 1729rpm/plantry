@@ -6,7 +6,7 @@ import type {
   Season,
 } from "./data/schemas.js";
 import { eligibleDishes } from "./eligibility.js";
-import { deriveDishMacros } from "./nutrition.js";
+import { dishProtein, proteinBand } from "./nutrition.js";
 
 /**
  * Explore ranking (docs/engine.md §7 Explore ranking).
@@ -49,9 +49,6 @@ import { deriveDishMacros } from "./nutrition.js";
  * Explore tab (§7).
  */
 
-/** Number of grams-per-person that separates one protein band from the next. */
-export const PROTEIN_BAND_WIDTH_GRAMS = 5;
-
 /** The structured "why it fits" key. The UI phrases it; the engine never does. */
 export type ExploreAffinityKey = "shared-ingredient" | "protein-match" | "familiar-category";
 
@@ -91,22 +88,6 @@ function cookedDishIds(history: MenuHistoryRow[]): Set<number> {
   const ids = new Set<number>();
   for (const row of history) ids.add(row.dishId);
   return ids;
-}
-
-/** Integer protein band: protein-per-person bucketed into PROTEIN_BAND_WIDTH_GRAMS. */
-function proteinBand(proteinPerPerson: number): number {
-  return Math.floor(proteinPerPerson / PROTEIN_BAND_WIDTH_GRAMS);
-}
-
-/** Per-person derived protein for one dish, or 0 when macros are unavailable. */
-function dishProtein(
-  dish: Dish,
-  ingredientsByDishId: Map<number, Ingredient[]>,
-  catalog: CatalogIngredient[],
-): number {
-  const rows = ingredientsByDishId.get(dish.id) ?? [];
-  if (rows.length === 0) return 0;
-  return deriveDishMacros(rows, catalog).proteinPerPerson;
 }
 
 /** Median of a numeric list (lower-middle for even counts); 0 for an empty list. */

@@ -1,6 +1,7 @@
 import type { Dish, MenuHistoryRow } from "./data/schemas.js";
 import type { Meal } from "./eligibility.js";
-import { deriveDishMacros } from "./nutrition.js";
+import { lastCookedMap } from "./historyRows.js";
+import { dishProtein, proteinBand } from "./nutrition.js";
 import type { CatalogIngredient, Ingredient } from "./data/schemas.js";
 
 /**
@@ -69,9 +70,6 @@ import type { CatalogIngredient, Ingredient } from "./data/schemas.js";
  * `getSlotAlternatives`), non-restrictive per Principle 4.
  */
 
-/** Number of grams-per-person that separates one protein band from the next. */
-export const PROTEIN_BAND_WIDTH_GRAMS = 5;
-
 export interface PickerRankingArgs {
   /**
    * The broad, non-restrictive pool already filtered by the caller (Active +
@@ -107,18 +105,6 @@ export interface PickerRankingArgs {
   ingredients?: Ingredient[];
   /** Ingredient catalog, the per-100g macro source for protein derivation. */
   catalog?: CatalogIngredient[];
-}
-
-/** Last-cooked date per dish id, most recent matching history row. */
-function lastCookedMap(history: MenuHistoryRow[]): Map<number, string> {
-  const map = new Map<number, string>();
-  for (const row of history) {
-    const existing = map.get(row.dishId);
-    if (existing === undefined || row.weekStart > existing) {
-      map.set(row.dishId, row.weekStart);
-    }
-  }
-  return map;
 }
 
 /**
@@ -163,22 +149,6 @@ function recencyTierMap(dishes: Dish[], lastCooked: Map<number, string>): Map<st
     .sort((a, b) => (a < b ? -1 : a > b ? 1 : 0))
     .forEach((week, index) => tierByWeek.set(week, index + 1));
   return tierByWeek;
-}
-
-/** Per-person derived protein for one dish, or 0 when macros are unavailable. */
-function dishProtein(
-  dish: Dish,
-  ingredientsByDishId: Map<number, Ingredient[]>,
-  catalog: CatalogIngredient[],
-): number {
-  const rows = ingredientsByDishId.get(dish.id) ?? [];
-  if (rows.length === 0) return 0;
-  return deriveDishMacros(rows, catalog).proteinPerPerson;
-}
-
-/** Integer protein band: protein-per-person bucketed into PROTEIN_BAND_WIDTH_GRAMS. */
-function proteinBand(proteinPerPerson: number): number {
-  return Math.floor(proteinPerPerson / PROTEIN_BAND_WIDTH_GRAMS);
 }
 
 /**

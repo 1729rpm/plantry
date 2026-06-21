@@ -1,4 +1,4 @@
-import type { CatalogIngredient, Ingredient } from "./data/schemas.js";
+import type { CatalogIngredient, Dish, Ingredient } from "./data/schemas.js";
 
 /**
  * Nutrition derivation (docs/engine.md §11 Nutrition).
@@ -168,4 +168,31 @@ export function isHealthy(
 export function proteinToCarbRatio(protein: number, carbs: number): number | null {
   if (carbs === 0) return null;
   return protein / carbs;
+}
+
+/**
+ * Protein banding (engine.md §5 picker "fixed 5 g buckets", §7 explore "fixed 5 g
+ * protein bands"). Both the swap/add picker and the Explore ranker bucket a
+ * dish's per-person protein into the same fixed-width bands, so the band width and
+ * its two helpers live here next to the macro derivation they build on, one
+ * definition for both call sites.
+ */
+
+/** Number of grams-per-person that separates one protein band from the next. */
+export const PROTEIN_BAND_WIDTH_GRAMS = 5;
+
+/** Integer protein band: protein-per-person bucketed into PROTEIN_BAND_WIDTH_GRAMS. */
+export function proteinBand(proteinPerPerson: number): number {
+  return Math.floor(proteinPerPerson / PROTEIN_BAND_WIDTH_GRAMS);
+}
+
+/** Per-person derived protein for one dish, or 0 when macros are unavailable. */
+export function dishProtein(
+  dish: Dish,
+  ingredientsByDishId: Map<number, Ingredient[]>,
+  catalog: CatalogIngredient[],
+): number {
+  const rows = ingredientsByDishId.get(dish.id) ?? [];
+  if (rows.length === 0) return 0;
+  return deriveDishMacros(rows, catalog).proteinPerPerson;
 }

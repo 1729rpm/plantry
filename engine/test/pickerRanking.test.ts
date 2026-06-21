@@ -1,5 +1,6 @@
 import { describe, it, expect } from "vitest";
-import { rankPickerAlternatives, PROTEIN_BAND_WIDTH_GRAMS } from "../src/pickerRanking.js";
+import { rankPickerAlternatives } from "../src/pickerRanking.js";
+import { PROTEIN_BAND_WIDTH_GRAMS } from "../src/nutrition.js";
 import type { CatalogIngredient, Dish, Ingredient, MenuHistoryRow } from "../src/data/schemas.js";
 
 /**
