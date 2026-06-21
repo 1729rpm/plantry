@@ -28,6 +28,7 @@ import {
   dishMatchesPickerFilters,
   type PickerPill,
 } from "../lib/dishFilters.js";
+import { matchesQuery } from "../lib/search.js";
 import { dayLabel, mealLabel } from "../lib/days.js";
 import { Sheet, SearchField, SectionLabel, PrimaryButton, Chip } from "./primitives.js";
 import { DishRow } from "./DishRow.js";
@@ -100,7 +101,7 @@ export function AddDishSheet({
   const textCorpus = useMemo(() => {
     const needle = trimmedQuery.toLowerCase();
     if (needle === "") return pool;
-    return pool.filter((d) => d.name.toLowerCase().includes(needle));
+    return pool.filter((d) => matchesQuery(d.name, trimmedQuery));
   }, [pool, trimmedQuery]);
 
   // The list actually shown: the text corpus narrowed by the selected pills. The
