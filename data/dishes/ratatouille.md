@@ -11,7 +11,7 @@ satiety: Medium
 prepMinutes: 30
 seasons: All
 cuisine: Continental
-complexity: Easy
+complexity: Medium
 skill: Cook the vegetables in stages so each keeps its shape
 photo: ratatouille.jpg
 ---

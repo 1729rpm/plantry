@@ -5,7 +5,7 @@ category: Gravy dish
 time: Lunch
 tags: [HP]
 primaryIngredient: Chicken
-preferred: No
+preferred: Yes
 active: Yes
 satiety: High
 prepMinutes: 30
