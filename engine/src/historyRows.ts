@@ -21,6 +21,11 @@ import type { GeneratedWeek } from "./generateWeek.js";
  * archive. This engine function operates on the generated week only.
  */
 
+/**
+ * Short day name (Mon..Sat) to the long form a `MenuHistoryRow` carries
+ * (Monday..Saturday). The single home for this mapping; generateWeek's history
+ * rows resolve through `toLongDay` rather than keeping their own copy.
+ */
 const LONG_DAY: Record<Day, MenuHistoryRow["day"]> = {
   Mon: "Monday",
   Tue: "Tuesday",
@@ -29,6 +34,11 @@ const LONG_DAY: Record<Day, MenuHistoryRow["day"]> = {
   Fri: "Friday",
   Sat: "Saturday",
 };
+
+/** Map a short day name to the long form a `MenuHistoryRow` carries. */
+export function toLongDay(day: Day): MenuHistoryRow["day"] {
+  return LONG_DAY[day];
+}
 
 const CAP_MEAL: Record<Meal, MenuHistoryRow["meal"]> = {
   Breakfast: "Breakfast",
