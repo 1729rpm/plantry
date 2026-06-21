@@ -9,6 +9,7 @@ import {
   shouldSubstituteWeekday,
   excludeHpIfMealHasHp,
   isHp,
+  isStandaloneBreakfastBread,
   type BreakfastWeekdayPairCandidateSet,
   type BreakfastSinglePickCandidateSet,
   type CandidateSet,
@@ -469,6 +470,11 @@ function tryPair(args: PickSlotArgs, leadPool: Dish[], partnerPool: Dish[]): Dis
   // It is a no-op for non-HP leads (their family is not in the HP-main used-set).
   const leadRanked = rankHpMain(args, leadPool);
   const lead = leadRanked[0];
+  // §3 R1 self-sufficient main: a Category=Bread complete_carb Option-B lead
+  // (avocado toast, masala toast) fills the breakfast alone, with no
+  // accompaniment, so it returns a 1-item breakfast. A Chilla or Paratha
+  // complete_carb falls through and keeps its accompaniment.
+  if (isStandaloneBreakfastBread(lead)) return [lead];
   // §3 one-HP-per-meal: once the lead is HP, the partner pool drops HP-tagged
   // dishes (thin-pool fallback keeps the slot fillable). Avoid double-picking
   // the same dish across positions when pools overlap.
@@ -488,16 +494,32 @@ function pickBreakfastSingle(args: PickSlotArgs, set: BreakfastSinglePickCandida
   // diversity (no-op for the non-HP candidates in the pool).
   const ranked = rankHpMain(args, set.pool);
   if (ranked.length === 0) return [];
-  return [ranked[0]];
+  const main = ranked[0];
+  // §3 R3 breakfast protein floor (Tue/Thu single pick): if the single main
+  // carries no HP tag, append one HP Category=Keto companion (boiled eggs etc.),
+  // making a 2-item breakfast. It fires only at HP count 0, so it composes with
+  // one-HP-per-meal and never produces two HP. An empty companion pool degrades
+  // gracefully to the 1-item breakfast.
+  if (!isHp(main)) {
+    const companionRanked = rank(
+      args,
+      set.ketoCompanion.filter((d) => d.id !== main.id),
+    );
+    if (companionRanked.length > 0) return [main, companionRanked[0]];
+  }
+  return [main];
 }
 
 /**
- * §3 Menu 1: HP first, then partner pool chosen by HP's category
- * (Dry → non-HP Gravy; Gravy → non-HP Accompaniment), then lunch carb. The
- * Menu 1 main is the meal's HP pick, so the partner pool is non-HP: a meal
- * carries one HP source, not two. Fallback: if the non-HP Accompaniment pool is
- * empty (a thin Accompaniment library), fall back to the unfiltered pool so the
- * slot still fills, accepting a second HP side over an incomplete meal.
+ * §3 Menu 1: HP first, then a partner that complements the main's form (§3 R4),
+ * then lunch carb. A Dry HP main pairs a non-HP Gravy (a dal); a Gravy HP main
+ * pairs a non-HP Dry sabzi, so an Indian lunch always carries both a gravy and a
+ * dry dish around its protein. The Menu 1 main is the meal's HP pick, so the
+ * partner pool is non-HP: a meal carries one HP source, not two. Menu 1 stays 3
+ * items (the §9 weekday cap of 5 holds). Gravy-branch thin-pool fallback chain:
+ * non-HP Dry sabzi → non-HP Accompaniment (a salad) → unfiltered Accompaniment,
+ * so the slot always fills, accepting a second HP side only as a last resort
+ * over an incomplete meal.
  */
 function pickMenu1(args: PickSlotArgs, set: Menu1CandidateSet): Dish[] {
   // §4.6: the HP main is ranked with protein diversity so a week's Menu 1 mains
@@ -511,12 +533,16 @@ function pickMenu1(args: PickSlotArgs, set: Menu1CandidateSet): Dish[] {
   if (hp.category === "Dry dish") {
     partnerPool = set.partnerWhenHpIsDry;
   } else {
-    // Gravy main → non-HP Accompaniment partner; fall back to the unfiltered
-    // Accompaniment pool only if the non-HP filter left nothing.
-    partnerPool =
-      set.partnerWhenHpIsGravy.length > 0
-        ? set.partnerWhenHpIsGravy
-        : set.partnerWhenHpIsGravyFallback;
+    // §3 R4: Gravy main → non-HP Dry sabzi partner. Fall back to a non-HP
+    // Accompaniment (a salad) only if the Dry-sabzi pool is empty, then to the
+    // unfiltered Accompaniment pool if even that is empty.
+    if (set.partnerWhenHpIsGravy.length > 0) {
+      partnerPool = set.partnerWhenHpIsGravy;
+    } else if (set.partnerWhenHpIsGravyFallback.length > 0) {
+      partnerPool = set.partnerWhenHpIsGravyFallback;
+    } else {
+      partnerPool = set.partnerWhenHpIsGravyLastResort;
+    }
   }
   const partnerRanked = rank(
     args,
