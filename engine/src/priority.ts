@@ -283,6 +283,15 @@ export function byPreferredYes(pool: Dish[]): Dish[] {
  * recency, within-week protein diversity), which run after it, so it can never
  * force a dish repeat or an HP-protein clash just to hit the cuisine target.
  *
+ * Within the promoted non-Indian group, Preferred=Yes dishes rank first: a stable
+ * sub-sort keyed on the `preferred` property (never dish names), so that when a
+ * companion data pass marks the international dishes Rajat actually likes as
+ * `preferred: Yes`, those float to the top of the promotion ahead of the rest of
+ * the non-Indian pool. The Indian group is left untouched. This is purely an
+ * intra-group ordering: it promotes no new dish (the non-Indian/Indian split is
+ * unchanged) and is inert while every international dish is `preferred: No` (the
+ * default), which is the case until that data pass lands.
+ *
  * Soft with a fresh-alternative fallback, mirroring steps 2, 6, and 7: if the
  * pool has no non-Indian candidate (an all-Indian lunch-carb pool, a
  * Category=Fruit pool), promoting none equals promoting all, so the pool is
@@ -292,10 +301,7 @@ export function byPreferredYes(pool: Dish[]): Dish[] {
  * slot. Undefined `placedNonIndianCount` leaves the step a no-op, so every
  * existing caller is unchanged.
  */
-export function byCuisineDiversity(
-  pool: Dish[],
-  placedNonIndianCount: number | undefined,
-): Dish[] {
+export function byCuisineDiversity(pool: Dish[], placedNonIndianCount: number | undefined): Dish[] {
   // No-op once the target is met (or when the count is not supplied at all).
   if (placedNonIndianCount === undefined) return pool;
   if (placedNonIndianCount >= WEEKLY_NON_INDIAN_TARGET) return pool;
@@ -312,7 +318,20 @@ export function byCuisineDiversity(
   // (fresh-alternative fallback). This makes fruit and lunch-carb pools no-ops
   // with no explicit exemption.
   if (nonIndian.length === 0) return pool;
-  return [...nonIndian, ...indian];
+  // Within the promoted non-Indian group, Preferred=Yes ranks first. Stable
+  // sub-sort keyed on the `preferred` property: the relative order of the
+  // previous step is preserved inside each of the Yes / No sub-groups. The
+  // Indian group is unchanged.
+  const preferredNonIndian: Dish[] = [];
+  const otherNonIndian: Dish[] = [];
+  for (const dish of nonIndian) {
+    if (dish.preferred === "Yes") {
+      preferredNonIndian.push(dish);
+    } else {
+      otherNonIndian.push(dish);
+    }
+  }
+  return [...preferredNonIndian, ...otherNonIndian, ...indian];
 }
 
 /**

@@ -302,6 +302,52 @@ describe("priority — docs/engine.md §4", () => {
       // Continental ranks up purely on the cuisine property, despite name order.
       expect(out.map((d) => d.name)).toEqual(["AAA-Continental", "ZZZ-Indian"]);
     });
+
+    it("ranks Preferred=Yes first within the promoted non-Indian group, under target", () => {
+      // Two non-Indian candidates, one Preferred=Yes and one Preferred=No, plus an
+      // Indian dish. Under target, the non-Indian group is promoted above Indian;
+      // within that group the Preferred=Yes dish ranks first.
+      const indian = makeDish({ name: "Indian", cuisine: "Indian", preferred: "No" });
+      const plainThai = makeDish({ name: "PlainThai", cuisine: "Thai", preferred: "No" });
+      const likedItalian = makeDish({ name: "LikedItalian", cuisine: "Italian", preferred: "Yes" });
+      // Input order puts the Preferred=No non-Indian first; the sub-sort lifts the
+      // Preferred=Yes non-Indian ahead of it, both still above the Indian dish.
+      const out = byCuisineDiversity([indian, plainThai, likedItalian], 0);
+      expect(out.map((d) => d.name)).toEqual(["LikedItalian", "PlainThai", "Indian"]);
+    });
+
+    it("keeps the Preferred sub-sort keyed on the property, not dish names (stable within Yes/No)", () => {
+      // Two Preferred=Yes and two Preferred=No non-Indian dishes, interleaved. Both
+      // sub-groups keep their relative input order; only the Yes/No split reorders.
+      const noA = makeDish({ name: "ZNoA", cuisine: "Thai", preferred: "No" });
+      const yesA = makeDish({ name: "ZYesA", cuisine: "Italian", preferred: "Yes" });
+      const noB = makeDish({ name: "ANoB", cuisine: "Greek", preferred: "No" });
+      const yesB = makeDish({ name: "AYesB", cuisine: "Korean", preferred: "Yes" });
+      const out = byCuisineDiversity([noA, yesA, noB, yesB], 0);
+      // Preferred=Yes first (yesA before yesB, input order), then Preferred=No
+      // (noA before noB, input order). No name-based ordering anywhere.
+      expect(out.map((d) => d.name)).toEqual(["ZYesA", "AYesB", "ZNoA", "ANoB"]);
+    });
+
+    it("is a no-op at/above target even with a Preferred=Yes non-Indian dish", () => {
+      // At target the whole step short-circuits, so the Preferred sub-sort never
+      // runs: input order is preserved despite the Preferred=Yes non-Indian dish.
+      const indian = makeDish({ name: "Indian", cuisine: "Indian", preferred: "No" });
+      const likedThai = makeDish({ name: "LikedThai", cuisine: "Thai", preferred: "Yes" });
+      const out = byCuisineDiversity([indian, likedThai], WEEKLY_NON_INDIAN_TARGET);
+      expect(out.map((d) => d.name)).toEqual(["Indian", "LikedThai"]);
+    });
+
+    it("returns an all-Indian pool unchanged even with a Preferred=Yes Indian dish (fallback preserved)", () => {
+      // No non-Indian candidate → fresh-alternative fallback fires before the
+      // Preferred sub-sort, so the pool (Indian, including a Preferred=Yes) is
+      // returned untouched. The Indian group is never reordered by this step.
+      const a = makeDish({ name: "A", cuisine: "Indian", preferred: "No" });
+      const b = makeDish({ name: "B", cuisine: "Indian", preferred: "Yes" });
+      const c = makeDish({ name: "C", cuisine: "Indian", preferred: "No" });
+      const out = byCuisineDiversity([a, b, c], 0);
+      expect(out.map((d) => d.name)).toEqual(["A", "B", "C"]);
+    });
   });
 
   describe("placedNonIndianCount", () => {
@@ -316,9 +362,9 @@ describe("priority — docs/engine.md §4", () => {
 
     it("is zero for an empty pick list and for an all-Indian week", () => {
       expect(placedNonIndianCount([])).toBe(0);
-      expect(placedNonIndianCount([makeDish({ cuisine: "Indian" }), makeDish({ cuisine: "Indian" })])).toBe(
-        0,
-      );
+      expect(
+        placedNonIndianCount([makeDish({ cuisine: "Indian" }), makeDish({ cuisine: "Indian" })]),
+      ).toBe(0);
     });
   });
 
@@ -398,6 +444,26 @@ describe("priority — docs/engine.md §4", () => {
       });
       // Target met → step 5 a no-op → Preferred=Yes Indian dish leads again.
       expect(out.map((d) => d.name)).toEqual(["PreferredIndian", "PlainThai"]);
+    });
+
+    it("Preferred-first ordering stays subordinate to within-week recency", () => {
+      // An already-placed Preferred=Yes non-Indian dish vs a fresh non-Indian dish.
+      // Cuisine (step 5) would rank the Preferred=Yes dish to the very top of the
+      // promotion, but within-week recency (step 6, terminal) sinks the placed
+      // dish below the fresh one regardless of its Preferred flag.
+      const placedPreferredThai = makeDish({
+        name: "PlacedPreferredThai",
+        cuisine: "Thai",
+        preferred: "Yes",
+      });
+      const freshThai = makeDish({ name: "FreshThai", cuisine: "Thai", preferred: "No" });
+      const out = rankCandidates({
+        pool: [placedPreferredThai, freshThai],
+        history: [],
+        placedNonIndianCount: 0,
+        withinWeekDishIds: new Set([placedPreferredThai.id]),
+      });
+      expect(out.map((d) => d.name)).toEqual(["FreshThai", "PlacedPreferredThai"]);
     });
   });
 
