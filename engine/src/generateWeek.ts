@@ -483,10 +483,7 @@ function tryPair(args: PickSlotArgs, leadPool: Dish[], partnerPool: Dish[]): Dis
   // the same dish across positions when pools overlap.
   const partnerRanked = rank(
     args,
-    excludeHpIfMealHasHp(
-      partnerPool.filter((d) => d.id !== lead.id),
-      isHp(lead),
-    ),
+    excludeHpIfMealHasHp(excluding(partnerPool, lead), isHp(lead)),
   );
   if (partnerRanked.length === 0) return null;
   return [lead, partnerRanked[0]];
@@ -504,10 +501,7 @@ function pickBreakfastSingle(args: PickSlotArgs, set: BreakfastSinglePickCandida
   // one-HP-per-meal and never produces two HP. An empty companion pool degrades
   // gracefully to the 1-item breakfast.
   if (!isHp(main)) {
-    const companionRanked = rank(
-      args,
-      set.ketoCompanion.filter((d) => d.id !== main.id),
-    );
+    const companionRanked = rank(args, excluding(set.ketoCompanion, main));
     if (companionRanked.length > 0) return [main, companionRanked[0]];
   }
   return [main];
@@ -547,10 +541,7 @@ function pickMenu1(args: PickSlotArgs, set: Menu1CandidateSet): Dish[] {
       partnerPool = set.partnerWhenHpIsGravyLastResort;
     }
   }
-  const partnerRanked = rank(
-    args,
-    partnerPool.filter((d) => d.id !== hp.id),
-  );
+  const partnerRanked = rank(args, excluding(partnerPool, hp));
   const partner = partnerRanked[0];
   const carbRanked = rank(args, set.lunchCarb);
   const carb = carbRanked[0];
@@ -562,15 +553,13 @@ function pickMenu2(args: PickSlotArgs, set: Menu2CandidateSet): Dish[] {
   // diversity. The non-HP Gravy/Dry companions do not (they are not HP mains).
   const ketoRanked = rankHpMain(args, set.keto);
   const keto = ketoRanked[0];
-  const gravyRanked = rank(
-    args,
-    set.nonHpGravy.filter((d) => keto && d.id !== keto.id),
-  );
+  // Exact-preserving note: the gravy pool empties when the Keto lead did not
+  // resolve (`keto` undefined). This differs from `excluding`'s "undefined leads
+  // ignored" contract, so we keep the original guard for the no-keto case rather
+  // than flattening it: when there is no keto lead, no gravy is picked either.
+  const gravyRanked = rank(args, keto ? excluding(set.nonHpGravy, keto) : []);
   const gravy = gravyRanked[0];
-  const dryRanked = rank(
-    args,
-    set.nonHpDry.filter((d) => (!keto || d.id !== keto.id) && (!gravy || d.id !== gravy.id)),
-  );
+  const dryRanked = rank(args, excluding(set.nonHpDry, keto, gravy));
   const dry = dryRanked[0];
   const carbRanked = rank(args, set.lunchCarb);
   const carb = carbRanked[0];
@@ -594,17 +583,11 @@ function pickMenu3(args: PickSlotArgs, set: Menu3CandidateSet): Dish[] {
   const mealHasHp = lead ? isHp(lead) : false;
   const acc = rank(
     args,
-    excludeHpIfMealHasHp(
-      set.accompaniment.filter((d) => !lead || d.id !== lead.id),
-      mealHasHp,
-    ),
+    excludeHpIfMealHasHp(excluding(set.accompaniment, lead), mealHasHp),
   )[0];
   const dessert = rank(
     args,
-    excludeHpIfMealHasHp(
-      set.dessert.filter((d) => !lead || d.id !== lead.id),
-      mealHasHp,
-    ),
+    excludeHpIfMealHasHp(excluding(set.dessert, lead), mealHasHp),
   )[0];
   return compact([lead, acc, dessert]);
 }
@@ -623,18 +606,12 @@ function pickMenu4(args: PickSlotArgs, set: Menu4CandidateSet): Dish[] {
   let mealHasHp = lead ? isHp(lead) : false;
   const keto = rankHpMain(
     args,
-    excludeHpIfMealHasHp(
-      set.keto.filter((d) => !lead || d.id !== lead.id),
-      mealHasHp,
-    ),
+    excludeHpIfMealHasHp(excluding(set.keto, lead), mealHasHp),
   )[0];
   if (keto && isHp(keto)) mealHasHp = true;
   const acc = rank(
     args,
-    excludeHpIfMealHasHp(
-      set.accompaniment.filter((d) => !lead || d.id !== lead.id),
-      mealHasHp,
-    ),
+    excludeHpIfMealHasHp(excluding(set.accompaniment, lead), mealHasHp),
   )[0];
   return compact([lead, keto, acc]);
 }
@@ -665,6 +642,25 @@ function pickLunchCarbOnly(args: PickSlotArgs, lunchCarbPool: Dish[]): Dish[] {
 
 function compact(dishes: Array<Dish | undefined>): Dish[] {
   return dishes.filter((d): d is Dish => d !== undefined);
+}
+
+/**
+ * Filter `pool` down to dishes whose id matches none of the already-`chosen`
+ * dishes, so overlapping position pools never double-pick one dish across a
+ * meal's positions. Undefined `chosen` entries (a lead/companion that did not
+ * resolve) are ignored, matching the per-site null-guards the pick functions
+ * previously open-coded. Behaviour-identical to the inline
+ * `pool.filter((d) => d.id !== a.id && (!b || d.id !== b.id))` shapes it
+ * replaces: the same ids are excluded and an undefined chosen dish excludes
+ * nothing.
+ */
+function excluding(pool: Dish[], ...chosen: Array<Dish | undefined>): Dish[] {
+  const excludedIds = new Set<number>();
+  for (const dish of chosen) {
+    if (dish) excludedIds.add(dish.id);
+  }
+  if (excludedIds.size === 0) return pool;
+  return pool.filter((d) => !excludedIds.has(d.id));
 }
 
 /**
