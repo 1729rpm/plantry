@@ -12,6 +12,26 @@ Brief description in present tense, one to three sentences. Reference the PR.
 
 ---
 
+## 2026-06-22 Engine structure cleanups: shared helpers, one slot-ranking derivation, a serialize guard
+
+Behavior-preserving structure pass from the engine review. A local `excluding(pool, ...chosen)` helper replaces nine open-coded same-id filters across the pick functions; a single `deriveSlotRankingInputs` is now the one source of truth for the per-slot ranking inputs, shared by the generation loop and the swap-slot ranker (`rankCandidatesForSlot`), with the existing swap-time omission of §4 step 7 preserved and explicitly documented at the call site; `WEEKDAYS`/`ALL_DAYS` move to their type owner `eligibility.ts`; and a new guard test asserts every `DishSchema` field is covered by the serializer, so a future field can no longer be silently dropped on round-trip. Simulation and round-trip unchanged. (#190)
+
+## 2026-06-22 Engine dead-code and small-duplication sweep
+
+Behavior-preserving cleanup from the engine review. Removes the dead `byConsolidationStub` alias and the production-dead `scoreCandidates`/`scoreSoftConsolidation` scorers (their tests migrated to the live `rankByConsolidation`, which is their superset); collapses a no-op branch in `formatQuantity`; deletes the unused `DishFrontmatterSchema` alias; de-duplicates `parsePackSizeGrams` (shared from `consolidation.ts`) and the short-to-long day-name map (shared `toLongDay` from `historyRows.ts`); and points the parser at the canonical `DishIngredientRowSchema` for ingredient rows. (#189)
+
+## 2026-06-22 Engine de-duplication: lastCookedMap and the protein-band helpers
+
+Behavior-preserving de-duplication from the engine review. The `lastCookedMap` recency helper, previously copied byte-for-byte in four places, now has one home in `historyRows.ts`; the 5 g protein-band trio (`PROTEIN_BAND_WIDTH_GRAMS`, `proteinBand`, `dishProtein`), previously defined twice, moves to its source of truth `nutrition.ts` and is imported by the picker and Explore rankers. The deliberately distinct recency orderings (`recencyTier` vs `byLongestUnused`) are left separate. (#188)
+
+## 2026-06-22 Dish tags and cuisine are now closed enums
+
+The `tags` and `cuisine` dish fields were free strings while `docs/engine.md` §12 documents them as closed sets, so a mistyped tag (a §3 rule input) could silently change the menu with no build failure. Both are now `z.enum` (the four documented tags; the thirteen documented cuisines); all current data already conforms. A typo in either field is now a parse/bake failure. (#186)
+
+## 2026-06-22 Engine spec-mirror comment sweep
+
+The engine's section-referencing comments had drifted from the current `docs/engine.md` numbering (CI does not check comment/spec drift). Corrects the stale section numbers (the cap module cited §5 for §9, consolidation cited §6 for §10, history-rows cited §6 for §8, and several cross-references), fixes an actively false comment that claimed `cuisine` is never a rule input (it drives §4 step 5), documents the intentional Menu 1 last-resort-pool exclusion in `candidateSetPools`, and removes dangling references to the retired design plan and build-order "slice" seams. Comment-only, plus one matching re-serialize of the `data/ingredients.md` catalog preamble. (#185)
+
 ## 2026-06-22 Dish-picker search matches query tokens, not a contiguous substring
 
 The Replace and Add-a-dish picker search boxes matched the whole query as one contiguous substring of the dish name, so "thai curry" returned nothing for "Thai green curry chicken" (the word "green" sits between the query words). A shared `matchesQuery` helper (`app/web/src/lib/search.ts`) now splits the query on whitespace and requires each token to appear somewhere in the name (case-insensitive; an empty query matches all), so word order and gaps no longer matter. Used at both picker call sites. (#181)
