@@ -12,6 +12,10 @@ Brief description in present tense, one to three sentences. Reference the PR.
 
 ---
 
+## 2026-06-21 Grocery day selection persists across page and app switches
+
+The Grocery screen's "Order for" day chips now persist to `localStorage` instead of living only in in-memory React state, so a household member's chosen days survive switching tabs inside the app (component unmount) and backgrounding or reopening the PWA (memory eviction) rather than reverting to the time-aware default. New `getGroceryDays`/`setGroceryDays` helpers in `app/web/src/lib/storage.ts` store a single `{ weekStart, days }` record under `plantry:groceryDays`; a read for a different `weekStart` is ignored, so a fresh week starts clean on the time-aware default. The selection is seeded once per week through a ref-guarded effect (it never re-seeds and stomps a fresh toggle), and a stored day that has since become past or skipped is dropped on seed. A non-empty stored selection that fully expires shows the pick-a-day prompt rather than re-defaulting. (#176)
+
 ## 2026-06-21 Within-week cuisine diversity (§4 step 5): menu leans slightly less Indian
 
 A soft, target-gated §4 selection step nudges the generated week toward a small, fixed number of non-Indian dishes (`cuisine !== "Indian"`) on a standing basis without flipping the menu international. While fewer than `WEEKLY_NON_INDIAN_TARGET` (3) non-Indian dishes have been placed in the week being generated, non-Indian candidates rank above Indian ones in each slot's pool; once the target is met the step is a no-op. It sits after Preferred=Yes and before the two terminal within-week partitions (recency, protein diversity), so it can promote a non-Indian dish over a Preferred Indian one but never forces a dish repeat or HP-protein clash. Soft with a fresh-alternative fallback (an all-Indian lunch-carb or fruit pool is a no-op), so it never narrows §3 eligibility. This turns `cuisine` into a §4 rule input (§1 eligibility and §3 composition still never read it); `docs/engine.md` §4 and §12 updated. The five simulated weeks move from 0 to 4-5 non-Indian dishes each. Closes the Cuisine diversity feature (single stream A). (#175)
