@@ -24,99 +24,125 @@
 // into a caller-supplied canvas; SharePreviewSheet shows that canvas in the rail
 // and reads its blob in renderFiles.
 //
-// Grocery and recipe sheets stay on html-to-image (they have not shown the bug;
-// converting them is out of scope). The shared foreignObject risk is noted in
-// the PR diagnosis card.
+// WHY THIS SHAPE (share-image refresh)
+// ------------------------------------
+// The "This week" PNG arrived soft in WhatsApp. The cause was not our render
+// resolution (we already exported at 3x): WhatsApp re-encodes every shared image
+// to JPEG and downscales it so its longest side fits a cap of about 1600px. The
+// old menu was a tall portrait (~360 x 960 layout units), so WhatsApp shrank it
+// until the height fit and dragged the width down to ~540px, softening the text.
+// The fix is the shape: a compact, near-square single-column ledger (600 wide,
+// ~754 tall, aspect ~1.26) exported at S = 2 -> 1200 x 1508. Because 1508 < 1600
+// WhatsApp ships it un-downscaled, so the in-chat width stays ~1200px (about 2x
+// sharper). EXPORT_SCALE is therefore 2 on purpose: pushing past ~2.1 sends the
+// long edge over 1600 and re-triggers WhatsApp's downscale, buying nothing.
+//
+// Recipe sheets stay on html-to-image (they have not shown the bug). Grocery is
+// no longer in the share family.
 
 import type { CurrentWeek } from "../lib/types.js";
 import { weekRangeLabel } from "../lib/days.js";
 import { buildShareDayModels, type ShareDayModel } from "./ShareImages.js";
 
-// Logical width matches .share__capture / .share-img (360px). The backing store
-// is scaled by EXPORT_SCALE for crispness, matching the old export's
-// pixelRatio: 3. All geometry below is in LOGICAL (CSS) pixels; ctx.scale maps
-// it to the backing store.
-const WIDTH = 360;
-export const EXPORT_SCALE = 3;
+// Logical width matches the ledger design (600px). The backing store is scaled
+// by EXPORT_SCALE for the bitmap. All geometry below is in LOGICAL (CSS) pixels;
+// ctx.scale maps it to the backing store. EXPORT_SCALE = 2 keeps the long edge
+// under WhatsApp's ~1600 cap (see the file header).
+const WIDTH = 600;
+export const EXPORT_SCALE = 2;
 
-// Palette and metrics pulled verbatim from .share-img* in index.css and from
-// design_handoff/hifi-share-image.jsx. Keep these in sync if the CSS changes.
+// Palette: app tokens plus the warmer share-surface literals already used by the
+// existing share images. Kept in sync with the handoff geometry.
 const COLOR = {
-  cardBg: "#fbf6ed", // .share-img background (warm cream)
-  dayBg: "#fffefa", // .share-img__day
-  dayBorder: "#ebe2d2", // .share-img__day / badge divider
-  ink: "#2c241b", // --pt-ink
-  sub: "#94846f", // --pt-sub
-  green: "#5f7355", // --pt-green (meal labels)
-  wordmark: "#b5a78f", // .share-img__wordmark
+  frameBg: "#FBF6ED", // image background (warm cream)
+  panelBg: "#FFFEFA", // ledger panel
+  panelBorder: "#EBE2D2", // panel border + row hairline
+  ink: "#2C241B", // --pt-ink
+  sub: "#94846F", // --pt-sub
+  green: "#5F7355", // --pt-green (meal labels)
+  footer: "#B5A78F", // Plantry wordmark
 };
 
 const FONT_SANS = '"Source Sans 3", "Helvetica Neue", sans-serif';
 const FONT_SERIF = '"Source Serif 4", Georgia, serif';
 
-// Frame padding: .share-img padding 26px 24px 20px (top, sides, bottom).
-const PAD_TOP = 26;
-const PAD_SIDE = 24;
-const PAD_BOTTOM = 20;
+// Frame padding: top 30, right 26, bottom 24, left 26. Content width = 548.
+const PAD_TOP = 30;
+const PAD_RIGHT = 26;
+const PAD_BOTTOM = 24;
+const PAD_LEFT = 26;
+const CONTENT_WIDTH = WIDTH - PAD_LEFT - PAD_RIGHT; // 548
 
-// Heading: .share-img__heading margin-bottom 16; title serif 21/700; sub
-// sans 12.5 sub-color, margin-top 3.
-const TITLE_SIZE = 21;
-const TITLE_LINE = 27; // serif title block height, generous for the cap/descenders
-const SUB_SIZE = 12.5;
-const SUB_GAP = 3;
-const SUB_LINE = 16;
-const HEADING_GAP = 16;
+// Header (centered, margin-bottom 22): title "This week" serif 700 30px; sub
+// (date range) sans 400 15px, margin-top 4.
+const TITLE_SIZE = 30;
+const TITLE_BLOCK = 33; // serif title block height (~1.1 line-height, cap/descenders)
+const SUB_SIZE = 15;
+const SUB_GAP = 4;
+const SUB_BLOCK = 18;
+const HEADER_GAP = 22;
+const HEADER_BLOCK = TITLE_BLOCK + SUB_GAP + SUB_BLOCK; // 55
 
-// Day cards: .share-img__day padding 10 12, border 1px, radius 12; gap 8.
-const CARD_GAP = 8;
-const CARD_PAD_Y = 10;
-const CARD_PAD_X = 12;
-const CARD_RADIUS = 12;
+// Ledger panel: border 1px, radius 16.
+const PANEL_BORDER = 1;
+const PANEL_RADIUS = 16;
 
-// Badge: .share-img__badge width 38, border-right 1px, padding-right 10.
-const BADGE_WIDTH = 38;
-const BADGE_PAD_RIGHT = 10;
-const BADGE_DAY_SIZE = 9.5; // uppercase, letter-spacing 0.14em
-const BADGE_DAY_TRACK = 0.14;
-const BADGE_DATE_SIZE = 20; // serif 600, line-height 1.15
-// Inner gap between badge column and meals column (.share-img__day gap: 12).
-const COL_GAP = 12;
+// Day row: column gap 16; padding 14 top/bottom x 18 left/right; 1px bottom
+// hairline between rows (none on the last).
+const ROW_PAD_Y = 14;
+const ROW_PAD_X = 18;
+const COL_GAP = 16;
 
-// Meals: .share-img__meals font 12.5 line-height 1.5. Label green 700 10.5
-// uppercase letter-spacing 0.1em. Since we control geometry, we lay the label
-// on its own line then the wrapped dish lines below it in a clean column, with a
-// clear gap between meals (the handoff reads label then names).
-const MEAL_LABEL_SIZE = 10.5;
-const MEAL_LABEL_TRACK = 0.1;
-const MEAL_LABEL_LINE = 15;
-const MEAL_LABEL_GAP = 3; // space below a label before its dish lines
-const DISH_SIZE = 12.5;
-const DISH_LINE = 18; // 12.5 * 1.44, comfortable for cream card text
-const MEAL_GAP = 8; // space between the breakfast block and the lunch block
-const SKIPPED_SIZE = 12.5;
-const SKIPPED_LINE = 18;
+// Date rail (width 40, fixed): weekday "MON" sans 700 10px tracked 0.12em
+// uppercase; date "15" serif 600 24px line-height 1.1.
+const RAIL_WIDTH = 40;
+const WEEKDAY_SIZE = 10;
+const WEEKDAY_TRACK = 0.12;
+const WEEKDAY_BLOCK = 13;
+const DATE_SIZE = 24;
+const DATE_BLOCK = 26;
+const RAIL_HEIGHT = WEEKDAY_BLOCK + DATE_BLOCK; // 39
 
-// Wordmark: .share-img__wordmark margin-top 18, serif 12, color wordmark,
-// letter-spacing 0.06em, centered.
-const WORDMARK_TOP = 18;
-const WORDMARK_SIZE = 12;
-const WORDMARK_TRACK = 0.06;
-const WORDMARK_LINE = 15;
+// Meals column: vertical stack, gap 6, one labeled line per present meal.
+const MEALS_GAP = 6;
+// Meal line: flex gap 10. Label width 66 (sans 700 9.5px tracked 0.08em
+// uppercase green, padding-top 3). Value (sans 400 14px, line advance 20).
+const LABEL_WIDTH = 66;
+const LABEL_GAP = 10;
+const LABEL_SIZE = 9.5;
+const LABEL_TRACK = 0.08;
+const LABEL_PAD_TOP = 3;
+const VALUE_SIZE = 14;
+const LINE_ADVANCE = 20; // round(14 * 1.4)
+
+// Value column width = 548 - 2 (panel border) - 18 - 18 (row padding) - 40
+// (rail) - 16 (column gap) - 66 (label) - 10 (label gap) = 378.
+const VALUE_WIDTH =
+  CONTENT_WIDTH - PANEL_BORDER * 2 - ROW_PAD_X * 2 - RAIL_WIDTH - COL_GAP - LABEL_WIDTH - LABEL_GAP;
+
+// Skipped day: one "Skipped" line, sans 14px sub.
+const SKIPPED_SIZE = 14;
+
+// Footer "Plantry" serif 15px footer-color, letter-spacing 0.06em, centered,
+// margin-top 18.
+const FOOTER_GAP = 18;
+const FOOTER_SIZE = 15;
+const FOOTER_BLOCK = 20;
+const FOOTER_TRACK = 0.06;
 
 // The faces/weights/sizes we actually draw. measureText/fillText silently fall
 // back to a system font if the webfont is not yet loaded, which would change
 // wrap points and break the layout->draw contract; we load every one before the
-// layout pass. (Source Sans 3 is loaded at 400 and 700; Source Serif 4 at 600
-// and 700, matching the <link> in index.html.)
+// layout pass. (Source Sans 3 at 400 and 700; Source Serif 4 at 600 and 700,
+// matching the <link> in index.html.)
 const REQUIRED_FONTS = [
   `400 ${SUB_SIZE}px "Source Sans 3"`,
-  `400 ${DISH_SIZE}px "Source Sans 3"`,
+  `400 ${VALUE_SIZE}px "Source Sans 3"`,
   `400 ${SKIPPED_SIZE}px "Source Sans 3"`,
-  `400 ${BADGE_DAY_SIZE}px "Source Sans 3"`,
-  `700 ${MEAL_LABEL_SIZE}px "Source Sans 3"`,
-  `600 ${BADGE_DATE_SIZE}px "Source Serif 4"`,
-  `600 ${WORDMARK_SIZE}px "Source Serif 4"`,
+  `700 ${WEEKDAY_SIZE}px "Source Sans 3"`,
+  `700 ${LABEL_SIZE}px "Source Sans 3"`,
+  `600 ${DATE_SIZE}px "Source Serif 4"`,
+  `600 ${FOOTER_SIZE}px "Source Serif 4"`,
   `700 ${TITLE_SIZE}px "Source Serif 4"`,
 ];
 
@@ -142,47 +168,31 @@ export function ensureMenuShareFonts(): Promise<void> {
   return fontsReadyPromise;
 }
 
-// Wrap one string to lines that fit maxWidth using the live ctx font (set by
-// the caller before calling). Splits on spaces; a single token longer than the
-// column is broken character by character so it can never overflow the card.
-function wrapText(ctx: CanvasRenderingContext2D, text: string, maxWidth: number): string[] {
-  const words = text.split(/\s+/).filter(Boolean);
+// Wrap one value string to lines that fit maxWidth using the live ctx font (set
+// by the caller before calling). Manual, greedy: split on single spaces, fit as
+// many tokens as fit, no hyphenation, no mid-word break. A lone token wider than
+// maxWidth (rare) overflows on its own line rather than breaking, per the spec.
+function wrapValue(ctx: CanvasRenderingContext2D, text: string, maxWidth: number): string[] {
+  const words = text.split(" ").filter(Boolean);
   if (words.length === 0) return [""];
   const lines: string[] = [];
-  let line = "";
-  for (const word of words) {
-    const candidate = line ? `${line} ${word}` : word;
-    if (ctx.measureText(candidate).width <= maxWidth || !line) {
-      // Fits, or the line is empty (must place at least one word). If a single
-      // word is itself too wide, hard-break it below.
-      if (ctx.measureText(candidate).width <= maxWidth) {
-        line = candidate;
-        continue;
-      }
-      // line is empty and the lone word is too wide: hard-break the word.
-      let chunk = "";
-      for (const ch of word) {
-        const next = chunk + ch;
-        if (ctx.measureText(next).width > maxWidth && chunk) {
-          lines.push(chunk);
-          chunk = ch;
-        } else {
-          chunk = next;
-        }
-      }
-      line = chunk;
+  let line = words[0];
+  for (let i = 1; i < words.length; i++) {
+    const candidate = `${line} ${words[i]}`;
+    if (ctx.measureText(candidate).width <= maxWidth) {
+      line = candidate;
     } else {
       lines.push(line);
-      line = word;
+      line = words[i];
     }
   }
-  if (line) lines.push(line);
+  lines.push(line);
   return lines;
 }
 
-// Draw text with manual letter-spacing (em fraction), returning nothing. Canvas
-// letterSpacing exists but is not universally supported; manual spacing keeps
-// the uppercase labels visually identical to the CSS letter-spacing values.
+// Draw text with manual letter-spacing (em fraction), returning the visible
+// advance. Canvas letterSpacing exists but is not universally supported; manual
+// spacing keeps the uppercase labels visually identical to the CSS values.
 function drawTracked(
   ctx: CanvasRenderingContext2D,
   text: string,
@@ -215,81 +225,76 @@ function measureTracked(
 
 // One meal's laid-out lines plus its measured block height.
 interface MealLayout {
-  label: string; // "Breakfast" | "Lunch" (already cased; drawn uppercase)
+  label: string; // "Breakfast" | "Lunch" | "Fruit" (drawn uppercase)
   lines: string[];
-  height: number;
+  height: number; // max(13, lineCount * 20)
 }
 
 interface DayLayout {
   model: ShareDayModel;
   meals: MealLayout[]; // empty when skipped
   skipped: boolean;
-  contentHeight: number; // height of the meals column (badge column is shorter)
-  cardHeight: number;
+  rowHeight: number;
 }
 
-// LAYOUT PASS: wrap every meal's dish string to the dishes column width, count
-// lines, and compute each meal block, each card, and the total height. Returns
-// the layout plus the total logical canvas height. ctx is used only to measure
-// here; the font is set per measurement.
+// One present-meal block height: max(13, lineCount * 20). One line = 20.
+function mealLineHeight(lineCount: number): number {
+  return Math.max(13, lineCount * LINE_ADVANCE);
+}
+
+// LAYOUT PASS: wrap every meal's value to the value column width, count lines,
+// and compute each meal block, each row, and the panel + image heights. ctx is
+// used only to measure here; the font is set per measurement.
 function layoutMenu(
   ctx: CanvasRenderingContext2D,
   days: ShareDayModel[],
-): { days: DayLayout[]; totalHeight: number } {
-  const dishesColX = PAD_SIDE + BADGE_WIDTH + BADGE_PAD_RIGHT + COL_GAP + CARD_PAD_X;
-  // dishes column width = card inner width minus the badge column minus the gap.
-  const cardInnerWidth = WIDTH - PAD_SIDE * 2 - CARD_PAD_X * 2;
-  const dishesWidth = cardInnerWidth - BADGE_WIDTH - BADGE_PAD_RIGHT - COL_GAP;
-  void dishesColX;
-
+): { days: DayLayout[]; panelHeight: number; totalHeight: number } {
   const laidOut: DayLayout[] = days.map((model) => {
     if (model.skipped) {
-      const contentHeight = SKIPPED_LINE;
+      // Skipped row: the meals block is a single 20px line.
+      const mealsHeight = LINE_ADVANCE;
       return {
         model,
         meals: [],
         skipped: true,
-        contentHeight,
-        cardHeight: contentHeight + CARD_PAD_Y * 2,
+        rowHeight: ROW_PAD_Y + Math.max(RAIL_HEIGHT, mealsHeight) + ROW_PAD_Y,
       };
     }
     const meals: MealLayout[] = [];
     const addMeal = (label: string, names: string[]) => {
       if (names.length === 0) return;
-      ctx.font = `400 ${DISH_SIZE}px ${FONT_SANS}`;
-      const lines = wrapText(ctx, names.join(", "), dishesWidth);
-      const height = MEAL_LABEL_LINE + MEAL_LABEL_GAP + lines.length * DISH_LINE;
-      meals.push({ label, lines, height });
+      ctx.font = `400 ${VALUE_SIZE}px ${FONT_SANS}`;
+      const lines = wrapValue(ctx, names.join(", "), VALUE_WIDTH);
+      meals.push({ label, lines, height: mealLineHeight(lines.length) });
     };
     addMeal("Breakfast", model.breakfast);
     addMeal("Lunch", model.lunch);
-    // §3.3 Fruit of the day: its own labelled block, after the savoury meals, so
-    // the share image mirrors the on-screen day card's section order.
-    addMeal("Fruit of the day", model.fruit);
-    // Total content = sum of meal blocks + gaps between them.
-    const contentHeight =
-      meals.reduce((sum, m) => sum + m.height, 0) + Math.max(0, meals.length - 1) * MEAL_GAP;
-    // A card with no meals (no breakfast, no lunch, not skipped) still gets a
-    // minimum height so the badge has room.
-    const safeContent = Math.max(contentHeight, BADGE_DATE_SIZE + BADGE_DAY_SIZE);
+    addMeal("Fruit", model.fruit);
+    const mealsHeight =
+      meals.reduce((sum, m) => sum + m.height, 0) + Math.max(0, meals.length - 1) * MEALS_GAP;
     return {
       model,
       meals,
       skipped: false,
-      contentHeight: safeContent,
-      cardHeight: safeContent + CARD_PAD_Y * 2,
+      rowHeight: ROW_PAD_Y + Math.max(RAIL_HEIGHT, mealsHeight) + ROW_PAD_Y,
     };
   });
 
-  let total = PAD_TOP;
-  total += TITLE_LINE + SUB_GAP + SUB_LINE + HEADING_GAP;
-  laidOut.forEach((d, i) => {
-    total += d.cardHeight;
-    if (i < laidOut.length - 1) total += CARD_GAP;
-  });
-  total += WORDMARK_TOP + WORDMARK_LINE;
-  total += PAD_BOTTOM;
-  return { days: laidOut, totalHeight: Math.ceil(total) };
+  const panelHeight =
+    laidOut.reduce((sum, d) => sum + d.rowHeight, 0) + PANEL_BORDER * 2;
+
+  // imageHeight = pad-top + header + header gap + panel + footer gap + footer +
+  // pad-bottom.
+  const totalHeight =
+    PAD_TOP +
+    HEADER_BLOCK +
+    HEADER_GAP +
+    panelHeight +
+    FOOTER_GAP +
+    FOOTER_BLOCK +
+    PAD_BOTTOM;
+
+  return { days: laidOut, panelHeight, totalHeight: Math.ceil(totalHeight) };
 }
 
 function roundRect(
@@ -310,142 +315,133 @@ function roundRect(
   ctx.closePath();
 }
 
-// DRAW PASS: paint header, each day card at its computed y, and the wordmark.
-// Because y-positions come from the layout pass's measured line counts, meals
-// can never overlap. Assumes ctx is already scaled to EXPORT_SCALE and the
-// canvas is sized; clears first so re-draws (re-open) start clean.
+// DRAW PASS: paint header, the ledger panel with each day row at its computed y,
+// and the footer wordmark. Because y-positions come from the layout pass's
+// measured line counts, meals can never overlap. Assumes ctx is already scaled
+// to EXPORT_SCALE and the canvas is sized.
 function paintMenu(
   ctx: CanvasRenderingContext2D,
-  laidOut: { days: DayLayout[]; totalHeight: number },
+  laidOut: { days: DayLayout[]; panelHeight: number; totalHeight: number },
   rangeLabel: string,
 ) {
   ctx.textBaseline = "alphabetic";
   ctx.textAlign = "left";
 
   // Frame background.
-  ctx.fillStyle = COLOR.cardBg;
+  ctx.fillStyle = COLOR.frameBg;
   ctx.fillRect(0, 0, WIDTH, laidOut.totalHeight);
 
   let y = PAD_TOP;
 
-  // Heading (centered).
+  // Header (centered).
   ctx.textAlign = "center";
   ctx.fillStyle = COLOR.ink;
   ctx.font = `700 ${TITLE_SIZE}px ${FONT_SERIF}`;
   ctx.fillText("This week", WIDTH / 2, y + TITLE_SIZE);
-  y += TITLE_LINE + SUB_GAP;
+  y += TITLE_BLOCK + SUB_GAP;
   ctx.fillStyle = COLOR.sub;
   ctx.font = `400 ${SUB_SIZE}px ${FONT_SANS}`;
   ctx.fillText(rangeLabel, WIDTH / 2, y + SUB_SIZE);
-  y += SUB_LINE + HEADING_GAP;
+  y += SUB_BLOCK + HEADER_GAP;
   ctx.textAlign = "left";
 
-  const cardX = PAD_SIDE;
-  const cardW = WIDTH - PAD_SIDE * 2;
-  const badgeColX = cardX + CARD_PAD_X;
-  const badgeCenterX = badgeColX + BADGE_WIDTH / 2;
-  const dividerX = badgeColX + BADGE_WIDTH + BADGE_PAD_RIGHT;
-  const dishX = dividerX + COL_GAP;
+  // Ledger panel.
+  const panelX = PAD_LEFT;
+  const panelY = y;
+  const panelW = CONTENT_WIDTH;
+  const panelH = laidOut.panelHeight;
+
+  ctx.fillStyle = COLOR.panelBg;
+  roundRect(ctx, panelX, panelY, panelW, panelH, PANEL_RADIUS);
+  ctx.fill();
+  ctx.lineWidth = PANEL_BORDER;
+  ctx.strokeStyle = COLOR.panelBorder;
+  roundRect(ctx, panelX + 0.5, panelY + 0.5, panelW - 1, panelH - 1, PANEL_RADIUS);
+  ctx.stroke();
+
+  // Day rows, stacked inside the panel border.
+  const railX = panelX + PANEL_BORDER + ROW_PAD_X;
+  const valueX = railX + RAIL_WIDTH + COL_GAP + LABEL_WIDTH + LABEL_GAP;
+  let rowY = panelY + PANEL_BORDER;
 
   laidOut.days.forEach((d, i) => {
-    const cardY = y;
-    const cardH = d.cardHeight;
+    const rowH = d.rowHeight;
 
-    // Card surface + border.
-    ctx.fillStyle = COLOR.dayBg;
-    roundRect(ctx, cardX, cardY, cardW, cardH, CARD_RADIUS);
-    ctx.fill();
-    ctx.lineWidth = 1;
-    ctx.strokeStyle = COLOR.dayBorder;
-    roundRect(ctx, cardX + 0.5, cardY + 0.5, cardW - 1, cardH - 1, CARD_RADIUS);
-    ctx.stroke();
-
-    // Badge column (centered text) + right divider.
-    ctx.textAlign = "center";
+    // Date rail (left-aligned): weekday tracked uppercase, then the date.
     ctx.fillStyle = COLOR.sub;
-    ctx.font = `400 ${BADGE_DAY_SIZE}px ${FONT_SANS}`;
-    const dayText = d.model.short.toUpperCase();
-    // Manual tracking, centered: measure the tracked width, start left of center.
-    const dayW = measureTracked(ctx, dayText, BADGE_DAY_TRACK, BADGE_DAY_SIZE);
-    ctx.textAlign = "left";
+    ctx.font = `700 ${WEEKDAY_SIZE}px ${FONT_SANS}`;
     drawTracked(
       ctx,
-      dayText,
-      badgeCenterX - dayW / 2,
-      cardY + CARD_PAD_Y + BADGE_DAY_SIZE,
-      BADGE_DAY_TRACK,
-      BADGE_DAY_SIZE,
+      d.model.short.toUpperCase(),
+      railX,
+      rowY + ROW_PAD_Y + WEEKDAY_SIZE,
+      WEEKDAY_TRACK,
+      WEEKDAY_SIZE,
     );
-    ctx.textAlign = "center";
     ctx.fillStyle = COLOR.ink;
-    ctx.font = `600 ${BADGE_DATE_SIZE}px ${FONT_SERIF}`;
-    ctx.fillText(
-      String(d.model.dateNum),
-      badgeCenterX,
-      cardY + CARD_PAD_Y + BADGE_DAY_SIZE + 4 + BADGE_DATE_SIZE,
-    );
-    ctx.textAlign = "left";
-
-    // Badge divider.
-    ctx.strokeStyle = COLOR.dayBorder;
-    ctx.lineWidth = 1;
-    ctx.beginPath();
-    ctx.moveTo(dividerX + 0.5, cardY + CARD_PAD_Y);
-    ctx.lineTo(dividerX + 0.5, cardY + cardH - CARD_PAD_Y);
-    ctx.stroke();
+    ctx.font = `600 ${DATE_SIZE}px ${FONT_SERIF}`;
+    ctx.fillText(String(d.model.dateNum), railX, rowY + ROW_PAD_Y + WEEKDAY_BLOCK + DATE_SIZE);
 
     // Meals column.
-    let my = cardY + CARD_PAD_Y;
+    let my = rowY + ROW_PAD_Y;
     if (d.skipped) {
       ctx.fillStyle = COLOR.sub;
       ctx.font = `400 ${SKIPPED_SIZE}px ${FONT_SANS}`;
-      ctx.fillText("Skipped", dishX, my + SKIPPED_SIZE);
+      ctx.fillText("Skipped", railX + RAIL_WIDTH + COL_GAP, my + SKIPPED_SIZE);
     } else {
       d.meals.forEach((meal, mi) => {
-        if (mi > 0) my += MEAL_GAP;
-        // Label line (green, uppercase, tracked).
+        if (mi > 0) my += MEALS_GAP;
+        // Label (green, uppercase, tracked, padding-top 3), aligned to the
+        // label column; the value sits in its own column to its right.
         ctx.fillStyle = COLOR.green;
-        ctx.font = `700 ${MEAL_LABEL_SIZE}px ${FONT_SANS}`;
+        ctx.font = `700 ${LABEL_SIZE}px ${FONT_SANS}`;
         drawTracked(
           ctx,
           meal.label.toUpperCase(),
-          dishX,
-          my + MEAL_LABEL_SIZE,
-          MEAL_LABEL_TRACK,
-          MEAL_LABEL_SIZE,
+          railX + RAIL_WIDTH + COL_GAP,
+          my + LABEL_PAD_TOP + LABEL_SIZE,
+          LABEL_TRACK,
+          LABEL_SIZE,
         );
-        my += MEAL_LABEL_LINE + MEAL_LABEL_GAP;
-        // Dish lines (ink).
+        // Value lines (ink). Wrapped lines hang under the value, not the label.
         ctx.fillStyle = COLOR.ink;
-        ctx.font = `400 ${DISH_SIZE}px ${FONT_SANS}`;
-        meal.lines.forEach((line) => {
-          ctx.fillText(line, dishX, my + DISH_SIZE);
-          my += DISH_LINE;
+        ctx.font = `400 ${VALUE_SIZE}px ${FONT_SANS}`;
+        meal.lines.forEach((line, li) => {
+          ctx.fillText(line, valueX, my + li * LINE_ADVANCE + VALUE_SIZE);
         });
+        my += meal.height;
       });
     }
 
-    y += cardH;
-    if (i < laidOut.days.length - 1) y += CARD_GAP;
+    rowY += rowH;
+
+    // Bottom hairline between rows (none on the last).
+    if (i < laidOut.days.length - 1) {
+      ctx.strokeStyle = COLOR.panelBorder;
+      ctx.lineWidth = PANEL_BORDER;
+      ctx.beginPath();
+      ctx.moveTo(panelX + PANEL_BORDER, rowY + 0.5);
+      ctx.lineTo(panelX + panelW - PANEL_BORDER, rowY + 0.5);
+      ctx.stroke();
+    }
   });
 
-  // Wordmark (centered, serif, tracked).
-  y += WORDMARK_TOP;
-  ctx.fillStyle = COLOR.wordmark;
-  ctx.font = `600 ${WORDMARK_SIZE}px ${FONT_SERIF}`;
+  // Footer wordmark (centered, serif, tracked).
+  const footerBaseY = panelY + panelH + FOOTER_GAP + FOOTER_SIZE;
+  ctx.fillStyle = COLOR.footer;
+  ctx.font = `600 ${FOOTER_SIZE}px ${FONT_SERIF}`;
   const mark = "Plantry";
-  const markW = measureTracked(ctx, mark, WORDMARK_TRACK, WORDMARK_SIZE);
-  drawTracked(ctx, mark, WIDTH / 2 - markW / 2, y + WORDMARK_SIZE, WORDMARK_TRACK, WORDMARK_SIZE);
+  const markW = measureTracked(ctx, mark, FOOTER_TRACK, FOOTER_SIZE);
+  drawTracked(ctx, mark, WIDTH / 2 - markW / 2, footerBaseY, FOOTER_TRACK, FOOTER_SIZE);
 }
 
 // Public API: lay out + draw the menu into the given canvas. Sizes the canvas
-// backing store to logical*EXPORT_SCALE for crispness (matching the old export's
-// pixelRatio: 3). On-screen display is governed by CSS (.share__menu-canvas:
-// width:100%; height:auto), which scales the canvas to fit the slide frame using
-// the intrinsic aspect ratio from the backing-store width/height attributes; we
-// deliberately do not set an inline CSS size here, so the preview never overflows
-// the rail. Fonts must be loaded first; call
-// ensureMenuShareFonts() and await it before this, or pass a font-ready ctx.
+// backing store to logical*EXPORT_SCALE for the bitmap. On-screen display is
+// governed by CSS (.share__menu-canvas: width:100%; height:auto), which scales
+// the canvas to fit the slide frame using the intrinsic aspect ratio from the
+// backing-store width/height attributes; we deliberately do not set an inline
+// CSS size here, so the preview never overflows the rail. Fonts must be loaded
+// first; call ensureMenuShareFonts() and await it before this.
 //
 // Returns the logical { width, height } so the caller can size the slide frame.
 export function drawMenuShareCanvas(
@@ -462,11 +458,10 @@ export function drawMenuShareCanvas(
   ctx.setTransform(1, 0, 0, 1, 0, 0);
   const laidOut = layoutMenu(ctx, days);
 
-  // Size the backing store at 3x, then scale the context so all drawing math
-  // stays in logical pixels. We do not set an inline CSS size: .share__menu-canvas
-  // (width:100%; height:auto) sizes the on-screen box from the backing store's
-  // intrinsic aspect ratio, so the preview fits the slide frame instead of
-  // overflowing it at a fixed 360px.
+  // Size the backing store at EXPORT_SCALE, then scale the context so all
+  // drawing math stays in logical pixels. We do not set an inline CSS size:
+  // .share__menu-canvas (width:100%; height:auto) sizes the on-screen box from
+  // the backing store's intrinsic aspect ratio.
   canvas.width = WIDTH * EXPORT_SCALE;
   canvas.height = laidOut.totalHeight * EXPORT_SCALE;
   ctx.setTransform(EXPORT_SCALE, 0, 0, EXPORT_SCALE, 0, 0);
