@@ -114,7 +114,7 @@ export function bake(options: BakeOptions): BakeOutput {
   const { dishes, ingredients } = dishFilesToLibrary(dishFiles);
   const packSizes = catalogToPackSizes(catalog);
 
-  // Blocking data-integrity gates (feature plan §1.3 / §5). Any failure aborts
+  // Blocking data-integrity gates. Any failure aborts
   // the bake before emitting, so CI fails loudly rather than baking bad data.
   validateDishFiles(dishFiles);
   validateCatalogGroups(catalog);

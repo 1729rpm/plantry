@@ -3,8 +3,8 @@ import type { Day, Meal } from "./eligibility.js";
 import type { GeneratedWeek } from "./generateWeek.js";
 
 /**
- * History-row derivation (docs/engine.md §6 Skipped days, design-revamp §1.4
- * item 3). On finalize, a week's picked dishes append to the historical record
+ * History-row derivation (docs/engine.md §8 Skipped days). On finalize, a
+ * week's picked dishes append to the historical record
  * (docs/product.md §3 item 4); that record drives the §4 recency rule on later
  * weeks. This pure function derives those `MenuHistoryRow` rows from a generated
  * week.

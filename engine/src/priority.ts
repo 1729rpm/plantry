@@ -6,10 +6,10 @@ import {
 } from "./consolidation.js";
 
 /**
- * Context for §4 step 3 (delegates to §6 ingredient consolidation). When
+ * Context for §4 step 3 (delegates to §10 ingredient consolidation). When
  * `ledger` is null/undefined the step is a no-op so callers with no ledger
  * (engine harnesses, isolated rankCandidates calls) keep the legacy
- * behaviour. Soft consolidation (the named fresh-produce list in §6) is
+ * behaviour. Soft consolidation (the named fresh-produce list in §10) is
  * optional and applied as a secondary tiebreak within hard-score groups.
  */
 export interface ConsolidationContext {
@@ -31,7 +31,7 @@ export interface RankCandidatesArgs {
    */
   sameDayBreakfastPrimaryIngredient?: string;
   /**
-   * §6 ingredient-consolidation context (ledger + ingredient table). Undefined
+   * §10 ingredient-consolidation context (ledger + ingredient table). Undefined
    * leaves step 3 a no-op; null is also accepted for callers that explicitly
    * disable consolidation. See `ConsolidationContext`.
    */
@@ -229,8 +229,8 @@ export function byNoSameDayPrimaryIngredient(
 }
 
 /**
- * §4 step 3: ingredient consolidation (delegates to §6). When no
- * consolidation context is supplied this is a no-op, matching the pre-§6
+ * §4 step 3: ingredient consolidation (delegates to §10). When no
+ * consolidation context is supplied this is a no-op, matching the pre-consolidation
  * behaviour. With a ledger, candidates that consume above-threshold
  * leftovers rank above those that do not; soft consolidation on the named
  * fresh-produce list is a secondary tiebreak.

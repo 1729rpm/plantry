@@ -4,7 +4,7 @@ import { composeSlot, candidateSetPools } from "./composition.js";
 import type { SlotPlan } from "./schedule.js";
 
 /**
- * Requested dishes (docs/engine.md §6 Requested dishes, design-revamp §1.4 item 2).
+ * Requested dishes (docs/engine.md §6 Requested dishes).
  *
  * `generateWeek` accepts an optional `requests` input: a list of dish ids the
  * next generation must place (later fed by the next-week queue). This generalises

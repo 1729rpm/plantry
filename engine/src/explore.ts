@@ -9,7 +9,7 @@ import { eligibleDishes } from "./eligibility.js";
 import { deriveDishMacros } from "./nutrition.js";
 
 /**
- * Explore ranking (docs/engine.md §7 Explore ranking, design-revamp §1.4 item 4).
+ * Explore ranking (docs/engine.md §7 Explore ranking).
  *
  * Ranks the ELIGIBLE (active, in-season), NEVER-COOKED dishes "familiar but new":
  * dishes the household has not had yet but that resemble what it actually cooks,
@@ -25,7 +25,7 @@ import { deriveDishMacros } from "./nutrition.js";
  *      paneer dish scores high in a paneer-heavy history.
  *
  *   2. protein-band proximity. Closeness of this dish's per-person protein
- *      (§9 nutrition) to the household's COOKED-MEDIAN protein, measured in
+ *      (§11 nutrition) to the household's COOKED-MEDIAN protein, measured in
  *      fixed `PROTEIN_BAND_WIDTH_GRAMS` bands: `1 / (1 + bandDistance)`, so a
  *      dish in the median band scores 1.0 and the score decays with distance. A
  *      dish in the household's usual protein range scores high.
@@ -45,8 +45,8 @@ import { deriveDishMacros } from "./nutrition.js";
  * resolve by a fixed priority order (shared-ingredient, then protein-match, then
  * familiar-category), so the key is deterministic too.
  *
- * Pure function: same inputs always produce the same ranking. This module ships
- * DORMANT; slice 7.1 wires it into the Explore tab.
+ * Pure function: same inputs always produce the same ranking. Powers the
+ * Explore tab (§7).
  */
 
 /** Number of grams-per-person that separates one protein band from the next. */

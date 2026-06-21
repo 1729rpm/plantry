@@ -65,10 +65,10 @@ export function validatePackSizesUsed(
 }
 
 // ---------------------------------------------------------------------------
-// Per-dish file + ingredient catalog validators (feature plan §1.3 / §5).
-// These are the blocking gates that protect the new data layout: structural
+// Per-dish file + ingredient catalog validators.
+// These are the blocking gates that protect the data layout: structural
 // integrity of the dish files, and the name-resolution gate that protects
-// future ordering automation (plan §7 item 1).
+// future ordering automation.
 // ---------------------------------------------------------------------------
 
 /**
@@ -159,10 +159,10 @@ export function validateCatalogGroups(catalog: CatalogIngredient[]): void {
 }
 
 /**
- * The referential-integrity gate that is the whole point of this slice: every
+ * The referential-integrity gate: every
  * ingredient row inside every dish file must resolve to a catalog row by exact
- * name match. This is what protects future ordering automation (plan §7 item
- * 1): a row that names an ingredient absent from the catalog would have no
+ * name match. This is what protects future ordering automation: a row that
+ * names an ingredient absent from the catalog would have no
  * group, no pack size, and no machine-readable identity. (Note: the dish
  * frontmatter `primaryIngredient` is a free categorization label, NOT an
  * ingredient row, and intentionally is NOT required to resolve here. See the PR
@@ -206,14 +206,14 @@ export function validateDishFileRoundTrip(file: DishFile, original: string): voi
 }
 
 // ===========================================================================
-// Reporting layer (design-revamp §1.3, slice 2.1).
+// Reporting layer (docs/engine.md §11.1 coverage and reports).
 //
 // These are REPORTING severity, NOT blocking. They never throw on a coverage
 // gap or a thin pool; they return structured data that engine/scripts/reports.ts
 // prints in CI output and the slow loop later consumes. The blocking validators
 // above keep facts TRUE; these reports keep the library GOOD, which is judgment
-// CI cannot make. Blank macros (every cell this slice, until 2.2) are EXPECTED:
-// the coverage report reading near-zero on macros is correct, not a failure.
+// CI cannot make. Blank macros are EXPECTED on the rows that legitimately have
+// none: the coverage report reading near-zero on those is correct, not a failure.
 // ===========================================================================
 
 const ALL_SEASONS: readonly Season[] = ["Summer", "Monsoon", "Winter"];
@@ -221,8 +221,8 @@ const ALL_SEASONS: readonly Season[] = ["Summer", "Monsoon", "Winter"];
 /**
  * Catalog rows that SHOULD carry macros, so the coverage denominator is not
  * diluted by spices and aromatics that legitimately stay blank forever
- * (design-revamp §1.1: "spices and aromatics can stay blank forever, protein
- * sources and staples cannot"). Heuristic, reporting-only: rows in the food
+ * (spices and aromatics can stay blank forever, protein sources and staples
+ * cannot). Heuristic, reporting-only: rows in the food
  * groups (Proteins and Dairy, Pantry, Vegetables) are macro-relevant; Aromatics
  * and Herbs are not, and Fruit is excluded from the coverage denominator too:
  * its rows mostly carry macros, but the "Fruit" placeholder row (the Seasonal
@@ -273,9 +273,9 @@ export interface CoverageReport {
 }
 
 /**
- * Enrichment + macro coverage over the active library and the catalog. The
- * ratchet slice 2.2+ burns down. Active dishes only (inactive dishes are not
- * shown in the UI, so their enrichment does not matter yet).
+ * Enrichment + macro coverage over the active library and the catalog (the
+ * §11.1 coverage ratchet). Active dishes only (inactive dishes are not shown in
+ * the UI, so their enrichment does not matter yet).
  */
 export function coverageReport(dishes: Dish[], catalog: CatalogIngredient[]): CoverageReport {
   const active = dishes.filter((d) => d.active === "Yes");
@@ -374,7 +374,7 @@ export interface HpProteinDrift {
  * call a dish "high-protein". Reporting-only: the HP TAG stays the rule input
  * (docs/engine.md §3), this number only surfaces drift between the tag and the
  * derived macro. Whether HP ever becomes derived from a threshold is a future
- * slow-loop question (design-revamp §1.2), not this slice.
+ * slow-loop question, not a current rule.
  */
 export const HP_PROTEIN_THRESHOLD_PER_PERSON = 20;
 
@@ -382,8 +382,8 @@ export const HP_PROTEIN_THRESHOLD_PER_PERSON = 20;
  * Warn when a dish's COMPUTED protein and its HP tag disagree: HP-tagged but
  * below the threshold, or above the threshold without the tag. Dishes whose
  * macros are not yet populated (derived protein zero because every ingredient's
- * catalog macros are blank) are SKIPPED, so the report stays silent this slice
- * (every macro cell is blank until 2.2) and only speaks once real macros exist.
+ * catalog macros are blank) are SKIPPED, so the report speaks only for dishes
+ * whose ingredient macros are populated.
  */
 export function hpProteinConsistencyReport(
   dishes: Dish[],

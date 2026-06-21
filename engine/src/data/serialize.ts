@@ -82,7 +82,7 @@ export function serializeMenuHistory(rows: MenuHistoryRow[]): string {
 // "## Ingredients" section holding a three-column pipe table. Frontmatter keys
 // are emitted in a fixed order; list values (tags, seasons) use YAML flow
 // sequences ("[HP]", "[Summer, Monsoon]", "[]"). All live scalar values are
-// YAML-plain-safe (verified during the slice-1.2 migration); the serializer
+// YAML-plain-safe; the serializer
 // emits them bare and the parser (engine/src/data/parse.ts) reads them back via
 // the `yaml` library, so any future value needing quoting fails the round-trip
 // validator loudly rather than corrupting silently. Dishes with no ingredient
@@ -118,9 +118,9 @@ export function serializeDishFile(file: DishFile): string {
   // Cuisine: a required single-value display/filter field, emitted right after
   // seasons (after the rule-input fields, before the optional enrichment block).
   fm.push(`cuisine: ${dish.cuisine}`);
-  // Enrichment frontmatter (design-revamp §1.1, slice 2.1). Emitted in a fixed
+  // Enrichment frontmatter (docs/engine.md §12). Emitted in a fixed
   // order, each line only when the field is present, so a dish with none of them
-  // (every current file) serializes byte-identically to before.
+  // serializes byte-identically to one without.
   if (dish.complexity !== undefined) fm.push(`complexity: ${dish.complexity}`);
   if (dish.skill !== undefined) fm.push(`skill: ${dish.skill}`);
   if (dish.equipment !== undefined) fm.push(`equipment: ${dish.equipment}`);
@@ -131,8 +131,8 @@ export function serializeDishFile(file: DishFile): string {
 
   // Body: an optional description paragraph, the `## Ingredients` table, then an
   // optional `## Recipe` section. description and recipe live in the body prose,
-  // not frontmatter (design-revamp §1.1). A dish with neither produces the same
-  // bytes as before.
+  // not frontmatter (docs/engine.md §12). A dish with neither produces the same
+  // bytes as one with only the ingredient table.
   const body: string[] = [];
   if (dish.description !== undefined) {
     body.push(dish.description);
@@ -173,7 +173,7 @@ const CATALOG_PREAMBLE = [
   "bucket (fixed order: Proteins and Dairy, Fruit, Vegetables, Aromatics and",
   "Herbs, Pantry). There is no catch-all section: any ingredient without an",
   "explicit group falls to Pantry, which renders last. `Unit` is the canonical",
-  "measure (g/ml/pcs). `Pack Size` present marks a tracked ingredient (used by §6",
+  "measure (g/ml/pcs). `Pack Size` present marks a tracked ingredient (used by §10",
   "Ingredient Consolidation and rounded up to whole packs on the buy list); blank",
   "marks an untracked staple bought by weight.",
   "",
