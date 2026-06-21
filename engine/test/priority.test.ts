@@ -3,7 +3,6 @@ import {
   rankCandidates,
   byLongestUnused,
   byNoSameDayPrimaryIngredient,
-  byConsolidationStub,
   byIngredientConsolidation,
   byPreferredYes,
   byCuisineDiversity,
@@ -175,15 +174,6 @@ describe("priority — docs/engine.md §4", () => {
       const pool = [a, b, c];
       const out = byIngredientConsolidation(pool, undefined);
       expect(out.map((d) => d.name)).toEqual(["A", "B", "C"]);
-    });
-
-    it("byConsolidationStub remains aliased for slice-4 callers (no-op when context absent)", () => {
-      const a = makeDish({ name: "A" });
-      const b = makeDish({ name: "B" });
-      // The legacy slice-4 export still resolves and stays a no-op without a
-      // ledger; only its identity widened to accept the §6 context.
-      const out = byConsolidationStub([a, b], undefined);
-      expect(out.map((d) => d.name)).toEqual(["A", "B"]);
     });
 
     it("reorders the pool when a ledger with above-threshold leftover is supplied", () => {

@@ -42,7 +42,7 @@ export const FRESH_PRODUCE_ITEMS: ReadonlySet<string> = new Set([
  * deciding whether to keep the entry. Today every tracked Pack Size in the
  * ingredient catalog is grams so this branch is defensive.
  */
-function parsePackSizeGrams(packSize: string): number {
+export function parsePackSizeGrams(packSize: string): number {
   const match = packSize.trim().match(/^(\d+(?:\.\d+)?)\s*g$/i);
   if (!match) return 0;
   return Number(match[1]);
@@ -52,7 +52,7 @@ function parsePackSizeGrams(packSize: string): number {
  * docs/engine.md §10 ("Tracked: ingredients whose catalog row carries a Pack
  * Size"). Builds an empty ledger keyed by canonical ingredient name. Untracked
  * ingredients (anything not in `packSizes`) are NEVER added; downstream
- * applyPick / scoreCandidates ignore them.
+ * applyPick / rankByConsolidation ignore them.
  */
 export function emptyLedger(packSizes: PackSizeHeader[]): IngredientLedger {
   const ledger: IngredientLedger = new Map();
@@ -109,9 +109,9 @@ export function applyPick(
 }
 
 /**
- * Returns the set of tracked ingredient names a dish would consume above
- * threshold from existing leftovers. Used by both scoreCandidates and the
- * priority.ts step-3 composition.
+ * Returns the count of tracked ingredients a dish would consume above
+ * threshold from existing leftovers. Used by rankByConsolidation (what
+ * priority.ts step 3 calls).
  */
 function consumedAboveThreshold(
   dish: Dish,
@@ -130,59 +130,6 @@ function consumedAboveThreshold(
     }
   }
   return score;
-}
-
-/**
- * docs/engine.md §10 step 2 ("If leftover is at least 50 g, the next slot
- * needing that ingredient prefers a dish that consumes the leftover").
- * Higher score (more tracked ingredients with above-threshold leftover that
- * this dish would consume) ranks first. Stable: ties preserve input order.
- */
-export function scoreCandidates(
-  pool: Dish[],
-  ledger: IngredientLedger,
-  ingredients: Ingredient[],
-  thresholdGrams: number = DEFAULT_LEFTOVER_THRESHOLD_GRAMS,
-): Dish[] {
-  const decorated = pool.map((dish, index) => ({
-    dish,
-    index,
-    score: consumedAboveThreshold(dish, ledger, ingredients, thresholdGrams),
-  }));
-  decorated.sort((a, b) => {
-    if (a.score !== b.score) return b.score - a.score;
-    return a.index - b.index;
-  });
-  return decorated.map((d) => d.dish);
-}
-
-/**
- * docs/engine.md §10 soft-consolidation paragraph ("prefer dishes that share
- * fresh produce already on the buy list: capsicum, tomato, cucumber, onion,
- * mint, coriander"). Returns the count of named fresh items the dish would
- * share with `lastFreshItemsUsed` (one purchase covering multiple dishes
- * beats two small ones). Pool sorted highest score first; stable on ties.
- *
- * The fresh items are matched against both Ingredient rows (dish-level
- * recipe) and Dish.primaryIngredient (the headline ingredient), so a dish
- * whose Primary Ingredient is one of the fresh items still counts even if
- * the ingredient row table only lists it once.
- */
-export function scoreSoftConsolidation(
-  pool: Dish[],
-  lastFreshItemsUsed: ReadonlySet<string>,
-  ingredients: Ingredient[],
-): Dish[] {
-  const decorated = pool.map((dish, index) => ({
-    dish,
-    index,
-    score: countSharedFreshItems(dish, lastFreshItemsUsed, ingredients),
-  }));
-  decorated.sort((a, b) => {
-    if (a.score !== b.score) return b.score - a.score;
-    return a.index - b.index;
-  });
-  return decorated.map((d) => d.dish);
 }
 
 /**
@@ -217,7 +164,7 @@ function countSharedFreshItems(
  * hard score is primary, soft score is secondary tiebreak, input order is
  * the final tiebreak. This is what priority.ts step 3 calls when a ledger
  * is present; when no soft signal is available (`lastFreshItemsUsed`
- * undefined) the behaviour is identical to scoreCandidates.
+ * undefined) it ranks on the hard leftover score alone.
  */
 export function rankByConsolidation(
   pool: Dish[],

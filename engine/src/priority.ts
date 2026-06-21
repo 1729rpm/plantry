@@ -235,9 +235,6 @@ export function byIngredientConsolidation(
   });
 }
 
-/** Backwards-compatible alias retained for callers of the slice-4 placeholder. */
-export const byConsolidationStub = byIngredientConsolidation;
-
 /**
  * §4 step 4: Preferred=Yes ranks above Preferred=No. Stable: within each group
  * the order from the previous step is preserved.

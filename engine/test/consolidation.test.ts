@@ -2,8 +2,6 @@ import { describe, it, expect } from "vitest";
 import {
   emptyLedger,
   applyPick,
-  scoreCandidates,
-  scoreSoftConsolidation,
   rankByConsolidation,
   DEFAULT_LEFTOVER_THRESHOLD_GRAMS,
   FRESH_PRODUCE_ITEMS,
@@ -157,7 +155,10 @@ describe("consolidation — docs/engine.md §6", () => {
     });
   });
 
-  describe("scoreCandidates", () => {
+  // rankByConsolidation with no soft signal (lastFreshItemsUsed undefined)
+  // ranks on the hard leftover score alone, the behaviour the deleted
+  // scoreCandidates helper provided. These cases assert that hard-only ranking.
+  describe("rankByConsolidation (hard leftover score, no soft signal)", () => {
     function ledgerWithLeftover(leftover: number) {
       const ledger = emptyLedger([PANEER_HEADER]);
       const paneer = ledger.get("Paneer")!;
@@ -174,7 +175,7 @@ describe("consolidation — docs/engine.md §6", () => {
         row(usesPaneer.id, usesPaneer.name, "Paneer", 100),
         row(noPaneer.id, noPaneer.name, "Onion", 100),
       ];
-      const out = scoreCandidates(
+      const out = rankByConsolidation(
         [noPaneer, usesPaneer],
         ledgerWithLeftover(150),
         ingredients,
@@ -186,7 +187,7 @@ describe("consolidation — docs/engine.md §6", () => {
       const usesPaneer = makeDish({ name: "UsesPaneer" });
       const noPaneer = makeDish({ name: "NoPaneer" });
       const ingredients = [row(usesPaneer.id, usesPaneer.name, "Paneer", 50)];
-      const out = scoreCandidates(
+      const out = rankByConsolidation(
         [noPaneer, usesPaneer],
         ledgerWithLeftover(DEFAULT_LEFTOVER_THRESHOLD_GRAMS),
         ingredients,
@@ -198,7 +199,7 @@ describe("consolidation — docs/engine.md §6", () => {
       const usesPaneer = makeDish({ name: "UsesPaneer" });
       const noPaneer = makeDish({ name: "NoPaneer" });
       const ingredients = [row(usesPaneer.id, usesPaneer.name, "Paneer", 50)];
-      const out = scoreCandidates(
+      const out = rankByConsolidation(
         [noPaneer, usesPaneer],
         ledgerWithLeftover(DEFAULT_LEFTOVER_THRESHOLD_GRAMS - 1),
         ingredients,
@@ -213,7 +214,7 @@ describe("consolidation — docs/engine.md §6", () => {
       const c = makeDish({ name: "C" });
       const ingredients = [row(a.id, a.name, "Onion", 100)];
       const ledger = ledgerWithLeftover(150);
-      const out = scoreCandidates([a, b, c], ledger, ingredients);
+      const out = rankByConsolidation([a, b, c], ledger, ingredients);
       expect(out.map((d) => d.name)).toEqual(["A", "B", "C"]);
     });
 
@@ -236,12 +237,18 @@ describe("consolidation — docs/engine.md §6", () => {
       curd.usedGrams = 350;
       curd.leftoverGrams = 150;
 
-      const out = scoreCandidates([usesOne, usesBoth], ledger, ingredients);
+      const out = rankByConsolidation([usesOne, usesBoth], ledger, ingredients);
       expect(out.map((d) => d.name)).toEqual(["UsesBoth", "UsesOne"]);
     });
   });
 
-  describe("scoreSoftConsolidation", () => {
+  // rankByConsolidation with an empty ledger (no tracked leftovers, so every
+  // dish scores hard=0) ranks purely on the soft fresh-produce overlap, the
+  // behaviour the deleted scoreSoftConsolidation helper provided. SOFT_ONLY is
+  // that empty ledger; these cases assert that soft-only ranking.
+  describe("rankByConsolidation (soft fresh-produce overlap, no leftovers)", () => {
+    const SOFT_ONLY = emptyLedger([]);
+
     it("ranks dishes that share a named fresh-produce item above those that don't", () => {
       const usesCapsicum = makeDish({
         name: "PaneerCapsicum",
@@ -252,11 +259,9 @@ describe("consolidation — docs/engine.md §6", () => {
         row(usesCapsicum.id, usesCapsicum.name, "Capsicum", 100),
         row(noFresh.id, noFresh.name, "Toor Dal", 100),
       ];
-      const out = scoreSoftConsolidation(
-        [noFresh, usesCapsicum],
-        new Set(["Capsicum"]),
-        ingredients,
-      );
+      const out = rankByConsolidation([noFresh, usesCapsicum], SOFT_ONLY, ingredients, {
+        lastFreshItemsUsed: new Set(["Capsicum"]),
+      });
       expect(out.map((d) => d.name)).toEqual(["PaneerCapsicum", "PlainDal"]);
     });
 
@@ -281,11 +286,9 @@ describe("consolidation — docs/engine.md §6", () => {
         row(sharesTwo.id, sharesTwo.name, "Tomato", 50),
         row(sharesOne.id, sharesOne.name, "Capsicum", 50),
       ];
-      const out = scoreSoftConsolidation(
-        [sharesOne, sharesTwo],
-        new Set(["Capsicum", "Tomato"]),
-        ingredients,
-      );
+      const out = rankByConsolidation([sharesOne, sharesTwo], SOFT_ONLY, ingredients, {
+        lastFreshItemsUsed: new Set(["Capsicum", "Tomato"]),
+      });
       expect(out.map((d) => d.name)).toEqual(["SharesTwo", "SharesOne"]);
     });
 
@@ -293,7 +296,9 @@ describe("consolidation — docs/engine.md §6", () => {
       const a = makeDish({ name: "A", primaryIngredient: "Paneer" });
       const b = makeDish({ name: "B", primaryIngredient: "Chicken" });
       const ingredients: Ingredient[] = [];
-      const out = scoreSoftConsolidation([a, b], new Set(["Capsicum"]), ingredients);
+      const out = rankByConsolidation([a, b], SOFT_ONLY, ingredients, {
+        lastFreshItemsUsed: new Set(["Capsicum"]),
+      });
       expect(out.map((d) => d.name)).toEqual(["A", "B"]);
     });
 
@@ -304,7 +309,9 @@ describe("consolidation — docs/engine.md §6", () => {
       });
       const plain = makeDish({ name: "Plain", primaryIngredient: "Paneer" });
       const ingredients: Ingredient[] = [];
-      const out = scoreSoftConsolidation([plain, tomatoRice], new Set(["Tomato"]), ingredients);
+      const out = rankByConsolidation([plain, tomatoRice], SOFT_ONLY, ingredients, {
+        lastFreshItemsUsed: new Set(["Tomato"]),
+      });
       expect(out.map((d) => d.name)).toEqual(["TomatoRice", "Plain"]);
     });
   });
@@ -348,7 +355,7 @@ describe("consolidation — docs/engine.md §6", () => {
       ]);
     });
 
-    it("behaves like scoreCandidates when no soft signal is supplied", () => {
+    it("ranks on the hard leftover score alone when no soft signal is supplied", () => {
       const usesPaneer = makeDish({ name: "UsesPaneer" });
       const noPaneer = makeDish({ name: "NoPaneer" });
       const ingredients = [row(usesPaneer.id, usesPaneer.name, "Paneer", 100)];
@@ -358,9 +365,9 @@ describe("consolidation — docs/engine.md §6", () => {
       paneer.usedGrams = 50;
       paneer.leftoverGrams = 150;
 
-      const composite = rankByConsolidation([noPaneer, usesPaneer], ledger, ingredients);
-      const hard = scoreCandidates([noPaneer, usesPaneer], ledger, ingredients);
-      expect(composite.map((d) => d.id)).toEqual(hard.map((d) => d.id));
+      const out = rankByConsolidation([noPaneer, usesPaneer], ledger, ingredients);
+      // Only the hard axis is active: UsesPaneer consumes the 150 g leftover.
+      expect(out.map((d) => d.name)).toEqual(["UsesPaneer", "NoPaneer"]);
     });
   });
 

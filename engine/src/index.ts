@@ -64,7 +64,6 @@ export {
   rankCandidates,
   byLongestUnused,
   byNoSameDayPrimaryIngredient,
-  byConsolidationStub,
   byIngredientConsolidation,
   byPreferredYes,
 } from "./priority.js";
@@ -72,8 +71,6 @@ export type { RankCandidatesArgs, ConsolidationContext } from "./priority.js";
 export {
   emptyLedger,
   applyPick,
-  scoreCandidates,
-  scoreSoftConsolidation,
   rankByConsolidation,
   DEFAULT_LEFTOVER_THRESHOLD_GRAMS,
   FRESH_PRODUCE_ITEMS,
