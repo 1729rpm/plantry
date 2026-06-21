@@ -9,6 +9,7 @@
 import { dishes, ingredients } from "@plantry/engine/library";
 import type { Dish, Ingredient } from "@plantry/engine";
 import { dishMatchesPickerFilters, type PickerPill } from "./dishFilters.js";
+import { matchesQuery } from "./search.js";
 
 const DISH_BY_ID = new Map<number, Dish>(dishes.map((d) => [d.id, d]));
 
@@ -253,9 +254,7 @@ export function swapPickerVisible(
 ): Dish[] {
   const needle = query.trim().toLowerCase();
   const matches = pool.filter(
-    (d) =>
-      (needle === "" || d.name.toLowerCase().includes(needle)) &&
-      dishMatchesPickerFilters(d, filters),
+    (d) => matchesQuery(d.name, query) && dishMatchesPickerFilters(d, filters),
   );
   // Default view only (no query AND no filter): cap to the suggested head.
   if (needle === "" && filters.length === 0) return matches.slice(0, suggestedCap);
