@@ -12,6 +12,14 @@ Brief description in present tense, one to three sentences. Reference the PR.
 
 ---
 
+## 2026-06-22 Dish-picker search matches query tokens, not a contiguous substring
+
+The Replace and Add-a-dish picker search boxes matched the whole query as one contiguous substring of the dish name, so "thai curry" returned nothing for "Thai green curry chicken" (the word "green" sits between the query words). A shared `matchesQuery` helper (`app/web/src/lib/search.ts`) now splits the query on whitespace and requires each token to appear somewhere in the name (case-insensitive; an empty query matches all), so word order and gaps no longer matter. Used at both picker call sites. (#181)
+
+## 2026-06-21 Shareable menu image reshaped to a compact ledger for WhatsApp
+
+The shared menu image arrived soft on WhatsApp: the tall portrait export exceeded WhatsApp's ~1600px longest-side cap and was downscaled. The menu share image is now a near-square single-column "ledger" (600 wide, six day rows) exported at 2x (~1200x1490, long edge under 1600), so WhatsApp ships it un-downscaled. Grocery is dropped from the share family (menu and recipe sheets only), and sharing now works offline (the family is a pure function of the cached week and baked library). (#180)
+
 ## 2026-06-21 Composition from feedback: encode Rajat's manual menu edits as engine rules
 
 Closes the Composition-from-feedback feature, which turns Rajat's 38 manual edits to the 2026-06-22 menu (prod `manualChanges` table) into four standing rules. **R1 (§3):** a self-sufficient main (tagged `complete_meal` or Category=Complete meal) takes no accompaniment and no separate carb; in breakfast Option B a Category=Bread `complete_carb` is served alone while a Chilla/Paratha keeps its chutney (#178). **R3 (§3):** the Tue/Thu single-pick breakfast adds one HP Category=Keto companion (e.g. boiled eggs) when its main carries no `HP` tag (#178). **R4 (§3):** Menu 1's partner complements the main's form, so a Gravy HP main pairs a non-HP Dry sabzi instead of an Accompaniment; Menu 1 stays 3 items, the §9 weekday cap holds (#178). **R2 (§4 + data):** the §4 cuisine-diversity step ranks `Preferred=Yes` dishes first within the promoted non-Indian group (#177), and the international dishes Rajat keeps are marked preferred (White sauce pasta, Pesto pasta, Thai green curry chicken), Korean tofu soup deactivated, Ratatouille re-tagged `complexity: Medium` (#179). The kadhi+bhindi case is left to manual swap (no structural signal). `docs/engine.md` §3 and §4 step 5 updated; simulation harness green, no weekday exceeds the 5-item cap.
