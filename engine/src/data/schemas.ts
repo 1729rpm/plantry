@@ -181,10 +181,6 @@ export const CatalogIngredientSchema = z.object({
 });
 export type CatalogIngredient = z.infer<typeof CatalogIngredientSchema>;
 
-/** Frontmatter-only view of a dish (per-dish file, no ingredient rows). */
-export const DishFrontmatterSchema = DishSchema;
-export type DishFrontmatter = z.infer<typeof DishFrontmatterSchema>;
-
 /** A single ingredient row inside a per-dish file (dish identity implied). */
 export const DishIngredientRowSchema = z.object({
   ingredient: z.string().min(1),

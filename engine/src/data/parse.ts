@@ -2,8 +2,8 @@ import { ZodError } from "zod";
 import { parse as parseYaml } from "yaml";
 import {
   CatalogIngredientSchema,
+  DishIngredientRowSchema,
   DishSchema,
-  IngredientSchema,
   MenuHistoryRowSchema,
   type CatalogIngredient,
   type Dish,
@@ -239,11 +239,11 @@ export function parseDishFile(slug: string, markdown: string): DishFile {
     const quantity = parseNumberStrict(cells[1], "Quantity", rowKey);
     try {
       ingredients.push(
-        IngredientSchema.pick({
-          ingredient: true,
-          quantity: true,
-          unit: true,
-        }).parse({ ingredient: cells[0], quantity, unit: cells[2] }),
+        DishIngredientRowSchema.parse({
+          ingredient: cells[0],
+          quantity,
+          unit: cells[2],
+        }),
       );
     } catch (err) {
       if (err instanceof ZodError) {

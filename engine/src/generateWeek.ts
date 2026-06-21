@@ -28,7 +28,7 @@ import {
 import { applyPick, emptyLedger, type IngredientLedger } from "./consolidation.js";
 import { applyCap } from "./cap.js";
 import { planRequests, slotKey } from "./requests.js";
-import { lastCookedMap } from "./historyRows.js";
+import { lastCookedMap, toLongDay } from "./historyRows.js";
 
 export interface GenerateWeekArgs {
   /** ISO date of the Monday that anchors the week. */
@@ -231,7 +231,7 @@ export function generateWeek(args: GenerateWeekArgs): GeneratedWeek {
       weekPicks.push(dish);
       inWeekHistory.push({
         weekStart,
-        day: longDay(slot.day),
+        day: toLongDay(slot.day),
         meal: slot.meal,
         dishName: dish.name,
         dishId: dish.id,
@@ -276,7 +276,7 @@ export function generateWeek(args: GenerateWeekArgs): GeneratedWeek {
     const dish = library.find((d) => d.id === dishId);
     const name = dish ? dish.name : `dish ${dishId}`;
     const droppedFromDay = findDroppedDay(beforeCap, capped.slotsByDay, dishId);
-    const dayLabel = droppedFromDay ? longDay(droppedFromDay) : "Unknown day";
+    const dayLabel = droppedFromDay ? toLongDay(droppedFromDay) : "Unknown day";
     const cap = droppedFromDay === "Sat" ? 3 : 5;
     incidents.push(`${dayLabel} over cap (${cap}), dropped: ${name}`);
   }
@@ -692,18 +692,6 @@ function orderFruitByLongestUnused(pool: Dish[], history: MenuHistoryRow[]): Dis
   return decorated.map((d) => d.dish);
 }
 
-function longDay(day: Day): MenuHistoryRow["day"] {
-  const map: Record<Day, MenuHistoryRow["day"]> = {
-    Mon: "Monday",
-    Tue: "Tuesday",
-    Wed: "Wednesday",
-    Thu: "Thursday",
-    Fri: "Friday",
-    Sat: "Saturday",
-  };
-  return map[day];
-}
-
 function findDroppedDay(
   before: Map<Day, Dish[]>,
   after: Map<Day, Dish[]>,
@@ -814,7 +802,7 @@ export function rankCandidatesForSlot(args: RankCandidatesForSlotArgs): Dish[] {
   // ranked (i.e. not including its current pick in currentWeekPicks).
   const inWeekHistory: MenuHistoryRow[] = currentWeekPicks.map((d) => ({
     weekStart,
-    day: longDay(day),
+    day: toLongDay(day),
     meal,
     dishName: d.name,
     dishId: d.id,
