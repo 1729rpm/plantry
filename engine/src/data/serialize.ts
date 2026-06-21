@@ -32,7 +32,6 @@ function bodyLine(cells: string[]): string {
 }
 
 function formatQuantity(q: number): string {
-  if (Number.isInteger(q)) return String(q);
   return String(q);
 }
 
