@@ -48,6 +48,7 @@ Grouping judgment calls (institutional memory; do not silently re-bucket):
 | Banana | Fruit | pcs | | 120 | 1.1 | 23 | 0.3 | 2.6 | |
 | Basil | Aromatics and Herbs | g | | | | | | | |
 | Bean Sprout | Vegetables | g | | | 3 | 6 | 0.2 | 1.8 | |
+| Beetroot | Vegetables | g | | | 1.6 | 10 | 0.2 | 2.8 | |
 | Bhindi | Vegetables | g | | | 1.9 | 7 | 0.2 | 3.2 | |
 | Bitter Gourd | Vegetables | g | | | 1 | 4 | 0.2 | 2.8 | |
 | Black Urad Dal | Pantry | g | | | 25 | 59 | 1.6 | 18 | |
