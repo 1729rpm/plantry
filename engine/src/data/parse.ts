@@ -167,7 +167,7 @@ export function parseMenuHistory(markdown: string): MenuHistoryRow[] {
 }
 
 // ---------------------------------------------------------------------------
-// Per-dish file + ingredient catalog parsing (the slice-1.2 data layout).
+// Per-dish file + ingredient catalog parsing.
 // ---------------------------------------------------------------------------
 
 const DISH_INGREDIENT_HEADERS = ["Ingredient", "Quantity", "Unit"];
@@ -205,13 +205,13 @@ export function parseDishFile(slug: string, markdown: string): DishFile {
 
   const body = markdown.slice(fmMatch[0].length);
 
-  // Body-prose conventions (design-revamp §1.1, slice 2.1):
+  // Body-prose conventions (docs/engine.md §12):
   //  - the first body paragraph, the prose before `## Ingredients`, is the
   //    one-line `description`;
   //  - a `## Recipe` section after `## Ingredients` holds numbered steps, one
   //    per `recipe` entry.
-  // Both optional: a dish file with neither (every current file) yields neither
-  // and parses exactly as before. We attach them to the dish object below.
+  // Both optional: a dish file with neither yields neither. We attach them to
+  // the dish object below.
   const description = parseDescription(body);
   const recipe = parseRecipe(body);
 
@@ -430,7 +430,7 @@ export function parseIngredientCatalog(markdown: string): CatalogIngredient[] {
 /**
  * Derive the engine's pack-size header shape (PackSizeHeader[]) from the
  * catalog. Only tracked ingredients (those with a Pack Size) are included, in
- * catalog order, matching the legacy header table the §6 consolidation ledger
+ * catalog order, matching the header table the §10 consolidation ledger
  * consumes.
  */
 export function catalogToPackSizes(catalog: CatalogIngredient[]): PackSizeHeader[] {

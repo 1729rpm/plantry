@@ -3,7 +3,7 @@ import type { Dish, Ingredient, PackSizeHeader } from "./data/schemas.js";
 /**
  * Per-ingredient state: how much of this ingredient is on the buy list and
  * how much remains unused after the dish picks so far this week. Implements
- * docs/engine.md §6 step 1 ("leftover after each dish picked").
+ * docs/engine.md §10 step 1 ("leftover after each dish picked").
  */
 export interface IngredientLedgerEntry {
   ingredient: string;
@@ -15,11 +15,11 @@ export interface IngredientLedgerEntry {
 
 export type IngredientLedger = Map<string, IngredientLedgerEntry>;
 
-/** Default leftover threshold from docs/engine.md §6 ("Leftover threshold: 50 g"). */
+/** Default leftover threshold from docs/engine.md §10 ("Leftover threshold: 50 g"). */
 export const DEFAULT_LEFTOVER_THRESHOLD_GRAMS = 50;
 
 /**
- * Fresh produce items named in docs/engine.md §6 soft-consolidation paragraph.
+ * Fresh produce items named in docs/engine.md §10 soft-consolidation paragraph.
  * Source: "capsicum, tomato, cucumber, onion, mint, coriander". Canonical
  * ingredient names in the ingredient catalog (data/ingredients.md) spell mint
  * as "Mint Leaf" and coriander as "Coriander Leaf", so both forms map to the
@@ -49,8 +49,8 @@ function parsePackSizeGrams(packSize: string): number {
 }
 
 /**
- * docs/engine.md §6 ("Tracked: ingredients listed in the pack-size header").
- * Builds an empty ledger keyed by canonical ingredient name. Untracked
+ * docs/engine.md §10 ("Tracked: ingredients whose catalog row carries a Pack
+ * Size"). Builds an empty ledger keyed by canonical ingredient name. Untracked
  * ingredients (anything not in `packSizes`) are NEVER added; downstream
  * applyPick / scoreCandidates ignore them.
  */
@@ -70,7 +70,7 @@ export function emptyLedger(packSizes: PackSizeHeader[]): IngredientLedger {
 }
 
 /**
- * docs/engine.md §6 step 1 ("After each dish is picked, compute leftover for
+ * docs/engine.md §10 step 1 ("After each dish is picked, compute leftover for
  * its tracked ingredients: pack size minus dish usage, rounded up to the next
  * pack multiple if a single pack falls short"). Pure: returns a new ledger.
  *
@@ -133,7 +133,7 @@ function consumedAboveThreshold(
 }
 
 /**
- * docs/engine.md §6 step 2 ("If leftover is at least 50 g, the next slot
+ * docs/engine.md §10 step 2 ("If leftover is at least 50 g, the next slot
  * needing that ingredient prefers a dish that consumes the leftover").
  * Higher score (more tracked ingredients with above-threshold leftover that
  * this dish would consume) ranks first. Stable: ties preserve input order.
@@ -157,7 +157,7 @@ export function scoreCandidates(
 }
 
 /**
- * docs/engine.md §6 soft-consolidation paragraph ("prefer dishes that share
+ * docs/engine.md §10 soft-consolidation paragraph ("prefer dishes that share
  * fresh produce already on the buy list: capsicum, tomato, cucumber, onion,
  * mint, coriander"). Returns the count of named fresh items the dish would
  * share with `lastFreshItemsUsed` (one purchase covering multiple dishes
@@ -213,7 +213,7 @@ function countSharedFreshItems(
 }
 
 /**
- * Composes hard (§6 step 2) and soft (§6 last paragraph) consolidation:
+ * Composes hard (§10 step 2) and soft (§10 last paragraph) consolidation:
  * hard score is primary, soft score is secondary tiebreak, input order is
  * the final tiebreak. This is what priority.ts step 3 calls when a ledger
  * is present; when no soft signal is available (`lastFreshItemsUsed`

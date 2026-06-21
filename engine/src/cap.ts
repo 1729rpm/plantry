@@ -2,17 +2,18 @@ import type { Dish, Satiety } from "./data/schemas.js";
 import type { Day } from "./eligibility.js";
 
 /**
- * The shape of a single picked item in the week-in-progress. §5 cares only
+ * The shape of a single picked item in the week-in-progress. §9 cares only
  * about a dish's Satiety and Prep Min; downstream consumers (generateWeek)
  * may need additional per-slot metadata. We expose the seam as a type alias
- * so a future grouping change does not ripple through this module. For
- * slice 6 a SlotPick is just a Dish.
+ * so a future grouping change does not ripple through this module. Today a
+ * SlotPick is just a Dish; the alias reserves a seam for future per-slot
+ * metadata.
  */
 export type SlotPick = Dish;
 
-/** docs/engine.md §5 ("5 items per weekday"). */
+/** docs/engine.md §9 ("5 items per weekday"). */
 export const WEEKDAY_CAP = 5;
-/** docs/engine.md §5 ("3 on Saturday"). */
+/** docs/engine.md §9 ("3 on Saturday"). */
 export const SATURDAY_CAP = 3;
 
 const WEEKDAYS: ReadonlySet<Day> = new Set<Day>([
@@ -39,11 +40,11 @@ export interface ApplyCapResult {
 }
 
 /**
- * Per-day item cap from docs/engine.md §5. When a day exceeds its cap, drop
+ * Per-day item cap from docs/engine.md §9. When a day exceeds its cap, drop
  * dishes one at a time:
  *   1. From the dishes with the lowest Satiety value present in the menu.
  *   2. Among those, drop the one with the longest Prep Min.
- * Tie-break beyond §5: when two dishes share both Satiety and Prep Min, the
+ * Tie-break beyond §9: when two dishes share both Satiety and Prep Min, the
  * one later in the day's array is dropped (earlier slots' picks win). This is
  * stable: a day at or below its cap is returned unchanged. Sunday, if present,
  * is passed through; §2 schedule emits no Sunday slots so this is defensive.
@@ -76,7 +77,7 @@ function capForDay(day: Day | string): number | null {
 }
 
 /**
- * Repeatedly drop the worst dish until length is at the cap. "Worst" per §5:
+ * Repeatedly drop the worst dish until length is at the cap. "Worst" per §9:
  * lowest Satiety; among those the longest Prep Min; final tie-break is the
  * latest position in the current array (stable for earlier picks).
  */
@@ -95,9 +96,9 @@ function trimToCap(
 }
 
 /**
- * Index of the dish to drop next per §5. Scans once, keeping the worst-so-far.
+ * Index of the dish to drop next per §9. Scans once, keeping the worst-so-far.
  * Worse = lower satiety, or equal satiety with longer prepMinutes, or both
- * equal with a later array position (the original §5 ordering is silent on
+ * equal with a later array position (the original §9 ordering is silent on
  * the final tie so we lock it here and document it inline).
  */
 function pickDropIndex(picks: readonly SlotPick[]): number {
@@ -115,7 +116,7 @@ function isWorse(a: SlotPick, b: SlotPick): boolean {
   const sb = SATIETY_RANK[b.satiety];
   if (sa !== sb) return sa < sb;
   if (a.prepMinutes !== b.prepMinutes) return a.prepMinutes > b.prepMinutes;
-  // Equal on both §5 criteria: prefer to drop the later one (keep earlier slots).
+  // Equal on both §9 criteria: prefer to drop the later one (keep earlier slots).
   // Returning true here means "a is worse than b" so the scan replaces b with a
   // whenever we see an equal candidate later in the array.
   return true;

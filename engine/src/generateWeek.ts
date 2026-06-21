@@ -35,7 +35,7 @@ export interface GenerateWeekArgs {
   library: Dish[];
   history: MenuHistoryRow[];
   season: Season;
-  /** Per-dish ingredient rows, used to drive the §6 consolidation ledger. */
+  /** Per-dish ingredient rows, used to drive the §10 consolidation ledger. */
   ingredients: Ingredient[];
   /** Tracked-ingredient pack sizes, derived from the ingredient catalog (data/ingredients.md). */
   packSizes: PackSizeHeader[];
@@ -82,7 +82,7 @@ export interface GeneratedWeekDay {
 export interface GeneratedWeek {
   weekStart: string;
   days: GeneratedWeekDay[];
-  /** Dish IDs dropped by §5 cap, in the order they were dropped. */
+  /** Dish IDs dropped by §9 cap, in the order they were dropped. */
   droppedDishIds: number[];
   /** Human-readable warnings ("Friday over cap (5), dropped: ..."). */
   incidents: string[];
@@ -92,10 +92,12 @@ const WEEKDAYS: Day[] = ["Mon", "Tue", "Wed", "Thu", "Fri"];
 const ALL_DAYS: Day[] = [...WEEKDAYS, "Sat"];
 
 /**
- * Top-level engine entry point. Composes §1 → §2 → §3 → §4 → §5 → §6:
- * schedule the week, compose each slot's candidate set, rank each pool with
- * priority (passing the running consolidation ledger), pick index 0, advance
- * the ledger, then apply the cap day by day and emit an incident per drop.
+ * Top-level engine entry point. Composes the pipeline §2 → §3 → §4 → §10 → §9
+ * (with §1 eligibility feeding §3): schedule the week (§2), compose each slot's
+ * candidate set from the eligible library (§1 → §3), rank each pool with
+ * priority (§4, passing the running §10 consolidation ledger), pick index 0,
+ * advance the ledger, then apply the §9 cap day by day and emit an incident per
+ * drop.
  */
 export function generateWeek(args: GenerateWeekArgs): GeneratedWeek {
   const {
@@ -253,7 +255,7 @@ export function generateWeek(args: GenerateWeekArgs): GeneratedWeek {
     slotResults.push({ day: slot.day, meal: slot.meal, dishes: picks });
   }
 
-  // §5 cap: group by day, hand off to applyCap, emit one incident per drop.
+  // §9 cap: group by day, hand off to applyCap, emit one incident per drop.
   const slotsByDay = new Map<Day, Dish[]>();
   for (const day of ALL_DAYS) {
     slotsByDay.set(day, []);
@@ -761,7 +763,7 @@ export interface RankCandidatesForSlotArgs {
   packSizes: PackSizeHeader[];
   /**
    * Dishes already locked into the in-progress week. Used to build the same
-   * §6 consolidation ledger, the same §3.1 weekLunchCarbs, and the same §4
+   * §10 consolidation ledger, the same §3.1 weekLunchCarbs, and the same §4
    * step 2 same-day breakfast Primary Ingredient that generateWeek used.
    */
   currentWeekPicks?: Dish[];

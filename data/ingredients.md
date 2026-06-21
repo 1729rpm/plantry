@@ -4,7 +4,7 @@ One row per canonical ingredient. `Group` is the user-facing grocery-list
 bucket (fixed order: Proteins and Dairy, Fruit, Vegetables, Aromatics and
 Herbs, Pantry). There is no catch-all section: any ingredient without an
 explicit group falls to Pantry, which renders last. `Unit` is the canonical
-measure (g/ml/pcs). `Pack Size` present marks a tracked ingredient (used by §6
+measure (g/ml/pcs). `Pack Size` present marks a tracked ingredient (used by §10
 Ingredient Consolidation and rounded up to whole packs on the buy list); blank
 marks an untracked staple bought by weight.
 
