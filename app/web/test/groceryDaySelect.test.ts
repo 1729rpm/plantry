@@ -3,6 +3,7 @@ import {
   buildChips,
   chipTag,
   defaultSelection,
+  filterSeed,
   isDisabled,
   rangeLabel,
   selectableDays,
@@ -109,6 +110,36 @@ describe("rangeLabel", () => {
     expect(rangeLabel([chip("Thu", 18, "today"), chip("Fri", 19, "tomorrow")])).toBe(
       "Thu 18 to Fri 19",
     );
+  });
+});
+
+describe("filterSeed", () => {
+  // Today is Thu 18: Mon..Wed past, Thu today, Fri tomorrow, Sat upcoming, with
+  // Fri skipped so it is disabled despite being in the future.
+  const chips = [
+    chip("Mon", 15, "past"),
+    chip("Tue", 16, "past"),
+    chip("Wed", 17, "past"),
+    chip("Thu", 18, "today"),
+    chip("Fri", 19, "tomorrow", true), // skipped -> disabled
+    chip("Sat", 20, "upcoming"),
+  ];
+
+  it("keeps only days that still have a selectable chip", () => {
+    expect(filterSeed(["Thu", "Sat"], chips)).toEqual(["Thu", "Sat"]);
+  });
+
+  it("drops a stored day that has since become past", () => {
+    expect(filterSeed(["Wed", "Thu"], chips)).toEqual(["Thu"]);
+  });
+
+  it("drops a stored day that has since become skipped", () => {
+    expect(filterSeed(["Fri", "Sat"], chips)).toEqual(["Sat"]);
+  });
+
+  it("preserves stored order and yields empty when nothing remains selectable", () => {
+    expect(filterSeed(["Sat", "Thu"], chips)).toEqual(["Sat", "Thu"]);
+    expect(filterSeed(["Mon", "Fri"], chips)).toEqual([]);
   });
 });
 

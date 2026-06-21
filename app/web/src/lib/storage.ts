@@ -2,7 +2,7 @@
 // All values are scoped under the `plantry:` prefix so future features can grep.
 
 import type { Identity } from "./types.js";
-import type { CachedWeek } from "./types.js";
+import type { CachedWeek, ShortDay } from "./types.js";
 
 const AUTH_KEY = "plantry:auth";
 const IDENTITY_KEY = "plantry:identity";
@@ -16,6 +16,13 @@ const DEVICE_ID_KEY = "plantry:deviceId";
 // tab. Keyed by identity so a shared device tracks each person's seen-state
 // independently. See getChangesSeenAt / setChangesSeenAt below.
 const CHANGES_SEEN_AT_PREFIX = "plantry:changesSeenAt:";
+// The household's explicit Grocery day selection, persisted so it survives a
+// page switch or an app-background eviction (the Grocery component otherwise
+// loses its in-memory selection on unmount and reverts to the time-aware
+// default). A single key holds `{ weekStart, days }`; reads for a different
+// weekStart are ignored (last week's days could now be past or skipped, so they
+// must not carry forward — the screen falls back to the time-aware default).
+const GROCERY_DAYS_KEY = "plantry:groceryDays";
 
 // Auth timeout: a week. Chosen because both phones live with their owner and
 // a personal household app doesn't need session security beyond that.
@@ -93,6 +100,54 @@ export function getChangesSeenAt(identity: Identity): number {
 
 export function setChangesSeenAt(identity: Identity, ms: number): void {
   safeSet(CHANGES_SEEN_AT_PREFIX + identity, String(ms));
+}
+
+interface GroceryDaysRecord {
+  weekStart: string;
+  days: ShortDay[];
+}
+
+const SHORT_DAYS: ReadonlySet<string> = new Set([
+  "Mon",
+  "Tue",
+  "Wed",
+  "Thu",
+  "Fri",
+  "Sat",
+]);
+
+// The household's explicit Grocery day selection for `weekStart`, or null when
+// nothing is stored, the stored entry is for a different week, or the payload is
+// malformed. Null means "no explicit choice" so the caller keeps using the
+// time-aware default. The returned days are de-duplicated and validated against
+// the ShortDay set; the caller still filters them against the currently
+// selectable chips (a stored day may since have become past or skipped).
+export function getGroceryDays(weekStart: string): ShortDay[] | null {
+  const raw = safeGet(GROCERY_DAYS_KEY);
+  if (!raw) return null;
+  try {
+    const parsed = JSON.parse(raw) as GroceryDaysRecord;
+    if (!parsed || parsed.weekStart !== weekStart || !Array.isArray(parsed.days)) {
+      return null;
+    }
+    const days = parsed.days.filter(
+      (d, i): d is ShortDay =>
+        typeof d === "string" && SHORT_DAYS.has(d) && parsed.days.indexOf(d) === i,
+    );
+    return days;
+  } catch {
+    return null;
+  }
+}
+
+// Persist the household's explicit Grocery day selection for `weekStart`. A
+// single key is reused across weeks (the weekStart guard on read makes a stale
+// entry inert), so this never accumulates per-week keys. Persisting an empty
+// array is valid: it records "the user explicitly cleared the selection" so the
+// screen does not silently re-apply the default over it.
+export function setGroceryDays(weekStart: string, days: ShortDay[]): void {
+  const record: GroceryDaysRecord = { weekStart, days };
+  safeSet(GROCERY_DAYS_KEY, JSON.stringify(record));
 }
 
 export function getCachedWeek(): CachedWeek | null {
