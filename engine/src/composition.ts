@@ -129,10 +129,12 @@ export function composeSlot(args: ComposeSlotArgs): CandidateSet {
 
 /**
  * Flatten a candidate set into its position pools, in their natural order. A
- * dish appears here iff §3 composition accepts it in some position of the slot.
- * Used by the swap picker (rankCandidatesForSlot) to union the pools and by the
- * §6 requested-dishes planner to test whether a slot's composition accepts a
- * requested dish.
+ * dish appears here iff §3 composition accepts it in some position of the slot,
+ * with one deliberate exclusion: the Menu 1 HP-inclusive last-resort
+ * accompaniment pool (`partnerWhenHpIsGravyLastResort`) is intentionally not
+ * flattened here (see the menu-1 case). Used by the swap picker
+ * (rankCandidatesForSlot) to union the pools and by the §6 requested-dishes
+ * planner to test whether a slot's composition accepts a requested dish.
  */
 export function candidateSetPools(set: CandidateSet): Dish[][] {
   switch (set.kind) {
@@ -146,6 +148,12 @@ export function candidateSetPools(set: CandidateSet): Dish[][] {
     case "breakfast-single":
       return [set.pool, set.ketoCompanion];
     case "menu-1":
+      // INTENTIONAL: this returns 5 pools and omits
+      // `partnerWhenHpIsGravyLastResort`, the unfiltered (HP-inclusive)
+      // last-resort accompaniment pool that pickMenu1 may draw from. That
+      // fallback is deliberately not advertised here, so §6 requested-dishes /
+      // swap-picker suggestions never pin an HP-tagged accompaniment into a
+      // Menu 1 slot via the last-resort fallback path.
       return [
         set.hp,
         set.partnerWhenHpIsDry,
