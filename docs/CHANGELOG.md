@@ -12,6 +12,10 @@ Brief description in present tense, one to three sentences. Reference the PR.
 
 ---
 
+## 2026-06-22 Archive two shipped-feature design handoffs; drop a docs seam
+
+The Grocery Day Selection + Compact Passes handoff and the Shareable menu image refresh handoff were design inputs for features that have shipped; they sat untracked under `features/`, which holds only the active feature spec. Both move to `archive/handoffs/` (the pattern set when the first handoff was archived), each README gaining an archival banner, and `features/` returns to `.gitkeep`. Separately, the `ADDING-DISHES.md` tags note loses a historical seam (the cuisine-migration narration), rewritten to present tense pointing at `docs/engine.md` §12. Docs / housekeeping only. (#194)
+
 ## 2026-06-22 Promote two in-week custom dishes into the library
 
 Two dishes Rajat added as in-week custom one-offs ("beetroot roti", "cucumber tomato salad") are promoted into the permanent library so they stop being free-text customs: Beetroot roti (id 282, Chapati, Lunch, with a new Beetroot ingredient catalog row) and Cucumber tomato salad (id 283, Accompaniment, Lunch, reusing existing catalog ingredients). Both ship active and year-round (seasons: All) with photos. The live week's two custom slots were then retargeted onto the new dishes via swapDish (Mon lunch -> 282, Sat lunch -> 283), so no custom entry remains. (#187)
