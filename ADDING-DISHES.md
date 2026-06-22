@@ -151,7 +151,7 @@ npm test         # vitest: schema, ingredient-resolution, byte-identical round-t
 npm run reports  # coverage + pool + special-sourcing reports (sanity-check your dish appears where expected)
 ```
 
-The blocking validators (`engine/src/data/validators.ts`) will fail the bake on: invalid frontmatter, **duplicate id**, **duplicate slug**, **slug not matching name**, an **ingredient name that does not resolve** to the catalog, or a dish file that does **not round-trip byte-identical**. Fix at the source; do not hand-massage generated output.
+The blocking validators (`engine/src/data/validators.ts`) will fail the bake on: invalid frontmatter, **duplicate id**, **duplicate slug**, **slug not matching name**, an **out-of-set `tags` or `cuisine` value** (both are closed enums, so a typo is a parse failure, not a silent menu change), an **ingredient name that does not resolve** to the catalog, or a dish file that does **not round-trip byte-identical**. Fix at the source; do not hand-massage generated output.
 
 ## 8. The live-data snapshots that move (only when activating)
 
