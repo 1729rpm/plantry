@@ -62,7 +62,7 @@ photo: <slug>.jpg                   # set automatically by the photo tool; see �
 
 Field traps that have actually bitten us:
 
-- **`tags` is for rule logic only.** Do not encode display facts as tags. Cuisine was once a tag and a field at once; that dual-source was migrated to a single first-class `cuisine` field (PR #105, `scripts/migrate-cuisine-field.mjs`). One canonical source per fact.
+- **`tags` is for rule logic only.** Do not encode display facts as tags; cuisine is its own first-class `cuisine` field (§12), not a tag. One canonical source per fact.
 - **`HP` is a rule input.** It drives one-HP-per-meal (§3) and protein diversity (§4.6). Tag it only if the dish genuinely is high-protein; a mis-tag distorts generation. It is keyed on the tag, never the dish name.
 - **`category: Fruit`** routes a dish to the Fruit-of-the-day slot (§3.3), which is separate from breakfast and lunch. Fruit dishes are recency-exempt.
 - **`seasons` gates eligibility now.** `[Winter]` on a dish added in June means it will not appear until October. Include the current Bangalore season (Summer Mar-May, Monsoon Jun-Sep, Winter Oct-Feb) or use `All`.
