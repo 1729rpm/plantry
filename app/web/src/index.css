@@ -2298,3 +2298,57 @@ input {
   z-index: 60;
   text-align: center;
 }
+
+/* ------------------------------------------------------------------ */
+/* Desktop frame (>= 768px). A courtesy surface, not a redesign: the   */
+/* finely-tuned mobile column is left untouched below this breakpoint  */
+/* (zero diff under 768px) and on wide viewports it is centered as an  */
+/* intentional ~600px phone-like card on a soft backdrop. The mobile   */
+/* layout is the product; desktop is a courtesy. Everything here is    */
+/* gated behind the media query so nothing leaks to phones.            */
+/* ------------------------------------------------------------------ */
+@media (min-width: 768px) {
+  /* #root becomes the page backdrop and centers the frame. A faint
+     radial wash over the warm bg reads as an intentional "stage" so the
+     cream card lifts off it without a harsh edge. */
+  #root {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 24px;
+    background: radial-gradient(120% 120% at 50% 0%, #efe7d8 0%, var(--pt-bg) 60%);
+  }
+
+  /* The frame itself. .screen is the universal top-level surface (the
+     app shell, the passcode gate, and the identity picker all render
+     through it), so capping it here frames every surface with one rule.
+     It keeps its base height: 100% / flex column / position: relative /
+     overflow: hidden from the mobile rule; this block only adds the cap
+     and the framing chrome.
+     - max-width caps the column at Rajat's chosen ~600px ("Comfortable").
+     - height is capped to a phone-like card and centered by #root, rather
+       than stretching the full desktop window height (which read as
+       broken). min(...) keeps it from overflowing a short window; height
+       wins over the inherited 100%.
+     - border + shadow + radius make it read as a deliberate card.
+     - contain: paint is the load-bearing line for overlay containment:
+       it makes .screen the containing block for fixed-positioned
+       descendants (the Explore toast is position: fixed), so the toast
+       resolves to this 600px frame instead of the full viewport. .screen
+       already sets overflow: hidden, so the paint containment's clipping
+       is the behaviour it already had; this only adds the fixed-element
+       anchoring. The scrim, sheets, tab bar, gate and identity picker are
+       position: absolute or in-flow within .screen and were already
+       scoped to it; this rule additionally pulls the one fixed overlay in.
+       The radius + overflow together clip the absolute sheet panel and
+       the tab bar to the rounded corners. */
+  .screen {
+    width: 100%;
+    max-width: 600px;
+    height: min(100dvh - 48px, 880px);
+    border: 1px solid var(--pt-line);
+    border-radius: 28px;
+    box-shadow: 0 24px 64px rgba(44, 36, 27, 0.18);
+    contain: paint;
+  }
+}
