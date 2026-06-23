@@ -2325,11 +2325,17 @@ input {
      It keeps its base height: 100% / flex column / position: relative /
      overflow: hidden from the mobile rule; this block only adds the cap
      and the framing chrome.
-     - max-width caps the column at Rajat's chosen ~600px ("Comfortable").
-     - height is capped to a phone-like card and centered by #root, rather
-       than stretching the full desktop window height (which read as
-       broken). min(...) keeps it from overflowing a short window; height
-       wins over the inherited 100%.
+     - max-width caps the column at Rajat's chosen ~600px ("Comfortable"),
+       the only hard pixel cap on the frame.
+     - height FILLS the available viewport height (100dvh minus the 48px
+       #root backdrop padding, 24px x 2) rather than stopping at a fixed
+       pixel ceiling that floats the card in empty space on a tall window.
+       Width is then derived from this filled height by a phone-like
+       aspect-ratio (width: auto lets the ratio drive it), so the frame
+       stays phone-proportioned at any window height. On very tall windows
+       the derived width hits max-width: 600px and clamps there, so the
+       card simply stays 600 wide while still filling the height (no empty
+       vertical band). Proportions come from a ratio, never a magic pixel.
      - border + shadow + radius make it read as a deliberate card.
      - contain: paint is the load-bearing line for overlay containment:
        it makes .screen the containing block for fixed-positioned
@@ -2343,9 +2349,10 @@ input {
        The radius + overflow together clip the absolute sheet panel and
        the tab bar to the rounded corners. */
   .screen {
-    width: 100%;
+    width: auto;
     max-width: 600px;
-    height: min(100dvh - 48px, 880px);
+    height: calc(100dvh - 48px);
+    aspect-ratio: 1 / 1.9;
     border: 1px solid var(--pt-line);
     border-radius: 28px;
     box-shadow: 0 24px 64px rgba(44, 36, 27, 0.18);
