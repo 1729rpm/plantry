@@ -42,3 +42,5 @@ engine/src/data/history.ts
 
 # Live-session registry — local EM coordination state, never travels onto a branch (development.md §11)
 coordination/active-streams.md
+# SessionStart hook that surfaces un-promoted in-week custom dishes — local EM tooling
+coordination/pending-custom-dishes.sh
