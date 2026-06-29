@@ -19,6 +19,16 @@ export type DishCategory = z.infer<typeof DishCategorySchema>;
 export const MealTimeSchema = z.enum(["Breakfast", "Lunch"]);
 export type MealTime = z.infer<typeof MealTimeSchema>;
 
+/**
+ * The meal a history row can carry. Distinct from `MealTimeSchema` (which is also
+ * `Dish.time` and must never be "Fruit"): the §3.3 Fruit of the day is logged
+ * into the recency record as its own `meal:"Fruit"` row so cross-week fruit
+ * rotation (`orderFruitByLongestUnused`) sees fruit recency. A dish's `time` is
+ * still only Breakfast|Lunch; this widening is the history row's meal only.
+ */
+export const HistoryMealSchema = z.enum(["Breakfast", "Lunch", "Fruit"]);
+export type HistoryMeal = z.infer<typeof HistoryMealSchema>;
+
 export const SatietySchema = z.enum(["Low", "Medium", "High"]);
 export type Satiety = z.infer<typeof SatietySchema>;
 
@@ -216,7 +226,7 @@ export const IsoDateSchema = z.string().regex(/^\d{4}-\d{2}-\d{2}$/);
 export const MenuHistoryRowSchema = z.object({
   weekStart: IsoDateSchema,
   day: DayNameSchema,
-  meal: MealTimeSchema,
+  meal: HistoryMealSchema,
   dishName: z.string().min(1),
   dishId: z.number().int().positive(),
 });

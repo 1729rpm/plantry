@@ -4,9 +4,13 @@ import { dishes } from "@plantry/engine/library";
 import { assertAuthor } from "./lib/author.js";
 
 type ShortDay = "Mon" | "Tue" | "Wed" | "Thu" | "Fri" | "Sat";
-type LowerMeal = "breakfast" | "lunch";
+// Includes "fruit": the live `currentWeek` flattens the §3.3 Fruit of the day
+// into `slots` as a third `meal:"fruit"` slot (generateWeek.ts), so finalize must
+// recognise it. The custom-dish mutations below only ever receive breakfast|lunch
+// (their args unions exclude fruit), so widening this shared type is safe.
+type LowerMeal = "breakfast" | "lunch" | "fruit";
 type LongDay = "Monday" | "Tuesday" | "Wednesday" | "Thursday" | "Friday" | "Saturday" | "Sunday";
-type CapMeal = "Breakfast" | "Lunch";
+type CapMeal = "Breakfast" | "Lunch" | "Fruit";
 
 type SlotAuthor = "rajat" | "tuhina" | "system";
 type DishPickShape = {
@@ -40,6 +44,7 @@ const LONG_DAY: Record<ShortDay, LongDay> = {
 const CAP_MEAL: Record<LowerMeal, CapMeal> = {
   breakfast: "Breakfast",
   lunch: "Lunch",
+  fruit: "Fruit",
 };
 
 /**
@@ -353,6 +358,12 @@ export const appendCustomDish = mutation({
  * one-off has neither. This matches the grocery list, which likewise skips
  * one-offs (they are not library dishes).
  *
+ * The §3.3 Fruit of the day IS archived. It is flattened into the live slots as a
+ * `meal:"fruit"` slot (generateWeek.ts), so it flows through the same loop and is
+ * recorded with `meal:"Fruit"` (`MenuHistoryRow.meal` widened via
+ * `HistoryMealSchema`). This feeds the cross-week fruit rotation selector, which
+ * reads fruit recency from the history record.
+ *
  * The engine's skip-aware `deriveHistoryRows({ skippedDays })` operates on a
  * `GeneratedWeek` of library `Dish` objects; the live `currentWeek` carries
  * swapped and custom picks instead, so finalize derives the rows directly from
@@ -398,11 +409,14 @@ export const finalizeWeek = mutation({
     );
 
     // Build archive rows from the live slots, skipping skipped days and custom
-    // one-offs. Order follows the slot/position order so the archive reads the
-    // way the week was cooked. Dish names come from the baked library (the live
-    // pick stores only the id for a library dish); a pick whose id is not in the
-    // library is skipped defensively (the swap/add mutations only write library
-    // ids, so this is unreachable for real data).
+    // one-offs. The §3.3 Fruit of the day is a `meal:"fruit"` slot here (flattened
+    // by generateWeek.ts) and IS archived: `CAP_MEAL["fruit"]` maps it to "Fruit"
+    // so cross-week fruit rotation sees fruit recency. Order follows the
+    // slot/position order so the archive reads the way the week was cooked. Dish
+    // names come from the baked library (the live pick stores only the id for a
+    // library dish); a pick whose id is not in the library is skipped defensively
+    // (the swap/add mutations only write library ids, so this is unreachable for
+    // real data).
     const nameById = new Map<number, string>(dishes.map((d) => [d.id, d.name]));
     const rows: {
       day: LongDay;

@@ -91,7 +91,10 @@ export default defineSchema({
           v.literal("Saturday"),
           v.literal("Sunday"),
         ),
-        meal: v.union(v.literal("Breakfast"), v.literal("Lunch")),
+        // "Fruit" is the §3.3 Fruit of the day, logged into the recency record so
+        // cross-week fruit rotation works. Additive: every pre-existing row is
+        // Breakfast|Lunch and still validates against this wider union.
+        meal: v.union(v.literal("Breakfast"), v.literal("Lunch"), v.literal("Fruit")),
         dishName: v.string(),
         dishId: v.number(),
       }),
