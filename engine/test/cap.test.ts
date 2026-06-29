@@ -6,11 +6,10 @@ import {
   type SlotPick,
 } from "../src/cap.js";
 import type { Day } from "../src/eligibility.js";
-import type { Dish } from "../src/data/schemas.js";
 
 let nextId = 1;
 
-function makeDish(overrides: Partial<Dish> = {}): SlotPick {
+function makeDish(overrides: Partial<SlotPick> = {}): SlotPick {
   const id = nextId++;
   return {
     id,
@@ -235,6 +234,66 @@ describe("cap — docs/engine.md §5", () => {
       expect(sun?.length).toBe(7);
       // Mon was over the cap of 5 so one dish was dropped; Sunday added none.
       expect(droppedDishIds.length).toBe(1);
+    });
+  });
+
+  describe("role-aware drop order (§9)", () => {
+    it("drops a companion side (sabzi), not the lower-satiety carb, on an over-cap thali day", () => {
+      // A full-breakfast Menu-1 day: breakfast main + accompaniment + a 4-item
+      // thali (protein + dal + dry sabzi + carb) = 6 items, one over the cap.
+      // The carb (Roti) is the lowest-satiety item, so the old satiety-only cap
+      // dropped it. Role-aware: the carb is protected and the dry sabzi (a
+      // companion side, here higher satiety) is dropped instead.
+      const breakfastMain = makeDish({ name: "Paratha", role: "breakfast-main", satiety: "High" });
+      const chutney = makeDish({
+        name: "Chutney",
+        role: "breakfast-accompaniment",
+        satiety: "Low",
+        prepMinutes: 5,
+      });
+      const protein = makeDish({ name: "Paneer", role: "protein-main", satiety: "High" });
+      const dal = makeDish({ name: "Dal", role: "dal", satiety: "Medium" });
+      const sabzi = makeDish({ name: "Bhindi", role: "sabzi", satiety: "High", prepMinutes: 40 });
+      const carb = makeDish({ name: "Roti", role: "carb", satiety: "Low", prepMinutes: 10 });
+      const { slotsByDay, droppedDishIds } = applyCap({
+        slotsByDay: dayMap([["Mon", [breakfastMain, chutney, protein, dal, sabzi, carb]]]),
+      });
+      expect(droppedDishIds).toEqual([sabzi.id]);
+      const kept = slotsByDay.get("Mon")?.map((d) => d.name);
+      expect(kept).toContain("Roti");
+      expect(kept).toContain("Paneer");
+      expect(kept).not.toContain("Bhindi");
+      expect(slotsByDay.get("Mon")?.length).toBe(WEEKDAY_CAP);
+    });
+
+    it("among droppable sides, drops the lowest satiety then longest prep", () => {
+      const protein = makeDish({ role: "protein-main", satiety: "High" });
+      const carb = makeDish({ role: "carb", satiety: "Low", prepMinutes: 5 });
+      const sabzi = makeDish({ name: "Sabzi", role: "sabzi", satiety: "Medium", prepMinutes: 20 });
+      const acc = makeDish({ name: "Acc", role: "accompaniment", satiety: "Low", prepMinutes: 10 });
+      const dessert = makeDish({ name: "Dessert", role: "dessert", satiety: "Low", prepMinutes: 30 });
+      const filler = makeDish({ role: "protein-main", satiety: "High" });
+      const { droppedDishIds } = applyCap({
+        slotsByDay: dayMap([["Mon", [protein, carb, sabzi, acc, dessert, filler]]]),
+      });
+      // Lowest-satiety droppable sides are Acc and Dessert (Low); among them the
+      // longest prep (Dessert, 30) drops. The Low-satiety carb is protected.
+      expect(droppedDishIds).toEqual([dessert.id]);
+    });
+
+    it("fallback: with no droppable side left, drops the §9-worst overall pick", () => {
+      // All protected roles, day over cap by one: no droppable side exists, so
+      // the cap falls back to satiety-only and drops the lowest-satiety pick.
+      const a = makeDish({ name: "A", role: "protein-main", satiety: "High" });
+      const b = makeDish({ name: "B", role: "dal", satiety: "Medium" });
+      const c = makeDish({ name: "C", role: "carb", satiety: "Low", prepMinutes: 10 });
+      const d = makeDish({ name: "D", role: "breakfast-main", satiety: "High" });
+      const e = makeDish({ name: "E", role: "protein-floor", satiety: "High" });
+      const f = makeDish({ name: "F", role: "breakfast-accompaniment", satiety: "High" });
+      const { droppedDishIds } = applyCap({
+        slotsByDay: dayMap([["Mon", [a, b, c, d, e, f]]]),
+      });
+      expect(droppedDishIds).toEqual([c.id]);
     });
   });
 
