@@ -12,6 +12,22 @@ Brief description in present tense, one to three sentences. Reference the PR.
 
 ---
 
+## 2026-06-29 Single source of truth for the Convex slot meal type
+
+The `currentWeek.slots[].meal` type was redefined locally in five `app/convex/` files with inconsistent fruit inclusion, so a consumer could silently omit `"fruit"` and still compile, which is how the `finalizeWeek` fruit crash shipped (its `CAP_MEAL: Record<LowerMeal, …>` used a too-narrow local type). A new `app/convex/lib/meals.ts` is now the single source of truth: `slotMealValidator`/`SlotMeal` (breakfast | lunch | fruit) and the narrower `mealTimeValidator`/`MealTime` (breakfast | lunch) for the add/delete/recipe/custom call boundaries, both via Convex `Infer`. `schema.ts` derives the slot meal from `slotMealValidator` (no drift between validator and type), and `CAP_MEAL` is now an exhaustive `Record<SlotMeal, …>`, so a future slot meal becomes a compile error in every unhandled consumer instead of a silent prod bug. Behavior-identical, Convex-only; no test, engine, or web change. (#198)
+
+## 2026-06-29 Fruit of the day is logged in the recency archive
+
+The §3.3 Fruit of the day was never written to the menu-history record, yet the fruit selector (`orderFruitByLongestUnused`) reads `lastCookedMap(history)` to rotate the longest-unused fruit across weeks, so cross-week fruit rotation was silently degraded; separately `finalizeWeek` crashed on any real (fruit-bearing) week because the live `meal:"fruit"` slot had no `CAP_MEAL` mapping and the `weekArchive` schema rejected the row. Fruit is now recorded end-to-end: a new `HistoryMealSchema` (Breakfast | Lunch | Fruit) backs `MenuHistoryRow.meal` (the shared `MealTimeSchema`/`Dish.time` stays Breakfast | Lunch), `deriveHistoryRows` emits a skip-aware `meal:"Fruit"` row from `day.fruit`, the `weekArchive` row meal union gains `"Fruit"` (additive, non-breaking), and `finalizeWeek` includes the fruit slot. A fragile breakfast/lunch ternary in `ExploreScreen.tsx` is hardened to route a Fruit-category dish to its own slot. The §4 recency exemption is unchanged. (#197)
+
+## 2026-06-23 Desktop app frame fills the viewport height by aspect ratio, not a fixed pixel cap
+
+Follow-up to the desktop centered frame (#195). The frame's `height: min(100dvh - 48px, 880px)` pixel cap floated the card in an empty band on tall windows; it is now `height: calc(100dvh - 48px)` with `aspect-ratio: 1 / 1.9`, so the frame fills the available viewport height and derives its width from the ratio (still clamped at the 600px max-width). Applies the "aspect ratios, not fixed pixels" principle. CSS only. (#196)
+
+## 2026-06-23 Desktop web friendliness: a centered app frame
+
+On desktop the phone-first PWA sprawled edge-to-edge and read as broken. A single `@media (min-width: 768px)` block in `app/web/src/index.css` now centers the app as a ~600px phone-like card on a backdrop; mobile (<768px) rendering is provably unchanged (crawled at 390px and 1440px). `contain: paint` on `.screen` is the load-bearing line that scopes the z-index-50 overlay system (sheets, scrim, toast, gate, identity picker) and the tab bar to the frame instead of the full viewport. Ships Option A (centered frame) over a full responsive redesign; see `DECISIONS.md` 2026-06-23. (#195)
+
 ## 2026-06-22 Archive two shipped-feature design handoffs; drop a docs seam
 
 The Grocery Day Selection + Compact Passes handoff and the Shareable menu image refresh handoff were design inputs for features that have shipped; they sat untracked under `features/`, which holds only the active feature spec. Both move to `archive/handoffs/` (the pattern set when the first handoff was archived), each README gaining an archival banner, and `features/` returns to `.gitkeep`. Separately, the `ADDING-DISHES.md` tags note loses a historical seam (the cuisine-migration narration), rewritten to present tense pointing at `docs/engine.md` §12. Docs / housekeeping only. (#194)
