@@ -77,6 +77,19 @@ export function deriveHistoryRows(args: DeriveHistoryRowsArgs): MenuHistoryRow[]
         });
       }
     }
+    // §3.3 Fruit of the day lives outside `slots` on `day.fruit`. Log it as its
+    // own `meal:"Fruit"` row (after the day's slot rows) so cross-week fruit
+    // rotation (`orderFruitByLongestUnused` via `lastCookedMap`) sees fruit
+    // recency. Skip-aware: a skipped day already `continue`d above.
+    if (day.fruit !== undefined) {
+      rows.push({
+        weekStart: week.weekStart,
+        day: LONG_DAY[day.day],
+        meal: "Fruit",
+        dishName: day.fruit.name,
+        dishId: day.fruit.id,
+      });
+    }
   }
   return rows;
 }

@@ -257,11 +257,16 @@ describe("forward simulation harness", () => {
     const skippedRows = deriveHistoryRows({ week, skippedDays: [SKIPPED_DAY] });
     expect(skippedRows.some((r) => r.day === "Friday")).toBe(false);
 
-    // The dropped rows are exactly the skipped day's rows.
+    // The dropped rows are exactly the skipped day's rows: its slot dishes plus
+    // its §3.3 Fruit of the day (logged as a `meal:"Fruit"` row), which a skipped
+    // day also drops.
     const fullRows = deriveHistoryRows({ week });
-    expect(fullRows.length - skippedRows.length).toBe(
-      (skippedDay?.slots ?? []).reduce((sum, s) => sum + s.dishes.length, 0),
+    const skippedSlotDishes = (skippedDay?.slots ?? []).reduce(
+      (sum, s) => sum + s.dishes.length,
+      0,
     );
+    const skippedFruitRows = skippedDay?.fruit ? 1 : 0;
+    expect(fullRows.length - skippedRows.length).toBe(skippedSlotDishes + skippedFruitRows);
 
     // Grocery list: ingredients unique to the skipped day disappear.
     const days = weekDayPicks(week);
