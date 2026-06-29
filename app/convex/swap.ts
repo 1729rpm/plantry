@@ -5,14 +5,12 @@ import { history } from "@plantry/engine/history";
 import { rankPickerAlternatives } from "@plantry/engine";
 import type { Dish, Season, MenuHistoryRow } from "@plantry/engine";
 import { assertAuthor } from "./lib/author.js";
+import type { SlotMeal } from "./lib/meals.js";
 
 type ShortDay = "Mon" | "Tue" | "Wed" | "Thu" | "Fri" | "Sat";
-// The breakfast/lunch meals (meal-time pools). The Fruit of the day adds the
-// standalone "fruit" slot (docs/engine.md §3.3); SlotMealValue is the full set a
-// stored slot can carry. Breakfast/lunch are pooled by meal-time; fruit is
-// pooled by Category=Fruit.
-type LowerMeal = "breakfast" | "lunch";
-type SlotMealValue = LowerMeal | "fruit";
+// `SlotMeal` is the full set a stored slot can carry: the breakfast/lunch
+// meal-time pools plus the standalone "fruit" slot (docs/engine.md §3.3).
+// Breakfast/lunch are pooled by meal-time; fruit is pooled by Category=Fruit.
 
 type SlotAuthor = "rajat" | "tuhina" | "system";
 type DishPickShape = {
@@ -24,7 +22,7 @@ type DishPickShape = {
 };
 type SlotShape = {
   day: ShortDay;
-  meal: SlotMealValue;
+  meal: SlotMeal;
   dishes: DishPickShape[];
 };
 
@@ -59,7 +57,7 @@ const LONG_DAY: Record<ShortDay, MenuHistoryRow["day"]> = {
  */
 function collectCurrentWeekPicks(
   slots: ReadonlyArray<SlotShape>,
-  exclude: { day: ShortDay; meal: SlotMealValue; position: number } | null,
+  exclude: { day: ShortDay; meal: SlotMeal; position: number } | null,
 ): Dish[] {
   const libraryById = new Map<number, Dish>(dishes.map((d) => [d.id, d]));
   const picks: Dish[] = [];
@@ -95,7 +93,7 @@ function collectCurrentWeekPicks(
  * dishes (see `getSlotAlternatives`); meal-time is a swap-time ordering signal,
  * not a hard pool filter.
  */
-function broadPool(meal: SlotMealValue, season: Season): Dish[] {
+function broadPool(meal: SlotMeal, season: Season): Dish[] {
   // The Fruit of the day's pool is category-based (docs/engine.md §3.3): every
   // Active, in-season, Category=Fruit dish. This is the swap-time analogue of the
   // generation-time fruit pool (engine `fruitOfDayPool`). The fruit slot stays
@@ -130,7 +128,7 @@ function broadPool(meal: SlotMealValue, season: Season): Dish[] {
 function buildSyntheticHistory(
   weekStart: string,
   day: ShortDay,
-  meal: SlotMealValue,
+  meal: SlotMeal,
   currentWeekPicks: Dish[],
 ): MenuHistoryRow[] {
   // The history row's `meal` field is cosmetic for the recency term (the ranking

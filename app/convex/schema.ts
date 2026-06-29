@@ -1,5 +1,6 @@
 import { defineSchema, defineTable } from "convex/server";
 import { v } from "convex/values";
+import { slotMealValidator } from "./lib/meals.js";
 
 // Schema for Plantry's runtime state. See docs/engineering.md §3.
 // The library + rules live in git markdown and are baked into the engine at build time;
@@ -34,7 +35,9 @@ export default defineSchema({
         // composition and outside the §9 item cap. Adding the literal is additive
         // to the union (existing breakfast/lunch rows still validate); a regenerate
         // is what actually writes the fruit rows (no fruit slots exist pre-deploy).
-        meal: v.union(v.literal("breakfast"), v.literal("lunch"), v.literal("fruit")),
+        // The validator (and its derived `SlotMeal` type) is the single source of
+        // truth shared with every slot-meal consumer (`lib/meals.ts`).
+        meal: slotMealValidator,
         dishes: v.array(
           v.object({
             dishId: v.union(v.number(), v.null()), // null when custom one-off

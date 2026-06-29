@@ -2,13 +2,14 @@ import { mutation } from "./_generated/server.js";
 import { v, ConvexError } from "convex/values";
 import { dishes } from "@plantry/engine/library";
 import { assertAuthor } from "./lib/author.js";
+import { mealTimeValidator, type SlotMeal } from "./lib/meals.js";
 
 type ShortDay = "Mon" | "Tue" | "Wed" | "Thu" | "Fri" | "Sat";
-// Includes "fruit": the live `currentWeek` flattens the §3.3 Fruit of the day
-// into `slots` as a third `meal:"fruit"` slot (generateWeek.ts), so finalize must
-// recognise it. The custom-dish mutations below only ever receive breakfast|lunch
-// (their args unions exclude fruit), so widening this shared type is safe.
-type LowerMeal = "breakfast" | "lunch" | "fruit";
+// `SlotMeal` includes "fruit": the live `currentWeek` flattens the §3.3 Fruit of
+// the day into `slots` as a third `meal:"fruit"` slot (generateWeek.ts), so
+// finalize must recognise it. The custom-dish mutations below only ever receive
+// breakfast|lunch (their args use `mealTimeValidator`, which excludes fruit), so
+// reading the stored slot with the wider `SlotMeal` is safe.
 type LongDay = "Monday" | "Tuesday" | "Wednesday" | "Thursday" | "Friday" | "Saturday" | "Sunday";
 type CapMeal = "Breakfast" | "Lunch" | "Fruit";
 
@@ -23,7 +24,7 @@ type DishPickShape = {
 };
 type SlotShape = {
   day: ShortDay;
-  meal: LowerMeal;
+  meal: SlotMeal;
   dishes: DishPickShape[];
 };
 type SkippedDayShape = {
@@ -41,7 +42,12 @@ const LONG_DAY: Record<ShortDay, LongDay> = {
   Fri: "Friday",
   Sat: "Saturday",
 };
-const CAP_MEAL: Record<LowerMeal, CapMeal> = {
+// Keyed by the exhaustive `SlotMeal` (the schema's slot-meal source of truth):
+// adding a new slot meal to `slotMealValidator` forces a new entry here (and so
+// in `finalizeWeek`) at compile time, instead of silently archiving the slot
+// under a missing key at runtime — the gap that shipped the original finalizeWeek
+// bug (a too-narrow local meal type let the missing "fruit" compile clean).
+const CAP_MEAL: Record<SlotMeal, CapMeal> = {
   breakfast: "Breakfast",
   lunch: "Lunch",
   fruit: "Fruit",
@@ -98,7 +104,7 @@ export const addCustomOneOff = mutation({
       v.literal("Fri"),
       v.literal("Sat"),
     ),
-    meal: v.union(v.literal("breakfast"), v.literal("lunch")),
+    meal: mealTimeValidator,
     position: v.number(),
     customLabel: v.string(),
     version: v.number(),
@@ -248,7 +254,7 @@ export const appendCustomDish = mutation({
       v.literal("Fri"),
       v.literal("Sat"),
     ),
-    meal: v.union(v.literal("breakfast"), v.literal("lunch")),
+    meal: mealTimeValidator,
     customLabel: v.string(),
     version: v.number(),
     reason: v.string(),

@@ -7,6 +7,7 @@ import {
   type GroceryDayPicks,
   type GroceryList,
 } from "@plantry/engine";
+import type { SlotMeal } from "./lib/meals.js";
 
 /**
  * Returns the structured grocery list for `currentWeek[weekStart]`. Drives the
@@ -48,16 +49,16 @@ import {
  */
 
 type ShortDay = "Mon" | "Tue" | "Wed" | "Thu" | "Fri" | "Sat";
-// "fruit" is the standalone Fruit of the day (docs/engine.md §3.3). The grocery
-// aggregation groups every slot's dishes by day regardless of meal, so a fruit
-// slot's ingredients flow into the list (skip-aware) like any other day dish.
-type LowerMeal = "breakfast" | "lunch" | "fruit";
+// `SlotMeal` includes "fruit", the standalone Fruit of the day (docs/engine.md
+// §3.3). The grocery aggregation groups every slot's dishes by day regardless of
+// meal, so a fruit slot's ingredients flow into the list (skip-aware) like any
+// other day dish.
 type DishPickShape = {
   dishId: number | null;
 };
 type SlotShape = {
   day: ShortDay;
-  meal: LowerMeal;
+  meal: SlotMeal;
   dishes: DishPickShape[];
 };
 type SkippedDayShape = {
