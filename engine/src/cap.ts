@@ -2,14 +2,45 @@ import type { Dish, Satiety } from "./data/schemas.js";
 import type { Day } from "./eligibility.js";
 
 /**
- * The shape of a single picked item in the week-in-progress. §9 cares only
- * about a dish's Satiety and Prep Min; downstream consumers (generateWeek)
- * may need additional per-slot metadata. We expose the seam as a type alias
- * so a future grouping change does not ripple through this module. Today a
- * SlotPick is just a Dish; the alias reserves a seam for future per-slot
- * metadata.
+ * Structural role of a pick within its meal form (§3), threaded from the
+ * composition/pick functions (generateWeek) so the §9 cap can be role-aware:
+ * it drops companion sides before the protected carb and protein main. Keyed
+ * on structure, never on dish names.
  */
-export type SlotPick = Dish;
+export type PickRole =
+  | "protein-main"
+  | "dal"
+  | "sabzi"
+  | "carb"
+  | "accompaniment"
+  | "dessert"
+  | "breakfast-main"
+  | "breakfast-accompaniment"
+  | "protein-floor";
+
+/**
+ * The §9 droppable roles: the companion sides the cap removes first. Everything
+ * else (carb, protein-main, dal, breakfast-main, breakfast-accompaniment,
+ * protein-floor) is protected and is never dropped while any droppable side
+ * remains on the day.
+ */
+const DROPPABLE_ROLES: ReadonlySet<PickRole> = new Set<PickRole>([
+  "sabzi",
+  "accompaniment",
+  "dessert",
+]);
+
+/**
+ * A single picked item in the week-in-progress. §9 reads a dish's Satiety and
+ * Prep Min, plus its structural `role` (when known) to drop companion sides
+ * before the protected carb/protein-main. `role` is optional so a plain Dish is
+ * still a valid SlotPick: a role-free pick is never a preferred drop, so a
+ * role-free day falls back to the satiety-only ordering (the original §9
+ * behavior), which is what the cap unit tests exercise.
+ */
+export interface SlotPick extends Dish {
+  role?: PickRole;
+}
 
 /** docs/engine.md §9 ("5 items per weekday"). */
 export const WEEKDAY_CAP = 5;
@@ -41,13 +72,22 @@ export interface ApplyCapResult {
 
 /**
  * Per-day item cap from docs/engine.md §9. When a day exceeds its cap, drop
- * dishes one at a time:
- *   1. From the dishes with the lowest Satiety value present in the menu.
- *   2. Among those, drop the one with the longest Prep Min.
- * Tie-break beyond §9: when two dishes share both Satiety and Prep Min, the
+ * dishes one at a time, role-aware:
+ *   1. Drop only droppable companion sides (sabzi / accompaniment / dessert)
+ *      while any remain; the carb, protein-main, breakfast-main, dal, the
+ *      breakfast chutney, and the protein floor are protected.
+ *   2. Among the droppable sides, drop the lowest Satiety, then the longest
+ *      Prep Min.
+ *   3. Fallback (rare): if the day is still over cap with no droppable side
+ *      left, drop the §9-worst pick overall (lowest Satiety, longest Prep Min)
+ *      so the day still resolves.
+ * Tie-break beyond §9: when two candidates share both Satiety and Prep Min, the
  * one later in the day's array is dropped (earlier slots' picks win). This is
- * stable: a day at or below its cap is returned unchanged. Sunday, if present,
- * is passed through; §2 schedule emits no Sunday slots so this is defensive.
+ * stable: a day at or below its cap is returned unchanged. A day whose picks
+ * carry no role (the cap unit tests) has no droppable set, so it goes straight
+ * to the fallback, reproducing the original satiety-only behavior. Sunday, if
+ * present, is passed through; §2 schedule emits no Sunday slots so this is
+ * defensive.
  */
 export function applyCap(args: ApplyCapArgs): ApplyCapResult {
   const out = new Map<Day, SlotPick[]>();
@@ -77,9 +117,11 @@ function capForDay(day: Day | string): number | null {
 }
 
 /**
- * Repeatedly drop the worst dish until length is at the cap. "Worst" per §9:
- * lowest Satiety; among those the longest Prep Min; final tie-break is the
- * latest position in the current array (stable for earlier picks).
+ * Repeatedly drop the worst pick until length is at the cap. "Worst" per §9 is
+ * role-aware: a droppable companion side (sabzi/accompaniment/dessert) is always
+ * preferred over a protected pick (carb/protein-main/...); within whichever set
+ * we are dropping from, lowest Satiety, then longest Prep Min, then the latest
+ * position in the current array (stable for earlier picks).
  */
 function trimToCap(
   picks: readonly SlotPick[],
@@ -95,15 +137,27 @@ function trimToCap(
   return { kept: working, dropped };
 }
 
+function isDroppable(pick: SlotPick): boolean {
+  return pick.role !== undefined && DROPPABLE_ROLES.has(pick.role);
+}
+
 /**
- * Index of the dish to drop next per §9. Scans once, keeping the worst-so-far.
- * Worse = lower satiety, or equal satiety with longer prepMinutes, or both
- * equal with a later array position (the original §9 ordering is silent on
- * the final tie so we lock it here and document it inline).
+ * Index of the pick to drop next per §9. Considers the droppable companion
+ * sides first (sabzi/accompaniment/dessert); only when none remain does it fall
+ * back to scanning every pick, so the carb and protein-main are protected while
+ * any side is still on the day. Within the candidate set it keeps the worst-so-
+ * far: lower satiety, or equal satiety with longer prepMinutes, or both equal
+ * with a later array position (the original §9 ordering is silent on the final
+ * tie so we lock it here and document it inline).
  */
 function pickDropIndex(picks: readonly SlotPick[]): number {
-  let worstIndex = 0;
-  for (let i = 1; i < picks.length; i += 1) {
+  const droppable: number[] = [];
+  for (let i = 0; i < picks.length; i += 1) {
+    if (isDroppable(picks[i])) droppable.push(i);
+  }
+  const candidates = droppable.length > 0 ? droppable : picks.map((_, i) => i);
+  let worstIndex = candidates[0];
+  for (const i of candidates) {
     if (isWorse(picks[i], picks[worstIndex])) {
       worstIndex = i;
     }

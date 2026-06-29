@@ -46,30 +46,33 @@ Mon, Wed, Fri (2 items), pick exactly one option per day:
 
 The fruit-bearing Option A is retired (fruit is now §3.3), so both 2-item options are savoury. A consequence: a `complete_meal` breakfast dish, which Option A used to lead, now appears only on the Tue/Thu single-item slot below.
 
-Tue, Thu (1 item, plus the protein floor below):
+Tue, Thu (1 item, plus the protein floor and the dish-driven chutney below):
 
-- 1 dish with `complete_meal` OR `complete_carb` tag (no accompaniment)
+- 1 dish with `complete_meal` OR `complete_carb` tag
 
 Breakfast protein floor (Tue/Thu single pick): when the single breakfast main carries no `HP` tag, the slot adds one HP Category=Keto companion (e.g. boiled eggs), making a 2-item breakfast. It fires only on a no-HP breakfast, so it never conflicts with the one-HP-per-meal cap; an empty companion pool falls back to a 1-item breakfast. Mon/Wed/Fri, already two items, are left to in-week manual addition.
 
+Breakfast chutney (dish-driven, all breakfast slots): the breakfast accompaniment is a property of the main dish, not of the slot form. A breakfast main whose Category is Chilla or Paratha carries one breakfast chutney (Category=Accompaniment, Time=Breakfast) in every breakfast slot, including the Tue/Thu single pick, so a cheela or paratha is never served without its chutney. This is what Option B already does for its Chilla/Paratha `complete_carb` lead; the single pick now does the same. A Category=Bread `complete_carb` stays self-sufficient and is served alone (above). On the single pick the chutney composes with the protein floor: a non-HP chilla may carry both an HP Keto floor companion and a non-HP chutney (a 3-item breakfast), which is acceptable; the §9 role-aware cap trims if the day then runs over. An empty chutney pool omits it.
+
 ### Lunch
 
-**Menu 1 (Mon, Wed, Fri), 3 items:**
+**Menu 1 (Mon, Wed, Fri), the 4-item thali aspiration:**
 
-- 1 HP dish (Category=Gravy dish or Dry dish)
-- 1 partner that complements the main's form: if the HP main is Dry, pick a non-HP Gravy dish (a dal); if the HP main is Gravy, pick a non-HP Dry sabzi
+- 1 HP protein main (Category=Gravy dish or Dry dish)
+- 1 non-HP dal (Category=Gravy dish)
+- 1 non-HP dry sabzi (Category=Dry dish)
 - 1 lunch carb (see §3.1)
 
-Menu 1's partner complements the main's form, so an Indian lunch always carries both a gravy and a dry dish around its protein. The partner is always non-HP: this is the one-HP-source-per-meal rule (above) applied to Menu 1, so the partner pool excludes any dish carrying the HP tag. The Gravy-main branch has a thin-pool fallback chain: a non-HP Accompaniment (a salad) when no non-HP Dry sabzi is eligible, then the unfiltered Accompaniment pool when even that is empty, so the slot always fills. Menu 1 stays 3 items, so the §9 weekday cap of 5 holds. Complete_meal lunches are exempt (a self-sufficient main fills its slot alone; see Self-sufficient mains above), so they reach the Menu 3 / Menu 4 forms rather than this partner rule. Pairing a sabzi with a self-sufficient gravy such as kadhi is left to in-week manual swap.
+The Indian weekday lunch aspires to the four-item thali: a protein main with both a dal and a dry sabzi around it, plus the lunch carb. This is the same form as Menu 2 below, differing only in the protein source (an HP Gravy/Dry main rather than a Keto dish). The protein main is the meal's only HP position; the dal and dry-sabzi pools both exclude HP-tagged dishes (the one-HP-source-per-meal rule above), keyed on the HP tag, not on dish names. The four-item aspiration is day-budgeted by the §9 role-aware cap, not by Menu 1 itself: on a full (2-item) breakfast day the cap drops the dry sabzi (a companion side), so the lunch lands at the 5-item day cap as a 3-item lunch (protein main + dal + carb); on a light (1-item) breakfast day all four survive. Thin pools degrade gracefully (the dal or the sabzi is simply omitted), and a slot with no eligible HP main falls back to a lunch carb so it still fills. Complete_meal lunches are exempt (a self-sufficient main fills its slot alone; see Self-sufficient mains above), so they reach the Menu 3 / Menu 4 forms rather than this thali. Pairing a sabzi with a self-sufficient gravy such as kadhi is left to in-week manual swap.
 
-**Menu 2 (Tue, Thu), 4 items:**
+**Menu 2 (Tue, Thu), the same 4-item thali, Keto-led:**
 
 - 1 Keto dish
 - 1 non-HP Gravy dish (any satiety)
 - 1 non-HP Dry dish
 - 1 lunch carb (see §3.1)
 
-The Keto dish is the meal's protein lead and the only position that may be HP; the Gravy and Dry companions are already non-HP, so one-HP-per-meal holds by construction.
+The Keto dish is the meal's protein lead and the only position that may be HP; the Gravy and Dry companions are already non-HP, so one-HP-per-meal holds by construction. Tue/Thu carry a 1-item breakfast, so the 4-item thali fits the 5-item day cap whole; the role-aware cap (§9) only trims it on the rare day a Tue/Thu breakfast runs to two or more items.
 
 **Menu 3 (Saturday), 3 items:**
 
@@ -207,12 +210,15 @@ Cap: 5 items per weekday, 3 on Saturday.
 
 The cap counts breakfast and lunch items only. The Fruit of the day (§3.3) is outside the cap: it is a fruit, not a meal item, so it never counts toward the per-day total and is never a cap-drop candidate.
 
-If §3 composition produces a menu over the cap, drop dishes one at a time:
+The cap is role-aware. Each composed pick carries a structural role from §3: `protein-main`, `dal`, `sabzi`, `carb`, `accompaniment`, `dessert`, `breakfast-main`, `breakfast-accompaniment`, or `protein-floor`. When §3 composition produces a menu over the cap, drop picks one at a time:
 
-1. From the dishes with the lowest Satiety value present in the menu
-2. Among those, drop the one with the longest Prep Min
+1. Drop only a droppable companion side (role `sabzi`, `accompaniment`, or `dessert`) while any remains. The carb, protein main, dal, breakfast main, breakfast chutney (`breakfast-accompaniment`), and protein floor are protected: they are never dropped while a droppable side is still on the day.
+2. Among the droppable sides, drop the lowest Satiety; among those the longest Prep Min; among those the later position in the day (earlier slots win).
+3. Fallback (rare): if the day is still over the cap with no droppable side left, drop the worst pick overall by the same Satiety then Prep Min then position order, so the day still resolves.
 
 Repeat until at the cap.
+
+The role-aware order makes the per-day budget emergent rather than declared. The 4-item Indian thali (§3 Menu 1 / Menu 2) plus the day's breakfast is trimmed by dropping the dry sabzi first, so a full (2-item) breakfast day lands a 3-item lunch (protein main + dal + carb) while a light (1-item) breakfast day keeps the full 4-item thali, each at the 5-item weekday cap. The earlier satiety-only rule dropped the lunch carb (a low-satiety item) before the sabzi; protecting the carb and protein main is the change.
 
 ## 10. Ingredient Consolidation
 

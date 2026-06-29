@@ -201,14 +201,15 @@ describe("§6 requested dishes — planRequests (pure planner)", () => {
   it("plans a request into the first slot whose composition accepts it", () => {
     nextId = 1;
     const library = makeMinimalLibrary();
-    const raita = library.find((d) => d.name === "Cucumber Raita")!;
+    // A non-HP Gravy (a dal) fits the Menu 1 thali; Mon is the first such slot.
+    const dal = library.find((d) => d.name === "Aloo Gobi")!;
     const schedule = weekSchedule({
       weekStart: "2026-06-08",
       lastSaturdayMenu: null,
       rng: () => 0.1,
     });
     const plan = planRequests({
-      requests: [raita.id],
+      requests: [dal.id],
       schedule,
       library,
       history: emptyHistory,
@@ -216,8 +217,7 @@ describe("§6 requested dishes — planRequests (pure planner)", () => {
     });
     expect(plan.incidents).toEqual([]);
     expect(plan.placements).toHaveLength(1);
-    // Accompaniment fits a Menu 1 lunch (Mon is the first such slot).
-    expect(plan.placements[0]).toEqual({ dishId: raita.id, day: "Mon", meal: "Lunch" });
+    expect(plan.placements[0]).toEqual({ dishId: dal.id, day: "Mon", meal: "Lunch" });
   });
 
   it("returns an incident for an out-of-season request (no slot accepts it)", () => {
@@ -270,15 +270,17 @@ describe("§6 requested dishes — planRequests (pure planner)", () => {
   it("never collides two requests on one slot", () => {
     nextId = 1;
     const library = makeMinimalLibrary();
-    const raita = library.find((d) => d.name === "Cucumber Raita")!;
-    const onion = library.find((d) => d.name === "Onion Salad")!;
+    // Two non-HP Gravy dals both fit a Menu 1 lunch, whose first slot is Mon; the
+    // planner must spread them across distinct slots rather than colliding.
+    const dal1 = library.find((d) => d.name === "Aloo Gobi")!;
+    const dal2 = library.find((d) => d.name === "Dal Tadka")!;
     const schedule = weekSchedule({
       weekStart: "2026-06-08",
       lastSaturdayMenu: null,
       rng: () => 0.1,
     });
     const plan = planRequests({
-      requests: [raita.id, onion.id],
+      requests: [dal1.id, dal2.id],
       schedule,
       library,
       history: emptyHistory,

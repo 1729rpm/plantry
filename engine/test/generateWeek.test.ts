@@ -301,7 +301,11 @@ describe("generateWeek — top-level engine", () => {
       expect(week.days[0].fruit!.name).not.toBe("Apple");
     });
 
-    it("emits no incidents and no dropped dish ids under the identity cap stub", () => {
+    it("§9 role-aware cap drops only companion sides (dry sabzi), never the carb or protein main", () => {
+      // Mon/Wed/Fri have a 2-item breakfast and a 4-item thali (6 items, one over
+      // the 5-item cap), so the role-aware cap trims one droppable side per such
+      // day. It must drop the dry sabzi (a companion side), never the lunch carb
+      // or the protein main, even though the carb is the lowest-satiety item.
       const week = generateWeek({
         weekStart: "2026-06-08",
         library,
@@ -312,8 +316,25 @@ describe("generateWeek — top-level engine", () => {
         rng: () => 0.1,
         lastSaturdayMenu: null,
       });
-      expect(week.droppedDishIds).toEqual([]);
-      expect(week.incidents).toEqual([]);
+      // Every dropped dish is a companion side (a Dry-dish sabzi here), not a
+      // carb (Chapati/Rice) and not an HP protein main.
+      for (const id of week.droppedDishIds) {
+        const dish = library.find((d) => d.id === id)!;
+        expect(["Chapati", "Rice"]).not.toContain(dish.category);
+        expect(dish.tags.includes("HP")).toBe(false);
+      }
+      // Every Menu-1 weekday lunch still carries its lunch carb and its HP main.
+      for (const dayName of ["Mon", "Wed", "Fri"] as const) {
+        const lunch = week.days
+          .find((d) => d.day === dayName)!
+          .slots.find((s) => s.meal === "Lunch")!;
+        expect(lunch.dishes.some((d) => d.category === "Chapati" || d.category === "Rice")).toBe(
+          true,
+        );
+        expect(lunch.dishes.some((d) => d.tags.includes("HP"))).toBe(true);
+        // Trimmed to 3 lunch items (main + dal + carb) on a full-breakfast day.
+        expect(lunch.dishes.length).toBe(3);
+      }
     });
 
     it("respects §3.1 Rice-at-most-once across the week", () => {
@@ -503,97 +524,6 @@ describe("generateWeek — top-level engine", () => {
         const hpCount = lunch.dishes.filter((d) => d.tags.includes("HP")).length;
         expect(hpCount, `${day.day} lunch has ${hpCount} HP dishes`).toBeLessThanOrEqual(1);
       }
-    });
-  });
-
-  describe("§3 R4 Menu 1 Gravy-branch thin-pool fallback chain", () => {
-    it("falls back through to the HP Accompaniment last resort rather than leaving the meal incomplete", () => {
-      nextId = 1;
-      // A library whose Gravy HP main has NO non-HP Dry sabzi and whose ONLY
-      // Accompaniment is HP-tagged. The R4 Dry-sabzi pool and the non-HP
-      // Accompaniment fallback are both empty, so pickMenu1 must use the
-      // unfiltered Accompaniment last resort so Menu 1 still fills three items.
-      const library: Dish[] = [
-        // Breakfast so the week is buildable (Mon/Wed/Fri pair + Tue/Thu single).
-        makeDish({
-          name: "Idli",
-          time: "Breakfast",
-          category: "Complete meal",
-          tags: ["complete_meal"],
-          primaryIngredient: "Idli batter",
-        }),
-        makeDish({
-          name: "Apple",
-          time: "Breakfast",
-          category: "Fruit",
-          tags: ["fruit"],
-          primaryIngredient: "Apple",
-        }),
-        makeDish({
-          name: "Dosa",
-          time: "Breakfast",
-          category: "Complete meal",
-          tags: ["complete_meal"],
-          primaryIngredient: "Dosa batter",
-        }),
-        // Menu 1: HP Gravy main, NO non-HP Dry sabzi, ONLY an HP-tagged
-        // Accompaniment partner (so both R4 fallbacks before the last resort are
-        // empty).
-        makeDish({
-          name: "Chicken Curry",
-          time: "Lunch",
-          category: "Gravy dish",
-          tags: ["HP"],
-          primaryIngredient: "Chicken",
-        }),
-        makeDish({
-          name: "Chicken Salad",
-          time: "Lunch",
-          category: "Accompaniment",
-          tags: ["HP"],
-          primaryIngredient: "Chicken",
-        }),
-        makeDish({
-          name: "Chapati",
-          time: "Lunch",
-          category: "Chapati",
-          primaryIngredient: "Wheat",
-        }),
-        // Menu 2 fillers so other weekdays build (no Dry dish, so Menu 1's
-        // R4 Dry-sabzi pool stays empty; Menu 2 simply runs without its Dry).
-        makeDish({ name: "Tofu", time: "Lunch", category: "Keto", primaryIngredient: "Tofu" }),
-        makeDish({ name: "Dal", time: "Lunch", category: "Gravy dish", primaryIngredient: "Dal" }),
-        // Saturday fillers.
-        makeDish({
-          name: "Biryani",
-          time: "Lunch",
-          category: "Complete meal",
-          tags: ["complete_meal", "HP"],
-          primaryIngredient: "Chicken",
-        }),
-        makeDish({
-          name: "Halwa",
-          time: "Lunch",
-          category: "Dessert",
-          primaryIngredient: "Carrot",
-        }),
-      ];
-      const week = generateWeek({
-        weekStart: "2026-06-15",
-        library,
-        history: emptyHistory,
-        season: "Monsoon",
-        ingredients: emptyIngredients,
-        packSizes: emptyPackSizes,
-        rng: () => 0.1,
-      });
-      const monLunch = week.days
-        .find((d) => d.day === "Mon")!
-        .slots.find((s) => s.meal === "Lunch")!;
-      // The fallback fills the partner slot: Menu 1 still has 3 items including
-      // the HP Accompaniment (one-HP-per-meal yields to slot-completeness).
-      expect(monLunch.dishes.length).toBe(3);
-      expect(monLunch.dishes.some((d) => d.name === "Chicken Salad")).toBe(true);
     });
   });
 
@@ -1065,19 +995,20 @@ describe("generateWeek — top-level engine", () => {
     });
   });
 
-  describe("§3 R4 Menu 1 thali partner complements the main's form", () => {
-    // Library exposing both a Gravy HP main and a Dry HP main across the three
-    // Menu-1 weekdays, with a non-HP Gravy, a non-HP Dry sabzi, and a salad.
-    function libraryForR4(): Dish[] {
+  describe("§3 Menu 1 4-item thali + §9 role-aware cap (emergent day budget)", () => {
+    // A Menu-1 library with an HP Gravy main, a non-HP Gravy dal, a non-HP Dry
+    // sabzi, and a carb. The Mon/Wed/Fri breakfast lead is parameterised: a
+    // Category=Bread lead is served alone (1-item breakfast), a Paratha lead
+    // keeps its accompaniment (2-item breakfast).
+    function libraryForThali(breakfastLead: "Bread" | "Paratha"): Dish[] {
       nextId = 1;
       return [
-        // Breakfasts.
         makeDish({
-          name: "Aloo Paratha",
+          name: "Breakfast Lead",
           time: "Breakfast",
-          category: "Paratha",
+          category: breakfastLead,
           tags: ["complete_carb"],
-          primaryIngredient: "Potato",
+          primaryIngredient: "Wheat",
         }),
         makeDish({
           name: "Curd",
@@ -1085,6 +1016,7 @@ describe("generateWeek — top-level engine", () => {
           category: "Accompaniment",
           primaryIngredient: "Curd",
         }),
+        // Tue/Thu single-pick (Complete meal, HP, so no protein floor / chutney).
         makeDish({
           name: "Sevai",
           time: "Breakfast",
@@ -1099,7 +1031,7 @@ describe("generateWeek — top-level engine", () => {
           tags: ["fruit"],
           primaryIngredient: "Apple",
         }),
-        // Menu 1 mains: one HP Gravy, one HP Dry.
+        // Menu 1 thali: HP Gravy main + non-HP Gravy dal + non-HP Dry sabzi + carb.
         makeDish({
           name: "Paneer Gravy",
           time: "Lunch",
@@ -1107,14 +1039,6 @@ describe("generateWeek — top-level engine", () => {
           tags: ["HP"],
           primaryIngredient: "Paneer",
         }),
-        makeDish({
-          name: "Chicken Dry",
-          time: "Lunch",
-          category: "Dry dish",
-          tags: ["HP"],
-          primaryIngredient: "Chicken",
-        }),
-        // Non-HP partners: a Gravy dal, a Dry sabzi, and a salad.
         makeDish({ name: "Dal", time: "Lunch", category: "Gravy dish", primaryIngredient: "Dal" }),
         makeDish({
           name: "Bhindi Sabzi",
@@ -1123,12 +1047,144 @@ describe("generateWeek — top-level engine", () => {
           primaryIngredient: "Okra",
         }),
         makeDish({
-          name: "Onion Salad",
+          name: "Chapati",
           time: "Lunch",
-          category: "Accompaniment",
-          primaryIngredient: "Onion",
+          category: "Chapati",
+          primaryIngredient: "Wheat",
         }),
-        // Lunch carbs + Menu 2 + Saturday fillers.
+        // Menu 2 + Saturday fillers.
+        makeDish({ name: "Tofu", time: "Lunch", category: "Keto", primaryIngredient: "Tofu" }),
+        makeDish({
+          name: "Biryani",
+          time: "Lunch",
+          category: "Complete meal",
+          tags: ["complete_meal", "HP"],
+          primaryIngredient: "Chicken",
+        }),
+        makeDish({
+          name: "Halwa",
+          time: "Lunch",
+          category: "Dessert",
+          primaryIngredient: "Carrot",
+        }),
+      ];
+    }
+
+    function monLunch(week: ReturnType<typeof generateWeek>) {
+      return week.days.find((d) => d.day === "Mon")!.slots.find((s) => s.meal === "Lunch")!;
+    }
+
+    it("a light (1-item) breakfast day keeps the full 4-item thali: protein + dal + dry sabzi + carb", () => {
+      const week = generateWeek({
+        weekStart: "2026-06-15",
+        library: libraryForThali("Bread"),
+        history: emptyHistory,
+        season: "Monsoon",
+        ingredients: emptyIngredients,
+        packSizes: emptyPackSizes,
+        rng: () => 0.1,
+      });
+      // Monday breakfast is a standalone Bread (1 item), so the 4-item thali fits
+      // under the 5-item cap and survives whole.
+      const monBf = week.days.find((d) => d.day === "Mon")!.slots.find((s) => s.meal === "Breakfast")!;
+      expect(monBf.dishes.length).toBe(1);
+      const lunch = monLunch(week);
+      expect(lunch.dishes.length).toBe(4);
+      expect(lunch.dishes[0].name).toBe("Paneer Gravy"); // HP protein main leads
+      expect(lunch.dishes.some((d) => d.name === "Dal")).toBe(true); // non-HP Gravy dal
+      expect(lunch.dishes.some((d) => d.name === "Bhindi Sabzi")).toBe(true); // non-HP Dry sabzi
+      expect(lunch.dishes.some((d) => d.category === "Chapati")).toBe(true); // lunch carb
+    });
+
+    it("a full (2-item) breakfast day: the cap drops the dry sabzi, leaving protein + dal + carb (3 items)", () => {
+      const week = generateWeek({
+        weekStart: "2026-06-15",
+        library: libraryForThali("Paratha"),
+        history: emptyHistory,
+        season: "Monsoon",
+        ingredients: emptyIngredients,
+        packSizes: emptyPackSizes,
+        rng: () => 0.1,
+      });
+      const monBf = week.days.find((d) => d.day === "Mon")!.slots.find((s) => s.meal === "Breakfast")!;
+      expect(monBf.dishes.length).toBe(2); // Paratha lead + accompaniment
+      const lunch = monLunch(week);
+      // 2 breakfast + 4 thali = 6 over the 5-item cap → drop the dry sabzi.
+      expect(lunch.dishes.length).toBe(3);
+      expect(lunch.dishes.some((d) => d.name === "Bhindi Sabzi")).toBe(false); // sabzi dropped
+      expect(lunch.dishes[0].name).toBe("Paneer Gravy"); // protein main protected
+      expect(lunch.dishes.some((d) => d.name === "Dal")).toBe(true); // dal protected
+      expect(lunch.dishes.some((d) => d.category === "Chapati")).toBe(true); // carb protected
+    });
+
+    it("keeps every weekday at the §9 5-item cap", () => {
+      const week = generateWeek({
+        weekStart: "2026-06-15",
+        library: libraryForThali("Paratha"),
+        history: emptyHistory,
+        season: "Monsoon",
+        ingredients: emptyIngredients,
+        packSizes: emptyPackSizes,
+        rng: () => 0.1,
+      });
+      for (const dayName of ["Mon", "Tue", "Wed", "Thu", "Fri"] as const) {
+        const day = week.days.find((d) => d.day === dayName)!;
+        const items = day.slots.reduce((sum, s) => sum + s.dishes.length, 0);
+        expect(items, `${dayName} has ${items} items`).toBeLessThanOrEqual(5);
+      }
+    });
+  });
+
+  describe("§3 dish-driven breakfast chutney on the Tue/Thu single pick", () => {
+    it("a Chilla single main carries a breakfast chutney", () => {
+      nextId = 1;
+      const library: Dish[] = [
+        // Mon/Wed/Fri Option B so the week builds.
+        makeDish({
+          name: "Aloo Paratha",
+          time: "Breakfast",
+          category: "Paratha",
+          tags: ["complete_carb"],
+          primaryIngredient: "Potato",
+        }),
+        makeDish({
+          name: "Pickle",
+          time: "Breakfast",
+          category: "Accompaniment",
+          primaryIngredient: "Mango",
+        }),
+        // Tue/Thu single pick: an HP Chilla (paneer cheela). HP, so no protein
+        // floor companion — it must still carry a chutney (the issue Rajat hit).
+        makeDish({
+          name: "Besan Paneer Chilla",
+          time: "Breakfast",
+          category: "Chilla",
+          tags: ["complete_carb", "HP"],
+          primaryIngredient: "Paneer",
+        }),
+        makeDish({
+          name: "Green Chutney",
+          time: "Breakfast",
+          category: "Accompaniment",
+          primaryIngredient: "Mint",
+        }),
+        makeDish({
+          name: "Apple",
+          time: "Breakfast",
+          category: "Fruit",
+          tags: ["fruit"],
+          primaryIngredient: "Apple",
+        }),
+        // Lunch fillers.
+        makeDish({
+          name: "Chicken Curry",
+          time: "Lunch",
+          category: "Gravy dish",
+          tags: ["HP"],
+          primaryIngredient: "Chicken",
+        }),
+        makeDish({ name: "Dal", time: "Lunch", category: "Gravy dish", primaryIngredient: "Dal" }),
+        makeDish({ name: "Bhindi", time: "Lunch", category: "Dry dish", primaryIngredient: "Okra" }),
         makeDish({
           name: "Chapati",
           time: "Lunch",
@@ -1150,87 +1206,19 @@ describe("generateWeek — top-level engine", () => {
           primaryIngredient: "Carrot",
         }),
       ];
-    }
-
-    function menu1Lunches(week: ReturnType<typeof generateWeek>) {
-      return (["Mon", "Wed", "Fri"] as const)
-        .map((dayName) =>
-          week.days.find((d) => d.day === dayName)!.slots.find((s) => s.meal === "Lunch"),
-        )
-        .filter((s): s is NonNullable<typeof s> => Boolean(s));
-    }
-
-    it("a Gravy HP main pairs a non-HP Dry sabzi (not a salad); a Dry HP main pairs a non-HP Gravy", () => {
       const week = generateWeek({
         weekStart: "2026-06-15",
-        library: libraryForR4(),
+        library,
         history: emptyHistory,
         season: "Monsoon",
         ingredients: emptyIngredients,
         packSizes: emptyPackSizes,
         rng: () => 0.1,
       });
-      const lunches = menu1Lunches(week);
-      expect(lunches.length).toBeGreaterThan(0);
-      for (const lunch of lunches) {
-        const main = lunch.dishes[0];
-        const partner = lunch.dishes[1];
-        expect(main.tags).toContain("HP");
-        // The partner is always non-HP (one HP source per meal).
-        expect(partner.tags.includes("HP")).toBe(false);
-        if (main.category === "Gravy dish") {
-          // R4: a gravy main pairs a Dry sabzi, never an Accompaniment salad.
-          expect(partner.category).toBe("Dry dish");
-        } else if (main.category === "Dry dish") {
-          // Unchanged: a dry main pairs a non-HP Gravy (a dal).
-          expect(partner.category).toBe("Gravy dish");
-        }
-        // Menu 1 stays exactly 3 items: main + partner + lunch carb.
-        expect(lunch.dishes.length).toBe(3);
-      }
-    });
-
-    it("keeps every weekday lunch within the §9 5-item cap (R4 is cap-neutral)", () => {
-      const week = generateWeek({
-        weekStart: "2026-06-15",
-        library: libraryForR4(),
-        history: emptyHistory,
-        season: "Monsoon",
-        ingredients: emptyIngredients,
-        packSizes: emptyPackSizes,
-        rng: () => 0.1,
-      });
-      for (const dayName of ["Mon", "Tue", "Wed", "Thu", "Fri"] as const) {
-        const day = week.days.find((d) => d.day === dayName)!;
-        const items = day.slots.reduce((sum, s) => sum + s.dishes.length, 0);
-        expect(items, `${dayName} has ${items} items`).toBeLessThanOrEqual(5);
-      }
-    });
-
-    it("falls back to an Accompaniment when the non-HP Dry-sabzi pool is empty", () => {
-      // Drop every non-HP Dry sabzi: a Gravy main must fall back to the salad.
-      const lib = libraryForR4().filter(
-        (d) => d.name !== "Bhindi Sabzi" && d.name !== "Chicken Dry",
-      );
-      const week = generateWeek({
-        weekStart: "2026-06-15",
-        library: lib,
-        history: emptyHistory,
-        season: "Monsoon",
-        ingredients: emptyIngredients,
-        packSizes: emptyPackSizes,
-        rng: () => 0.1,
-      });
-      const lunches = menu1Lunches(week);
-      for (const lunch of lunches) {
-        const main = lunch.dishes[0];
-        const partner = lunch.dishes[1];
-        expect(main.category).toBe("Gravy dish");
-        // No Dry sabzi available → fall back to the non-HP Accompaniment salad.
-        expect(partner.category).toBe("Accompaniment");
-        expect(partner.tags.includes("HP")).toBe(false);
-        expect(lunch.dishes.length).toBe(3);
-      }
+      const tueBf = week.days.find((d) => d.day === "Tue")!.slots.find((s) => s.meal === "Breakfast")!;
+      expect(tueBf.dishes.map((d) => d.name)).toEqual(["Besan Paneer Chilla", "Green Chutney"]);
+      // One HP source per meal: the chutney is non-HP.
+      expect(tueBf.dishes.filter((d) => d.tags.includes("HP")).length).toBe(1);
     });
   });
 });
