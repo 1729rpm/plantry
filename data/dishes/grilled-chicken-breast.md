@@ -3,7 +3,7 @@ id: 113
 name: Grilled chicken breast
 category: Keto
 time: Lunch
-tags: [HP]
+tags: [HP, cuisine_neutral]
 primaryIngredient: Chicken Breast
 preferred: Yes
 active: Yes

@@ -361,6 +361,123 @@ describe("generateWeek — top-level engine", () => {
     });
   });
 
+  describe("§3 / §3.2 international weekday lunches", () => {
+    // The minimal library is all-Indian; add a non-Indian anchor set so the
+    // international substitution has anchors. Two cuisines so the selection can
+    // prefer distinct cuisines; one veg-forward anchor with a same-cuisine
+    // protein so the "veggies need a protein" branch is exercised.
+    function makeIntlLibrary(): Dish[] {
+      nextId = 1000;
+      const base = makeMinimalLibrary();
+      return [
+        ...base,
+        makeDish({ name: "Continental baked vegetables", time: "Lunch", category: "Dry dish", cuisine: "Continental", primaryIngredient: "Mixed Veg" }),
+        makeDish({ name: "Continental grilled chicken", time: "Lunch", category: "Dry dish", cuisine: "Continental", tags: ["HP"], primaryIngredient: "Chicken Breast" }),
+        makeDish({ name: "Ratatouille", time: "Lunch", category: "Dry dish", cuisine: "Continental", primaryIngredient: "Mixed Veg" }),
+        makeDish({ name: "Thai green curry chicken", time: "Lunch", category: "Gravy dish", cuisine: "Thai", tags: ["HP"], primaryIngredient: "Chicken" }),
+        makeDish({ name: "Thai tofu stir fry", time: "Lunch", category: "Dry dish", cuisine: "Thai", tags: ["HP"], primaryIngredient: "Tofu" }),
+      ];
+    }
+
+    function weekdayLunches(week: ReturnType<typeof generateWeek>) {
+      return week.days
+        .filter((d) => d.day !== "Sat")
+        .map((d) => d.slots.find((s) => s.meal === "Lunch"))
+        .filter((s): s is NonNullable<typeof s> => Boolean(s));
+    }
+
+    it("produces about two coherent single-cuisine non-Indian weekday lunches, no Indian carb", () => {
+      const library = makeIntlLibrary();
+      const week = generateWeek({
+        weekStart: "2026-06-08",
+        library,
+        history: emptyHistory,
+        season: "Summer",
+        ingredients: emptyIngredients,
+        packSizes: emptyPackSizes,
+        rng: () => 0.1,
+        lastSaturdayMenu: null,
+      });
+      const intlLunches = weekdayLunches(week).filter((s) =>
+        s.dishes.some((d) => d.cuisine !== "Indian"),
+      );
+      expect(intlLunches.length).toBe(2);
+      for (const lunch of intlLunches) {
+        // Single cuisine register (no mixed-cuisine plate).
+        const cuisines = new Set(lunch.dishes.map((d) => d.cuisine));
+        expect(cuisines.size).toBe(1);
+        expect([...cuisines][0]).not.toBe("Indian");
+        // No Indian carb in the international form.
+        expect(lunch.dishes.some((d) => d.category === "Chapati" || d.category === "Rice")).toBe(
+          false,
+        );
+        // At most two items (anchor + at most one companion).
+        expect(lunch.dishes.length).toBeLessThanOrEqual(2);
+      }
+    });
+
+    it("a veg-forward non-Indian anchor gets exactly one same-cuisine/neutral protein", () => {
+      // Force the veg-forward Continental anchor onto a weekday via a pinned
+      // request? No — use history so Continental baked vegetables is the
+      // longest-unused anchor and lands first. Simpler: assert that whenever an
+      // international lunch leads with a non-HP veg anchor, it carries one protein.
+      const library = makeIntlLibrary();
+      const week = generateWeek({
+        weekStart: "2026-06-08",
+        library,
+        history: emptyHistory,
+        season: "Summer",
+        ingredients: emptyIngredients,
+        packSizes: emptyPackSizes,
+        rng: () => 0.1,
+        lastSaturdayMenu: null,
+      });
+      for (const lunch of weekdayLunches(week)) {
+        const nonIndian = lunch.dishes.some((d) => d.cuisine !== "Indian");
+        if (!nonIndian) continue;
+        const anchor = lunch.dishes[0];
+        const vegForward =
+          !anchor.tags.includes("HP") &&
+          anchor.category !== "Keto" &&
+          !anchor.tags.includes("complete_meal") &&
+          anchor.category !== "Complete meal";
+        if (vegForward) {
+          expect(lunch.dishes.length).toBe(2);
+          const protein = lunch.dishes[1];
+          // exactly one protein, same-cuisine or cuisine_neutral.
+          expect(protein.tags.includes("HP") || protein.category === "Keto").toBe(true);
+          expect(protein.cuisine === anchor.cuisine || protein.tags.includes("cuisine_neutral")).toBe(
+            true,
+          );
+        }
+      }
+    });
+
+    it("the other weekday lunches stay the Indian thali (Menu 1/2 form with a carb)", () => {
+      const library = makeIntlLibrary();
+      const week = generateWeek({
+        weekStart: "2026-06-08",
+        library,
+        history: emptyHistory,
+        season: "Summer",
+        ingredients: emptyIngredients,
+        packSizes: emptyPackSizes,
+        rng: () => 0.1,
+        lastSaturdayMenu: null,
+      });
+      const indianLunches = weekdayLunches(week).filter(
+        (s) => !s.dishes.some((d) => d.cuisine !== "Indian"),
+      );
+      // 5 weekdays minus 2 international = 3 Indian thali lunches.
+      expect(indianLunches.length).toBe(3);
+      for (const lunch of indianLunches) {
+        expect(lunch.dishes.some((d) => d.category === "Chapati" || d.category === "Rice")).toBe(
+          true,
+        );
+      }
+    });
+  });
+
   describe("§3.2 weekday substitution via userRequestedDishId", () => {
     it("places the pinned complete_meal Lunch dish on a weekday and switches that day to the substitution form", () => {
       nextId = 1;

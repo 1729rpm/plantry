@@ -73,9 +73,9 @@ describe("rankCandidatesForSlot — swap-UI ranking", () => {
 
     it("dedupes dishes that appear in multiple position pools", () => {
       nextId = 1;
-      // Same Accompaniment dish appears in both Menu 1 partnerWhenHpIsGravy
+      // Same Accompaniment dish appears in both Menu 1 drySabzi
       // and lunchCarb? No, accompaniments are not carbs. But a Gravy can be HP
-      // (Menu 1 hp pool) and non-HP gravy pool (no — partnerWhenHpIsDry needs
+      // (Menu 1 hp pool) and non-HP gravy pool (no — dal needs
       // non-HP). So we test simpler: union has no duplicates.
       const acc = makeDish({
         name: "Cucumber Raita",
