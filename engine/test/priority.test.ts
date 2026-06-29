@@ -5,9 +5,6 @@ import {
   byNoSameDayPrimaryIngredient,
   byIngredientConsolidation,
   byPreferredYes,
-  byCuisineDiversity,
-  placedNonIndianCount,
-  WEEKLY_NON_INDIAN_TARGET,
   byWithinWeekRecency,
   withinWeekRecencySet,
   byProteinDiversity,
@@ -230,234 +227,7 @@ describe("priority — docs/engine.md §4", () => {
     });
   });
 
-  describe("§4 step 5: within-week cuisine diversity", () => {
-    it("is a no-op when no placed-non-Indian count is supplied", () => {
-      const indian = makeDish({ name: "Indian", cuisine: "Indian" });
-      const thai = makeDish({ name: "Thai", cuisine: "Thai" });
-      // Undefined count: the step does not fire, input order preserved.
-      const out = byCuisineDiversity([indian, thai], undefined);
-      expect(out.map((d) => d.name)).toEqual(["Indian", "Thai"]);
-    });
-
-    it("promotes non-Indian candidates above Indian ones while under target", () => {
-      const indianA = makeDish({ name: "IndianA", cuisine: "Indian" });
-      const thai = makeDish({ name: "Thai", cuisine: "Thai" });
-      const indianB = makeDish({ name: "IndianB", cuisine: "Indian" });
-      const italian = makeDish({ name: "Italian", cuisine: "Italian" });
-      // Zero placed so far → under target → non-Indian dishes rank up.
-      const out = byCuisineDiversity([indianA, thai, indianB, italian], 0);
-      expect(out.map((d) => d.name)).toEqual(["Thai", "Italian", "IndianA", "IndianB"]);
-    });
-
-    it("is a no-op once the target is met (at target)", () => {
-      const indian = makeDish({ name: "Indian", cuisine: "Indian" });
-      const thai = makeDish({ name: "Thai", cuisine: "Thai" });
-      // Exactly at target → step stops, input order preserved.
-      const out = byCuisineDiversity([indian, thai], WEEKLY_NON_INDIAN_TARGET);
-      expect(out.map((d) => d.name)).toEqual(["Indian", "Thai"]);
-    });
-
-    it("is a no-op above the target", () => {
-      const indian = makeDish({ name: "Indian", cuisine: "Indian" });
-      const thai = makeDish({ name: "Thai", cuisine: "Thai" });
-      const out = byCuisineDiversity([indian, thai], WEEKLY_NON_INDIAN_TARGET + 2);
-      expect(out.map((d) => d.name)).toEqual(["Indian", "Thai"]);
-    });
-
-    it("returns the pool unchanged when it holds no non-Indian candidate (fresh-alt fallback)", () => {
-      // All-Indian pool (e.g. a Chapati/Rice lunch-carb pool, or a Fruit pool):
-      // no non-Indian alternative exists, so the step is a no-op with no need for
-      // an explicit exemption.
-      const a = makeDish({ name: "A", cuisine: "Indian" });
-      const b = makeDish({ name: "B", cuisine: "Indian" });
-      const c = makeDish({ name: "C", cuisine: "Indian" });
-      const out = byCuisineDiversity([a, b, c], 0);
-      expect(out.map((d) => d.name)).toEqual(["A", "B", "C"]);
-    });
-
-    it("preserves prior-step order within the non-Indian and Indian groups (stable)", () => {
-      const indianA = makeDish({ name: "IndianA", cuisine: "Indian" });
-      const thaiA = makeDish({ name: "ThaiA", cuisine: "Thai" });
-      const indianB = makeDish({ name: "IndianB", cuisine: "Indian" });
-      const italianB = makeDish({ name: "ItalianB", cuisine: "Italian" });
-      // Interleaved input; both groups keep their relative order.
-      const out = byCuisineDiversity([indianA, thaiA, indianB, italianB], 1);
-      expect(out.map((d) => d.name)).toEqual(["ThaiA", "ItalianB", "IndianA", "IndianB"]);
-    });
-
-    it("treats any non-Indian cuisine as non-Indian (property-keyed, not name-keyed)", () => {
-      const indian = makeDish({ name: "ZZZ-Indian", cuisine: "Indian" });
-      const continental = makeDish({ name: "AAA-Continental", cuisine: "Continental" });
-      const out = byCuisineDiversity([indian, continental], 0);
-      // Continental ranks up purely on the cuisine property, despite name order.
-      expect(out.map((d) => d.name)).toEqual(["AAA-Continental", "ZZZ-Indian"]);
-    });
-
-    it("ranks Preferred=Yes first within the promoted non-Indian group, under target", () => {
-      // Two non-Indian candidates, one Preferred=Yes and one Preferred=No, plus an
-      // Indian dish. Under target, the non-Indian group is promoted above Indian;
-      // within that group the Preferred=Yes dish ranks first.
-      const indian = makeDish({ name: "Indian", cuisine: "Indian", preferred: "No" });
-      const plainThai = makeDish({ name: "PlainThai", cuisine: "Thai", preferred: "No" });
-      const likedItalian = makeDish({ name: "LikedItalian", cuisine: "Italian", preferred: "Yes" });
-      // Input order puts the Preferred=No non-Indian first; the sub-sort lifts the
-      // Preferred=Yes non-Indian ahead of it, both still above the Indian dish.
-      const out = byCuisineDiversity([indian, plainThai, likedItalian], 0);
-      expect(out.map((d) => d.name)).toEqual(["LikedItalian", "PlainThai", "Indian"]);
-    });
-
-    it("keeps the Preferred sub-sort keyed on the property, not dish names (stable within Yes/No)", () => {
-      // Two Preferred=Yes and two Preferred=No non-Indian dishes, interleaved. Both
-      // sub-groups keep their relative input order; only the Yes/No split reorders.
-      const noA = makeDish({ name: "ZNoA", cuisine: "Thai", preferred: "No" });
-      const yesA = makeDish({ name: "ZYesA", cuisine: "Italian", preferred: "Yes" });
-      const noB = makeDish({ name: "ANoB", cuisine: "Greek", preferred: "No" });
-      const yesB = makeDish({ name: "AYesB", cuisine: "Korean", preferred: "Yes" });
-      const out = byCuisineDiversity([noA, yesA, noB, yesB], 0);
-      // Preferred=Yes first (yesA before yesB, input order), then Preferred=No
-      // (noA before noB, input order). No name-based ordering anywhere.
-      expect(out.map((d) => d.name)).toEqual(["ZYesA", "AYesB", "ZNoA", "ANoB"]);
-    });
-
-    it("is a no-op at/above target even with a Preferred=Yes non-Indian dish", () => {
-      // At target the whole step short-circuits, so the Preferred sub-sort never
-      // runs: input order is preserved despite the Preferred=Yes non-Indian dish.
-      const indian = makeDish({ name: "Indian", cuisine: "Indian", preferred: "No" });
-      const likedThai = makeDish({ name: "LikedThai", cuisine: "Thai", preferred: "Yes" });
-      const out = byCuisineDiversity([indian, likedThai], WEEKLY_NON_INDIAN_TARGET);
-      expect(out.map((d) => d.name)).toEqual(["Indian", "LikedThai"]);
-    });
-
-    it("returns an all-Indian pool unchanged even with a Preferred=Yes Indian dish (fallback preserved)", () => {
-      // No non-Indian candidate → fresh-alternative fallback fires before the
-      // Preferred sub-sort, so the pool (Indian, including a Preferred=Yes) is
-      // returned untouched. The Indian group is never reordered by this step.
-      const a = makeDish({ name: "A", cuisine: "Indian", preferred: "No" });
-      const b = makeDish({ name: "B", cuisine: "Indian", preferred: "Yes" });
-      const c = makeDish({ name: "C", cuisine: "Indian", preferred: "No" });
-      const out = byCuisineDiversity([a, b, c], 0);
-      expect(out.map((d) => d.name)).toEqual(["A", "B", "C"]);
-    });
-  });
-
-  describe("placedNonIndianCount", () => {
-    it("counts every non-Indian dish placed, with no exemptions", () => {
-      const indian = makeDish({ cuisine: "Indian" });
-      const thai = makeDish({ cuisine: "Thai" });
-      const italian = makeDish({ cuisine: "Italian" });
-      // A non-Indian fruit still counts toward the week's cuisine mix.
-      const nonIndianFruit = makeDish({ cuisine: "Thai", tags: ["fruit"], category: "Fruit" });
-      expect(placedNonIndianCount([indian, thai, italian, nonIndianFruit])).toBe(3);
-    });
-
-    it("is zero for an empty pick list and for an all-Indian week", () => {
-      expect(placedNonIndianCount([])).toBe(0);
-      expect(
-        placedNonIndianCount([makeDish({ cuisine: "Indian" }), makeDish({ cuisine: "Indian" })]),
-      ).toBe(0);
-    });
-  });
-
-  describe("§4 step 5 end-to-end: cuisine diversity in rankCandidates", () => {
-    it("ranks a non-Indian candidate above a Preferred=Yes Indian dish while under target", () => {
-      const preferredIndian = makeDish({
-        name: "PreferredIndian",
-        cuisine: "Indian",
-        preferred: "Yes",
-      });
-      const plainThai = makeDish({ name: "PlainThai", cuisine: "Thai", preferred: "No" });
-      // Without the cuisine count, Preferred=Yes (step 4) keeps the Indian dish first.
-      const baseline = rankCandidates({ pool: [preferredIndian, plainThai], history: [] });
-      expect(baseline.map((d) => d.name)).toEqual(["PreferredIndian", "PlainThai"]);
-      // Under target, the cuisine step (step 5, after Preferred) lifts the Thai dish.
-      const withCuisine = rankCandidates({
-        pool: [preferredIndian, plainThai],
-        history: [],
-        placedNonIndianCount: 0,
-      });
-      expect(withCuisine.map((d) => d.name)).toEqual(["PlainThai", "PreferredIndian"]);
-    });
-
-    it("is subordinate to within-week recency: cuisine never resurrects a placed dish", () => {
-      // A placed non-Indian dish vs a fresh Indian dish. Cuisine (step 5) would
-      // rank the non-Indian dish up, but within-week recency (step 6, terminal)
-      // sinks the already-placed dish below the fresh one regardless.
-      const placedThai = makeDish({ name: "PlacedThai", cuisine: "Thai" });
-      const freshIndian = makeDish({ name: "FreshIndian", cuisine: "Indian" });
-      const out = rankCandidates({
-        pool: [placedThai, freshIndian],
-        history: [],
-        placedNonIndianCount: 0,
-        withinWeekDishIds: new Set([placedThai.id]),
-      });
-      expect(out.map((d) => d.name)).toEqual(["FreshIndian", "PlacedThai"]);
-    });
-
-    it("is subordinate to within-week protein diversity for HP mains", () => {
-      // A non-Indian HP main on a spent protein vs a fresh-protein Indian HP main.
-      // Cuisine (step 5) prefers the non-Indian dish, but protein diversity
-      // (step 7, terminal) sinks the spent-protein dish below the fresh one.
-      const nonIndianChicken = makeDish({
-        name: "NonIndianChicken",
-        cuisine: "Thai",
-        tags: ["HP"],
-        category: "Gravy dish",
-        primaryIngredient: "Chicken",
-      });
-      const indianFish = makeDish({
-        name: "IndianFish",
-        cuisine: "Indian",
-        tags: ["HP"],
-        category: "Gravy dish",
-        primaryIngredient: "Fish",
-      });
-      const out = rankCandidates({
-        pool: [nonIndianChicken, indianFish],
-        history: [],
-        placedNonIndianCount: 0,
-        usedHpMainProteinFamilies: new Set(["Chicken"]),
-      });
-      expect(out.map((d) => d.name)).toEqual(["IndianFish", "NonIndianChicken"]);
-    });
-
-    it("is a no-op at/above target end-to-end (week ranks as before)", () => {
-      const preferredIndian = makeDish({
-        name: "PreferredIndian",
-        cuisine: "Indian",
-        preferred: "Yes",
-      });
-      const plainThai = makeDish({ name: "PlainThai", cuisine: "Thai", preferred: "No" });
-      const out = rankCandidates({
-        pool: [preferredIndian, plainThai],
-        history: [],
-        placedNonIndianCount: WEEKLY_NON_INDIAN_TARGET,
-      });
-      // Target met → step 5 a no-op → Preferred=Yes Indian dish leads again.
-      expect(out.map((d) => d.name)).toEqual(["PreferredIndian", "PlainThai"]);
-    });
-
-    it("Preferred-first ordering stays subordinate to within-week recency", () => {
-      // An already-placed Preferred=Yes non-Indian dish vs a fresh non-Indian dish.
-      // Cuisine (step 5) would rank the Preferred=Yes dish to the very top of the
-      // promotion, but within-week recency (step 6, terminal) sinks the placed
-      // dish below the fresh one regardless of its Preferred flag.
-      const placedPreferredThai = makeDish({
-        name: "PlacedPreferredThai",
-        cuisine: "Thai",
-        preferred: "Yes",
-      });
-      const freshThai = makeDish({ name: "FreshThai", cuisine: "Thai", preferred: "No" });
-      const out = rankCandidates({
-        pool: [placedPreferredThai, freshThai],
-        history: [],
-        placedNonIndianCount: 0,
-        withinWeekDishIds: new Set([placedPreferredThai.id]),
-      });
-      expect(out.map((d) => d.name)).toEqual(["FreshThai", "PlacedPreferredThai"]);
-    });
-  });
-
-  describe("§4 step 6: within-week recency", () => {
+  describe("§4 step 5: within-week recency", () => {
     it("is a no-op when no within-week set is supplied", () => {
       const a = makeDish({ name: "A" });
       const b = makeDish({ name: "B" });
@@ -511,14 +281,14 @@ describe("priority — docs/engine.md §4", () => {
       const a = makeDish({ name: "A" });
       const b = makeDish({ name: "B" });
       const out = byWithinWeekRecency([a, b], new Set([a.id, b.id]));
-      // No fresh alternative remains → §4 step 6 fallback preserves input order.
+      // No fresh alternative remains → §4 step 5 fallback preserves input order.
       expect(out.map((d) => d.name)).toEqual(["A", "B"]);
     });
 
     it("dominates consolidation and Preferred=Yes end-to-end: a placed favourite still sinks", () => {
       // Reproduces the Cluster A defect at the rankCandidates level: the top
       // dish is Preferred=Yes and never-cooked in cross-week history, so steps 1
-      // to 4 keep it first; step 6 demotes it because it was placed this week.
+      // to 4 keep it first; step 5 demotes it because it was placed this week.
       const placedFavourite = makeDish({
         name: "PlacedFavourite",
         preferred: "Yes",

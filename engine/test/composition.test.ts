@@ -9,8 +9,13 @@ import {
   menu2,
   menu3,
   menu4,
+  menuIntl,
+  isIntlAnchor,
+  isCuisineNeutral,
   lunchCarbPool,
   shouldSubstituteWeekday,
+  selectInternationalSubstitutions,
+  planWeekdaySubstitutions,
   excludeHpIfMealHasHp,
   isHp,
   isSelfSufficientMain,
@@ -261,11 +266,10 @@ describe("composition — docs/engine.md §3", () => {
       const acc = makeDish({ time: "Lunch", category: "Accompaniment" });
       const out = menu1([nonHpGravy, hpGravy, nonHpDry, acc], []);
       // The 4-item thali carries BOTH a dal (non-HP Gravy) and a dry sabzi
-      // (non-HP Dry) around the protein main. The field names are historical;
-      // partnerWhenHpIsDry is the dal pool, partnerWhenHpIsGravy is the sabzi.
+      // (non-HP Dry) around the protein main.
       // An Accompaniment is no longer a Menu 1 position.
-      expect(out.partnerWhenHpIsDry).toEqual([nonHpGravy]);
-      expect(out.partnerWhenHpIsGravy).toEqual([nonHpDry]);
+      expect(out.dal).toEqual([nonHpGravy]);
+      expect(out.drySabzi).toEqual([nonHpDry]);
     });
 
     it("§3 R4 + one-HP-per-meal: the Dry-sabzi pool excludes HP-tagged dishes", () => {
@@ -283,8 +287,8 @@ describe("composition — docs/engine.md §3", () => {
       const acc = makeDish({ time: "Lunch", category: "Accompaniment" });
       const out = menu1([hpGravy, hpDry, plainDry, acc], []);
       // The R4 partner pool keeps only the non-HP Dry sabzi.
-      expect(out.partnerWhenHpIsGravy).toEqual([plainDry]);
-      expect(out.partnerWhenHpIsGravy.some((d) => d.tags.includes("HP"))).toBe(false);
+      expect(out.drySabzi).toEqual([plainDry]);
+      expect(out.drySabzi.some((d) => d.tags.includes("HP"))).toBe(false);
     });
 
     it("§3 R4 partner is property-based: a paneer HP dry sabzi is excluded too", () => {
@@ -304,8 +308,8 @@ describe("composition — docs/engine.md §3", () => {
       });
       const plainDry = makeDish({ time: "Lunch", category: "Dry dish" });
       const out = menu1([hpPaneerGravy, hpPaneerDry, plainDry], []);
-      expect(out.partnerWhenHpIsGravy).toEqual([plainDry]);
-      expect(out.partnerWhenHpIsGravy.some((d) => d.tags.includes("HP"))).toBe(false);
+      expect(out.drySabzi).toEqual([plainDry]);
+      expect(out.drySabzi.some((d) => d.tags.includes("HP"))).toBe(false);
     });
 
     it("lunchCarb pool defaults to Chapati and includes Rice when not already used this week", () => {
@@ -379,6 +383,111 @@ describe("composition — docs/engine.md §3", () => {
       expect(out.completeMealNonHp).toEqual([completeMealNonHp]);
       expect(out.keto).toEqual([keto]);
       expect(out.accompaniment).toEqual([acc]);
+    });
+  });
+
+  describe("§3 Menu intl (international lunch form)", () => {
+    it("isIntlAnchor: non-Indian Lunch in an anchor category; isCuisineNeutral keys on the tag", () => {
+      const thaiGravy = makeDish({ time: "Lunch", category: "Gravy dish", cuisine: "Thai" });
+      const indianGravy = makeDish({ time: "Lunch", category: "Gravy dish", cuisine: "Indian" });
+      const nonIndianAcc = makeDish({ time: "Lunch", category: "Accompaniment", cuisine: "Italian" });
+      const nonIndianBreakfast = makeDish({ time: "Breakfast", category: "Dry dish", cuisine: "Thai" });
+      expect(isIntlAnchor(thaiGravy)).toBe(true);
+      expect(isIntlAnchor(indianGravy)).toBe(false); // Indian is never an intl anchor
+      expect(isIntlAnchor(nonIndianAcc)).toBe(false); // Accompaniment is not an anchor category
+      expect(isIntlAnchor(nonIndianBreakfast)).toBe(false); // Lunch only
+      expect(isCuisineNeutral(makeDish({ tags: ["cuisine_neutral"] }))).toBe(true);
+      expect(isCuisineNeutral(makeDish({ tags: ["HP"] }))).toBe(false);
+    });
+
+    it("companion pools are same-cuisine-or-neutral and the form carries no Indian carb", () => {
+      const anchor = makeDish({ time: "Lunch", category: "Dry dish", cuisine: "Continental", tags: ["HP"], primaryIngredient: "Chicken Breast" });
+      const sameCuisineVeg = makeDish({ time: "Lunch", category: "Dry dish", cuisine: "Continental" });
+      const sameCuisineProtein = makeDish({ time: "Lunch", category: "Keto", cuisine: "Continental", tags: ["HP"] });
+      const neutralProtein = makeDish({ time: "Lunch", category: "Keto", cuisine: "Indian", tags: ["HP", "cuisine_neutral"], primaryIngredient: "Chicken Breast" });
+      const otherCuisineVeg = makeDish({ time: "Lunch", category: "Dry dish", cuisine: "Thai" });
+      const indianCarb = makeDish({ time: "Lunch", category: "Chapati", cuisine: "Indian" });
+      const out = menuIntl(
+        [anchor, sameCuisineVeg, sameCuisineProtein, neutralProtein, otherCuisineVeg, indianCarb],
+        anchor,
+      );
+      expect(out.kind).toBe("menu-intl");
+      // proteinCompanion: same-cuisine OR neutral HP/Keto; never the other cuisine.
+      expect(out.proteinCompanion).toContain(sameCuisineProtein);
+      expect(out.proteinCompanion).toContain(neutralProtein);
+      expect(out.proteinCompanion).not.toContain(otherCuisineVeg);
+      // sideCompanion: same-cuisine non-HP veg; never the other cuisine, never the Indian carb.
+      expect(out.sideCompanion).toContain(sameCuisineVeg);
+      expect(out.sideCompanion).not.toContain(otherCuisineVeg);
+      const pooled = [...out.anchor, ...out.proteinCompanion, ...out.sideCompanion];
+      expect(pooled.some((d) => d.category === "Chapati" || d.category === "Rice")).toBe(false);
+    });
+
+    it("an undefined anchor (defensive) keeps only cuisine_neutral companions", () => {
+      const thaiProtein = makeDish({ time: "Lunch", category: "Keto", cuisine: "Thai", tags: ["HP"] });
+      const neutralProtein = makeDish({ time: "Lunch", category: "Keto", cuisine: "Indian", tags: ["HP", "cuisine_neutral"] });
+      const out = menuIntl([thaiProtein, neutralProtein], undefined);
+      // No anchor cuisine to match → only the neutral protein qualifies.
+      expect(out.proteinCompanion).toEqual([neutralProtein]);
+    });
+  });
+
+  describe("§3.2 international substitution selection", () => {
+    function intlAnchor(id: number, cuisine: Dish["cuisine"], extra: Partial<Dish> = {}): Dish {
+      return makeDish({ id, time: "Lunch", category: "Gravy dish", cuisine, tags: ["HP"], ...extra });
+    }
+
+    it("selects up to two anchors, preferring distinct cuisines", () => {
+      const lib = [
+        intlAnchor(160, "Thai"),
+        intlAnchor(161, "Thai"),
+        intlAnchor(164, "Chinese"),
+        // an Indian protein candidate so the trigger has a day's protein to compare against
+        makeDish({ id: 1, time: "Lunch", category: "Gravy dish", cuisine: "Indian", tags: ["HP"] }),
+      ];
+      const out = selectInternationalSubstitutions({ library: lib, history: emptyHistory, season: "Summer" });
+      expect(out.length).toBe(2);
+      const cuisines = out.map((d) => lib.find((x) => x.id === d.leadDishId)!.cuisine);
+      // Distinct cuisines preferred: Thai (longest-unused, lowest id) then Chinese, not Thai twice.
+      expect(new Set(cuisines).size).toBe(2);
+      expect(out.every((d) => d.form === "menu-intl")).toBe(true);
+      // Distinct days, no double-substitution.
+      expect(new Set(out.map((d) => d.day)).size).toBe(out.length);
+    });
+
+    it("planWeekdaySubstitutions: international claims days first, complete_meal takes a different day", () => {
+      const lib = [
+        intlAnchor(160, "Thai"),
+        intlAnchor(164, "Chinese"),
+        makeDish({ id: 1, time: "Lunch", category: "Gravy dish", cuisine: "Indian", tags: ["HP"] }),
+        makeDish({ id: 2, time: "Lunch", category: "Keto", cuisine: "Indian" }),
+        makeDish({
+          id: 50,
+          time: "Lunch",
+          category: "Complete meal",
+          cuisine: "Indian",
+          tags: ["complete_meal", "HP"],
+          primaryIngredient: "Chicken",
+        }),
+      ];
+      const out = planWeekdaySubstitutions({ library: lib, history: emptyHistory, season: "Summer" });
+      const intl = out.filter((d) => d.form === "menu-intl");
+      const cm = out.filter((d) => d.form === "menu-3" || d.form === "menu-4");
+      expect(intl.length).toBe(2);
+      expect(cm.length).toBeLessThanOrEqual(1);
+      // No day is substituted twice.
+      expect(new Set(out.map((d) => d.day)).size).toBe(out.length);
+      // The complete_meal lead is never one of the international anchors.
+      const intlIds = new Set(intl.map((d) => d.leadDishId));
+      expect(cm.every((d) => !intlIds.has(d.leadDishId))).toBe(true);
+    });
+
+    it("returns no international substitution when the anchor pool is empty (all-Indian library)", () => {
+      const lib = [
+        makeDish({ id: 1, time: "Lunch", category: "Gravy dish", cuisine: "Indian", tags: ["HP"] }),
+        makeDish({ id: 2, time: "Lunch", category: "Chapati", cuisine: "Indian" }),
+      ];
+      expect(selectInternationalSubstitutions({ library: lib, history: emptyHistory, season: "Summer" })).toEqual([]);
     });
   });
 
@@ -654,6 +763,25 @@ describe("composition — docs/engine.md §3", () => {
       const m4 = out as Menu4CandidateSet;
       expect(m4.kind).toBe("menu-4");
       expect(m4.completeMealNonHp).toEqual([cm]);
+    });
+
+    it("dispatches a Lunch slot with intlAnchorDishId to the international form", () => {
+      const anchor = makeDish({
+        id: 500,
+        time: "Lunch",
+        category: "Dry dish",
+        cuisine: "Continental",
+        tags: ["HP"],
+        primaryIngredient: "Chicken Breast",
+      });
+      const out = composeSlot({
+        slot: { day: "Tue", meal: "Lunch", itemCount: 2, intlAnchorDishId: 500 },
+        library: [anchor],
+        history: emptyHistory,
+        season: "Summer",
+      });
+      expect(out.kind).toBe("menu-intl");
+      expect((out as { anchor: Dish[] }).anchor).toEqual([anchor]);
     });
 
     it("applies §1 eligibility (active + season) before §3 composition", () => {

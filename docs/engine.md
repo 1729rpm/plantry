@@ -63,7 +63,7 @@ Breakfast chutney (dish-driven, all breakfast slots): the breakfast accompanimen
 - 1 non-HP dry sabzi (Category=Dry dish)
 - 1 lunch carb (see §3.1)
 
-The Indian weekday lunch aspires to the four-item thali: a protein main with both a dal and a dry sabzi around it, plus the lunch carb. This is the same form as Menu 2 below, differing only in the protein source (an HP Gravy/Dry main rather than a Keto dish). The protein main is the meal's only HP position; the dal and dry-sabzi pools both exclude HP-tagged dishes (the one-HP-source-per-meal rule above), keyed on the HP tag, not on dish names. The four-item aspiration is day-budgeted by the §9 role-aware cap, not by Menu 1 itself: on a full (2-item) breakfast day the cap drops the dry sabzi (a companion side), so the lunch lands at the 5-item day cap as a 3-item lunch (protein main + dal + carb); on a light (1-item) breakfast day all four survive. Thin pools degrade gracefully (the dal or the sabzi is simply omitted), and a slot with no eligible HP main falls back to a lunch carb so it still fills. Complete_meal lunches are exempt (a self-sufficient main fills its slot alone; see Self-sufficient mains above), so they reach the Menu 3 / Menu 4 forms rather than this thali. Pairing a sabzi with a self-sufficient gravy such as kadhi is left to in-week manual swap.
+The Indian weekday lunch aspires to the four-item thali: a protein main with both a dal and a dry sabzi around it, plus the lunch carb. This is the same form as Menu 2 below, differing only in the protein source (an HP Gravy/Dry main rather than a Keto dish). **Cuisine is meal-level: Menu 1 (and Menu 2) compose Indian-cuisine dishes only** (`cuisine === "Indian"`, keyed on the field, never on names), so the Indian thali never lands a lone non-Indian sabzi or dal in an otherwise-Indian plate; non-Indian dishes reach the menu through the international form (Menu intl, §3.2). The protein main is the meal's only HP position; the dal and dry-sabzi pools both exclude HP-tagged dishes (the one-HP-source-per-meal rule above), keyed on the HP tag, not on dish names. The four-item aspiration is day-budgeted by the §9 role-aware cap, not by Menu 1 itself: on a full (2-item) breakfast day the cap drops the dry sabzi (a companion side), so the lunch lands at the 5-item day cap as a 3-item lunch (protein main + dal + carb); on a light (1-item) breakfast day all four survive. Thin pools degrade gracefully (the dal or the sabzi is simply omitted), and a slot with no eligible HP main falls back to a lunch carb so it still fills. Complete_meal lunches are exempt (a self-sufficient main fills its slot alone; see Self-sufficient mains above), so they reach the Menu 3 / Menu 4 forms rather than this thali. Pairing a sabzi with a self-sufficient gravy such as kadhi is left to in-week manual swap.
 
 **Menu 2 (Tue, Thu), the same 4-item thali, Keto-led:**
 
@@ -72,7 +72,21 @@ The Indian weekday lunch aspires to the four-item thali: a protein main with bot
 - 1 non-HP Dry dish
 - 1 lunch carb (see §3.1)
 
-The Keto dish is the meal's protein lead and the only position that may be HP; the Gravy and Dry companions are already non-HP, so one-HP-per-meal holds by construction. Tue/Thu carry a 1-item breakfast, so the 4-item thali fits the 5-item day cap whole; the role-aware cap (§9) only trims it on the rare day a Tue/Thu breakfast runs to two or more items.
+The Keto dish is the meal's protein lead and the only position that may be HP; the Gravy and Dry companions are already non-HP, so one-HP-per-meal holds by construction. Like Menu 1, Menu 2 composes Indian-cuisine dishes only. Tue/Thu carry a 1-item breakfast, so the 4-item thali fits the 5-item day cap whole; the role-aware cap (§9) only trims it on the rare day a Tue/Thu breakfast runs to two or more items.
+
+**Menu intl (substituted weekday lunch), the coherent non-Indian form:**
+
+- 1 non-Indian anchor main (`cuisine !== "Indian"`, Category in {Gravy dish, Dry dish, Keto, Complete meal})
+- at most 1 companion, same-cuisine-or-`cuisine_neutral`
+- no Indian carb
+
+Up to two weekday lunches per week run this form instead of the Indian thali (the §3.2 international substitution selects which days and which anchors). The form keeps a meal in one cuisine register: a companion is eligible only when it shares the anchor's cuisine OR carries the `cuisine_neutral` tag (a plain protein that pairs with any register, e.g. grilled chicken breast, boiled eggs). The companion depends on the anchor:
+
+- A **self-sufficient** anchor (`complete_meal` tag or Category=Complete meal, e.g. a fried rice or pasta) fills the slot alone (the self-sufficient-main rule above); the cuisine's carb is built into the dish.
+- A **protein** anchor (HP or Category=Keto) takes at most one same-cuisine-or-neutral NON-HP veg side. The anchor is the meal's one HP source, so the side pool excludes HP-tagged dishes (one HP per meal).
+- A **veg-forward** anchor (not HP, not Keto, not a complete_meal, e.g. Continental baked vegetables) takes one same-cuisine-or-neutral HP/Keto protein companion, so a veg-forward dish is never served without a protein.
+
+The form has no Chapati/Rice position (no Indian carb). The picks carry §9 roles: the anchor is `protein-main`, a veg-forward anchor's protein companion is a protected `protein-floor`, and a protein anchor's veg side is a droppable `accompaniment`. The meal is small (one or two items), so the §9 cap rarely trims it. Thin pools degrade gracefully: a missing companion leaves the anchor as a valid 1-item international meal.
 
 **Menu 3 (Saturday), 3 items:**
 
@@ -94,19 +108,31 @@ Default: pick a dish with Category=Chapati.
 Constraint: dishes with Category=Rice appear at most once per week.
 The recency rule (§4) does not apply to lunch carbs.
 
-### 3.2 Weekday complete meal substitution
+### 3.2 Weekday lunch substitution
 
-One weekday lunch per week may swap its default menu for Menu 3 or Menu 4:
+Some weekday lunches swap their default Indian thali (Menu 1/2) for another form. Two kinds of substitution share this machinery and are planned together so a day is never substituted twice.
+
+**International substitution (up to two weekday lunches).** Cuisine coherence is a meal-level concern, so the week's non-Indian lunches are placed here, as whole coherent meals, rather than nudged in per position. Selection:
+
+- **Anchor pool:** Active, in-season, non-Indian (`cuisine !== "Indian"`) Lunch dishes in an anchor category (Gravy dish, Dry dish, Keto, Complete meal).
+- **Ranking:** rank the anchor pool longest-unused (§4.1) and take up to two anchors, **preferring two distinct cuisines** (don't make both international meals the same cuisine when an alternative exists).
+- **Placement:** assign each chosen anchor to the earliest weekday lunch whose would-be Indian protein main is not strictly longer-unused than the anchor (a recency comparison mirroring trigger (b) below, with ties favouring the international form, since meal-level cuisine coherence is the goal). Each anchor takes a distinct day. The day then runs the Menu intl form (§3 above), anchored on that dish.
+
+An empty or only-recently-cooked anchor pool yields fewer than two (or zero) international lunches; the other weekday lunches stay the Indian thali.
+
+**Complete_meal substitution (at most one weekday lunch).** One further weekday lunch may swap its default menu for Menu 3 or Menu 4:
 
 - Menu 3 form (complete_meal+HP + Accompaniment + Dessert) when the lead complete_meal is HP-tagged.
 - Menu 4 form (complete_meal + Keto + Accompaniment) when the lead complete_meal is non-HP.
 
-Substitution is triggered when either:
+Triggered when either:
 
 - a. The user requests a specific complete_meal Lunch dish for the week, or
-- b. The longest-unused eligible complete_meal Lunch dish (per §4.1) is older than the longest-unused candidate that would otherwise fill the day's protein slot (HP for Menu 1, Keto for Menu 2).
+- b. The longest-unused eligible complete_meal Lunch dish (per §4.1) is older than the longest-unused candidate that would otherwise fill the day's Indian protein slot (HP for Menu 1, Keto for Menu 2).
 
-The supporting items (Accompaniment, Dessert) are then picked per §4 from their composition-defined candidate sets. Saturday's own Menu 3/4 alternation (§2) is independent of this weekday substitution.
+The supporting items (Accompaniment, Dessert) are then picked per §4 from their composition-defined candidate sets.
+
+**Coexistence.** The international substitution claims its days and its anchor dishes first; the complete_meal substitution then runs on a remaining day and never re-pins an international anchor. So a day is never double-substituted, and the two-vs-one counts never collide. Saturday's own Menu 3/4 alternation (§2) is independent of all weekday substitution.
 
 ### 3.3 Fruit of the day
 
@@ -125,15 +151,16 @@ After §3 composition has produced the candidate set for a slot, rank candidates
 2. **Same-day key ingredient deprioritisation.** If breakfast's Primary Ingredient on the same day matches a candidate's Primary Ingredient, deprioritise the candidate. If no viable alternative exists, allow the repeat.
 3. **Ingredient consolidation (§10).** Prefer candidates that consume leftover from earlier picks in the week.
 4. **Preferred=Yes** over Preferred=No.
-5. **Within-week cuisine diversity.** A soft, target-gated nudge that leans the week slightly less Indian on a standing basis without flipping it international. It tracks how many non-Indian dishes (`cuisine !== "Indian"`, the only `cuisine` use in any rule) have already been placed in the week being generated, against the constant `WEEKLY_NON_INDIAN_TARGET` (default 3). While that count is below the target, the step partitions each slot's pool so non-Indian candidates rank above Indian ones, stable within each group; once the target is met the step is a no-op, so the rest of the week ranks exactly as before. Within the promoted non-Indian group, `Preferred=Yes` dishes rank first (a stable sub-sort keyed on the `preferred` property, never dish names), so the international dishes marked preferred float to the top of the promotion ahead of the rest of the non-Indian pool; the Indian group is untouched. This is purely an intra-group ordering: it promotes no additional dish and reorders no Indian dish, and it is inert while every international dish is `preferred: No`. That gate is what bounds the effect to "slightly": roughly `WEEKLY_NON_INDIAN_TARGET` non-Indian dishes a week (a slot can carry the week just over the target, since the count updates between slots, not between the positions of one slot), with every other slot unchanged. The step sits after Preferred=Yes (step 4), so in the at-most-target slots where it fires it can promote a non-Indian candidate above a Preferred=Yes Indian dish; it stays subordinate to the two terminal partitions (steps 6 and 7), which run after it, so it can never force a dish repeat or an HP-protein clash to hit the cuisine target. It is soft with a fresh-alternative fallback (mirroring step 2): if a slot's pool holds no non-Indian candidate (an all-Indian lunch-carb pool, a Category=Fruit pool), promoting none equals promoting all and the pool is returned unchanged, so fruit and lunch-carb slots need no explicit exemption. It never narrows §3 composition eligibility and never empties a slot.
-6. **Within-week recency.** A dish already placed in an earlier slot of the week being generated is treated as most-recently-used for every subsequent slot's ranking, so it sinks below any fresh (not-yet-placed-this-week) alternative. This is a dominant ordering: unlike step 1's `menu_history.md` recency, it is applied near-last, so none of consolidation (step 3), Preferred=Yes (step 4), or cuisine diversity (step 5) can re-promote an already-placed dish above an equally eligible fresh one. It exists because the cross-week history (step 1) is silent on the in-progress week, so without it a single broad pool's top-ranked dish (e.g. the longest-unused HP gravy) wins every Menu 1 slot Mon/Wed/Fri identically. When every candidate has already been placed this week, demoting them all is the same as demoting none, so the pool is returned unchanged and the repeat is allowed (the fresh-alternative fallback, mirroring step 2).
-7. **Within-week protein diversity (HP mains only).** This is the protein-level analogue of step 6, scoped to HP mains. An HP main is an `HP`-tagged dish in a meal's protein-main slot: Category in {Gravy dish, Dry dish, Complete meal, Keto}. (HP accompaniments are sides, not mains, so they neither consume nor are governed by this step; the one-HP-per-meal rule in §3 already keeps them off an HP-main meal.) When ranking an HP-main pool, a candidate whose **protein family** (see §4.6) already appeared as an HP main earlier in the week is deprioritised below the fresh-protein candidates, so a fresh protein ranks up and the week's HP mains spread across proteins (fish, prawn, mutton, egg get a fair shot) rather than repeating chicken or paneer. This is a soft preference, not a hard constraint: if every candidate's protein family already appeared (no fresh-protein alternative), the pool is returned unchanged so the slot still fills (the fresh-alternative fallback, mirroring steps 2 and 6). It never narrows §3 composition eligibility and never overrides the recency exemptions (below). It applies only to HP-main position pools; companion (non-main) pools are never reordered by protein.
+5. **Within-week recency.** A dish already placed in an earlier slot of the week being generated is treated as most-recently-used for every subsequent slot's ranking, so it sinks below any fresh (not-yet-placed-this-week) alternative. This is a dominant ordering: unlike step 1's `menu_history.md` recency, it is applied near-last, so neither consolidation (step 3) nor Preferred=Yes (step 4) can re-promote an already-placed dish above an equally eligible fresh one. It exists because the cross-week history (step 1) is silent on the in-progress week, so without it a single broad pool's top-ranked dish (e.g. the longest-unused HP gravy) wins every Menu 1 slot Mon/Wed/Fri identically. When every candidate has already been placed this week, demoting them all is the same as demoting none, so the pool is returned unchanged and the repeat is allowed (the fresh-alternative fallback, mirroring step 2).
+6. **Within-week protein diversity (HP mains only).** This is the protein-level analogue of step 5, scoped to HP mains. An HP main is an `HP`-tagged dish in a meal's protein-main slot: Category in {Gravy dish, Dry dish, Complete meal, Keto}. (HP accompaniments are sides, not mains, so they neither consume nor are governed by this step; the one-HP-per-meal rule in §3 already keeps them off an HP-main meal.) When ranking an HP-main pool, a candidate whose **protein family** (see §4.6) already appeared as an HP main earlier in the week is deprioritised below the fresh-protein candidates, so a fresh protein ranks up and the week's HP mains spread across proteins (fish, prawn, mutton, egg get a fair shot) rather than repeating chicken or paneer. This is a soft preference, not a hard constraint: if every candidate's protein family already appeared (no fresh-protein alternative), the pool is returned unchanged so the slot still fills (the fresh-alternative fallback, mirroring steps 2 and 5). It never narrows §3 composition eligibility and never overrides the recency exemptions (below). It applies only to HP-main position pools; companion (non-main) pools are never reordered by protein.
 
-Recency exemptions (apply to step 1 and step 6): dishes with the `fruit` tag, and lunch carbs (Category in {Chapati, Rice}). A fruit-tagged dish repeating across days as the Fruit of the day (§3.3) and Roti repeating across lunches are intended, not defects. Step 5 (cuisine diversity) and step 7 (protein diversity) have their own fresh-alternative fallbacks instead of an exemption list: a fruit or lunch-carb pool that holds no non-Indian candidate is a cuisine no-op, and step 7 acts only on HP mains, none of which are exempt categories, so the exemption list does not interact with either.
+Cuisine is no longer a §4 ranking step. It was a per-position within-week nudge (the former step 5); cuisine coherence is now a §3 meal-level composition concern (the Indian thali composes Indian dishes, and the international form, §3/§3.2, places coherent non-Indian lunches), so the per-position nudge is removed. §4 selection no longer reads `cuisine`.
+
+Recency exemptions (apply to step 1 and step 5): dishes with the `fruit` tag, and lunch carbs (Category in {Chapati, Rice}). A fruit-tagged dish repeating across days as the Fruit of the day (§3.3) and Roti repeating across lunches are intended, not defects. Step 6 (protein diversity) has its own fresh-alternative fallback instead of an exemption list: it acts only on HP mains, none of which are exempt categories, so the exemption list does not interact with it.
 
 ### 4.6 Protein-family normalization
 
-Step 7 compares dishes by protein family, not by raw `primaryIngredient`, so cuts of the same protein count as one protein for diversity. The mapping collapses these families and passes every other ingredient through unchanged (each is its own family):
+Step 6 compares dishes by protein family, not by raw `primaryIngredient`, so cuts of the same protein count as one protein for diversity. The mapping collapses these families and passes every other ingredient through unchanged (each is its own family):
 
 | `primaryIngredient` | Protein family |
 | ------------------- | -------------- |
@@ -280,13 +307,14 @@ Alongside the blocking validators (§1, §12), a reporting layer in `engine/src/
   - `complete_meal`: standalone dish, no sides needed.
   - `complete_carb`: substantial carb needing only an accompaniment.
   - `fruit`: marks a Fruit-of-the-day candidate (§3.3); recency-exempt.
+  - `cuisine_neutral`: marks a plain protein with no cuisine character (grilled chicken breast, boiled eggs) that pairs with any register. An eligible companion in the §3 international lunch form regardless of the anchor's cuisine.
 - `primaryIngredient`: dominant fresh or packaged ingredient. Drives §4.2 same-day deprioritisation and §10 consolidation. A free categorization label, not required to match a catalog ingredient name. Use `Mixed Veg` when no single vegetable dominates (it never triggers consolidation but does trigger same-day deduplication).
 - `preferred`: Yes/No. Used as a tiebreaker in §4.4.
 - `active`: Yes/No. Eligibility filter per §1.
 - `satiety`: High, Medium, or Low. Used by §9.
 - `prepMinutes`: estimated active prep time in minutes. Used by §9 tiebreaker.
 - `seasons`: a season list, or `All` for year-round.
-- `cuisine`: a single cuisine, the human-readable name (Indian, Italian, Chinese, Mexican, Greek, Spanish, Korean, Japanese, Continental, Vietnamese, Lebanese, Mediterranean, Thai). A display and filter field that §4 selection reads for the within-week cuisine-diversity step (§4 step 5) only: §1 eligibility and §3 composition never read it, so it never narrows a pool or makes a dish eligible or ineligible. It is the single source of truth for the Explore cuisine filter, the Explore card's cuisine display, and the dish-photo prompt's cuisine slot (engineering.md §4). Dishes with no international cuisine are `Indian`, and `cuisine !== "Indian"` is the non-Indian test §4 step 5 uses. Required on every dish.
+- `cuisine`: a single cuisine, the human-readable name (Indian, Italian, Chinese, Mexican, Greek, Spanish, Korean, Japanese, Continental, Vietnamese, Lebanese, Mediterranean, Thai). A display, filter, and **§3 composition** field. §3 reads it for meal-level cuisine coherence: the Indian thali (Menu 1/2) composes only `cuisine === "Indian"` dishes, and the international form and its §3.2 selection use `cuisine !== "Indian"` for the anchor pool and same-cuisine companion match. §1 eligibility and §4 selection do not read it (the former per-position cuisine-diversity step is gone, §4). It is the single source of truth for the Explore cuisine filter, the Explore card's cuisine display, and the dish-photo prompt's cuisine slot (engineering.md §4). Dishes with no international cuisine are `Indian`, and `cuisine !== "Indian"` is the non-Indian test. Required on every dish.
 
 Enrichment fields, all optional (absent on a dish parses unchanged; the UI degrades gracefully when missing):
 

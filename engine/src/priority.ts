@@ -38,17 +38,7 @@ export interface RankCandidatesArgs {
    */
   consolidationContext?: ConsolidationContext | null;
   /**
-   * §4 step 5 within-week cuisine diversity: the count of non-Indian dishes
-   * (`cuisine !== "Indian"`) already placed in an earlier slot of the week being
-   * generated. While this count is below `WEEKLY_NON_INDIAN_TARGET`, the
-   * cuisine-diversity step ranks non-Indian candidates above Indian ones in each
-   * slot's pool; at or above the target the step is a no-op. Build it with
-   * `placedNonIndianCount`. Undefined leaves the step a no-op (treated as below
-   * target only when supplied), so every existing caller is unchanged.
-   */
-  placedNonIndianCount?: number;
-  /**
-   * §4 step 6 within-week recency: ids of dishes already placed in an earlier
+   * §4 step 5 within-week recency: ids of dishes already placed in an earlier
    * slot of the week being generated. Any non-exempt candidate whose id is in
    * this set is demoted below the fresh (not-yet-placed) candidates, dominating
    * steps 1 to 5 so a broad pool's favourite cannot win every slot identically.
@@ -58,7 +48,7 @@ export interface RankCandidatesArgs {
    */
   withinWeekDishIds?: ReadonlySet<number>;
   /**
-   * §4 step 7 within-week protein diversity (HP mains only): the set of protein
+   * §4 step 6 within-week protein diversity (HP mains only): the set of protein
    * families (`proteinFamily`) already placed as an HP main earlier in the week.
    * Supplied only when this slot is ranking an HP-main pool. A candidate whose
    * protein family is in this set is softly deprioritised below fresh-protein
@@ -72,27 +62,6 @@ export interface RankCandidatesArgs {
 }
 
 const LUNCH_CARB_CATEGORIES = new Set(["Chapati", "Rice"]);
-
-/**
- * §4 step 5 within-week cuisine diversity: how many non-Indian dishes the week
- * aims for. While fewer than this many non-Indian dishes have been placed in the
- * week being generated, the cuisine-diversity step partitions each slot's pool so
- * non-Indian candidates rank above Indian ones; at or above this count the step
- * is a no-op, which is what bounds the effect to "slightly". Tunable in one place.
- * Keep this in lockstep with docs/engine.md §4 step 5.
- */
-export const WEEKLY_NON_INDIAN_TARGET = 3;
-
-/**
- * §4 cuisine test: a dish is non-Indian when its `cuisine` property is anything
- * other than "Indian". Dishes carrying no international cuisine are tagged
- * `Indian` in the library (docs/engine.md §12), so this single comparison
- * partitions the pool. Property-based: keyed on the `cuisine` field, never on
- * dish names or ids.
- */
-function isNonIndian(dish: Dish): boolean {
-  return dish.cuisine !== "Indian";
-}
 
 /**
  * §4.6 protein-family normalization. Collapses `primaryIngredient` values that
@@ -127,7 +96,7 @@ export function proteinFamily(dish: Dish): string {
 
 /**
  * §4 recency exemption: dishes with the `fruit` tag and lunch carbs (Category
- * in {Chapati, Rice}) are exempt from both step 1 (longest unused) and step 6
+ * in {Chapati, Rice}) are exempt from both step 1 (longest unused) and step 5
  * (within-week recency). They pass through with a neutral rank so neither step
  * reorders them relative to each other or to non-exempt dishes; this is what
  * lets fruit-tagged dishes recur Mon/Wed/Fri and Roti recur across lunches.
@@ -139,7 +108,7 @@ function isRecencyExempt(dish: Dish): boolean {
 }
 
 /**
- * Build the §4 step 6 within-week demotion set from the dishes already placed
+ * Build the §4 step 5 within-week demotion set from the dishes already placed
  * earlier in the week being generated. Exempt dishes (fruit, lunch carbs) are
  * left out so they stay free to repeat. Shared by the generateWeek loop and the
  * single-slot picker (rankCandidatesForSlot), so the within-week recency rule
@@ -253,99 +222,13 @@ export function byPreferredYes(pool: Dish[]): Dish[] {
 }
 
 /**
- * §4 step 5: within-week cuisine diversity. A soft, target-gated partition that
- * nudges a small, fixed number of non-Indian dishes into each week without
- * flipping the menu international. While the week has placed fewer than
- * `WEEKLY_NON_INDIAN_TARGET` non-Indian dishes (`placedNonIndianCount` below the
- * target), non-Indian candidates (`cuisine !== "Indian"`) rank above Indian ones,
- * stable within each group; once the target is met the step is a no-op, so the
- * rest of the week ranks exactly as before. This is what bounds the effect to
- * "slightly": ~`WEEKLY_NON_INDIAN_TARGET` international dishes a week, every other
- * slot unchanged.
- *
- * It sits after Preferred=Yes (step 4), so in the at-most-`target` slots where it
- * fires it can promote a non-Indian candidate above a Preferred=Yes Indian dish.
- * It stays subordinate to the two dominant terminal partitions (within-week
- * recency, within-week protein diversity), which run after it, so it can never
- * force a dish repeat or an HP-protein clash just to hit the cuisine target.
- *
- * Within the promoted non-Indian group, Preferred=Yes dishes rank first: a stable
- * sub-sort keyed on the `preferred` property (never dish names), so that when a
- * companion data pass marks the international dishes Rajat actually likes as
- * `preferred: Yes`, those float to the top of the promotion ahead of the rest of
- * the non-Indian pool. The Indian group is left untouched. This is purely an
- * intra-group ordering: it promotes no new dish (the non-Indian/Indian split is
- * unchanged) and is inert while every international dish is `preferred: No` (the
- * default), which is the case until that data pass lands.
- *
- * Soft with a fresh-alternative fallback, mirroring steps 2, 6, and 7: if the
- * pool has no non-Indian candidate (an all-Indian lunch-carb pool, a
- * Category=Fruit pool), promoting none equals promoting all, so the pool is
- * returned unchanged. This is why fruit slots and lunch-carb slots need no
- * explicit exemption: they hold no non-Indian candidate, so the step never
- * touches them. It never narrows §3 composition eligibility and never empties a
- * slot. Undefined `placedNonIndianCount` leaves the step a no-op, so every
- * existing caller is unchanged.
- */
-export function byCuisineDiversity(pool: Dish[], placedNonIndianCount: number | undefined): Dish[] {
-  // No-op once the target is met (or when the count is not supplied at all).
-  if (placedNonIndianCount === undefined) return pool;
-  if (placedNonIndianCount >= WEEKLY_NON_INDIAN_TARGET) return pool;
-  const nonIndian: Dish[] = [];
-  const indian: Dish[] = [];
-  for (const dish of pool) {
-    if (isNonIndian(dish)) {
-      nonIndian.push(dish);
-    } else {
-      indian.push(dish);
-    }
-  }
-  // No non-Indian candidate → no diversity gain available; leave the pool as is
-  // (fresh-alternative fallback). This makes fruit and lunch-carb pools no-ops
-  // with no explicit exemption.
-  if (nonIndian.length === 0) return pool;
-  // Within the promoted non-Indian group, Preferred=Yes ranks first. Stable
-  // sub-sort keyed on the `preferred` property: the relative order of the
-  // previous step is preserved inside each of the Yes / No sub-groups. The
-  // Indian group is unchanged.
-  const preferredNonIndian: Dish[] = [];
-  const otherNonIndian: Dish[] = [];
-  for (const dish of nonIndian) {
-    if (dish.preferred === "Yes") {
-      preferredNonIndian.push(dish);
-    } else {
-      otherNonIndian.push(dish);
-    }
-  }
-  return [...preferredNonIndian, ...otherNonIndian, ...indian];
-}
-
-/**
- * Build the §4 step 5 placed-non-Indian count from the dishes already placed
- * this week. Counts every non-Indian dish (`cuisine !== "Indian"`), with no
- * exemptions: a non-Indian fruit or lunch carb still counts toward the week's
- * cuisine target, since the target is about the week's overall cuisine mix.
- * Shared by the generateWeek loop and the single-slot picker
- * (rankCandidatesForSlot), so the count has one definition, not two. Pass the
- * running list of this-week picks; the returned number feeds
- * `RankCandidatesArgs.placedNonIndianCount`.
- */
-export function placedNonIndianCount(picks: Dish[]): number {
-  let count = 0;
-  for (const dish of picks) {
-    if (isNonIndian(dish)) count += 1;
-  }
-  return count;
-}
-
-/**
- * §4 step 6: within-week recency. A candidate already placed earlier in the
+ * §4 step 5: within-week recency. A candidate already placed earlier in the
  * week being generated (its id is in `withinWeekDishIds`) is treated as the
  * most-recently-used dish, so it sinks below every fresh (not-yet-placed)
  * candidate. Applied near-last and as a stable partition, it dominates steps 1
- * to 5: a dish that consolidation (step 3), Preferred=Yes (step 4), or cuisine
- * diversity (step 5) re-promoted is still pushed below the fresh alternatives,
- * so a broad pool's favourite cannot win every Mon/Wed/Fri slot identically.
+ * to 4: a dish that consolidation (step 3) or Preferred=Yes (step 4) re-promoted
+ * is still pushed below the fresh alternatives, so a broad pool's favourite
+ * cannot win every Mon/Wed/Fri slot identically.
  * Exempt dishes (fruit, lunch carbs) are never in the demotion set, so they keep
  * their place. Fallback: if every candidate has already been placed this week,
  * demoting them all equals demoting none, so the pool is returned unchanged and
@@ -371,17 +254,17 @@ export function byWithinWeekRecency(
 }
 
 /**
- * §4 step 7: within-week protein diversity for HP mains. A candidate whose
+ * §4 step 6: within-week protein diversity for HP mains. A candidate whose
  * protein family (`proteinFamily`) already appeared as an HP main earlier in the
  * week (its family is in `usedProteinFamilies`) is softly deprioritised below
  * the fresh-protein candidates, so a week's HP mains spread across proteins
  * rather than repeating chicken or paneer while fish/prawn/mutton/egg never
- * surface. This is the protein-level analogue of step 6's dish-level recency,
+ * surface. This is the protein-level analogue of step 5's dish-level recency,
  * scoped to HP mains: it runs as the terminal partition so it dominates the
- * earlier tie-breaks the same way step 6 does. It is a SOFT preference, never a
+ * earlier tie-breaks the same way step 5 does. It is a SOFT preference, never a
  * hard constraint: if every candidate's protein family already appeared (no
  * fresh-protein alternative), the pool is returned unchanged so the slot still
- * fills (mirrors the step 2 and step 6 fresh-alternative fallbacks). It never
+ * fills (mirrors the step 2 and step 5 fresh-alternative fallbacks). It never
  * touches §3 composition eligibility or the recency exemptions. Undefined or
  * empty `usedProteinFamilies` leaves the step a no-op, so non-HP-main pools and
  * every pre-Cluster-E caller are unchanged.
@@ -410,7 +293,7 @@ export function byProteinDiversity(
 }
 
 /**
- * Build the §4 step 7 used-protein set from the dishes already placed this week
+ * Build the §4 step 6 used-protein set from the dishes already placed this week
  * that were HP mains. Only `HP`-tagged Gravy/Dry/Complete meal dishes count as
  * mains; HP accompaniments and non-HP picks are ignored, so the set captures
  * exactly the protein the week's HP mains have already spent. Pass the running
@@ -445,14 +328,13 @@ export function isHpMain(dish: Dish): boolean {
 
 /**
  * §4 selection priority. Composes the steps in order; each step takes the output
- * of the previous as its input, so ties from step N are broken by step N+1.
- * Step 5 (within-week cuisine diversity) is a soft, target-gated nudge that sits
- * after Preferred=Yes but before the two dominant terminal partitions, step 6
- * (within-week recency) and step 7 (within-week protein diversity, HP mains
- * only). Those run after all the tie-breaks so an already-placed dish sinks
- * below a fresh one and a repeated protein sinks below a fresh one; running them
- * after cuisine diversity keeps cuisine subordinate, so it can never force a
- * dish repeat or an HP-protein clash to hit its target. Returns a stable
+ * of the previous as its input, so ties from step N are broken by step N+1. The
+ * two dominant terminal partitions, step 5 (within-week recency) and step 6
+ * (within-week protein diversity, HP mains only), run after all the tie-breaks so
+ * an already-placed dish sinks below a fresh one and a repeated protein sinks
+ * below a fresh one. Cuisine is no longer a §4 ranking concern: it is now a §3
+ * meal-level composition concern (the international lunch form, §3/§3.2), so the
+ * former per-position cuisine-diversity step is gone. Returns a stable
  * permutation of the input pool.
  */
 export function rankCandidates(args: RankCandidatesArgs): Dish[] {
@@ -460,8 +342,7 @@ export function rankCandidates(args: RankCandidatesArgs): Dish[] {
   const step2 = byNoSameDayPrimaryIngredient(step1, args.sameDayBreakfastPrimaryIngredient);
   const step3 = byIngredientConsolidation(step2, args.consolidationContext);
   const step4 = byPreferredYes(step3);
-  const step5 = byCuisineDiversity(step4, args.placedNonIndianCount);
-  const step6 = byWithinWeekRecency(step5, args.withinWeekDishIds);
-  const step7 = byProteinDiversity(step6, args.usedHpMainProteinFamilies);
-  return step7;
+  const step5 = byWithinWeekRecency(step4, args.withinWeekDishIds);
+  const step6 = byProteinDiversity(step5, args.usedHpMainProteinFamilies);
+  return step6;
 }

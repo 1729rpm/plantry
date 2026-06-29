@@ -8,6 +8,13 @@ export interface SlotPlan {
   meal: Meal;
   itemCount: number;
   lunchMenu?: LunchMenu;
+  /**
+   * §3.2 international substitution: when set, this lunch slot runs the §3
+   * international form (`menuIntl`) anchored on this non-Indian dish, instead of
+   * the day's default Menu 1/2. Set by `generateWeek` from the substitution plan;
+   * `weekSchedule` never sets it.
+   */
+  intlAnchorDishId?: number;
 }
 
 export interface WeekScheduleArgs {

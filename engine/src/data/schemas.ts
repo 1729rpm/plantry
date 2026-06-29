@@ -53,10 +53,18 @@ export type Complexity = z.infer<typeof ComplexitySchema>;
 /**
  * Dish tags, the closed set documented in docs/engine.md §12. These are rule
  * inputs (`HP`, `complete_meal`, `complete_carb` drive §3 composition; `fruit`
- * drives §3.3), so a mistyped tag would silently change the menu. The enum makes
- * §12 the enforced source of truth: an unknown tag fails the build, not the menu.
+ * drives §3.3; `cuisine_neutral` marks a plain protein that pairs with any
+ * register in the §3 international lunch form), so a mistyped tag would silently
+ * change the menu. The enum makes §12 the enforced source of truth: an unknown
+ * tag fails the build, not the menu.
  */
-export const DishTagSchema = z.enum(["HP", "complete_meal", "complete_carb", "fruit"]);
+export const DishTagSchema = z.enum([
+  "HP",
+  "complete_meal",
+  "complete_carb",
+  "fruit",
+  "cuisine_neutral",
+]);
 export type DishTag = z.infer<typeof DishTagSchema>;
 
 /** Cuisine, the closed set documented in docs/engine.md §12. */
