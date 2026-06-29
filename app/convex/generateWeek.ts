@@ -4,9 +4,9 @@ import type { Id } from "./_generated/dataModel.js";
 import { dishes, packSizes, ingredients } from "@plantry/engine/library";
 import { history } from "@plantry/engine/history";
 import { generateWeek, type GeneratedWeek, type Season } from "@plantry/engine";
+import type { SlotMeal } from "./lib/meals.js";
 
 type ShortDay = "Mon" | "Tue" | "Wed" | "Thu" | "Fri" | "Sat";
-type LowerMeal = "breakfast" | "lunch" | "fruit";
 
 /**
  * Bangalore seasons per `docs/product.md` §1:
@@ -128,7 +128,7 @@ export const generateCurrentWeek = internalMutation({
         .filter((slot) => slot.dishes.length > 0)
         .map((slot) => ({
           day: slot.day as ShortDay,
-          meal: slot.meal.toLowerCase() as LowerMeal,
+          meal: slot.meal.toLowerCase() as SlotMeal,
           dishes: slot.dishes.map((dish) => toDishEntry(dish.id)),
         }));
       // §3.3 Fruit of the day: one Category=Fruit dish per day Mon-Sat, stored as
@@ -137,7 +137,7 @@ export const generateCurrentWeek = internalMutation({
       if (d.fruit) {
         mealSlots.push({
           day: d.day as ShortDay,
-          meal: "fruit" as LowerMeal,
+          meal: "fruit" as SlotMeal,
           dishes: [toDishEntry(d.fruit.id)],
         });
       }

@@ -3,9 +3,9 @@ import { v, ConvexError } from "convex/values";
 import { dishes } from "@plantry/engine/library";
 import type { Season } from "@plantry/engine";
 import { assertAuthor } from "./lib/author.js";
+import { mealTimeValidator, type SlotMeal } from "./lib/meals.js";
 
 type ShortDay = "Mon" | "Tue" | "Wed" | "Thu" | "Fri" | "Sat";
-type LowerMeal = "breakfast" | "lunch";
 
 type SlotAuthor = "rajat" | "tuhina" | "system";
 type DishPickShape = {
@@ -16,9 +16,12 @@ type DishPickShape = {
   updatedAt: number;
   includeRecipe?: boolean;
 };
+// A slot read here may be a fruit slot even though the add/delete/recipe args
+// can only target breakfast|lunch (`mealTimeValidator`), so the stored slot meal
+// is the wider `SlotMeal`.
 type SlotShape = {
   day: ShortDay;
-  meal: LowerMeal;
+  meal: SlotMeal;
   dishes: DishPickShape[];
 };
 type SkippedDayShape = {
@@ -36,7 +39,9 @@ const DAY_VALIDATOR = v.union(
   v.literal("Fri"),
   v.literal("Sat"),
 );
-const MEAL_VALIDATOR = v.union(v.literal("breakfast"), v.literal("lunch"));
+// Add/delete/recipe target a meal-time only (fruit is not a manual day op), so
+// the arg meal draws from the shared `mealTimeValidator` (breakfast|lunch).
+const MEAL_VALIDATOR = mealTimeValidator;
 
 /**
  * Bangalore seasons per `docs/product.md` §1. Duplicated inline from
