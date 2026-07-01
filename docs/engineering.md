@@ -63,7 +63,7 @@ currentWeek
   version: number                      # for optimistic concurrency
 ```
 
-Each (day, meal) slot holds the engine's full pick list for that meal. Breakfast carries one or two dishes: the count is variable because a self-sufficient main (a Category=Bread `complete_carb` such as avocado toast, or a `complete_meal` main) fills the slot alone, and a single-pick breakfast whose main carries no HP tag gains one HP protein companion. Mon/Wed/Fri lunch carries 3; Tue/Thu lunch carries 4; Saturday lunch carries 3. Every day Mon to Sat (Saturday included) also carries a `meal: "fruit"` slot of exactly one dish, the Fruit of the day (`docs/engine.md` §3.3); it sits outside the breakfast and lunch composition and outside the item cap. Per-dish author and updatedAt let the slow loop attribute who changed which dish in a multi-dish meal. `includeRecipe` marks a dish whose recipe sheet rides along in the shared image family; it lives on the week so it resets when a new week document is generated. `skippedDays` records days the user is eating out or away; the day's dishes stay in `slots` (restore is lossless), and skipped days are excluded from the grocery list and the finalized archive.
+Each (day, meal) slot holds the engine's full pick list for that meal. Breakfast carries one or two dishes: the count is variable because a self-sufficient main (a Category=Bread `complete_carb` such as avocado toast, or a `complete_meal` main) fills the slot alone, and a single-pick breakfast whose main carries no HP tag gains one HP protein companion. Mon/Wed/Fri lunch carries 3; Tue/Thu lunch carries 4; Saturday lunch carries 3. Every day Mon to Sat (Saturday included) also carries a `meal: "fruit"` slot of exactly one dish, the Fruit of the day (`docs/engine.md` §3.3); it sits outside the breakfast and lunch composition and outside the item cap. Per-dish author and updatedAt let the slow loop attribute who changed which dish in a multi-dish meal. `includeRecipe` marks a dish whose recipe sheet rides along in the shared image family; it lives on the week so it resets when a new week document is generated. `skippedDays` records days the user is eating out or away; the day's dishes stay in `slots` (restore is lossless), and skipped days are excluded from the grocery list and the finalized archive. The slot `meal` type (`breakfast | lunch | fruit`), and the narrower `breakfast | lunch` meal-time used at the add, delete, recipe, and custom-dish call boundaries, both derive from one validator in `app/convex/lib/meals.ts`; `schema.ts` and every server consumer share that single definition, so a new slot meal is a compile error in any unhandled consumer rather than a silent gap.
 
 ```
 weekArchive
@@ -71,7 +71,7 @@ weekArchive
   finalizedAt: number
   rows: array of {
     day: "Monday" | "Tuesday" | "Wednesday" | "Thursday" | "Friday" | "Saturday" | "Sunday"
-    meal: "Breakfast" | "Lunch"
+    meal: "Breakfast" | "Lunch" | "Fruit"   # Fruit: the §3.3 Fruit of the day, archived for cross-week fruit recency
     dishName: string
     dishId: number
   }                                    # mirrors menu_history.md row format exactly
