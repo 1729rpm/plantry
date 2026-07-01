@@ -38,7 +38,7 @@ Plantry is structured around a clean split between a pure rules engine, a backen
 
 - **Engine** (`engine/`): a pure-function TypeScript module that holds all meal-planning logic (selection, composition, no-repeat recency, grocery aggregation). It is imported by both the backend and the tests, and it mirrors a human-readable rules spec. Continuous integration fails if the spec and the code drift apart.
 - **Backend** (`app/convex/`): [Convex](https://www.convex.dev/) schema and server functions hold the live week, the edit log, and the queued feedback.
-- **Frontend** (`app/web/`): a [Vite](https://vitejs.dev/) + React + TypeScript PWA, with a service worker for offline-tolerant, installable use on a phone.
+- **Frontend** (`app/web/`): a [Vite](https://vitejs.dev/) + React + TypeScript PWA, with a service worker for offline-tolerant, installable use.
 - **Data** (`data/`): a human-edited, version-controlled dish library, ingredient catalog, and history seed. This is the target of the slow review loop.
 
 ### Two loops, never one
