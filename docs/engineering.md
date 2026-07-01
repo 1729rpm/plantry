@@ -354,6 +354,9 @@ plantry/
   features/            # active feature spec (one at a time)
   engine/              # TS engine module
   app/convex/          # Convex schema + functions
+    lib/               # shared server helpers (slot meal-type validators, author assertion)
+    queries/           # read-only query modules
+    _generated/        # machine-generated Convex client (committed; Prettier-ignored)
   app/web/             # Vite + React + TS PWA
   archive/             # history (handoffs, retired docs, shipped feature specs)
 ```
