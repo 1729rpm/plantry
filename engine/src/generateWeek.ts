@@ -167,9 +167,7 @@ function deriveSlotRankingInputs(args: DeriveSlotRankingInputsArgs): SlotRanking
       dishId: dish.id,
     });
   }
-  const weekLunchCarbs = picks.filter(
-    (d) => d.category === "Chapati" || d.category === "Rice",
-  );
+  const weekLunchCarbs = picks.filter((d) => d.category === "Chapati" || d.category === "Rice");
 
   return {
     ledger,
@@ -298,9 +296,7 @@ export function generateWeek(args: GenerateWeekArgs): GeneratedWeek {
       ingredients,
     };
     const slotSubstitution =
-      slot.meal === "Lunch"
-        ? substitutionByDay.get(slot.day as WeekdaySubstitutionDay)
-        : undefined;
+      slot.meal === "Lunch" ? substitutionByDay.get(slot.day as WeekdaySubstitutionDay) : undefined;
     const roledPicks = pickSlot({
       slot,
       candidateSet,
@@ -551,10 +547,7 @@ function promotePins(ranked: Dish[], pinnedDishIds: number[] | undefined): Dish[
  * fruit is the standalone Fruit of the day (§3.3), picked per day outside the
  * breakfast/lunch slots.
  */
-function pickBreakfastPair(
-  args: PickSlotArgs,
-  set: BreakfastWeekdayPairCandidateSet,
-): RoledPick[] {
+function pickBreakfastPair(args: PickSlotArgs, set: BreakfastWeekdayPairCandidateSet): RoledPick[] {
   // Option B partner is the breakfast chutney/accompaniment; Option C partner is
   // the plain breakfast carb (a protected carb, like a lunch carb).
   const optionB = tryPair(
@@ -589,10 +582,7 @@ function tryPair(
   // §3 one-HP-per-meal: once the lead is HP, the partner pool drops HP-tagged
   // dishes (thin-pool fallback keeps the slot fillable). Avoid double-picking
   // the same dish across positions when pools overlap.
-  const partnerRanked = rank(
-    args,
-    excludeHpIfMealHasHp(excluding(partnerPool, lead), isHp(lead)),
-  );
+  const partnerRanked = rank(args, excludeHpIfMealHasHp(excluding(partnerPool, lead), isHp(lead)));
   if (partnerRanked.length === 0) return null;
   return roled([
     [lead, "breakfast-main"],
@@ -701,14 +691,8 @@ function pickMenu3(args: PickSlotArgs, set: Menu3CandidateSet): RoledPick[] {
   // main later in the week).
   const lead = pickSubstitutedLead(args, set.completeMealHp, rankHpMain);
   const mealHasHp = lead ? isHp(lead) : false;
-  const acc = rank(
-    args,
-    excludeHpIfMealHasHp(excluding(set.accompaniment, lead), mealHasHp),
-  )[0];
-  const dessert = rank(
-    args,
-    excludeHpIfMealHasHp(excluding(set.dessert, lead), mealHasHp),
-  )[0];
+  const acc = rank(args, excludeHpIfMealHasHp(excluding(set.accompaniment, lead), mealHasHp))[0];
+  const dessert = rank(args, excludeHpIfMealHasHp(excluding(set.dessert, lead), mealHasHp))[0];
   return roled([
     [lead, "protein-main"],
     [acc, "accompaniment"],
@@ -728,15 +712,9 @@ function pickMenu4(args: PickSlotArgs, set: Menu4CandidateSet): RoledPick[] {
   // protein lead and the §4.6 main, so it is ranked with protein diversity.
   const lead = pickSubstitutedLead(args, set.completeMealNonHp, rank);
   let mealHasHp = lead ? isHp(lead) : false;
-  const keto = rankHpMain(
-    args,
-    excludeHpIfMealHasHp(excluding(set.keto, lead), mealHasHp),
-  )[0];
+  const keto = rankHpMain(args, excludeHpIfMealHasHp(excluding(set.keto, lead), mealHasHp))[0];
   if (keto && isHp(keto)) mealHasHp = true;
-  const acc = rank(
-    args,
-    excludeHpIfMealHasHp(excluding(set.accompaniment, lead), mealHasHp),
-  )[0];
+  const acc = rank(args, excludeHpIfMealHasHp(excluding(set.accompaniment, lead), mealHasHp))[0];
   // The complete_meal lead is the meal's main; the Keto dish is its protein
   // companion (protected, like the breakfast protein floor); the Accompaniment
   // is a droppable side. Saturday's cap (3) equals Menu 4's item count, so these

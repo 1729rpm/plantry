@@ -5,11 +5,7 @@ import type { Doc } from "../_generated/dataModel.js";
 export const getCurrentWeek = query({
   args: {},
   handler: async (ctx): Promise<Doc<"currentWeek"> | null> => {
-    const rows = await ctx.db
-      .query("currentWeek")
-      .withIndex("by_weekStart")
-      .order("desc")
-      .take(1);
+    const rows = await ctx.db.query("currentWeek").withIndex("by_weekStart").order("desc").take(1);
     return rows[0] ?? null;
   },
 });

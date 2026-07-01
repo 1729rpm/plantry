@@ -6,11 +6,7 @@ import {
   DEFAULT_LEFTOVER_THRESHOLD_GRAMS,
   FRESH_PRODUCE_ITEMS,
 } from "../src/consolidation.js";
-import type {
-  Dish,
-  Ingredient,
-  PackSizeHeader,
-} from "../src/data/schemas.js";
+import type { Dish, Ingredient, PackSizeHeader } from "../src/data/schemas.js";
 
 let nextId = 1;
 
@@ -103,10 +99,7 @@ describe("consolidation — docs/engine.md §6", () => {
     it("accumulates across successive picks of the same ingredient", () => {
       const a = makeDish({ name: "Palak paneer" });
       const b = makeDish({ name: "Paneer bhurji" });
-      const ingredients = [
-        row(a.id, a.name, "Paneer", 150),
-        row(b.id, b.name, "Paneer", 100),
-      ];
+      const ingredients = [row(a.id, a.name, "Paneer", 150), row(b.id, b.name, "Paneer", 100)];
       // After A: 1 pack, 150 g used, 50 g leftover.
       // After B: 250 g used > 200 g committed → bump to 2 packs (400 g),
       // leftover = 400 - 250 = 150 g.
@@ -175,11 +168,7 @@ describe("consolidation — docs/engine.md §6", () => {
         row(usesPaneer.id, usesPaneer.name, "Paneer", 100),
         row(noPaneer.id, noPaneer.name, "Onion", 100),
       ];
-      const out = rankByConsolidation(
-        [noPaneer, usesPaneer],
-        ledgerWithLeftover(150),
-        ingredients,
-      );
+      const out = rankByConsolidation([noPaneer, usesPaneer], ledgerWithLeftover(150), ingredients);
       expect(out.map((d) => d.name)).toEqual(["UsesPaneer", "NoPaneer"]);
     });
 
@@ -347,12 +336,7 @@ describe("consolidation — docs/engine.md §6", () => {
       );
       // hard=1 group: BothMatch (soft=1), HardOnly (soft=0) → BothMatch first.
       // hard=0 group: SoftOnly (soft=1), Neither (soft=0) → SoftOnly first.
-      expect(out.map((d) => d.name)).toEqual([
-        "BothMatch",
-        "HardOnly",
-        "SoftOnly",
-        "Neither",
-      ]);
+      expect(out.map((d) => d.name)).toEqual(["BothMatch", "HardOnly", "SoftOnly", "Neither"]);
     });
 
     it("ranks on the hard leftover score alone when no soft signal is supplied", () => {

@@ -668,8 +668,7 @@ export function selectInternationalSubstitutions(
   }
   // Return in schedule (day) order so downstream rewrites stay deterministic.
   return decisions.sort(
-    (a, b) =>
-      WEEKDAYS_FOR_SUBSTITUTION.indexOf(a.day) - WEEKDAYS_FOR_SUBSTITUTION.indexOf(b.day),
+    (a, b) => WEEKDAYS_FOR_SUBSTITUTION.indexOf(a.day) - WEEKDAYS_FOR_SUBSTITUTION.indexOf(b.day),
   );
 }
 
@@ -696,8 +695,7 @@ export function planWeekdaySubstitutions(
   });
   const all = completeMeal ? [...intl, completeMeal] : intl;
   return all.sort(
-    (a, b) =>
-      WEEKDAYS_FOR_SUBSTITUTION.indexOf(a.day) - WEEKDAYS_FOR_SUBSTITUTION.indexOf(b.day),
+    (a, b) => WEEKDAYS_FOR_SUBSTITUTION.indexOf(a.day) - WEEKDAYS_FOR_SUBSTITUTION.indexOf(b.day),
   );
 }
 

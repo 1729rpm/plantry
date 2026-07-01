@@ -1,10 +1,5 @@
 import { describe, it, expect } from "vitest";
-import {
-  applyCap,
-  WEEKDAY_CAP,
-  SATURDAY_CAP,
-  type SlotPick,
-} from "../src/cap.js";
+import { applyCap, WEEKDAY_CAP, SATURDAY_CAP, type SlotPick } from "../src/cap.js";
 import type { Day } from "../src/eligibility.js";
 
 let nextId = 1;
@@ -73,9 +68,7 @@ describe("cap — docs/engine.md §5", () => {
       const high2 = makeDish({ name: "High2", satiety: "High" });
       const high3 = makeDish({ name: "High3", satiety: "High" });
       const { slotsByDay, droppedDishIds } = applyCap({
-        slotsByDay: dayMap([
-          ["Wed", [high1, low, med1, high2, med2, high3]],
-        ]),
+        slotsByDay: dayMap([["Wed", [high1, low, med1, high2, med2, high3]]]),
       });
       expect(slotsByDay.get("Wed")?.length).toBe(WEEKDAY_CAP);
       expect(droppedDishIds).toEqual([low.id]);
@@ -96,9 +89,7 @@ describe("cap — docs/engine.md §5", () => {
       const high2 = makeDish({ name: "High2", satiety: "High" });
       const high3 = makeDish({ name: "High3", satiety: "High" });
       const { slotsByDay, droppedDishIds } = applyCap({
-        slotsByDay: dayMap([
-          ["Mon", [lowFast, lowSlow, med, high1, high2, high3]],
-        ]),
+        slotsByDay: dayMap([["Mon", [lowFast, lowSlow, med, high1, high2, high3]]]),
       });
       expect(droppedDishIds).toEqual([lowSlow.id]);
       expect(slotsByDay.get("Mon")?.map((d) => d.name)).toEqual([
@@ -122,10 +113,7 @@ describe("cap — docs/engine.md §5", () => {
       const high3 = makeDish({ name: "High3", satiety: "High" });
       const { slotsByDay, droppedDishIds } = applyCap({
         slotsByDay: dayMap([
-          [
-            "Fri",
-            [lowSlow, lowFast, medSlow, medMid, medFast, high1, high2, high3],
-          ],
+          ["Fri", [lowSlow, lowFast, medSlow, medMid, medFast, high1, high2, high3]],
         ]),
       });
       // First drop: lowest satiety + longest prep = LowSlow.
@@ -152,11 +140,7 @@ describe("cap — docs/engine.md §5", () => {
       });
       expect(slotsByDay.get("Sat")?.length).toBe(SATURDAY_CAP);
       expect(droppedDishIds).toEqual([low.id]);
-      expect(slotsByDay.get("Sat")?.map((d) => d.name)).toEqual([
-        "Med",
-        "High",
-        "High2",
-      ]);
+      expect(slotsByDay.get("Sat")?.map((d) => d.name)).toEqual(["Med", "High", "High2"]);
     });
   });
 
@@ -172,13 +156,7 @@ describe("cap — docs/engine.md §5", () => {
         slotsByDay: dayMap([["Thu", [a, b, c, d, e, f]]]),
       });
       expect(droppedDishIds).toEqual([b.id]);
-      expect(slotsByDay.get("Thu")?.map((d) => d.name)).toEqual([
-        "A",
-        "C",
-        "D",
-        "E",
-        "F",
-      ]);
+      expect(slotsByDay.get("Thu")?.map((d) => d.name)).toEqual(["A", "C", "D", "E", "F"]);
     });
 
     it("tie on satiety AND prepMinutes: drops the later one in the day's array", () => {
@@ -224,9 +202,7 @@ describe("cap — docs/engine.md §5", () => {
       // Cast to Day for the test even though Sunday is not in the Day union;
       // applyCap accepts the input map shape and we want to document the
       // defensive passthrough.
-      const slots = new Map<Day, SlotPick[]>([
-        ["Mon" as Day, [a, b, c, d, e, f]],
-      ]);
+      const slots = new Map<Day, SlotPick[]>([["Mon" as Day, [a, b, c, d, e, f]]]);
       // Add a Sunday entry via cast for documentation purposes.
       (slots as unknown as Map<string, SlotPick[]>).set("Sun", [a, b, c, d, e, f, a]);
       const { slotsByDay, droppedDishIds } = applyCap({ slotsByDay: slots });
@@ -271,7 +247,12 @@ describe("cap — docs/engine.md §5", () => {
       const carb = makeDish({ role: "carb", satiety: "Low", prepMinutes: 5 });
       const sabzi = makeDish({ name: "Sabzi", role: "sabzi", satiety: "Medium", prepMinutes: 20 });
       const acc = makeDish({ name: "Acc", role: "accompaniment", satiety: "Low", prepMinutes: 10 });
-      const dessert = makeDish({ name: "Dessert", role: "dessert", satiety: "Low", prepMinutes: 30 });
+      const dessert = makeDish({
+        name: "Dessert",
+        role: "dessert",
+        satiety: "Low",
+        prepMinutes: 30,
+      });
       const filler = makeDish({ role: "protein-main", satiety: "High" });
       const { droppedDishIds } = applyCap({
         slotsByDay: dayMap([["Mon", [protein, carb, sabzi, acc, dessert, filler]]]),
@@ -313,10 +294,7 @@ describe("cap — docs/engine.md §5", () => {
         makeDish({ satiety: "High" }),
         makeDish({ satiety: "High" }),
       ];
-      const tueOk = [
-        makeDish({ satiety: "Low" }),
-        makeDish({ satiety: "Low" }),
-      ];
+      const tueOk = [makeDish({ satiety: "Low" }), makeDish({ satiety: "Low" })];
       const { slotsByDay, droppedDishIds } = applyCap({
         slotsByDay: dayMap([
           ["Mon", [lowMon, ...monRest]],
@@ -357,9 +335,7 @@ describe("cap — docs/engine.md §5", () => {
       const result = applyCap({ slotsByDay });
       for (const [day, picks] of slotsByDay) {
         const cap = day === "Sat" ? SATURDAY_CAP : WEEKDAY_CAP;
-        expect(result.slotsByDay.get(day)?.length).toBe(
-          Math.min(picks.length, cap),
-        );
+        expect(result.slotsByDay.get(day)?.length).toBe(Math.min(picks.length, cap));
       }
       // Dropped ids = input minus output.
       const outputIds = new Set<number>();

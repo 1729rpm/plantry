@@ -41,6 +41,7 @@ You are spawning a new engineer for a Plantry stream. Read `CLAUDE.md`, `docs/de
 ## Engineer contract (what the brief encodes)
 
 The engineer:
+
 - Stays in this worktree. Does not touch the main directory.
 - Stays in this stream. Does not silently expand scope.
 - Carries a diagnosis card in the PR description.
@@ -53,8 +54,10 @@ The engineer:
 ## Cleanup on merge
 
 Worktree closure is part of merging a PR, not an optional afterthought (`docs/development.md` §2, §3). The moment a stream's PR merges to `main`, the EM runs, in the same step as the merge:
+
 ```
 git worktree remove ../plantry-<branch>
 git branch -D <full-branch-name>            # local branch (squash-merge leaves it non-ancestor)
 ```
+
 then updates the active feature spec's stream-state table (if any), and moves the stream's row in `coordination/active-streams.md` to Shipped, clearing any Hotspot ledger rows it closed. Leaving a merged worktree or branch behind is the failure mode that accumulates stale worktrees across parallel sessions; a periodic sweep is `git worktree list` cross-checked against merged PRs, then `git worktree remove` each one whose branch has landed.

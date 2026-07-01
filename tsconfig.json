@@ -1,8 +1,4 @@
 {
   "files": [],
-  "references": [
-    { "path": "./engine" },
-    { "path": "./app/web" },
-    { "path": "./app/convex" }
-  ]
+  "references": [{ "path": "./engine" }, { "path": "./app/web" }, { "path": "./app/convex" }]
 }
