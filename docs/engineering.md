@@ -4,18 +4,18 @@ How Plantry is built. Stack, data layer split, runtime topology, hosting, deploy
 
 ## 1. Stack
 
-| Layer | Choice | Notes |
-|---|---|---|
-| Engine (rules in code) | TypeScript module under `engine/` | Pure functions, no I/O. Imported by Convex functions and by tests. |
-| YAML parsing | `yaml` | Reads per-dish file frontmatter (`data/dishes/<slug>.md`) at bake time. |
-| Backend / API | Convex | Managed backend platform: typed schema, server functions, live sync to clients. No self-hosted server. |
-| Frontend | Vite + React + TypeScript | PWA, installable on phones. |
-| Service worker | Workbox | Caches the app shell + last-good week so the app opens on bad network. |
-| Hosting (frontend) | Vercel (or Cloudflare Pages) | Static deploy + per-PR preview environments. |
-| Hosting (backend) | Convex (managed) | Free tier covers this scale indefinitely. |
-| DNS | Cloudflare (under mudgal.xyz) | `plantry.mudgal.xyz` for prod, `plantry-dev.mudgal.xyz` for preview. |
-| CI | GitHub Actions | Round-trip parser, engine spec/code parity, simulation harness, type-check, lint. |
-| Source control | GitHub (public repo `plantry`) | |
+| Layer                  | Choice                            | Notes                                                                                                  |
+| ---------------------- | --------------------------------- | ------------------------------------------------------------------------------------------------------ |
+| Engine (rules in code) | TypeScript module under `engine/` | Pure functions, no I/O. Imported by Convex functions and by tests.                                     |
+| YAML parsing           | `yaml`                            | Reads per-dish file frontmatter (`data/dishes/<slug>.md`) at bake time.                                |
+| Backend / API          | Convex                            | Managed backend platform: typed schema, server functions, live sync to clients. No self-hosted server. |
+| Frontend               | Vite + React + TypeScript         | PWA, installable on phones.                                                                            |
+| Service worker         | Workbox                           | Caches the app shell + last-good week so the app opens on bad network.                                 |
+| Hosting (frontend)     | Vercel (or Cloudflare Pages)      | Static deploy + per-PR preview environments.                                                           |
+| Hosting (backend)      | Convex (managed)                  | Free tier covers this scale indefinitely.                                                              |
+| DNS                    | Cloudflare (under mudgal.xyz)     | `plantry.mudgal.xyz` for prod, `plantry-dev.mudgal.xyz` for preview.                                   |
+| CI                     | GitHub Actions                    | Round-trip parser, engine spec/code parity, simulation harness, type-check, lint.                      |
+| Source control         | GitHub (public repo `plantry`)    |                                                                                                        |
 
 TypeScript is the single language across engine, backend, and frontend. Schema validation and typed data are first-class everywhere via Convex's typed schema and the engine's own types.
 
@@ -23,14 +23,14 @@ TypeScript is the single language across engine, backend, and frontend. Schema v
 
 Plantry has two stores by design. The split is the load-bearing engineering decision; if a piece of data sits in the wrong place, fix the placement rather than working around it.
 
-| Stays in git markdown | Stays in Convex tables |
-|---|---|
-| `data/dishes/<slug>.md`, one file per dish (frontmatter + ingredient rows) | `currentWeek`, the live Mon-Sat plan with overrides |
+| Stays in git markdown                                                                          | Stays in Convex tables                                                        |
+| ---------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------- |
+| `data/dishes/<slug>.md`, one file per dish (frontmatter + ingredient rows)                     | `currentWeek`, the live Mon-Sat plan with overrides                           |
 | `data/ingredients.md`, the ingredient catalog (one row per ingredient: group, unit, pack size) | `weekArchive`, finalized past weeks (queryable for the engine's recency rule) |
-| `data/menu_history.md`, seed for first deploy (later, a periodic snapshot) | `comments`, queued slow-loop input |
-| `data/changelog.md`, structural changes audit | `incidents`, runtime errors written by the auto-recovery middleware |
-| `docs/engine.md`, the rules spec | `userProfiles`, device identity ("I am Rajat" or "I am Tuhina") |
-| `engine/` source code | `swiggyCarts`, future Swiggy MCP integration state |
+| `data/menu_history.md`, seed for first deploy (later, a periodic snapshot)                     | `comments`, queued slow-loop input                                            |
+| `data/changelog.md`, structural changes audit                                                  | `incidents`, runtime errors written by the auto-recovery middleware           |
+| `docs/engine.md`, the rules spec                                                               | `userProfiles`, device identity ("I am Rajat" or "I am Tuhina")               |
+| `engine/` source code                                                                          | `swiggyCarts`, future Swiggy MCP integration state                            |
 
 Principle for the split: anything a human edits by hand stays in git, because git's pull-request/diff/review workflow is what we want. Anything the running app writes stays in Convex, because committing on every swap would be slow, noisy, and turn git history into a transactional log. The audit-trail argument for git is preserved where it matters (library and rules); operational state has author + timestamp inside Convex.
 
@@ -171,69 +171,84 @@ Coverage is complete: every active dish carries a photo (a coverage report asser
 ## 5. Read paths and write paths
 
 **Read (frontend opens):**
+
 1. PWA loads from Vercel cache; service worker may serve from cache offline.
 2. App connects to Convex over WebSocket.
 3. Library and rules are already bundled into the JS, so the engine can simulate immediately.
 4. `currentWeek` and `comments` come from Convex subscriptions and stream live updates as either user edits.
 
 **Read (swap picker alternatives):**
+
 1. Frontend calls `getSlotAlternatives({ weekStart, day, meal, position, limit? })`.
 2. The query builds a non-restrictive candidate pool: every dish in the library that is Active, in-season for the current Bangalore season, and matches the meal-time (Breakfast-time dishes for breakfast positions, Lunch-time dishes for lunch positions). For a fruit slot (`meal: "fruit"`) the pool is category-based rather than meal-time-based: every Active, in-season, Category=Fruit dish, the swap-time analogue of the generation-time fruit pool (`docs/engine.md` §3.3). No per-position eligibility filter; §3 composition (HP/partner/Option A-B-C/carb-position) is not enforced.
 3. The engine ranks the pool by `docs/engine.md` §4 priority (longest-unused first, with the ingredient ledger and same-day-breakfast tilts seeded from the live week's other picks, excluding the slot/position being ranked).
 4. The currently-picked dish at this position is filtered out; the frontend renders the ranked list and the user picks any dish.
 
 **Read (grocery list):**
+
 1. Frontend calls `getGroceryList({ weekStart, selectedDays? })`. `selectedDays` (optional, short day names "Mon".."Sat") narrows the buy list to the upcoming days the household chose to order for; the Grocery screen derives it with a time-aware default off the device clock (today + tomorrow before 11 AM, tomorrow + day-after from 11 AM). An explicit user selection is persisted to `localStorage` (`plantry:groceryDays`, a single `{ weekStart, days }` record) so it survives the component unmounting on a tab switch and the PWA being evicted in the background; a stored selection for a different `weekStart` is ignored, so a new week falls back to the time-aware default, and a stored day that has since become past or skipped is dropped on load. Omitting it returns the whole non-skipped week, so any caller that does not pass it (and the future Swiggy MCP) is unaffected.
 2. The query groups the week's library-dish picks by day, keeps only the selected days when `selectedDays` is present, and hands the day-tagged shape plus `currentWeek.skippedDays` to the engine aggregator, which drops skipped days (a day the household is eating out is not cooked, so its dishes are not bought) before summing. Custom dishes (null `dishId`) contribute nothing (their quantities are not in the library). Items carry `ingredient, quantity, unit, tracked, packs, packTotalGrams` in the fixed §3 group order (Proteins and Dairy, Fruit, Vegetables, Aromatics and Herbs, Pantry last, no catch-all), the structured shape the Swiggy MCP integration (§13) consumes. With no skipped days and no day selection the output is identical to summing every day's picks flat.
 
 **Read (activity feed):**
+
 1. Frontend calls `listManualChangesForWeek({ weekStart })`.
 2. The query returns every `manualChanges` row for the week, newest first (all statuses, since the Changes tab is a history, not a work queue). The client merges in the week's `comments` separately; the two queries together are the Changes tab's data. Comments are not joined server-side so each signal keeps its own subscription.
 
 **Read (explore feed):**
+
 1. Frontend calls `getExploreFeed({ weekStart })`.
 2. The query feeds the engine `rankExplore` the library, the season for `weekStart`, and the cooking history: the baked `menu_history` plus a synthetic row per `weekArchive` row (weeks finalized since the last bake), so a dish cooked in either record is excluded. The engine returns the eligible (active, in-season), never-cooked dishes ranked familiar-but-new, each with its `dominantAffinity` key (`shared-ingredient` / `protein-match` / `familiar-category`); the query projects `{ dishId, name, dominantAffinity }`. The UI phrases the "why it fits" line from the key; no UI prose leaves the engine. With an empty `weekArchive` the feed is exactly what the engine derives from the seed.
 
 **Write (swap a dish):**
+
 1. Frontend optimistically updates the UI.
 2. Convex mutation `swapDish({ author, weekStart, day, meal, position, newDishId, reason, version })` validates: `version` matches the loaded version (optimistic concurrency); the (day, meal) slot exists and `position` is within `slot.dishes`; the new dish is in the library, is Active, and is in season; for a breakfast or lunch slot it must match the meal-time, and for a fruit slot it must be Category=Fruit instead; `reason` is non-empty after trim. Per `docs/product.md` §4 Principle 4 the fast loop stays permissive; §3 composition eligibility is not validated at swap time.
 3. On success the slot's `dishes[position]` updates to `{ dishId: newDishId, customLabel: null, source: "swapped", author, updatedAt: now }`, `version` increments, and a `manualChanges` row inserts in the same Convex transaction carrying the slot's pre-change `before`, the new `after`, the user's `reason`, `changeKind: "swap"`, and `status: "queued"`. The grocery list is re-derived by the engine on read.
 4. On failure the frontend rolls back. The tagged-union return distinguishes recoverable reasons (`version-mismatch`, `no-current-week`, `no-such-slot`, `no-such-position`, `dish-not-in-library`, `dish-not-meal-time`, `dish-not-fruit`, `dish-not-active-or-in-season`) the UI handles inline; `dish-not-fruit` is the fruit-slot analogue of `dish-not-meal-time`. Missing or empty `author` or `reason` throws.
 
 **Write (custom dish):** A custom dish is a free-text dish that is not in the library. It can replace a position or be appended as an extra dish; both record `changeKind: "custom"` and feed the slow loop, which may promote a repeatedly requested custom dish into a library dish.
+
 1. To replace a position, the frontend calls `addCustomOneOff({ author, weekStart, day, meal, position, customLabel, reason, version })`, which patches `slot.dishes[position]` to `{ dishId: null, customLabel, source: "custom", author, updatedAt: now }`.
 2. To append an extra dish, the frontend calls `appendCustomDish({ author, weekStart, day, meal, customLabel, reason, version })` (no `position`), which pushes the same custom pick onto `slot.dishes` and returns the new `position`. It does not enforce the per-day cap (the cap is a generation-time constraint; the fast loop is permissive, like `addDish`).
 3. Either way `version` increments and a `manualChanges` row with `changeKind: "custom"` inserts in the same Convex transaction; an append carries a null `before`. Recoverable reasons: `version-mismatch`, `no-current-week`, `no-such-slot` (and `no-such-position` for the replace path).
 
 **Write (delete a dish):**
+
 1. Frontend calls `deleteDish({ author, weekStart, day, meal, position, reason, version })`.
 2. Validates author, non-empty trimmed `reason`, version, slot, and position. Removes `slot.dishes[position]`, increments `version`, and inserts a `manualChanges` row with `changeKind: "delete"`, `before` = the removed pick, `after` = a null entry. Delete is permissive: it may leave the day below its composition shape (the share image simply shows fewer items). Recoverable reasons: `version-mismatch`, `no-current-week`, `no-such-slot`, `no-such-position`.
 
 **Write (add a library dish to a day):**
+
 1. Frontend calls `addDish({ author, weekStart, day, meal, newDishId, reason, version })`.
 2. Validates author, non-empty trimmed `reason`, version, slot, and the dish (in library, meal-time, Active, in season; same hard filters as swap, no §3 composition check). Appends `{ dishId: newDishId, customLabel: null, source: "swapped", author, updatedAt: now }` to `slot.dishes`, increments `version`, and inserts a `manualChanges` row with `changeKind: "add"`, `before` = a null entry, `after` = the added dish. Returns the new `position`. Recoverable reasons: `version-mismatch`, `no-current-week`, `no-such-slot`, `dish-not-in-library`, `dish-not-meal-time`, `dish-not-active-or-in-season`.
 
 **Write (skip / restore a day):**
+
 1. Frontend calls `skipDay({ author, weekStart, day, reason, version })` or `restoreDay({ author, weekStart, day, reason, version })`.
 2. `skipDay` appends `{ day, reason, author, skippedAt: now }` to `currentWeek.skippedDays` (rejecting `already-skipped`); `restoreDay` removes the day's entry (rejecting `not-skipped`). The day's `slots` are never touched, so restore is lossless. Each increments `version` and inserts a `manualChanges` row (`changeKind: "skip_day"` / `"restore_day"`, day-level: no meal/position, null before/after). Recoverable reasons: `version-mismatch`, `no-current-week`, and the kind-specific `already-skipped` / `not-skipped`.
 
 **Write (save a dish for next week):**
+
 1. Frontend calls `saveForNextWeek({ author, weekStart, dishId, reason })`.
 2. Validates author, non-empty trimmed `reason`, and that the dish is in the library and not already queued. Inserts a `nextWeekQueue` row (`status: "queued"`, `consumedWeekStart: null`) and a `manualChanges` row with `changeKind: "save_next_week"` (the saved dish lives in `after.dishId`) in the same transaction. The next generation run consumes queued rows as engine `requests`. Recoverable reasons: `dish-not-in-library`, `already-queued`.
 
 **Write (include a recipe in the share):**
+
 1. Frontend calls `setIncludeRecipe({ author, weekStart, day, meal, position, include, version })`.
 2. Sets `includeRecipe` on `slot.dishes[position]` and increments `version`. This is a share preference, not a menu change, so it does NOT write a `manualChanges` row. Recoverable reasons: `version-mismatch`, `no-current-week`, `no-such-slot`, `no-such-position`.
 
 **Write (comment):**
+
 1. Frontend posts to `addComment({ author, attachedTo, text })`.
 2. Convex inserts a `queued` row in `comments`. The slow loop consumes it later (see `MAINTENANCE.md` §1).
 
 **Write (finalize the week):**
+
 1. A user finalizes via `finalizeWeek({ author, weekStart, version })` (or a future scheduled action).
 2. Validates `author`, version (optimistic concurrency), that the week exists, and that it is not already `final`. Appends a `weekArchive` row whose `rows` mirror the `menu_history.md` format (long-form day, capitalised meal, dish name from the baked library, dish id), then flips `currentWeek.status` to `"final"` and increments `version`. Skipped days (`currentWeek.skippedDays`) and custom dishes are excluded from the archive: a skipped day was not cooked, so recency (`docs/engine.md` §4) must not see it, and a custom dish has no library id or canonical name. The day's `slots` are untouched (restore stays lossless). With no skipped days every library pick archives, exactly as a week with no skips always has. Recoverable reasons: `version-mismatch`, `no-current-week`, `already-final`.
 
 **Generation (consume the next-week queue):**
+
 1. `generateCurrentWeek({ weekStart, rng?, userRequestedDishId? })`, an `internalMutation` triggered by the EM or a future scheduled action, reads every `queued` `nextWeekQueue` row (createdAt ascending) and passes their `dishId`s to the engine as `requests` (`docs/engine.md` §6).
 2. The engine places each requested dish into a slot whose §3 composition accepts it, overriding §4 recency, or emits an incident when no slot accepts it (out of season, inactive, unknown, or no fitting slot). After generation, queue rows whose dish landed in the week are marked `placed` with `consumedWeekStart = weekStart`; rows whose dish could not be placed stay `queued` (the engine's incident is persisted to `incidents`) so a later run retries them. An empty queue (production today) yields no requests and leaves generation identical to before.
 
@@ -266,9 +281,9 @@ Each `currentWeek` document carries a `version` field. The frontend includes the
 
 Under `mudgal.xyz` on Cloudflare:
 
-| Type | Name | Value | Notes |
-|---|---|---|---|
-| CNAME | `plantry` | `cname.vercel-dns.com` | Production frontend. Vercel issues the cert. |
+| Type  | Name          | Value                  | Notes                                                                        |
+| ----- | ------------- | ---------------------- | ---------------------------------------------------------------------------- |
+| CNAME | `plantry`     | `cname.vercel-dns.com` | Production frontend. Vercel issues the cert.                                 |
 | CNAME | `plantry-dev` | `cname.vercel-dns.com` | Preview frontend. Vercel alias updates to point at the current PR's preview. |
 
 Convex prod and preview each have their own `<deployment>.convex.cloud` URLs; the frontend reads them from `VITE_CONVEX_URL` at build time. No DNS records needed for Convex.
@@ -276,14 +291,17 @@ Convex prod and preview each have their own `<deployment>.convex.cloud` URLs; th
 ## 11. Environment variables
 
 **Frontend build (`app/web/.env.local` locally, Vercel project env in deploy):**
+
 - `VITE_CONVEX_URL` — the Convex deployment URL.
 - `VITE_PLANTRY_PASSCODE` — the shared passcode the splash gate validates against (§8). Build-time, so it is baked into the bundle; treat it as a private-URL gate, not a secret boundary. Unset means no gate.
 
 **Convex deployment (set via `npx convex env set`):**
+
 - `SLOW_LOOP_TOKEN` — token the slow-loop session uses to read queued comments without exposing the dashboard.
 - `SWIGGY_MCP_URL` (future) — endpoint of the Swiggy MCP server.
 
 **Offline tooling (local environment):**
+
 - `NVIDIA_API_KEY` — NVIDIA NIM key the dish-photo generation tool (`scripts/generate-dish-photos.mjs`, §4) reads to call the FLUX.1-dev endpoint. Not a runtime variable; it lives only in the environment of whoever runs the tool. (The tool's dormant Hugging Face fallback reads `HF_TOKEN` instead when run with `PROVIDER=hf`.)
 - `VERCEL_AUTOMATION_BYPASS_SECRET` — the Vercel "Protection Bypass for Automation" token the pre-merge crawl reads to reach a deployment-protected preview (§16). Not a runtime variable; it lives only in the environment of whoever runs the crawl. The companion `VERCEL_TOKEN` (Vercel API key) is used only to list deployment URLs, not by the app.
 
@@ -354,6 +372,9 @@ plantry/
   features/            # active feature spec (one at a time)
   engine/              # TS engine module
   app/convex/          # Convex schema + functions
+    lib/               # shared server helpers (slot meal-type validators, author assertion)
+    queries/           # read-only query modules
+    _generated/        # machine-generated Convex client (committed; Prettier-ignored)
   app/web/             # Vite + React + TS PWA
   archive/             # history (handoffs, retired docs, shipped feature specs)
 ```
@@ -361,6 +382,7 @@ plantry/
 Gitignored entries the structure check tolerates but the tree omits: `.git`, `.vercel`, `node_modules`, and `coordination/` (the EM's local live-session registry, §11.1 in `docs/development.md`; it lives only in the main dir and never travels onto a branch).
 
 Naming:
+
 - Folder names under `archive/`, `docs/`, `features/`, `app/web/src/components/`: kebab-case.
 - TypeScript component files: PascalCase.
 - TypeScript non-component files: camelCase.

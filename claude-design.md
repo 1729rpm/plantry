@@ -15,7 +15,7 @@ Plantry has two user-facing surfaces, and a handoff covers both as a related fam
 
 The operator attaches all of:
 
-1. `docs/product.md` — product scope, persona, principles, tone. Frames *why* the feature exists, and owns the user-facing rules a design must honor (no internal labels, no em dashes, plain uncluttered tone).
+1. `docs/product.md` — product scope, persona, principles, tone. Frames _why_ the feature exists, and owns the user-facing rules a design must honor (no internal labels, no em dashes, plain uncluttered tone).
 2. The current visual + behavioral truth. Plantry has no separate `docs/design.md`. The source of truth for the app as it exists today is the live PWA in `app/web/src/`, with design tokens declared as CSS variables in `app/web/src/index.css`. This is the freshest truth, ahead of any prior handoff; where a prior handoff and the live app disagree, the live app wins.
 3. The previous handoff folder — the most recent `features/<feature>/` handoff (JSX + HTML + the README/FEATURES/DESIGN doc set), showing the app as the last design surface described it. Use this as the style anchor for tokens, component patterns, voice, structure. On the first commission no prior handoff exists; until one does, use the live app in `app/web/src/` as the style anchor and bootstrap the folder from it. If the prior handoff has drifted behind the live app, resync the design surface to live as part of this commission and note the resync in `README.md`.
 4. Feature request — what the operator wants added or changed. This carries the scope. Nothing scope-related is embedded in this contract.

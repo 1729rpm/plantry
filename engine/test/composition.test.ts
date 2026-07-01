@@ -390,8 +390,16 @@ describe("composition — docs/engine.md §3", () => {
     it("isIntlAnchor: non-Indian Lunch in an anchor category; isCuisineNeutral keys on the tag", () => {
       const thaiGravy = makeDish({ time: "Lunch", category: "Gravy dish", cuisine: "Thai" });
       const indianGravy = makeDish({ time: "Lunch", category: "Gravy dish", cuisine: "Indian" });
-      const nonIndianAcc = makeDish({ time: "Lunch", category: "Accompaniment", cuisine: "Italian" });
-      const nonIndianBreakfast = makeDish({ time: "Breakfast", category: "Dry dish", cuisine: "Thai" });
+      const nonIndianAcc = makeDish({
+        time: "Lunch",
+        category: "Accompaniment",
+        cuisine: "Italian",
+      });
+      const nonIndianBreakfast = makeDish({
+        time: "Breakfast",
+        category: "Dry dish",
+        cuisine: "Thai",
+      });
       expect(isIntlAnchor(thaiGravy)).toBe(true);
       expect(isIntlAnchor(indianGravy)).toBe(false); // Indian is never an intl anchor
       expect(isIntlAnchor(nonIndianAcc)).toBe(false); // Accompaniment is not an anchor category
@@ -401,10 +409,31 @@ describe("composition — docs/engine.md §3", () => {
     });
 
     it("companion pools are same-cuisine-or-neutral and the form carries no Indian carb", () => {
-      const anchor = makeDish({ time: "Lunch", category: "Dry dish", cuisine: "Continental", tags: ["HP"], primaryIngredient: "Chicken Breast" });
-      const sameCuisineVeg = makeDish({ time: "Lunch", category: "Dry dish", cuisine: "Continental" });
-      const sameCuisineProtein = makeDish({ time: "Lunch", category: "Keto", cuisine: "Continental", tags: ["HP"] });
-      const neutralProtein = makeDish({ time: "Lunch", category: "Keto", cuisine: "Indian", tags: ["HP", "cuisine_neutral"], primaryIngredient: "Chicken Breast" });
+      const anchor = makeDish({
+        time: "Lunch",
+        category: "Dry dish",
+        cuisine: "Continental",
+        tags: ["HP"],
+        primaryIngredient: "Chicken Breast",
+      });
+      const sameCuisineVeg = makeDish({
+        time: "Lunch",
+        category: "Dry dish",
+        cuisine: "Continental",
+      });
+      const sameCuisineProtein = makeDish({
+        time: "Lunch",
+        category: "Keto",
+        cuisine: "Continental",
+        tags: ["HP"],
+      });
+      const neutralProtein = makeDish({
+        time: "Lunch",
+        category: "Keto",
+        cuisine: "Indian",
+        tags: ["HP", "cuisine_neutral"],
+        primaryIngredient: "Chicken Breast",
+      });
       const otherCuisineVeg = makeDish({ time: "Lunch", category: "Dry dish", cuisine: "Thai" });
       const indianCarb = makeDish({ time: "Lunch", category: "Chapati", cuisine: "Indian" });
       const out = menuIntl(
@@ -424,8 +453,18 @@ describe("composition — docs/engine.md §3", () => {
     });
 
     it("an undefined anchor (defensive) keeps only cuisine_neutral companions", () => {
-      const thaiProtein = makeDish({ time: "Lunch", category: "Keto", cuisine: "Thai", tags: ["HP"] });
-      const neutralProtein = makeDish({ time: "Lunch", category: "Keto", cuisine: "Indian", tags: ["HP", "cuisine_neutral"] });
+      const thaiProtein = makeDish({
+        time: "Lunch",
+        category: "Keto",
+        cuisine: "Thai",
+        tags: ["HP"],
+      });
+      const neutralProtein = makeDish({
+        time: "Lunch",
+        category: "Keto",
+        cuisine: "Indian",
+        tags: ["HP", "cuisine_neutral"],
+      });
       const out = menuIntl([thaiProtein, neutralProtein], undefined);
       // No anchor cuisine to match → only the neutral protein qualifies.
       expect(out.proteinCompanion).toEqual([neutralProtein]);
@@ -434,7 +473,14 @@ describe("composition — docs/engine.md §3", () => {
 
   describe("§3.2 international substitution selection", () => {
     function intlAnchor(id: number, cuisine: Dish["cuisine"], extra: Partial<Dish> = {}): Dish {
-      return makeDish({ id, time: "Lunch", category: "Gravy dish", cuisine, tags: ["HP"], ...extra });
+      return makeDish({
+        id,
+        time: "Lunch",
+        category: "Gravy dish",
+        cuisine,
+        tags: ["HP"],
+        ...extra,
+      });
     }
 
     it("selects up to two anchors, preferring distinct cuisines", () => {
@@ -445,7 +491,11 @@ describe("composition — docs/engine.md §3", () => {
         // an Indian protein candidate so the trigger has a day's protein to compare against
         makeDish({ id: 1, time: "Lunch", category: "Gravy dish", cuisine: "Indian", tags: ["HP"] }),
       ];
-      const out = selectInternationalSubstitutions({ library: lib, history: emptyHistory, season: "Summer" });
+      const out = selectInternationalSubstitutions({
+        library: lib,
+        history: emptyHistory,
+        season: "Summer",
+      });
       expect(out.length).toBe(2);
       const cuisines = out.map((d) => lib.find((x) => x.id === d.leadDishId)!.cuisine);
       // Distinct cuisines preferred: Thai (longest-unused, lowest id) then Chinese, not Thai twice.
@@ -470,7 +520,11 @@ describe("composition — docs/engine.md §3", () => {
           primaryIngredient: "Chicken",
         }),
       ];
-      const out = planWeekdaySubstitutions({ library: lib, history: emptyHistory, season: "Summer" });
+      const out = planWeekdaySubstitutions({
+        library: lib,
+        history: emptyHistory,
+        season: "Summer",
+      });
       const intl = out.filter((d) => d.form === "menu-intl");
       const cm = out.filter((d) => d.form === "menu-3" || d.form === "menu-4");
       expect(intl.length).toBe(2);
@@ -487,7 +541,9 @@ describe("composition — docs/engine.md §3", () => {
         makeDish({ id: 1, time: "Lunch", category: "Gravy dish", cuisine: "Indian", tags: ["HP"] }),
         makeDish({ id: 2, time: "Lunch", category: "Chapati", cuisine: "Indian" }),
       ];
-      expect(selectInternationalSubstitutions({ library: lib, history: emptyHistory, season: "Summer" })).toEqual([]);
+      expect(
+        selectInternationalSubstitutions({ library: lib, history: emptyHistory, season: "Summer" }),
+      ).toEqual([]);
     });
   });
 

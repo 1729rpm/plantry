@@ -1,6 +1,6 @@
 # Adding dishes — content-batch playbook
 
-The single procedure for adding a new dish (or a batch of dishes) to the library. Operational doc, sibling to `MAINTENANCE.md`: where `MAINTENANCE.md` is the playbook for the *automated* structural-change path (the slow loop), this is the playbook for the *manual, reviewed* structural-change path (content-batch dish adds).
+The single procedure for adding a new dish (or a batch of dishes) to the library. Operational doc, sibling to `MAINTENANCE.md`: where `MAINTENANCE.md` is the playbook for the _automated_ structural-change path (the slow loop), this is the playbook for the _manual, reviewed_ structural-change path (content-batch dish adds).
 
 Read this before authoring any new dish. It does not restate the specs; it orchestrates them and bakes in every trap we have actually hit. Authoritative homes it points at:
 
@@ -11,7 +11,7 @@ Read this before authoring any new dish. It does not restate the specs; it orche
 
 ## 0. The legitimate path
 
-New dishes go through a **reviewed content-batch PR**, never silently into the engine or rules (`docs/development.md` §9 anti-patterns). Branch: `data/expansion-<n>` (`docs/development.md` §2). Rajat reviews every batch personally. Structural rule/tag changes are a *different* path (the slow loop); a dish add never edits `docs/engine.md` or `engine/src/`.
+New dishes go through a **reviewed content-batch PR**, never silently into the engine or rules (`docs/development.md` §9 anti-patterns). Branch: `data/expansion-<n>` (`docs/development.md` §2). Rajat reviews every batch personally. Structural rule/tag changes are a _different_ path (the slow loop); a dish add never edits `docs/engine.md` or `engine/src/`.
 
 Right-size first (`docs/product.md` §4, Principle 1): a single comment is not a new dish. Net-new dishes are a content-coverage decision (the library wants more of some kind of meal), not a response to one week's noise.
 
@@ -112,17 +112,17 @@ Full system: `docs/engineering.md` §4 and `data/dish-photos/STYLE.md`. The look
 
 Per-dish detail lines override the model's defaults. The proven counters (CHANGELOG #77, #80, #84):
 
-| Prior the model wants | Wrong output | Detail-line fix |
-|---|---|---|
-| Paneer | Yellow cubes | "soft WHITE paneer cubes like fresh white tofu or white feta, never yellow" (crumbled: "white cottage cheese"). Improved but seed-sensitive; a hard FLUX ceiling on a few dishes. |
-| Boiled egg in gravy | Cut, patterned/sunburst yolk | "whole peeled hard-boiled eggs, kept WHOLE and uncut, smooth glossy white, no cut yolk shown" |
-| Okra | Whole pods | "cut into ROUNDS (not whole pods)" |
-| Dry dish | Sitting in sauce | explicit "dry, no gravy, no pooling" |
-| Rice | Fused/noodle-like mass | "loose separate individual grains, clearly distinct, never fused" |
-| Dal | Smooth puree | "thick dal with visible cooked lentils, grainy, not pureed soup" |
-| Shrikhand / thick set dish | Runny | "very thick dense, mounded high, stiff peaks, absolutely not runny" |
-| Flatbread / chilla | Puffy, naan-like, garnished | "thin flat flatbread, not puffy, not naan"; "plain, no garnish" |
-| Garnish | Flat-leaf parsley, centred sprig | skeleton already forces "fresh green coriander (cilantro), never parsley"; scatter, not a centre sprig |
+| Prior the model wants                                        | Wrong output                      | Detail-line fix                                                                                                                                                                                 |
+| ------------------------------------------------------------ | --------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Paneer                                                       | Yellow cubes                      | "soft WHITE paneer cubes like fresh white tofu or white feta, never yellow" (crumbled: "white cottage cheese"). Improved but seed-sensitive; a hard FLUX ceiling on a few dishes.               |
+| Boiled egg in gravy                                          | Cut, patterned/sunburst yolk      | "whole peeled hard-boiled eggs, kept WHOLE and uncut, smooth glossy white, no cut yolk shown"                                                                                                   |
+| Okra                                                         | Whole pods                        | "cut into ROUNDS (not whole pods)"                                                                                                                                                              |
+| Dry dish                                                     | Sitting in sauce                  | explicit "dry, no gravy, no pooling"                                                                                                                                                            |
+| Rice                                                         | Fused/noodle-like mass            | "loose separate individual grains, clearly distinct, never fused"                                                                                                                               |
+| Dal                                                          | Smooth puree                      | "thick dal with visible cooked lentils, grainy, not pureed soup"                                                                                                                                |
+| Shrikhand / thick set dish                                   | Runny                             | "very thick dense, mounded high, stiff peaks, absolutely not runny"                                                                                                                             |
+| Flatbread / chilla                                           | Puffy, naan-like, garnished       | "thin flat flatbread, not puffy, not naan"; "plain, no garnish"                                                                                                                                 |
+| Garnish                                                      | Flat-leaf parsley, centred sprig  | skeleton already forces "fresh green coriander (cilantro), never parsley"; scatter, not a centre sprig                                                                                          |
 | Coriander on a bare dish (bread, dessert, fruit, plain rice) | Coriander sprinkled on regardless | put **"no garnish"** in the detail line: the builder then drops the skeleton's coriander clause entirely (a negation alone fails; the named token leaks). See the next-but-one bullet (PR #121) |
 
 Other photo facts to know:
@@ -166,7 +166,7 @@ These are report snapshots tracking live data, not rules. Bump them to the truth
 
 ## 9. Schema-field caution (rare)
 
-Adding a *new frontmatter field* (not a new dish) is a different, heavier change: Convex validates every existing row against the new schema on deploy, so a new required field is a breaking change needing a wipe-and-regenerate or transitional-schema plan in the PR diagnosis card. A normal dish add uses only existing fields and never touches this.
+Adding a _new frontmatter field_ (not a new dish) is a different, heavier change: Convex validates every existing row against the new schema on deploy, so a new required field is a breaking change needing a wipe-and-regenerate or transitional-schema plan in the PR diagnosis card. A normal dish add uses only existing fields and never touches this.
 
 ## 10. Ship
 

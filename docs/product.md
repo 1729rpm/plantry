@@ -8,12 +8,12 @@ Two adults: Rajat (product owner) and Tuhina (second user). Cooking style is hig
 
 ## 2. Weekly loop
 
-| Day | Fruit | Breakfast | Lunch | Items |
-|---|---|---|---|---|
-| Mon, Wed, Fri | 1 fruit | 2 items | 3 items | 5 |
-| Tue, Thu | 1 fruit | 1 item | 4 items | 5 |
-| Sat | 1 fruit | none | 3 items | 3 |
-| Sun | none | none | none | 0 |
+| Day           | Fruit   | Breakfast | Lunch   | Items |
+| ------------- | ------- | --------- | ------- | ----- |
+| Mon, Wed, Fri | 1 fruit | 2 items   | 3 items | 5     |
+| Tue, Thu      | 1 fruit | 1 item    | 4 items | 5     |
+| Sat           | 1 fruit | none      | 3 items | 3     |
+| Sun           | none    | none      | none    | 0     |
 
 Every day Mon to Sat also carries a Fruit of the day: one in-season fruit, shown as its own light section separate from breakfast and lunch (Saturday included, even though it has no breakfast). Breakfast itself is savoury. The fruit sits outside the breakfast and lunch slots and outside the item cap, so the "Items" column above (the capped breakfast plus lunch count) is unchanged by it.
 
@@ -85,7 +85,7 @@ The user-facing output is plain, readable, and uncluttered. No internal jargon, 
   2. The grocery list is available as structured data via a dedicated query, not parsed from markdown.
   3. Pack sizes live in a machine-readable column on the ingredient catalog, distinct from per-dish quantity rows.
   4. A special-sourcing flag on the ingredient catalog already marks which ingredients need a supermarket or specialty-store run; a per-dish report surfaces which dishes that affects. This is the first of the additive sourcing fields the catalog anticipates.
-  Brand preference and substitution policy are future additive fields, not current columns. No SKU or store-specific identifier ever lives in the canonical data.
+     Brand preference and substitution policy are future additive fields, not current columns. No SKU or store-specific identifier ever lives in the canonical data.
 - **Calendar awareness.** Generator plans around stated absences upfront, removing the need for after-the-fact day overrides.
 - **Variance analysis.** Once a few months of history accumulates with author attribution, surface patterns like "paneer appears in 70 percent of weeks because Rajat or Tuhina keep voting it in".
 

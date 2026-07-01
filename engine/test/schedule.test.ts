@@ -148,21 +148,21 @@ describe("weekSchedule — docs/engine.md §2", () => {
 
   describe("Input validation", () => {
     it("rejects a non-ISO weekStart", () => {
-      expect(() =>
-        weekSchedule({ weekStart: "06/08/2026", lastSaturdayMenu: 3 }),
-      ).toThrow(/ISO date/);
+      expect(() => weekSchedule({ weekStart: "06/08/2026", lastSaturdayMenu: 3 })).toThrow(
+        /ISO date/,
+      );
     });
 
     it("rejects a non-Monday weekStart", () => {
-      expect(() =>
-        weekSchedule({ weekStart: "2026-06-09", lastSaturdayMenu: 3 }),
-      ).toThrow(/Monday/);
+      expect(() => weekSchedule({ weekStart: "2026-06-09", lastSaturdayMenu: 3 })).toThrow(
+        /Monday/,
+      );
     });
 
     it("rejects an impossible calendar date", () => {
-      expect(() =>
-        weekSchedule({ weekStart: "2026-02-30", lastSaturdayMenu: 3 }),
-      ).toThrow(/calendar date/);
+      expect(() => weekSchedule({ weekStart: "2026-02-30", lastSaturdayMenu: 3 })).toThrow(
+        /calendar date/,
+      );
     });
   });
 

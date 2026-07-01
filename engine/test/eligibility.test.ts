@@ -216,8 +216,7 @@ describe("eligibleDishes — docs/engine.md §1", () => {
         });
         for (const dish of result) {
           expect(dish.active).toBe("Yes");
-          const seasonOk =
-            dish.seasons === "All" || dish.seasons.includes(season);
+          const seasonOk = dish.seasons === "All" || dish.seasons.includes(season);
           expect(seasonOk).toBe(true);
         }
       }

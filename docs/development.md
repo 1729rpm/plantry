@@ -7,6 +7,7 @@ How changes are made in this repo. Session model, worktree workflow, ship workfl
 Plantry has one persistent Claude Code session that holds the engineering manager (EM) role and short-lived engineer sessions spawned by the EM for scoped work. Rajat talks to the EM. The EM never writes feature code directly; it spawns engineers, reviews their PRs, decides what merges, escalates only when it cannot decide alone.
 
 **EM responsibilities:**
+
 - Hold and re-read the four canonical docs and the active feature spec under `features/` (if any) at the start of every session.
 - Identify the next unblocked stream from the current feature's stream-state table.
 - Spawn an engineer for that stream in its own git worktree on its own branch, with a scoped brief, a pointer to the canonical docs, and a definition of done.
@@ -17,6 +18,7 @@ Plantry has one persistent Claude Code session that holds the engineering manage
 - Surface batched open items to Rajat at natural checkpoints, never piecemeal.
 
 **EM does not:**
+
 - Write feature code.
 - Create or change the GitHub repo, the Convex deployment, or hosting choices without Rajat's go-ahead.
 - Push to remote without Rajat's first-push authorization.
@@ -25,6 +27,7 @@ Plantry has one persistent Claude Code session that holds the engineering manage
 - Run destructive git operations.
 
 **Engineer responsibilities:**
+
 - Read `CLAUDE.md`, `docs/development.md` (this doc), and the relevant canonical docs.
 - Stay in one stream and one PR-sized chunk.
 - Carry a diagnosis card in every PR description (see §5).
@@ -38,6 +41,7 @@ Every code-touching session works in its own git worktree on its own feature bra
 **To start a new engineer stream:** the EM invokes `/new-stream <branch> <stream-letter>` (see `.claude/commands/new-stream.md`). The command creates `../plantry-<branch>/` as a worktree, checks out a fresh branch, drops the engineer brief into the worktree, and opens a new Claude Code session anchored there.
 
 **Branch naming:**
+
 - `feat/<stream-letter>-<short-name>` for engineer streams. Example: `feat/B-engine-section-1-3`.
 - `slow-loop/<date>` for slow-loop PRs. Example: `slow-loop/2026-07-12`.
 - `docs/maintenance-<date>` for canonical-doc reconciliation. Example: `docs/maintenance-2026-07-12`.
@@ -106,6 +110,7 @@ For PRs that propose no behavior change after diagnosis ("the comment looks like
 The slow loop runs only when Rajat invokes it. Convention is Sunday around 11am IST, but the cadence is not enforced.
 
 **To run the slow loop:**
+
 1. Rajat opens a Claude Code session in the main repo directory.
 2. Types `/slow-loop`. (Definition lives at `.claude/commands/slow-loop.md`.)
 3. The session reads queued comments from Convex (via `npx convex run`), reads the dish library under `data/dishes/`, the `data/ingredients.md` catalog, `data/menu_history.md`, `docs/engine.md`, and recent `incidents` from Convex.
@@ -118,6 +123,7 @@ Full slow-loop spec: `MAINTENANCE.md`.
 ## 7. Escalation rules
 
 The EM decides on its own:
+
 - Stream sequencing and engineer brief shape.
 - PR merges that pass principles and gates.
 - File and folder organization changes within the agreed layout.
@@ -125,6 +131,7 @@ The EM decides on its own:
 - Most slow-loop reasoning (the card makes the reasoning auditable).
 
 The EM surfaces to Rajat before acting:
+
 - Visibly destructive operations (force-push, history rewrite, dropping a Convex table, deleting branches).
 - Cross-stream product behavior changes (e.g., changing what the menu image looks like).
 - Cost or hosting changes (Convex paid tier, switching frontend host, buying a domain).
@@ -176,13 +183,14 @@ The EM either answers or escalates to Rajat. Engineers do not ping Rajat directl
 
 ## 11. Parallel-session coordination
 
-This repo routinely runs several worktree sessions at once and lands many PRs per hour on the same hotspots (picker components, `data/dishes/`, the CHANGELOG, `DECISIONS.md`, feature stream-tables). §2 isolates each session physically; this section keeps their *merges* clean by pre-planning who owns which files.
+This repo routinely runs several worktree sessions at once and lands many PRs per hour on the same hotspots (picker components, `data/dishes/`, the CHANGELOG, `DECISIONS.md`, feature stream-tables). §2 isolates each session physically; this section keeps their _merges_ clean by pre-planning who owns which files.
 
 ### 11.1 The live-session registry
 
 `coordination/active-streams.md` is the single source of truth for what is in flight. It is local and gitignored: it lives only in the main repo dir, the EM edits it by hand, and it never travels onto a branch, so it can never itself become a merge conflict. Worktree sessions read it (the brief carries its absolute path); they do not edit it.
 
 The EM maintains it:
+
 - **Before spawning a stream:** scan the registry. Choose file lanes no live stream owns. If the new stream must share a lane, do not run it in parallel; either narrow the lane or sequence it and record the merge order in the Hotspot ledger.
 - **On spawn:** add a Live streams row naming the exact owned paths.
 - **On merge:** move the row to Shipped and clear any Hotspot ledger rows it closed.
@@ -212,7 +220,7 @@ If session A merges first, session B owns the entire rebase. This is ordinary gi
 Some files cannot be lane-partitioned because every stream touches them. Each gets a planned merge order in the registry's Hotspot ledger.
 
 - **`docs/CHANGELOG.md`, `DECISIONS.md`, and feature stream-tables** are EM-owned. Engineers do not edit them. The EM batches CHANGELOG and DECISIONS entries into one docs PR at a checkpoint (the main dir cannot commit, so this matches the repo's existing docs-PR cadence). Append-only; never rewrite an existing entry.
-- **Tree-wide data migrations** (a change that rewrites every file under `data/dishes/`, e.g. adding a field to every dish) merge *last* among the streams that touch that tree, so the migrating stream rebases once onto the others' content rows rather than forcing every content stream to fight a tree-wide rewrite.
+- **Tree-wide data migrations** (a change that rewrites every file under `data/dishes/`, e.g. adding a field to every dish) merge _last_ among the streams that touch that tree, so the migrating stream rebases once onto the others' content rows rather than forcing every content stream to fight a tree-wide rewrite.
 - **Shared UI primitives** (the `Chip`, picker styles, anything under a shared component or global CSS): keep edits inside your own component. Touch the shared primitive only if unavoidable, and add a Hotspot ledger row when you do. A shared-primitive change is whole-app blast radius and gets the full crawl (§3).
 - **Canonical docs** (`docs/product.md`, `docs/engine.md`, `docs/engineering.md`, this file) are reconciled by the maintenance job / `reconcile-docs`, not edited in shipping sessions (see `MAINTENANCE.md`). The one exception is an append-only addition that would otherwise force a renumber of sections other docs cross-reference; append, do not insert.
 

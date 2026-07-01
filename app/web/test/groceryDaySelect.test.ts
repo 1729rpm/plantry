@@ -19,12 +19,7 @@ import type { CurrentWeek, ShortDay, WeekSlot } from "../src/lib/types.js";
 // resolution is deterministic across CI machines and timezones. The week
 // starting Mon 2026-06-15 runs Mon..Sat = Jun 15..20.
 
-function chip(
-  day: ShortDay,
-  dateNum: number,
-  status: ChipStatus,
-  skipped = false,
-): DayChip {
+function chip(day: ShortDay, dateNum: number, status: ChipStatus, skipped = false): DayChip {
   return { day, dateNum, status, skipped };
 }
 
@@ -80,11 +75,7 @@ describe("defaultSelection", () => {
 
   it("near week end before 11 yields the one or two remaining days", () => {
     // Today is Sat 20, last day: before 11 only Sat is selectable.
-    const lastDay = [
-      chip("Mon", 15, "past"),
-      chip("Fri", 19, "past"),
-      chip("Sat", 20, "today"),
-    ];
+    const lastDay = [chip("Mon", 15, "past"), chip("Fri", 19, "past"), chip("Sat", 20, "today")];
     expect(defaultSelection(lastDay, 9)).toEqual(["Sat"]);
     // From 11, today is excluded -> nothing left.
     expect(defaultSelection(lastDay, 14)).toEqual([]);

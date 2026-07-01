@@ -55,11 +55,15 @@ export function ExploreFilters({ state, onChange, pool }: ExploreFiltersProps) {
         </Chip>
         <Chip active={state.cuisines.length > 0} onClick={() => setPanel("cuisines")}>
           Cuisines{state.cuisines.length > 0 ? ` (${state.cuisines.length})` : ""}
-          <span className="chip__chevron" aria-hidden="true">▾</span>
+          <span className="chip__chevron" aria-hidden="true">
+            ▾
+          </span>
         </Chip>
         <Chip active={state.mealTimes.length > 0} onClick={() => setPanel("mealTimes")}>
           Meal time{state.mealTimes.length > 0 ? ` (${state.mealTimes.length})` : ""}
-          <span className="chip__chevron" aria-hidden="true">▾</span>
+          <span className="chip__chevron" aria-hidden="true">
+            ▾
+          </span>
         </Chip>
         {total > 0 && (
           <button
@@ -163,7 +167,11 @@ function MultiSelectPanel({
             );
           })}
         </ul>
-        <button type="button" className="btn-primary filter-panel__apply" onClick={() => onApply(draft)}>
+        <button
+          type="button"
+          className="btn-primary filter-panel__apply"
+          onClick={() => onApply(draft)}
+        >
           Apply
         </button>
       </div>

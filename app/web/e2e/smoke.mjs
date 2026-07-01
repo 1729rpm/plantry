@@ -354,9 +354,7 @@ async function runEngine(engineName, launcher, width, failures, coverage) {
       // renders the signal, so the bounded wait simply falls through.
       const readySel = TAB_READY[tab];
       if (readySel) {
-        await page
-          .waitForSelector(readySel, { timeout: TAB_READY_TIMEOUT })
-          .catch(() => {});
+        await page.waitForSelector(readySel, { timeout: TAB_READY_TIMEOUT }).catch(() => {});
       }
 
       await checkOverflow(page, `${tag} ${tab}`, failures);

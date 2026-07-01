@@ -568,7 +568,10 @@ const BLACK_LUM_THRESHOLD = 25;
 function meanLuminance(imgPath) {
   // Unique temp name per call so concurrent pool workers do not clobber a shared
   // file mid-check.
-  const tmp = resolve(photosDir, `.lumcheck.${process.pid}.${Math.random().toString(36).slice(2)}.png`);
+  const tmp = resolve(
+    photosDir,
+    `.lumcheck.${process.pid}.${Math.random().toString(36).slice(2)}.png`,
+  );
   try {
     run("sips", ["-z", "1", "1", "-s", "format", "png", imgPath, "--out", tmp]);
     const buf = readFileSync(tmp);
@@ -675,7 +678,9 @@ async function processDish(slug, token) {
     const { buf: imgBuf, usage, finishReason } = await generateImage(prompt, token, seedOverride);
     if (usage) console.log(`  usage: ${JSON.stringify(usage)}`);
     if (finishReason === "CONTENT_FILTERED") {
-      console.warn(`  CONTENT_FILTERED by the provider safety filter; skipping (placeholder covers it)`);
+      console.warn(
+        `  CONTENT_FILTERED by the provider safety filter; skipping (placeholder covers it)`,
+      );
       skipped = true;
       break;
     }

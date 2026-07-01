@@ -47,13 +47,7 @@ export const WEEKDAY_CAP = 5;
 /** docs/engine.md §9 ("3 on Saturday"). */
 export const SATURDAY_CAP = 3;
 
-const WEEKDAYS: ReadonlySet<Day> = new Set<Day>([
-  "Mon",
-  "Tue",
-  "Wed",
-  "Thu",
-  "Fri",
-]);
+const WEEKDAYS: ReadonlySet<Day> = new Set<Day>(["Mon", "Tue", "Wed", "Thu", "Fri"]);
 
 const SATIETY_RANK: Record<Satiety, number> = {
   Low: 0,

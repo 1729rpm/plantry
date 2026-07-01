@@ -31,7 +31,5 @@ function matchesSeason(dish: Dish, season: Season): boolean {
 }
 
 export function eligibleDishes(args: EligibleDishesArgs): Dish[] {
-  return args.library.filter(
-    (dish) => isActive(dish) && matchesSeason(dish, args.season),
-  );
+  return args.library.filter((dish) => isActive(dish) && matchesSeason(dish, args.season));
 }

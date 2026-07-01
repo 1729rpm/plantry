@@ -27,17 +27,11 @@ const ISO_MONDAY = /^\d{4}-\d{2}-\d{2}$/;
 
 function assertIsoMonday(weekStart: string): void {
   if (!ISO_MONDAY.test(weekStart)) {
-    throw new Error(
-      `weekStart must be an ISO date (YYYY-MM-DD); got ${weekStart}`,
-    );
+    throw new Error(`weekStart must be an ISO date (YYYY-MM-DD); got ${weekStart}`);
   }
   const [y, m, d] = weekStart.split("-").map(Number);
   const utc = new Date(Date.UTC(y, m - 1, d));
-  if (
-    utc.getUTCFullYear() !== y ||
-    utc.getUTCMonth() !== m - 1 ||
-    utc.getUTCDate() !== d
-  ) {
+  if (utc.getUTCFullYear() !== y || utc.getUTCMonth() !== m - 1 || utc.getUTCDate() !== d) {
     throw new Error(`weekStart is not a valid calendar date: ${weekStart}`);
   }
   if (utc.getUTCDay() !== 1) {
@@ -57,10 +51,7 @@ function weekdayLunchItemCount(day: Day): number {
   return day === "Mon" || day === "Wed" || day === "Fri" ? 3 : 4;
 }
 
-function pickSaturdayMenu(
-  lastSaturdayMenu: 3 | 4 | null | undefined,
-  rng: () => number,
-): 3 | 4 {
+function pickSaturdayMenu(lastSaturdayMenu: 3 | 4 | null | undefined, rng: () => number): 3 | 4 {
   if (lastSaturdayMenu === 3) return 4;
   if (lastSaturdayMenu === 4) return 3;
   return rng() < 0.5 ? 3 : 4;

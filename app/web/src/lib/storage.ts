@@ -107,14 +107,7 @@ interface GroceryDaysRecord {
   days: ShortDay[];
 }
 
-const SHORT_DAYS: ReadonlySet<string> = new Set([
-  "Mon",
-  "Tue",
-  "Wed",
-  "Thu",
-  "Fri",
-  "Sat",
-]);
+const SHORT_DAYS: ReadonlySet<string> = new Set(["Mon", "Tue", "Wed", "Thu", "Fri", "Sat"]);
 
 // The household's explicit Grocery day selection for `weekStart`, or null when
 // nothing is stored, the stored entry is for a different week, or the payload is

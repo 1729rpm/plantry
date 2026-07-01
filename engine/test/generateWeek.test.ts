@@ -371,11 +371,44 @@ describe("generateWeek — top-level engine", () => {
       const base = makeMinimalLibrary();
       return [
         ...base,
-        makeDish({ name: "Continental baked vegetables", time: "Lunch", category: "Dry dish", cuisine: "Continental", primaryIngredient: "Mixed Veg" }),
-        makeDish({ name: "Continental grilled chicken", time: "Lunch", category: "Dry dish", cuisine: "Continental", tags: ["HP"], primaryIngredient: "Chicken Breast" }),
-        makeDish({ name: "Ratatouille", time: "Lunch", category: "Dry dish", cuisine: "Continental", primaryIngredient: "Mixed Veg" }),
-        makeDish({ name: "Thai green curry chicken", time: "Lunch", category: "Gravy dish", cuisine: "Thai", tags: ["HP"], primaryIngredient: "Chicken" }),
-        makeDish({ name: "Thai tofu stir fry", time: "Lunch", category: "Dry dish", cuisine: "Thai", tags: ["HP"], primaryIngredient: "Tofu" }),
+        makeDish({
+          name: "Continental baked vegetables",
+          time: "Lunch",
+          category: "Dry dish",
+          cuisine: "Continental",
+          primaryIngredient: "Mixed Veg",
+        }),
+        makeDish({
+          name: "Continental grilled chicken",
+          time: "Lunch",
+          category: "Dry dish",
+          cuisine: "Continental",
+          tags: ["HP"],
+          primaryIngredient: "Chicken Breast",
+        }),
+        makeDish({
+          name: "Ratatouille",
+          time: "Lunch",
+          category: "Dry dish",
+          cuisine: "Continental",
+          primaryIngredient: "Mixed Veg",
+        }),
+        makeDish({
+          name: "Thai green curry chicken",
+          time: "Lunch",
+          category: "Gravy dish",
+          cuisine: "Thai",
+          tags: ["HP"],
+          primaryIngredient: "Chicken",
+        }),
+        makeDish({
+          name: "Thai tofu stir fry",
+          time: "Lunch",
+          category: "Dry dish",
+          cuisine: "Thai",
+          tags: ["HP"],
+          primaryIngredient: "Tofu",
+        }),
       ];
     }
 
@@ -446,9 +479,9 @@ describe("generateWeek — top-level engine", () => {
           const protein = lunch.dishes[1];
           // exactly one protein, same-cuisine or cuisine_neutral.
           expect(protein.tags.includes("HP") || protein.category === "Keto").toBe(true);
-          expect(protein.cuisine === anchor.cuisine || protein.tags.includes("cuisine_neutral")).toBe(
-            true,
-          );
+          expect(
+            protein.cuisine === anchor.cuisine || protein.tags.includes("cuisine_neutral"),
+          ).toBe(true);
         }
       }
     });
@@ -1203,7 +1236,9 @@ describe("generateWeek — top-level engine", () => {
       });
       // Monday breakfast is a standalone Bread (1 item), so the 4-item thali fits
       // under the 5-item cap and survives whole.
-      const monBf = week.days.find((d) => d.day === "Mon")!.slots.find((s) => s.meal === "Breakfast")!;
+      const monBf = week.days
+        .find((d) => d.day === "Mon")!
+        .slots.find((s) => s.meal === "Breakfast")!;
       expect(monBf.dishes.length).toBe(1);
       const lunch = monLunch(week);
       expect(lunch.dishes.length).toBe(4);
@@ -1223,7 +1258,9 @@ describe("generateWeek — top-level engine", () => {
         packSizes: emptyPackSizes,
         rng: () => 0.1,
       });
-      const monBf = week.days.find((d) => d.day === "Mon")!.slots.find((s) => s.meal === "Breakfast")!;
+      const monBf = week.days
+        .find((d) => d.day === "Mon")!
+        .slots.find((s) => s.meal === "Breakfast")!;
       expect(monBf.dishes.length).toBe(2); // Paratha lead + accompaniment
       const lunch = monLunch(week);
       // 2 breakfast + 4 thali = 6 over the 5-item cap → drop the dry sabzi.
@@ -1301,7 +1338,12 @@ describe("generateWeek — top-level engine", () => {
           primaryIngredient: "Chicken",
         }),
         makeDish({ name: "Dal", time: "Lunch", category: "Gravy dish", primaryIngredient: "Dal" }),
-        makeDish({ name: "Bhindi", time: "Lunch", category: "Dry dish", primaryIngredient: "Okra" }),
+        makeDish({
+          name: "Bhindi",
+          time: "Lunch",
+          category: "Dry dish",
+          primaryIngredient: "Okra",
+        }),
         makeDish({
           name: "Chapati",
           time: "Lunch",
@@ -1332,7 +1374,9 @@ describe("generateWeek — top-level engine", () => {
         packSizes: emptyPackSizes,
         rng: () => 0.1,
       });
-      const tueBf = week.days.find((d) => d.day === "Tue")!.slots.find((s) => s.meal === "Breakfast")!;
+      const tueBf = week.days
+        .find((d) => d.day === "Tue")!
+        .slots.find((s) => s.meal === "Breakfast")!;
       expect(tueBf.dishes.map((d) => d.name)).toEqual(["Besan Paneer Chilla", "Green Chutney"]);
       // One HP source per meal: the chutney is non-HP.
       expect(tueBf.dishes.filter((d) => d.tags.includes("HP")).length).toBe(1);

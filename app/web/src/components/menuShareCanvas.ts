@@ -280,19 +280,12 @@ function layoutMenu(
     };
   });
 
-  const panelHeight =
-    laidOut.reduce((sum, d) => sum + d.rowHeight, 0) + PANEL_BORDER * 2;
+  const panelHeight = laidOut.reduce((sum, d) => sum + d.rowHeight, 0) + PANEL_BORDER * 2;
 
   // imageHeight = pad-top + header + header gap + panel + footer gap + footer +
   // pad-bottom.
   const totalHeight =
-    PAD_TOP +
-    HEADER_BLOCK +
-    HEADER_GAP +
-    panelHeight +
-    FOOTER_GAP +
-    FOOTER_BLOCK +
-    PAD_BOTTOM;
+    PAD_TOP + HEADER_BLOCK + HEADER_GAP + panelHeight + FOOTER_GAP + FOOTER_BLOCK + PAD_BOTTOM;
 
   return { days: laidOut, panelHeight, totalHeight: Math.ceil(totalHeight) };
 }
