@@ -33,7 +33,7 @@ id: <next free integer>
 name: <Display name>
 category: <Gravy dish | Dry dish | Complete meal | Rice | Chapati | Paratha | Bread | Chilla | Accompaniment | Dessert | Keto | Fruit>
 time: <Breakfast | Lunch>          # Fruit-category dishes still carry a time, but the Fruit slot is separate (§3.3)
-tags: []                            # subset of [HP, complete_meal, complete_carb, fruit]; HP only if it truly clears the protein bar
+tags: []                            # subset of [HP, complete_meal, complete_carb, fruit, cuisine_neutral]; HP only if it truly clears the protein bar
 primaryIngredient: <dominant ingredient, or "Mixed Veg" when none dominates>
 preferred: No                       # new dishes ship preferred: No
 active: <No while batch-reviewing | Yes if shipping live now>
@@ -70,7 +70,7 @@ Field traps that have actually bitten us:
 
 ### Cuisine taxonomy (exactly one, required)
 
-`Indian` (default for any dish with no international cuisine), `Italian`, `Chinese`, `Mexican`, `Greek`, `Spanish`, `Korean`, `Japanese`, `Continental`, `Vietnamese`, `Lebanese`, `Mediterranean`, `Thai`. Selection reads it for the §4 within-week cuisine-diversity step (which leans the week slightly less Indian and surfaces preferred international dishes first); eligibility (§1) and composition (§3) never read it. It also feeds the Explore cuisine filter and the photo prompt's cuisine slot.
+`Indian` (default for any dish with no international cuisine), `Italian`, `Chinese`, `Mexican`, `Greek`, `Spanish`, `Korean`, `Japanese`, `Continental`, `Vietnamese`, `Lebanese`, `Mediterranean`, `Thai`. §3 composition reads it for meal-level cuisine coherence (the Indian thali composes only `Indian` dishes; the international lunch form and its §3.2 selection use `cuisine !== "Indian"` for the anchor pool and same-cuisine companion match, with `cuisine_neutral` proteins eligible in any register); eligibility (§1) and §4 selection do not read it. It also feeds the Explore cuisine filter and the photo prompt's cuisine slot. See `docs/engine.md` §12.
 
 ## 3. Ingredients (catalog-first)
 
