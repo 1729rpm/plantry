@@ -123,7 +123,7 @@ Rajat invokes `/reconcile-docs` after a notable run of CHANGELOG entries (typica
 
 ### 2.3 Inputs the session reads
 
-- `docs/CHANGELOG.md` entries since the last reconciliation (last-run marker stored in `.maintenance-state`, committed).
+- `docs/CHANGELOG.md` entries since the last reconciliation (last-run marker stored in `.maintenance-state`, committed). Each entry's `Updated:` line is the primary work queue: it names the doc sections the shipping session judged stale. The pass verifies that judgment rather than re-deriving every entry's doc impact from the diff, and still scans the entry body for impact the line missed.
 - The `features/` directory if anything is active, and any feature spec referenced by recent CHANGELOG entries (`archive/features/<name>.md` after ship).
 - Current `docs/product.md`, `docs/engine.md`, `docs/engineering.md`, `docs/development.md` — to preserve voice and structure.
 - Current code state under `engine/`, `app/`, plus the data files — to cross-check that doc claims match reality.
