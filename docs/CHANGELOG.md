@@ -7,10 +7,33 @@ Format:
 ```
 ## YYYY-MM-DD  short title
 
-Brief description in present tense, one to three sentences. Reference the PR.
+Brief description in present tense. Reference the PR.
+Why: the motivation, one or two sentences.
+Updated: the canonical or operational doc sections this change makes stale, as the
+work queue for /reconcile-docs and /reconcile-ops; or "none".
 ```
 
 ---
+
+## 2026-07-05 Playbook migration: phase layer, memory merge, changelog format
+
+Implements the cross-project standard at `~/code/DEVELOPMENT-PLAYBOOK.md` (brief:
+`features/playbook-migration.md`). `docs/PLAN.md` adds the phase table (phases 1 to 4
+shipped, none in flight) and the "Begin development. We are on Phase N." session-start
+ritual. `scripts/end-session.sh` plus `scripts/merge_memory.py` (ported from Cadence)
+merge a worktree session's Claude auto-memory into the canonical project memory dir
+before worktree removal. CHANGELOG entries now carry Why: and Updated: lines, this
+entry being the first example. P3 items (automated cleanup backstop, .worktreeinclude)
+are skipped for now; see DECISIONS.md 2026-07-05.
+Why: engineer-session memories currently evaporate on worktree removal, reconciliation
+has to re-derive each entry's doc impact from diffs, and phase state lived nowhere a
+fresh session could load; the playbook closes all three.
+Updated: `docs/development.md` §3 step 6 (entry format), §3 steps 7 to 8 (memory merge
+at worktree closure; phase-close additions: PLAN.md flip and annotated tag), §1 (the
+session-start ritual), and the playbook pointer; `CLAUDE.md` (doc hierarchy gains
+PLAN.md, playbook pointer, em-dash rule tightened to everywhere); `MAINTENANCE.md`
+§2.3 (the Updated: line as reconciliation input); `.claude/commands/new-stream.md`
+(session close via end-session.sh). Queued for `/reconcile-docs` and `/reconcile-ops`.
 
 ## 2026-06-29 Menu composition v2: meal-level cuisine, 4-item thali, role-aware cap
 
