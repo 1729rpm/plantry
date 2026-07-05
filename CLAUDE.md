@@ -15,12 +15,14 @@ Four canonical specs plus a changelog in `docs/`, three operational docs at root
 - `docs/product.md` — what we are building, persona, scope, principles, tone, future scope. Owns scope decisions.
 - `docs/engine.md` — the meal-planning rules spec. The TS engine mirrors this; CI fails if they drift. Owns rule decisions.
 - `docs/engineering.md` — stack, Convex schema, data layer split, deploy model, hosting, Swiggy MCP shape, env vars. Owns stack and integration decisions.
-- `docs/development.md` — session isolation, worktree workflow, ship workflow, definition of done, diagnosis card, slow-loop trigger, escalation rules, commit conventions. Owns "how to make changes" decisions.
-- `docs/CHANGELOG.md` — append-only chronological index of shipped changes. One entry per change.
+- `docs/development.md` — session isolation, worktree workflow, ship workflow, definition of done, diagnosis card, slow-loop trigger, escalation rules, commit conventions. Owns "how to make changes" decisions. Implements the cross-project standard at `~/code/DEVELOPMENT-PLAYBOOK.md` and records this repo's deliberate deltas.
+- `docs/PLAN.md` — the phase plan for the build, one row per phase with a verifiable outcome. Owns sequencing.
+- `docs/CHANGELOG.md` — append-only chronological index of shipped changes. One entry per change, each ending with the `Updated:` line the reconciliation passes consume.
 
 Read order by task:
 
 - Starting any session that will touch code → `docs/development.md`. Always.
+- Starting a session on a phase ("Begin development. We are on Phase N.") → `docs/PLAN.md`, the active spec in `features/`, and `coordination/active-streams.md`.
 - Touching the rules or the engine → `docs/engine.md` + the matching `engine/src/` module.
 - Touching Convex schema, frontend, deploy, hosting, integrations → `docs/engineering.md`.
 - Asking why something exists → `docs/CHANGELOG.md`, then `archive/`.
@@ -61,6 +63,6 @@ Full ground rules (session model, branch naming, commit style, definition of don
 
 ## Project-specific style
 
-- No em dashes or long dashes in user-facing content: PWA UI strings, generated menu images, grocery lists, share images. Em dashes are fine in internal docs (specs, CHANGELOG, DECISIONS, briefs, PR descriptions, code comments, commit messages); use them sparingly there too.
+- No em dashes or long dashes anywhere in newly produced text: user-facing content (PWA UI strings, generated menu images, grocery lists, share images) and internal docs alike (specs, CHANGELOG, DECISIONS, briefs, PR descriptions, code comments, commit messages). Use commas, parentheses, semicolons, or sentence breaks. Existing em dashes in append-only ledger history stay as written (those entries are never rewritten); reconciliation passes strip them from spec sections as they touch them.
 - Canonical docs in `docs/` read as present-tense steady-state specs. No "added in", no "previously", no historical seams. The CHANGELOG holds the chronology.
 - Explain non-obvious software, infra, data, finance, or business-strategy concepts inline; Rajat prefers more information, never less, on terms an experienced PM would not already know. Skip explanations for PM-craft and Indian quick-commerce knowledge.

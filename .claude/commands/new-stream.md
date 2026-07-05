@@ -56,8 +56,10 @@ The engineer:
 Worktree closure is part of merging a PR, not an optional afterthought (`docs/development.md` §2, §3). The moment a stream's PR merges to `main`, the EM runs, in the same step as the merge:
 
 ```
-git worktree remove ../plantry-<branch>
+(cd ../plantry-<branch> && ../Plantry/scripts/end-session.sh)   # memory merge + worktree removal
 git branch -D <full-branch-name>            # local branch (squash-merge leaves it non-ancestor)
 ```
+
+`end-session.sh` merges the worktree session's Claude auto-memory into the canonical project memory dir before removing the worktree (Claude Code keys memory on the dasherized cwd, so without the merge a worktree session's learnings are lost). Pass `--dry-run` to preview the merge. A plain `git worktree remove` is the fallback when the session wrote no memory.
 
 then updates the active feature spec's stream-state table (if any), and moves the stream's row in `coordination/active-streams.md` to Shipped, clearing any Hotspot ledger rows it closed. Leaving a merged worktree or branch behind is the failure mode that accumulates stale worktrees across parallel sessions; a periodic sweep is `git worktree list` cross-checked against merged PRs, then `git worktree remove` each one whose branch has landed.
