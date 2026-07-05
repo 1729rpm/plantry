@@ -15,7 +15,7 @@ Four canonical specs plus a changelog in `docs/`, three operational docs at root
 - `docs/product.md` — what we are building, persona, scope, principles, tone, future scope. Owns scope decisions.
 - `docs/engine.md` — the meal-planning rules spec. The TS engine mirrors this; CI fails if they drift. Owns rule decisions.
 - `docs/engineering.md` — stack, Convex schema, data layer split, deploy model, hosting, Swiggy MCP shape, env vars. Owns stack and integration decisions.
-- `docs/development.md` — session isolation, worktree workflow, ship workflow, definition of done, diagnosis card, slow-loop trigger, escalation rules, commit conventions. Owns "how to make changes" decisions. Implements the cross-project standard at `~/code/DEVELOPMENT-PLAYBOOK.md` and records this repo's deliberate deltas.
+- `docs/development.md` — session isolation, worktree workflow, ship workflow, definition of done, diagnosis card, slow-loop trigger, escalation rules, commit conventions. Owns "how to make changes" decisions. Implements the cross-project standard at `~/Downloads/AI Products/DEVELOPMENT-PLAYBOOK.md` and records this repo's deliberate deltas.
 - `docs/PLAN.md` — the phase plan for the build, one row per phase with a verifiable outcome. Owns sequencing.
 - `docs/CHANGELOG.md` — append-only chronological index of shipped changes. One entry per change, each ending with the `Updated:` line the reconciliation passes consume.
 

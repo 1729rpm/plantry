@@ -1,6 +1,6 @@
 # Development
 
-How changes are made in this repo. Session model, worktree workflow, ship workflow, definition of done, diagnosis card discipline, slow loop trigger, escalation, commit conventions, anti-patterns. The process implements the cross-project standard at `~/code/DEVELOPMENT-PLAYBOOK.md`; this doc records how it lands here plus this repo's deliberate deltas.
+How changes are made in this repo. Session model, worktree workflow, ship workflow, definition of done, diagnosis card discipline, slow loop trigger, escalation, commit conventions, anti-patterns. The process implements the cross-project standard at `~/Downloads/AI Products/DEVELOPMENT-PLAYBOOK.md`; this doc records how it lands here plus this repo's deliberate deltas.
 
 ## 1. Session model
 
