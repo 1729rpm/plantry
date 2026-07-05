@@ -1,7 +1,7 @@
 # Playbook migration: Plantry
 
 Brief for aligning this repo with the cross-project standard at
-`~/code/DEVELOPMENT-PLAYBOOK.md`. Plantry is the closest of the three projects to the
+`~/Downloads/AI Products/DEVELOPMENT-PLAYBOOK.md`. Plantry is the closest of the three projects to the
 playbook; most of the playbook IS Plantry's system generalized. The gaps are the new
 phase layer, the changelog format, and two small adoptions from Cadence. Section
 numbers below (§) refer to the playbook.
@@ -64,7 +64,7 @@ the cross-project standard, largely verbatim from this repo.
    workflow, or fold it into the EM's merge-time checklist.
 
 6. **Point at the playbook.** Add one line to CLAUDE.md: process standard is
-   `~/code/DEVELOPMENT-PLAYBOOK.md`; `docs/development.md` keeps only this repo's
+   `~/Downloads/AI Products/DEVELOPMENT-PLAYBOOK.md`; `docs/development.md` keeps only this repo's
    genuine deltas (EM mode, the slow loop, content-batch branch series, the crawl
    gate, real-device iOS verification). Record the session-model choice explicitly:
    EM mode (§4).
