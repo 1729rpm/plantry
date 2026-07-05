@@ -19,6 +19,15 @@ Decisions Rajat must approve go in the "Open items" list in `features/phase2.md`
 
 ---
 
+## 2026-07-05  Playbook migration: adopt P1 and P2, skip both P3 items for now
+
+**Stream:** chore/playbook-migration (cross-stream process change)
+**Context:** The cross-project playbook migration (brief: `features/playbook-migration.md`) leaves two optional P3 items to EM judgment: porting Cadence's automated three-guard worktree cleanup sweep, and adopting `.worktreeinclude` for env propagation.
+**Options considered:** (a) adopt both P3 items now; (b) skip both and record why; (c) adopt only the cleanup sweep.
+**Chosen:** (b). The cleanup sweep solves stray worktrees, but Plantry's ship workflow already removes the worktree and branch as part of the merge step itself and the registry makes strays visible in one glance; adding a scheduled launchd job is infrastructure without a demonstrated recurrence (no stray worktrees exist today). `.worktreeinclude` matters only for Claude Code's built-in worktree creation; Plantry worktrees are created by `/new-stream`, which already handles env. Both re-enter scope on first recurrence of the problem they solve.
+**Reversibility:** trivial; both are additive adoptions whenever wanted.
+**Right-size check (per `docs/product.md` §4):** problem size is zero observed instances for both; fix level chosen is no-change with a recorded trigger for revisit; generality: the same right-size bar the slow loop applies to dish feedback, applied to process tooling.
+
 ## 2026-06-22 03:30 IST  Expansion-8: ship the two promoted customs active, and add a Beetroot catalog row
 
 **Stream:** data/expansion-8 (content batch, #187)
