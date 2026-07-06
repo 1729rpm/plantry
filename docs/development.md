@@ -6,13 +6,13 @@ How changes are made in this repo. Session model, worktree workflow, ship workfl
 
 Plantry has one persistent Claude Code session that holds the engineering manager (EM) role and short-lived engineer sessions spawned by the EM for scoped work. Rajat talks to the EM. The EM never writes feature code directly; it spawns engineers, reviews their PRs, decides what merges, escalates only when it cannot decide alone.
 
-A build session starts on a phase. Rajat says "Begin development. We are on Phase N." and the EM reads, in order: `CLAUDE.md`, this doc, `docs/PLAN.md`, the active phase spec under `features/`, and the live-session registry at `coordination/active-streams.md`. It then identifies the next unblocked stream from the spec's stream-state table (dependencies met, lanes free), confirms the pick in one line, and spawns the engineer. If the stated phase disagrees with `docs/PLAN.md`, the EM surfaces the mismatch before any code is written.
+A build session starts on a phase. Rajat says "Begin development. We are on Phase N." and the EM reads, in order: `CLAUDE.md`, this doc, `docs/PLAN.md`, the active phase spec under `features/`, and the live-session registry at `coordination/active-streams.md`. It then identifies every unblocked stream in the spec's stream-state table (dependencies met, lanes free), not just the next one, confirms the picks in one line, and spawns one engineer per unblocked stream, each in its own worktree. Work runs parallel by default, serial by dependency: independent streams run concurrently, while a stream that consumes another stream's output, shares a lane, or touches a hotspot waits its turn in dependency order (§11). Every parallel stream clears the same gates and review as serial work; when independence is unclear, sequence it. If the stated phase disagrees with `docs/PLAN.md`, the EM surfaces the mismatch before any code is written.
 
 **EM responsibilities:**
 
 - Hold and re-read the four canonical docs and the active feature spec under `features/` (if any) at the start of every session.
-- Identify the next unblocked stream from the current feature's stream-state table.
-- Spawn an engineer for that stream in its own git worktree on its own branch, with a scoped brief, a pointer to the canonical docs, and a definition of done.
+- Identify every unblocked stream in the current feature's stream-state table and run them in parallel; single-stream execution is the floor, not the default.
+- Spawn an engineer per unblocked stream, each in its own git worktree on its own branch, with a scoped brief, a pointer to the canonical docs, and a definition of done. Dependent or lane-sharing streams are sequenced in dependency order, not parallelized.
 - Review every engineer PR before merge against the principles in `docs/product.md` §4 and the CI gates in `docs/engineering.md` §15.
 - For every slice that touches the app frontend (`app/web`), spin off the in-depth full-flow crawl-and-compare pass against the PR preview before merge, and review its output (see §3 and `docs/engineering.md` §16).
 - Track cross-stream consistency (a schema change should ripple to engine, Convex schema, frontend).
@@ -35,6 +35,7 @@ A build session starts on a phase. Rajat says "Begin development. We are on Phas
 - Carry a diagnosis card in every PR description (see §5).
 - Ask the EM clarifying questions in the PR rather than guess.
 - Self-test against the CI gates locally before opening the PR.
+- Fan out independent subtasks (reading several files, running checks across modules, researching separate questions) as concurrent subagents or batched tool calls; run steps that consume an earlier step's output in order.
 
 ## 2. Worktree workflow
 
@@ -241,3 +242,4 @@ Never `git add -A` or `git add .`. Stage by filename or directory. Worktrees alr
 - **Live-session registry.** A local, gitignored coordination file (`coordination/active-streams.md`) the EM maintains, listing every in-flight stream and the file lanes it owns. Read before spawning any stream so two sessions never collide on the same files. See §11.
 - **File lane.** The concrete set of paths a stream owns for the life of its branch (real paths like `engine/src/nutrition.ts` or `app/web/src/components/Explore*`, not whole areas). Two streams with disjoint lanes can run in parallel safely.
 - **Hotspot.** A file more than one live stream will touch (the CHANGELOG, `DECISIONS.md`, a feature stream-table, a tree-wide data migration, a shared UI primitive). Hotspots get a planned merge order in the registry's Hotspot ledger rather than colliding by accident.
+- **Subagent.** A short-lived child Claude session spawned inside a running session with a narrow brief and its own context window. Several run concurrently without sharing state, which makes them the in-session analogue of giving each stream its own worktree.
