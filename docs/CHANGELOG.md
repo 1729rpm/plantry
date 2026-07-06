@@ -15,6 +15,23 @@ work queue for /reconcile-docs and /reconcile-ops; or "none".
 
 ---
 
+## 2026-07-06 Session model runs parallel by default, serial by dependency
+
+`docs/development.md` §1 states the parallelism rule (#210): the EM identifies every
+unblocked stream in the stream-state table, not just the next one, and spawns one
+engineer per unblocked stream, each in its own worktree; a stream that consumes
+another stream's output, shares a lane, or touches a hotspot is sequenced in
+dependency order, and when independence is unclear it is sequenced. Engineers apply
+the same rule inside a stream, fanning out independent subtasks as concurrent
+subagents or batched tool calls. Every parallel stream clears the same gates and
+review as serial work. §12 gains a Subagent glossary entry. Mirrors principle 8 of
+the cross-project playbook.
+Why: the coordination machinery in §11 exists precisely to make parallel streams
+safe, but the session model still described spawning one engineer at a time; making
+the fan-out the stated default buys wall-clock speed without loosening any gate.
+Updated: none (the change is itself the `docs/development.md` edit; no other doc
+restates the session-start behavior).
+
 ## 2026-07-05 Playbook migration: phase layer, memory merge, changelog format
 
 Implements the cross-project standard at `~/code/DEVELOPMENT-PLAYBOOK.md` (brief:
