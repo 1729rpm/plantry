@@ -8,6 +8,7 @@ import {
   type MenuHistoryRow,
   type Season,
 } from "@plantry/engine";
+import { archiveToHistoryRows } from "./lib/archiveHistory.js";
 
 /**
  * Explore feed for the Explore tab (`features/design-revamp.md` §1.4 item 4,
@@ -62,20 +63,7 @@ export const getExploreFeed = query({
   args: { weekStart: v.string() },
   handler: async (ctx, args): Promise<ExploreFeedDish[]> => {
     const archives = await ctx.db.query("weekArchive").collect();
-    const archiveHistory: MenuHistoryRow[] = [];
-    for (const archive of archives) {
-      for (const row of archive.rows) {
-        archiveHistory.push({
-          weekStart: archive.weekStart,
-          day: row.day,
-          meal: row.meal,
-          dishName: row.dishName,
-          dishId: row.dishId,
-        });
-      }
-    }
-
-    const mergedHistory: MenuHistoryRow[] = [...history, ...archiveHistory];
+    const mergedHistory: MenuHistoryRow[] = [...history, ...archiveToHistoryRows(archives)];
 
     const ranked = rankExplore({
       library: dishes,

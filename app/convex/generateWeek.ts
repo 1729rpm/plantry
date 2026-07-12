@@ -3,8 +3,14 @@ import { v } from "convex/values";
 import type { Id } from "./_generated/dataModel.js";
 import { dishes, packSizes, ingredients } from "@plantry/engine/library";
 import { history } from "@plantry/engine/history";
-import { generateWeek, type GeneratedWeek, type Season } from "@plantry/engine";
+import {
+  generateWeek,
+  type GeneratedWeek,
+  type MenuHistoryRow,
+  type Season,
+} from "@plantry/engine";
 import type { SlotMeal } from "./lib/meals.js";
+import { archiveToHistoryRows } from "./lib/archiveHistory.js";
 
 type ShortDay = "Mon" | "Tue" | "Wed" | "Thu" | "Fri" | "Sat";
 
@@ -55,6 +61,15 @@ export function seasonOf(isoDate: string): Season {
  * next run). An empty queue (production today) yields no requests and leaves
  * generation byte-identical to before.
  *
+ * History input (docs/engine.md Inputs, §8): the engine's historical record is
+ * the baked seed history (`@plantry/engine/history`, a periodic snapshot) plus
+ * one `MenuHistoryRow` per `weekArchive` row (weeks finalized since the last
+ * bake), merged via `archiveToHistoryRows`. The merged record drives the §4
+ * longest-unused priority, the §2 Saturday Menu 3/4 alternation, and the §3.3
+ * fruit rotation, so a freshly finalized week immediately sinks its dishes in
+ * the next generation. With an empty `weekArchive` the merged history equals
+ * the baked history.
+ *
  * Incidents: any human-readable warnings the engine reports (`GeneratedWeek
  * .incidents`, e.g. "Friday over cap (5), dropped: Rajma", or an unplaceable
  * requested dish) are persisted as one `incidents` row each with
@@ -89,13 +104,18 @@ export const generateCurrentWeek = internalMutation({
     queued.sort((a, b) => a.createdAt - b.createdAt);
     const requests = queued.map((row) => row.dishId);
 
+    // Historical record = baked seed + every finalized week in `weekArchive`,
+    // so recency-driven rules see weeks finalized since the last bake.
+    const archives = await ctx.db.query("weekArchive").collect();
+    const mergedHistory: MenuHistoryRow[] = [...history, ...archiveToHistoryRows(archives)];
+
     // The engine composes §1 schedule -> §2 alternation -> §3 composition
     // -> §3.2 substitution -> §4 priority -> §5 cap -> §6 consolidation, then
     // places §6 requested dishes ahead of recency where composition accepts them.
     const generated: GeneratedWeek = generateWeek({
       weekStart: args.weekStart,
       library: dishes,
-      history,
+      history: mergedHistory,
       season,
       ingredients,
       packSizes,
