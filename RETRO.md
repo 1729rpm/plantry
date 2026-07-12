@@ -120,3 +120,19 @@ run only reads entries appended since.
 - Impact: A grocery-card CSS regression can ship unseen; #155's misaligned rows reached prod and only an operator eyeball caught it.
 - Proposed level: infra (a seeded non-prod Convex test week the crawl can render) + process-doc (until then, record in engineering.md §16 the static-`index.css`-render-of-a-mock-grocery-DOM technique as the way to verify Grocery-list CSS)
 - Status: fixed (PR #174) — `scripts/seed-dev-week.mjs` seeds a dev current week the crawl renders the Grocery read path against; engineering.md §16 documents both the seeded week and the static-`index.css`-render-of-a-mock-grocery-DOM fallback. Seed run against dev and verified (Grocery list populated; updated smoke crawl passes on the real Grocery selectors).
+
+## 2026-07-12  Finalize-before-cooking makes weekArchive record the planned week, not the cooked one
+- Area: verification
+- What happened: `finalizeWeek` snapshots archive rows at the moment it runs, and the household finalizes at preparation time (2026-07-06 was finalized ~10 minutes after generation, before 16 swaps and a custom add landed that week; 2026-07-13 was likewise finalized on generation day per Rajat's instruction). Post-finalize swaps never reach the archive, so the recency record that #211 wired into generation partly describes menus that were never cooked (the 2026-07-06 archive holds Thai red curry tofu on Monday; the live week shows it was swapped away).
+- Recurrence: systemic (every finalized week that gets edited afterward)
+- Impact: recency, Saturday alternation, and fruit rotation rank against partly fictional history; dishes actually cooked can rank as never-cooked and vice versa.
+- Proposed level: process-doc or engine (either finalize at week end as the archive semantics assume, or make the archive follow post-finalize edits to a final week); needs a MAINTENANCE.md §6 triage with Rajat since it touches when he taps Finalize.
+- Status: open
+
+## 2026-07-12  Convex dev smoke from a fresh worktree has two traps (stale dist bundle, anonymous .env.local)
+- Area: tooling
+- What happened: An engineer running the standard dev-deployment smoke hit both: (1) a stale gitignored `app/convex/dist/` (emitted by the root build) breaks `npx convex dev --once` bundling because `convex.json` declares `functions: "./"`, and (2) the auto-created `app/convex/.env.local` pointed at `anonymous:anonymous-convex` (a local backend), so the first smoke run silently targeted the wrong deployment until rewritten to `dev:lovely-curlew-631`.
+- Recurrence: systemic (every engineer worktree that pushes to the dev deployment)
+- Impact: ~10 minutes lost per stream; worse, a smoke "pass" against the anonymous local backend can be mistaken for a dev-deployment verification.
+- Proposed level: tooling (exclude `dist/` from the Convex bundle or clean it in the smoke path; seed the correct dev deployment into worktree env propagation) + brief-template (name both traps in briefs that include a dev smoke)
+- Status: open
