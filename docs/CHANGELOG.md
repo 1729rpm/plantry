@@ -15,6 +15,39 @@ work queue for /reconcile-docs and /reconcile-ops; or "none".
 
 ---
 
+## 2026-07-12 Add Red sauce pasta (custom-dish promotion)
+
+Promotes the free-text custom dish "Red Sauce Pasta" (week 2026-07-06, Wed breakfast,
+author rajat, reason "Craving it") into the permanent library as Red sauce pasta
+(id 284, Complete meal, Lunch, Italian, active, photo'd), the desi-style spicy
+tomato-onion-garlic red sauce with capsicum, deliberately distinct from Pasta
+pomodoro (#212). All six ingredient rows resolve to existing catalog rows; the
+live-count snapshot assertions auto-track (active library 260 to 261). The EM
+follow-up `swap:swapDish` retargeting of the live 2026-07-06 slot onto id 284 is
+pending Rajat's per-action prod approval.
+Why: the designed custom-dish path promotes every in-week free-text dish into the
+library so it gains history, grocery, and photo coverage instead of staying an
+untracked label.
+Updated: none (dish data only; `ADDING-DISHES.md` procedure unchanged).
+
+## 2026-07-12 Merge weekArchive rows into the generation history input
+
+`generateCurrentWeek` now merges Convex `weekArchive` rows into the history it
+passes to the engine, via the new shared pure helper
+`app/convex/lib/archiveHistory.ts` (`archiveToHistoryRows`); `explore.ts` is
+refactored onto the same helper with unchanged behavior (#211). Generation recency
+(§4 longest-unused), the §2 Saturday Menu 3/4 alternation, and the §3.3 fruit
+rotation now see weeks finalized since the last bake; previously generation read
+only the baked seed (frozen at week 2026-05-04) and regenerated near-identical
+menus week over week (the 2026-07-13 run confirms: seed-only reproduces 27 of 29
+picks from the archived weeks, merged drops that to 19, the rest being
+Preferred=Yes staples that §4 step 4 deliberately ranks above recency).
+Why: spec-vs-shipped drift; `docs/engine.md` (Inputs, §8) and `docs/engineering.md`
+§3 already state that the historical record is the seed plus `weekArchive`, and
+Explore already merged it, but generation never did.
+Updated: `docs/engineering.md` §5 (generation flow does not yet mention the merged
+history input).
+
 ## 2026-07-06 Session model runs parallel by default, serial by dependency
 
 `docs/development.md` §1 states the parallelism rule (#210): the EM identifies every

@@ -43,11 +43,11 @@ Two engine rule changes, a Rajat-directed follow-up to the 2026-06-14 run after 
 
 Added 50 easy-to-cook dishes (ids 222-271), inactive pending review, each with recipe + photo. Every new dish ships complete (description, numbered recipe, complexity, and an AI-generated photo) but `active: No` and `preferred: No`, so Rajat can review and flip them into the weekly rotation himself. They use only existing `data/ingredients.md` catalog ingredients (no new catalog rows). Because they are inactive, they do not enter any generation pool and the coverage/pool reports are unchanged. The photos were generated with per-dish `data/dish-photos/details.md` correction lines (the established quality workflow that beats the FLUX ingredient priors: white paneer not yellow, whole uncut eggs, loose separate rice grains, grainy dal not puree, okra as rounds). Dishes: Aloo methi, Cabbage thoran, Gajar matar, Beans poriyal, Baingan bharta, Begun bhaja, Zucchini stir fry, Broccoli garlic stir fry, Sprouts usal, Mushroom do pyaza, Bhindi do pyaza, Palak corn, Anda paratha, Dal palak, Panchmel dal, Sambar, Rasam, Aloo tamatar sabzi, Dum aloo, Paneer jalfrezi, Egg roast, Vegetable stew, Methi chicken, Soya matar keema, Veg fried rice, Chana pulao, Soya pulao, Paneer fried rice, Vegetable daliya, Bisi bele bath, Egg pulao, Mac and cheese, White sauce pasta, Cheese quesadilla, Bean tacos, Paneer bhurji keto, Keto chicken stir fry, Sweet corn salad, Moong dal kosambari, Cucumber raita, Tomato soup, Sweet corn soup, Hot and sour soup, Lemon coriander soup, Fattoush, Lentil salad, Gobi manchurian, Vegetable omelette, Mango lassi, Besan chilla.
 
-## 2026-06-15  Activate the 50 easy-to-cook expansion dishes  (#TBD)
+## 2026-06-15  Activate the 50 easy-to-cook expansion dishes  (#99)
 
 Activated the 50 expansion dishes (ids 222-271); they now enter weekly menu generation. Each was shipped inactive-with-photo by #97 for review; with Rajat's go-ahead after the gallery review they flip to `active: Yes` (and stay `preferred: No`). The active library grows from 200 to 250 dishes, so two live-data snapshot assertions in `engine/test/data/reports.test.ts` move: coverage `withPhoto` 200 to 250 (every activated dish carries a photo), and the special-sourcing report gains Vegetable daliya (Bulgur Wheat) and Lentil salad (Parsley). No engine, app, rule, or catalog change; the dishes reuse existing `data/ingredients.md` rows.
 
-## 2026-06-16  Add 7 seasonal monsoon fruit dishes (active, photo'd)  (#TBD)
+## 2026-06-16  Add 7 seasonal monsoon fruit dishes (active, photo'd)  (#104)
 
 Added 7 net-new Category=Fruit dishes (ids 274-280), all active-with-photo, deepening the Fruit of the day pool (#103) beyond Seasonal fruit / Banana bowl / Papaya bowl. Each ships complete (one-line description, numbered recipe, complexity Easy, an AI-generated photo) and carries Monsoon in its `seasons`, so all 7 are eligible this Monsoon season (June-Sept). Dishes: Mango bowl ([Summer, Monsoon]), Litchi bowl ([Summer, Monsoon]), Jamun bowl ([Monsoon]), Plum bowl ([Monsoon]), Peach bowl ([Monsoon]), Pineapple bowl ([Monsoon]), Pomegranate bowl ([Monsoon, Winter]).
 
@@ -55,7 +55,7 @@ Added 7 net-new Category=Fruit dishes (ids 274-280), all active-with-photo, deep
 - Photos generated via `scripts/generate-dish-photos.mjs` (FLUX.1-dev / NVIDIA NIM) with per-dish `data/dish-photos/details.md` correction lines so each shows the correct cut/served fruit (cubed mango and pineapple, peeled litchis, whole jamun with a split aril, sliced plums and peaches, loose pomegranate arils), beating the FLUX whole-uncut-fruit prior. All 7 verified visually on the first pass.
 - Live-data snapshot assertions in `engine/test/data/reports.test.ts` move: coverage `withPhoto` 252 to 259 (active library 252 to 259, all photo'd), and the Summer Fruit pool 3 to 5 (Mango and Litchi are also Summer). No engine, app, or rule change.
 
-## 2026-06-16  Add Pav as a permanent library dish (inactive, photo'd)  (#TBD)
+## 2026-06-16  Add Pav as a permanent library dish (inactive, photo'd)  (#120)
 
 Promoted "Pav" (id 281) from an in-week one-off into the permanent library as a `category: Bread` staple bread, analogous to how plain "Steamed rice" (id 272) was added as a staple carb. Pav (Indian soft dinner rolls / ladi pav) is the bread companion to keema and bhaji. It ships `active: No` and `preferred: No`, complete with a one-line description, a numbered recipe, complexity Easy, and an AI-generated photo, so Rajat reviews it as a real card before flipping it live (the inactive review gate, ADDING-DISHES.md §6).
 
@@ -64,7 +64,7 @@ Promoted "Pav" (id 281) from an in-week one-off into the permanent library as a 
 - Photo generated via `scripts/generate-dish-photos.mjs` (FLUX.1-dev / NVIDIA NIM) with a per-dish `data/dish-photos/details.md` line describing soft golden-brown pull-apart ladi pav rolls with a fluffy white crumb; verified visually on the first pass (luminance 91, 103 KB, square 1024).
 - Because Pav is inactive, it enters no generation pool and no coverage / pool / special-sourcing report; the active library stays at 259 and the `engine/test/data/reports.test.ts` live-data snapshots do not move (confirmed green without editing any assertion). No engine, app, rule, or catalog change.
 
-## 2026-06-16  Activate Pav (id 281)  (#TBD)
+## 2026-06-16  Activate Pav (id 281)  (#122)
 
 Flipped "Pav" (id 281, `category: Bread`, `time: Breakfast`) from `active: No` to `active: Yes` after Rajat reviewed the inactive card. It now enters weekly menu generation as a plain breakfast carb in the Mon/Wed/Fri breakfast Option C pool (`docs/engine.md` §3), and becomes visible in Explore and the swap pickers. Stays `preferred: No`. No engine, app, rule, or catalog change; only the dish file's `active` flag.
 
@@ -87,7 +87,7 @@ Two additional reversible data edits Rajat approved at the PR (the open decision
 - Ratatouille (id 205, Continental): `complexity: Easy` to `Medium`. Rajat called it too hard for the cook. `complexity` is UI-only (no eligibility/selection/composition rule reads it), so this changes only the Explore "Easy" chip; no slot, pool, or generation behavior moves.
 - Live-data snapshots in `engine/test/data/reports.test.ts` move from the deactivation only: `cov.withPhoto === cov.activeDishCount` auto-tracks the one-lower active count and stays green (no hardcoded count edited), and the special-sourcing array drops its `{ dishId: 208, "Korean tofu soup", ["Gochujang"] }` row (the report omits inactive dishes; the other two Gochujang dishes, Tofu bibimbap 191 and Korean chicken stir fry 192, stay). The complexity re-tag moves no count (Ratatouille stays active and fully enriched). The round-trip serializer test confirms both field edits round-trip byte-identical. No engine, rule, app, or catalog change.
 
-## 2026-06-22  Promote two in-week custom dishes into the library (Beetroot roti, Cucumber tomato salad) (active, photo'd)  (#TBD)
+## 2026-06-22  Promote two in-week custom dishes into the library (Beetroot roti, Cucumber tomato salad) (active, photo'd)  (#187)
 
 Promoted two dishes Rajat added as in-week custom one-offs into the permanent library so they stop being free-text customs: Beetroot roti (id 282, `category: Chapati`, `time: Lunch`) and Cucumber tomato salad (id 283, `category: Accompaniment`, `time: Lunch`). Both ship `active: Yes` and `preferred: No`, complete with a one-line description, numbered recipe, complexity, and an AI-generated photo. They go live directly (rather than through the inactive review gate) because both are small, confidently-correct, year-round dishes that mirror existing cousins already in the library: Beetroot roti against Missi roti / Bajra roti, and Cucumber tomato salad against Cucumber salad / Onion-tomato salad. They must be active and in-season for the EM's follow-up `swapDish` to retarget the live 2026-06-22 week slots onto them (beetroot roti on Mon lunch, cucumber tomato salad on Fri lunch).
 

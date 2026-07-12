@@ -19,6 +19,33 @@ Decisions Rajat must approve go in the "Open items" list in `features/phase2.md`
 
 ---
 
+## 2026-07-12 20:15 IST  Accept the generated 2026-07-13 week despite preferred-staple repeats
+
+**Stream:** menu-prep session (cross-stream, weekly operation)
+**Context:** The first generation to run with the #211 archive-history merge still repeats several dishes from the archived weeks (Friday lunch trio Soya chunks masala + Vegetable korma + Roti is identical to the 2026-07-06 archive; Kadhi, Curd rice, Fish tikka and three breakfasts also recur). A local deterministic reproduction confirmed the merge is live and working: seed-only history reproduces 27 of 29 archived picks, merged history drops that to 19, and every remaining repeat is a `preferred: Yes` dish, which `docs/engine.md` §4 step 4 deliberately ranks above recency (recency only orders within the preferred group, and several thali position pools have few preferred candidates).
+**Options considered:** (a) accept the week as generated; (b) regenerate (pointless: output is near-deterministic given history); (c) hotfix the §4 step order or weaken the preferred partition.
+**Chosen:** (a). The behavior is per-spec, the spec-code parity gate is green, and preferred flags are Rajat's curated data. Whether preferred-over-recency produces too little week-over-week variety in narrow pools is a rule-tuning question that belongs to the slow loop with real household feedback, not an EM hotfix on generation day.
+**Reversibility:** full; Rajat swaps any slot in-app, and a rule change can ship any week via the slow loop.
+**Right-size check (per `docs/product.md` §4):** problem size is a preference signal with zero comments behind it; fix level chosen is no change plus this recorded observation; generality: the analysis (which repeats are recency misses vs preferred-by-design) is reusable for the slow-loop theme if comments arrive.
+
+## 2026-07-12 19:50 IST  Red sauce pasta ships as a new dish, not a Pasta pomodoro swap
+
+**Stream:** data/expansion-9 (content batch, #212)
+**Context:** Promoting the 2026-07-06 Wed-breakfast custom "Red Sauce Pasta" (reason: "Craving it") could either author a new dish or retarget the slot to the existing Pasta pomodoro (id 170).
+**Options considered:** (a) swap the slot to Pasta pomodoro and add no dish; (b) author Red sauce pasta as its own dish; (c) ship it inactive behind the review gate.
+**Chosen:** (b), active. The desi red sauce pasta (spicy tomato-onion-garlic sauce with capsicum) is a recognizably different dish from pomodoro (minimal slow-cooked tomato-basil), and the household typed a new name rather than picking pomodoro from a picker that reaches every dish by search. Ships `active: Yes` (single, confidently-correct, all-season, already cooked on request) because active + in-season is required for the follow-up `swapDish` retarget, mirroring the expansion-8 precedent. `time: Lunch` matches its pasta siblings; the breakfast use stays reachable because meal-time is not a hard swap filter. Photo accepted with a known small basil-sprig leak present in all four rolls (the same FLUX prior-ceiling class as yellow paneer, documented in `ADDING-DISHES.md` §5).
+**Reversibility:** easy; `active: No` is a one-line flip, and the dish file is additive.
+**Right-size check (per `docs/product.md` §4):** problem size is one real cooked-and-requested dish; fix level is a data row (dish file + photo, no catalog, engine, or rule change); generality: follows the standing promotion path, no special-casing.
+
+## 2026-07-12 19:45 IST  EM-initiated fix: generation reads weekArchive history
+
+**Stream:** fix/generation-archive-history (#211)
+**Context:** While preparing the 2026-07-13 generation, the EM found `generateCurrentWeek` passes only the baked seed history (frozen at 2026-05-04) to the engine, though `docs/engine.md` (Inputs, §8) and `docs/engineering.md` §3 define the historical record as seed plus `weekArchive`, and `explore.ts` already merges both. Escalation rules reserve Rajat sign-off for structural changes to canonical data and rules; this is Convex wiring drifted from an already-agreed spec.
+**Options considered:** (a) generate anyway and queue the fix; (b) fix before generating; (c) treat the spec as wrong and amend it to the blind behavior.
+**Chosen:** (b). Generating first would have produced a near-copy of the 2026-07-06 week (verified: 27 of 29 picks repeat under seed-only history), wasting the week the fix exists to serve. The change is code-level, mirrors the shipped Explore merge, and the spec already mandates it, so it sits inside the EM's merge authority; Rajat's session merge approval covered the merge itself.
+**Reversibility:** easy; one function argument and a helper, revert restores seed-only behavior.
+**Right-size check (per `docs/product.md` §4):** problem size is a small pattern (one function drifted from spec); fix level is engine-adjacent wiring code, no rule change; generality: the shared helper also serves Explore and any future history consumer.
+
 ## 2026-07-05  Playbook migration: adopt P1 and P2, skip both P3 items for now
 
 **Stream:** chore/playbook-migration (cross-stream process change)
