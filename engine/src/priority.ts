@@ -59,9 +59,36 @@ export interface RankCandidatesArgs {
    * with `proteinFamiliesUsedAsHpMain`.
    */
   usedHpMainProteinFamilies?: ReadonlySet<string>;
+  /**
+   * §4 step 4 favorites: the household's standing wishlist dish ids
+   * (`features/wishlist.md`). A candidate whose id is in this set ranks above a
+   * non-favorite as a stable partition, replacing the former Preferred=Yes
+   * tiebreak as the §4 preference signal. Undefined or empty leaves the step a
+   * no-op, so every caller without favorites is unchanged. Build it from the
+   * Convex `favorites` table.
+   */
+  favoriteDishIds?: ReadonlySet<number>;
+  /**
+   * §4 step 4 weekly promotion budget: the count of favorite dishes already
+   * placed earlier in the week being generated. Once it reaches
+   * `FAVORITE_WEEKLY_CAP` the favorites step no-ops for the rest of the week (see
+   * `byFavorites`). Defaults to 0, so a single-slot caller that never threads it
+   * (the swap picker) promotes favorites normally within its one slot.
+   */
+  favoritesPlacedThisWeek?: number;
 }
 
 const LUNCH_CARB_CATEGORIES = new Set(["Chapati", "Rice"]);
+
+/**
+ * §4 step 4 weekly promotion budget: the most favorite dishes the favorites step
+ * promotes into one generated week. The generateWeek loop counts favorite picks
+ * placed so far and passes that count to `byFavorites`; once it reaches this cap
+ * the step no-ops for the rest of the week, so a long favorites list cannot swamp
+ * rotation and discovery. A one-line tunable: raise it to let more of a long
+ * favorites list surface each week, lower it to protect rotation.
+ */
+export const FAVORITE_WEEKLY_CAP = 6;
 
 /**
  * §4.6 protein-family normalization. Collapses `primaryIngredient` values that
@@ -205,20 +232,41 @@ export function byIngredientConsolidation(
 }
 
 /**
- * §4 step 4: Preferred=Yes ranks above Preferred=No. Stable: within each group
- * the order from the previous step is preserved.
+ * §4 step 4: favorites rank above non-favorites. A dish whose id is in
+ * `favoriteDishIds` (the household's standing wishlist, `features/wishlist.md`)
+ * leads; the rest follow. Stable: within each group the order from the previous
+ * step is preserved, so steps 5 and 6 still dominate inside the favorite and
+ * non-favorite groups. This is the §4 preference signal; the `preferred`
+ * frontmatter field stays parsed (§12) but is no longer read here.
+ *
+ * Weekly promotion budget: `favoritesPlacedThisWeek` is the number of favorite
+ * dishes already placed earlier in the week being generated. Once it reaches
+ * `FAVORITE_WEEKLY_CAP` the step is a no-op for the rest of the week, so a long
+ * favorites list cannot swamp rotation and discovery. An absent or empty
+ * `favoriteDishIds` also leaves the step a no-op, so every caller without
+ * favorites is unchanged.
+ *
+ * Weekly cadence is emergent, not scheduled: step 5 (within-week recency) already
+ * sinks an already-placed favorite below fresh alternatives, so a favorite lands
+ * about once a week with no due-date arithmetic here.
  */
-export function byPreferredYes(pool: Dish[]): Dish[] {
-  const yes: Dish[] = [];
-  const no: Dish[] = [];
+export function byFavorites(
+  pool: Dish[],
+  favoriteDishIds: ReadonlySet<number> | undefined,
+  favoritesPlacedThisWeek: number,
+): Dish[] {
+  if (!favoriteDishIds || favoriteDishIds.size === 0) return pool;
+  if (favoritesPlacedThisWeek >= FAVORITE_WEEKLY_CAP) return pool;
+  const favorites: Dish[] = [];
+  const rest: Dish[] = [];
   for (const dish of pool) {
-    if (dish.preferred === "Yes") {
-      yes.push(dish);
+    if (favoriteDishIds.has(dish.id)) {
+      favorites.push(dish);
     } else {
-      no.push(dish);
+      rest.push(dish);
     }
   }
-  return [...yes, ...no];
+  return [...favorites, ...rest];
 }
 
 /**
@@ -341,7 +389,7 @@ export function rankCandidates(args: RankCandidatesArgs): Dish[] {
   const step1 = byLongestUnused(args.pool, args.history);
   const step2 = byNoSameDayPrimaryIngredient(step1, args.sameDayBreakfastPrimaryIngredient);
   const step3 = byIngredientConsolidation(step2, args.consolidationContext);
-  const step4 = byPreferredYes(step3);
+  const step4 = byFavorites(step3, args.favoriteDishIds, args.favoritesPlacedThisWeek ?? 0);
   const step5 = byWithinWeekRecency(step4, args.withinWeekDishIds);
   const step6 = byProteinDiversity(step5, args.usedHpMainProteinFamilies);
   return step6;
