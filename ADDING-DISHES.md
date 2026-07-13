@@ -41,6 +41,7 @@ satiety: <Low | Medium | High>
 prepMinutes: <integer>
 seasons: <[Summer]|[Monsoon]|[Winter]|All>   # MUST include the current season to be eligible now
 cuisine: <one of the taxonomy below; Indian by default>
+carbAffinity: <Rice | Roti>          # optional; a lunch main's canonical carb (§3.1). Omit unless canonical (kadhi/chhole/Thai curry -> Rice); absent = default Chapati
 complexity: <Easy | Medium | Hard>
 buySpecially: <free text, only if an ingredient needs a special run>
 photo: <slug>.jpg                   # set automatically by the photo tool; see §5
