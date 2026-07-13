@@ -8,7 +8,7 @@ import type { Dish, MenuHistoryRow, PackSizeHeader } from "../src/data/schemas.j
  * every Active + in-season + meal-time-matching dish and hands it to
  * `rankCandidates`. These tests verify that `rankCandidates` correctly ranks
  * such a broad pool by §4 priority (longest-unused first, with the ingredient-
- * ledger and Preferred=Yes tilts), so the convex-side picker's contract
+ * ledger and favorites tilts), so the convex-side picker's contract
  * (described in `features/multi-dish-slots.md`) holds at the engine layer.
  */
 
@@ -71,12 +71,16 @@ describe("Stream H broad-pool ranking", () => {
     expect(ids).toContain(lunchCarb.id);
   });
 
-  it("Preferred=Yes wins step-4 ties within the broad pool", () => {
+  it("a favorite wins step-4 ties within the broad pool", () => {
     nextId = 1;
-    const preferred = makeDish({ name: "Preferred", preferred: "Yes" });
-    const notPreferred = makeDish({ name: "Not Preferred", preferred: "No" });
-    const ranked = rankCandidates({ pool: [notPreferred, preferred], history: [] });
-    expect(ranked[0].id).toBe(preferred.id);
+    const favorite = makeDish({ name: "Favorite" });
+    const notFavorite = makeDish({ name: "Not Favorite" });
+    const ranked = rankCandidates({
+      pool: [notFavorite, favorite],
+      history: [],
+      favoriteDishIds: new Set([favorite.id]),
+    });
+    expect(ranked[0].id).toBe(favorite.id);
   });
 
   it("accepts an ingredient-consolidation context without crashing on a broad pool", () => {

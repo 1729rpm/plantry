@@ -104,6 +104,14 @@ export const generateCurrentWeek = internalMutation({
     queued.sort((a, b) => a.createdAt - b.createdAt);
     const requests = queued.map((row) => row.dishId);
 
+    // §4 step 4 favorites: the household's standing favorites list. Every row's
+    // dish id becomes a favorite the engine promotes (up to FAVORITE_WEEKLY_CAP
+    // placements per week), replacing the git-file `preferred` field as the live
+    // preference signal (`features/wishlist.md`). An empty table yields an empty
+    // set, so the favorites step is a no-op and generation is identical to before.
+    const favoriteRows = await ctx.db.query("favorites").collect();
+    const favoriteDishIds = new Set(favoriteRows.map((row) => row.dishId));
+
     // Historical record = baked seed + every finalized week in `weekArchive`,
     // so recency-driven rules see weeks finalized since the last bake.
     const archives = await ctx.db.query("weekArchive").collect();
@@ -122,6 +130,7 @@ export const generateCurrentWeek = internalMutation({
       rng: args.rng !== undefined ? () => args.rng as number : undefined,
       userRequestedDishId: args.userRequestedDishId,
       requests,
+      favoriteDishIds,
     });
 
     // A requested dish "landed" iff it appears anywhere in the generated week

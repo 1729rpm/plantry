@@ -60,6 +60,16 @@ export interface GenerateWeekArgs {
    * identical to today and every existing caller stays green.
    */
   requests?: number[];
+  /**
+   * §4 step 4 favorites: the household's standing wishlist dish ids
+   * (`features/wishlist.md`, the Convex `favorites` table). Each generated slot
+   * ranks a favorite candidate above a non-favorite (§4 step 4, `byFavorites`),
+   * up to `FAVORITE_WEEKLY_CAP` favorite placements per week, after which the
+   * favorites step no-ops for the rest of the week. Absent or empty leaves every
+   * slot's ranking identical to a no-favorites run, so every existing caller is
+   * unchanged.
+   */
+  favoriteDishIds?: ReadonlySet<number>;
 }
 
 export interface GeneratedWeekSlot {
@@ -122,6 +132,14 @@ interface SlotRankingInputs {
   /** §4 step 5 within-week recency: ids of non-exempt dishes already placed. */
   withinWeekDishIds: ReadonlySet<number>;
   /**
+   * §4 step 4 weekly promotion budget: the count of favorite dishes already
+   * placed this week (picks whose id is in `favoriteDishIds`). Threaded exactly
+   * like `withinWeekDishIds`: derived fresh each slot from the running picks, so
+   * once it reaches `FAVORITE_WEEKLY_CAP` the favorites step (`byFavorites`)
+   * no-ops for the rest of the week. Zero when no `favoriteDishIds` was supplied.
+   */
+  favoritesPlacedThisWeek: number;
+  /**
    * §4 step 6 within-week protein diversity: protein families already spent on
    * an HP main this week. Derived here for both paths, but ONLY the main
    * generation loop threads it into ranking; `rankCandidatesForSlot`
@@ -138,6 +156,13 @@ interface DeriveSlotRankingInputsArgs {
   /** Cross-week history seed; combine with `inWeekHistory` for composition/§4. */
   ingredients: Ingredient[];
   packSizes: PackSizeHeader[];
+  /**
+   * §4 step 4 favorites: the wishlist dish ids, so the derivation can count how
+   * many favorites have been placed this week (`favoritesPlacedThisWeek`).
+   * Undefined leaves the count 0, which is what the swap-time ranker
+   * (`rankCandidatesForSlot`) passes so favorites never reorder a swap.
+   */
+  favoriteDishIds?: ReadonlySet<number>;
 }
 
 /**
@@ -155,10 +180,11 @@ interface DeriveSlotRankingInputsArgs {
  * that path and keeps the derivation in one place.
  */
 function deriveSlotRankingInputs(args: DeriveSlotRankingInputsArgs): SlotRankingInputs {
-  const { picks, weekStart, ingredients, packSizes } = args;
+  const { picks, weekStart, ingredients, packSizes, favoriteDishIds } = args;
 
   let ledger: IngredientLedger = emptyLedger(packSizes);
   const inWeekHistory: MenuHistoryRow[] = [];
+  let favoritesPlacedThisWeek = 0;
   for (const dish of picks) {
     ledger = applyPick(ledger, dish, ingredients);
     inWeekHistory.push({
@@ -168,6 +194,7 @@ function deriveSlotRankingInputs(args: DeriveSlotRankingInputsArgs): SlotRanking
       dishName: dish.name,
       dishId: dish.id,
     });
+    if (favoriteDishIds && favoriteDishIds.has(dish.id)) favoritesPlacedThisWeek += 1;
   }
   const weekLunchCarbs = picks.filter((d) => d.category === "Chapati" || d.category === "Rice");
 
@@ -176,6 +203,7 @@ function deriveSlotRankingInputs(args: DeriveSlotRankingInputsArgs): SlotRanking
     weekLunchCarbs,
     inWeekHistory,
     withinWeekDishIds: withinWeekRecencySet(picks),
+    favoritesPlacedThisWeek,
     usedHpMainProteinFamilies: proteinFamiliesUsedAsHpMain(picks),
   };
 }
@@ -200,6 +228,7 @@ export function generateWeek(args: GenerateWeekArgs): GeneratedWeek {
     lastSaturdayMenu,
     userRequestedDishId,
     requests = [],
+    favoriteDishIds,
   } = args;
 
   const baseSchedule = weekSchedule({ weekStart, lastSaturdayMenu, rng });
@@ -296,6 +325,7 @@ export function generateWeek(args: GenerateWeekArgs): GeneratedWeek {
       weekStart,
       ingredients,
       packSizes,
+      favoriteDishIds,
     });
     const compositionHistory: MenuHistoryRow[] = [...history, ...rankingInputs.inWeekHistory];
     const candidateSet = composeSlot({
@@ -320,6 +350,11 @@ export function generateWeek(args: GenerateWeekArgs): GeneratedWeek {
       // §4 step 6 protein diversity IS applied in generation (the main loop):
       // a later HP-main slot prefers a protein the week has not used yet.
       usedHpMainProteinFamilies: rankingInputs.usedHpMainProteinFamilies,
+      // §4 step 4 favorites: promote wishlist dishes into this slot, capped at
+      // FAVORITE_WEEKLY_CAP placements per week. Both the ids and the running
+      // placed-count are threaded so byFavorites can no-op once the cap is hit.
+      favoriteDishIds,
+      favoritesPlacedThisWeek: rankingInputs.favoritesPlacedThisWeek,
       sameDayBreakfastPrimaryIngredient:
         slot.meal === "Lunch" ? sameDayBreakfastPrimary.get(slot.day) : undefined,
       // §3.1 budget: the same day's breakfast has already composed, so its item
@@ -470,6 +505,20 @@ interface PickSlotArgs {
    * by protein. Soft with fallback.
    */
   usedHpMainProteinFamilies?: ReadonlySet<string>;
+  /**
+   * §4 step 4 favorites: the household's wishlist dish ids. Threaded into every
+   * rankCandidates call for this slot (both `rank` and `rankHpMain`), so a
+   * favorite candidate ranks above a non-favorite in every position pool, exactly
+   * where the former Preferred=Yes tiebreak used to act.
+   */
+  favoriteDishIds?: ReadonlySet<number>;
+  /**
+   * §4 step 4 weekly promotion budget: favorite dishes already placed this week.
+   * Passed straight through to `byFavorites`, which no-ops the favorites step once
+   * it reaches FAVORITE_WEEKLY_CAP. Same per-slot value for every position of the
+   * slot (derived once per slot, like withinWeekDishIds).
+   */
+  favoritesPlacedThisWeek?: number;
   sameDayBreakfastPrimaryIngredient?: string;
   /**
    * §3.1 budget-aware composition: the lunch item budget for this slot
@@ -582,6 +631,8 @@ function rank(args: PickSlotArgs, pool: Dish[]): Dish[] {
     sameDayBreakfastPrimaryIngredient: args.sameDayBreakfastPrimaryIngredient,
     consolidationContext: args.consolidationContext,
     withinWeekDishIds: args.withinWeekDishIds,
+    favoriteDishIds: args.favoriteDishIds,
+    favoritesPlacedThisWeek: args.favoritesPlacedThisWeek,
   });
   return promotePins(ranked, args.pinnedDishIds);
 }
@@ -602,6 +653,8 @@ function rankHpMain(args: PickSlotArgs, pool: Dish[]): Dish[] {
     consolidationContext: args.consolidationContext,
     withinWeekDishIds: args.withinWeekDishIds,
     usedHpMainProteinFamilies: args.usedHpMainProteinFamilies,
+    favoriteDishIds: args.favoriteDishIds,
+    favoritesPlacedThisWeek: args.favoritesPlacedThisWeek,
   });
   return promotePins(ranked, args.pinnedDishIds);
 }
@@ -1125,6 +1178,13 @@ export function rankCandidatesForSlot(args: RankCandidatesForSlotArgs): Dish[] {
       // rankingInputs.usedHpMainProteinFamilies (one shared derivation), but it
       // is not passed on here. Leaving it off is the documented choice, not an
       // oversight; pass it through only if step 6 is intentionally added to swaps.
+      //
+      // §4 step 4 favorites is likewise DELIBERATELY OMITTED here: a swap is a
+      // deliberate user choice over the broad picker pool, so favorites do not
+      // reorder the alternatives offered (spec §3: "§5 picker ranking and §7
+      // Explore are untouched by favorites"). deriveSlotRankingInputs was called
+      // above without favoriteDishIds, so favoritesPlacedThisWeek is 0 and no
+      // favoriteDishIds is threaded into this rankCandidates call.
     });
     for (const dish of r) {
       if (seen.has(dish.id)) continue;

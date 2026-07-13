@@ -66,7 +66,8 @@ export {
   byLongestUnused,
   byNoSameDayPrimaryIngredient,
   byIngredientConsolidation,
-  byPreferredYes,
+  byFavorites,
+  FAVORITE_WEEKLY_CAP,
 } from "./priority.js";
 export type { RankCandidatesArgs, ConsolidationContext } from "./priority.js";
 export {

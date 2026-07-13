@@ -229,6 +229,21 @@ export default defineSchema({
     consumedWeekStart: v.union(v.string(), v.null()),
   }).index("by_status", ["status"]),
 
+  // The household's standing favorites list (the wishlist "we want this
+  // regularly" set; `features/wishlist.md`). One shared list: `author` records
+  // who added each row, but either person can remove either person's entry. The
+  // generation run reads every row and passes the dish ids to the engine as
+  // §4-step-4 favorites, so a favorite surfaces about weekly in the generated
+  // menu (subject to the FAVORITE_WEEKLY_CAP promotion budget). Replaces the
+  // git-file `preferred` field as the live preference signal. Parallel in shape
+  // to `nextWeekQueue`/`dishDislikes`; `by_dishId` backs the already-favorite
+  // guard and the remove-by-dish path.
+  favorites: defineTable({
+    createdAt: v.number(),
+    author: v.union(v.literal("rajat"), v.literal("tuhina")),
+    dishId: v.number(),
+  }).index("by_dishId", ["dishId"]),
+
   // Structured runtime error log written by the auto-recovery middleware.
   // Also fuel for the slow loop.
   incidents: defineTable({
