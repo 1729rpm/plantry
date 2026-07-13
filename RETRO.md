@@ -33,6 +33,22 @@ run only reads entries appended since.
 
 ---
 
+## 2026-07-13  Engineer-brief gate list omitted the Prettier format check
+- Area: ci
+- What happened: PR #215's engineer ran the brief's listed local gates (lint, typecheck, test) and pushed; CI failed on the separate `npm run format:check` step, costing a fix round trip. The brief template names lint/typecheck/tests/simulation but not format:check, which CI runs as its own step.
+- Recurrence: recurring (will hit every stream whose brief copies the same gate list)
+- Impact: one red CI run and one extra engineer round trip per stream; no wrong code shipped.
+- Proposed level: brief-template
+- Status: open
+
+## 2026-07-13  Untracked feature specs in the main dir block the post-merge pull
+- Area: coordination
+- What happened: the feature spec lives untracked in the main dir until its activation stream commits it; when that PR merges, `git pull --ff-only` in the main dir aborts because the merge would overwrite the untracked file, and the abort is easy to miss when tailing output (the main dir silently stayed on the old commit until checked).
+- Recurrence: systemic (every feature under the specs-committed-by-activation-stream model)
+- Impact: a stale main dir masquerading as synced; caught this session by re-checking `git log` after the pull.
+- Proposed level: process-doc
+- Status: open
+
 ## 2026-06-16  Crawl gate cannot reach SSO-walled Vercel previews
 - Area: infra
 - What happened: Every PR preview returns HTTP 401 (Vercel deployment protection); the app never boots, so the engineering.md §16 per-slice crawl cannot run against the preview as documented. The localStorage gate-bypass only clears Plantry's own passcode, not Vercel's edge protection.

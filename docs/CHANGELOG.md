@@ -15,6 +15,32 @@ work queue for /reconcile-docs and /reconcile-ops; or "none".
 
 ---
 
+## 2026-07-13 Engine v3: plate composition (Phase 5)
+
+Weekday lunch composition moves from compose-then-trim to budget-fit plates
+(#215). Menu 1/2 become one weekday-plate form: a protein lead, an
+affinity-driven carb, and companions filling
+`clamp(5 - breakfast items, 2, 4)` positions, so the §9 cap is now a safety net
+that does not fire in normal generation and an over-cap incident signals a real
+defect. A plate holds at most one Category=Gravy dish item (hard, no thin-pool
+fallback). Every lunch form carries a protein floor: a plate with no HP or Keto
+item appends one cuisine-coherent protein companion, so a non-HP complete_meal
+international anchor now lands with a protein beside it. A new optional
+`carbAffinity: Rice | Roti` dish field sends the carb position to the matching
+plain-carb pool (kadhi, chhole, sambar, rasam, and the non-Indian curries carry
+Rice; an international Rice-affinity anchor draws `cuisine_neutral` steamed
+rice), and a hard no-rice-on-consecutive-days rule replaces "Rice at most once
+per week". Curd rice is recategorized to Complete meal so it can never be served
+as a plate carb; Steamed rice gains `cuisine_neutral`. `docs/engine.md`
+§3/§3.1/§9/§12 rewritten in the same PR.
+Why: the post-v2 weeks (2026-07-06, 25 manual edits; 2026-07-13, 13) showed
+three recurring both-member patterns: two gravies on one plate, carbs that
+belong to the main (kadhi wants rice), and weekly over-cap trim noise; Rajat
+directed a first-principles restructure and locked the rules in chat.
+Updated: none (`docs/engine.md` updated in-PR; `docs/product.md`'s schedule
+table already states the 3/4-item lunches the budget now produces by
+construction).
+
 ## 2026-07-12 Add Red sauce pasta (custom-dish promotion)
 
 Promotes the free-text custom dish "Red Sauce Pasta" (week 2026-07-06, Wed breakfast,
