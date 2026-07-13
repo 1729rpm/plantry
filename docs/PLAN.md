@@ -22,7 +22,7 @@ surfaces the mismatch before any code is written.
 | 5     | Engine v3                             | Generated lunches compose one-wet, budget-fit, protein-floored plates with main-driven carbs                            | shipped |
 | 6     | Wishlist page and favorites frequency | Favorites and the next-week queue are visible and editable in the app, and favorites surface about weekly in generation | shipped |
 
-Phase 6 is building (`features/wishlist.md`). Future phases are added here when they are planned, not
+No phase is in flight. Future phases are added here when they are planned, not
 before. On phase close the row flips to shipped, the spec moves to
 `archive/features/`, and the close is tagged `phase-<n>-complete`
 (`docs/development.md` §3 step 8).
