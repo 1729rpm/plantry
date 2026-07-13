@@ -1,6 +1,7 @@
 import type { Dish, DishTag, MenuHistoryRow, Season } from "./data/schemas.js";
 import type { Day } from "./eligibility.js";
 import { eligibleDishes } from "./eligibility.js";
+import { WEEKDAY_CAP } from "./cap.js";
 import { lastCookedMap } from "./historyRows.js";
 import type { SlotPlan } from "./schedule.js";
 
@@ -45,30 +46,47 @@ export interface BreakfastSinglePickCandidateSet {
   chutney: Dish[];
 }
 
+/**
+ * §3.2 weekday-plate form (Menu 1). The Indian weekday lunch composes to the day
+ * budget (§3.1): a protein lead, an affinity-driven carb, and budget-filled
+ * companions, with at most one Category=Gravy dish item on the plate (the hard
+ * one-wet rule). Menu 1 leads with an HP Gravy/Dry protein; Menu 2 leads with a
+ * Keto dish; the rest of the form is identical, which is why they share the
+ * companion, protein-floor, and carb pools.
+ */
 export interface Menu1CandidateSet {
   kind: "menu-1";
+  /** Protein lead: HP-tagged, Category in {Gravy dish, Dry dish}, Indian. */
   hp: Dish[];
   /**
-   * §3 R4 thali dal: the non-HP Gravy pool. The Indian weekday lunch aspires to
-   * the 4-item thali, so this dal sits beside the protein main on every Menu 1
-   * day.
+   * §3.2 companion pool: eligible non-HP Indian Lunch dishes, Category in
+   * {Gravy dish, Dry dish, Accompaniment}. The pick fills `lunchBudget - 2`
+   * positions from this pool (one or two), ranked by §4, enforcing the hard
+   * one-Gravy-per-plate rule (no thin-pool fallback). Roles map by category:
+   * Gravy dish → `dal`, Dry dish → `sabzi`, Accompaniment → `accompaniment`.
    */
-  dal: Dish[];
+  companions: Dish[];
   /**
-   * §3 R4 thali dry sabzi: the non-HP Dry pool. Always part of the 4-item thali
-   * aspiration. Non-HP: one HP source per meal (the protein main is the only HP
-   * position).
+   * §3.3 lunch protein floor pool: eligible Indian (or `cuisine_neutral`) Lunch
+   * dishes with the HP tag or Category=Keto. Menu 1/2 satisfy the floor by
+   * construction (the lead is HP/Keto), so this only fires on the carb-only
+   * fallback when no protein lead is eligible.
    */
-  drySabzi: Dish[];
-  lunchCarb: Dish[];
+  proteinFloor: Dish[];
+  /** §3.4 carb affinity Rice pool: plain Category=Rice Lunch dishes. */
+  riceCarb: Dish[];
+  /** §3.4 default/Roti carb pool: plain Category=Chapati Lunch dishes. */
+  chapatiCarb: Dish[];
 }
 
 export interface Menu2CandidateSet {
   kind: "menu-2";
+  /** Protein lead: Category=Keto, Indian. */
   keto: Dish[];
-  nonHpGravy: Dish[];
-  nonHpDry: Dish[];
-  lunchCarb: Dish[];
+  companions: Dish[];
+  proteinFloor: Dish[];
+  riceCarb: Dish[];
+  chapatiCarb: Dish[];
 }
 
 export interface Menu3CandidateSet {
@@ -76,6 +94,8 @@ export interface Menu3CandidateSet {
   completeMealHp: Dish[];
   accompaniment: Dish[];
   dessert: Dish[];
+  /** §3.3 protein floor pool (Indian register). No-ops: the lead is always HP. */
+  proteinFloor: Dish[];
 }
 
 export interface Menu4CandidateSet {
@@ -83,6 +103,8 @@ export interface Menu4CandidateSet {
   completeMealNonHp: Dish[];
   keto: Dish[];
   accompaniment: Dish[];
+  /** §3.3 protein floor pool (Indian register). Fires only if the Keto pool is empty. */
+  proteinFloor: Dish[];
 }
 
 /**
@@ -117,6 +139,14 @@ export interface MenuIntlCandidateSet {
    * Dry/Gravy veg). One HP source per meal holds: the anchor is the HP position.
    */
   sideCompanion: Dish[];
+  /**
+   * §3.4 international carb pool: plain Category=Rice Lunch dishes carrying the
+   * `cuisine_neutral` tag (register-neutral steamed rice). Drawn only when the
+   * pinned anchor has `carbAffinity: Rice` and rice did not land the previous day
+   * (the hard rice-spacing rule); a Thai curry then carries rice while the plate
+   * stays coherent. The intl form never takes an Indian carb otherwise.
+   */
+  neutralRiceCarb: Dish[];
 }
 
 export interface ComposeSlotArgs {
@@ -124,8 +154,31 @@ export interface ComposeSlotArgs {
   library: Dish[];
   history: MenuHistoryRow[];
   season: Season;
-  /** Lunch carbs already picked elsewhere in the week. Used by §3.1. */
+  /**
+   * Retained for the §6 requested-dishes planner (requests.ts) call shape. The
+   * §3 carb rule no longer reads it: carb affinity (§3.4) picks the carb pool and
+   * the hard rice-spacing rule lives in generation (generateWeek), not
+   * composition. Passing it is a harmless no-op.
+   */
   weekLunchCarbs?: Dish[];
+}
+
+/**
+ * §3.1 hard per-lunch item ceiling. A lunch never composes more than four items;
+ * the day budget clamps to this, so a lunch is budget-fit by construction and the
+ * §9 cap is a safety net that should not fire in normal generation.
+ */
+export const LUNCH_MAX_ITEMS = 4;
+
+/**
+ * §3.1 budget-aware lunch item count. Breakfast composes first; the lunch then
+ * composes to `clamp(WEEKDAY_CAP - breakfastItemCount, 2, LUNCH_MAX_ITEMS)`
+ * items instead of composing four and trimming after. Mon/Wed/Fri (2-item
+ * breakfast) budget three; Tue/Thu (1-item breakfast) budget four. Saturday keeps
+ * its own 3-item Menu 3/4 forms and does not use this.
+ */
+export function lunchBudget(breakfastItemCount: number): number {
+  return Math.min(Math.max(WEEKDAY_CAP - breakfastItemCount, 2), LUNCH_MAX_ITEMS);
 }
 
 /** Composition entry point. Mirrors docs/engine.md §3. */
@@ -156,9 +209,9 @@ export function composeSlot(args: ComposeSlotArgs): CandidateSet {
 
   switch (slot.lunchMenu) {
     case 1:
-      return menu1(eligible, args.weekLunchCarbs ?? []);
+      return menu1(eligible);
     case 2:
-      return menu2(eligible, args.weekLunchCarbs ?? []);
+      return menu2(eligible);
     case 3:
       return menu3(eligible);
     case 4:
@@ -187,15 +240,15 @@ export function candidateSetPools(set: CandidateSet): Dish[][] {
     case "breakfast-single":
       return [set.pool, set.ketoCompanion, set.chutney];
     case "menu-1":
-      return [set.hp, set.dal, set.drySabzi, set.lunchCarb];
+      return [set.hp, set.companions, set.proteinFloor, set.riceCarb, set.chapatiCarb];
     case "menu-2":
-      return [set.keto, set.nonHpGravy, set.nonHpDry, set.lunchCarb];
+      return [set.keto, set.companions, set.proteinFloor, set.riceCarb, set.chapatiCarb];
     case "menu-3":
-      return [set.completeMealHp, set.accompaniment, set.dessert];
+      return [set.completeMealHp, set.accompaniment, set.dessert, set.proteinFloor];
     case "menu-4":
-      return [set.completeMealNonHp, set.keto, set.accompaniment];
+      return [set.completeMealNonHp, set.keto, set.accompaniment, set.proteinFloor];
     case "menu-intl":
-      return [set.anchor, set.proteinCompanion, set.sideCompanion];
+      return [set.anchor, set.proteinCompanion, set.sideCompanion, set.neutralRiceCarb];
   }
 }
 
@@ -339,55 +392,77 @@ export function breakfastSinglePick(eligible: Dish[]): BreakfastSinglePickCandid
   };
 }
 
+/** §3.2 companion categories: the non-HP Indian sides that fill the plate budget. */
+const WEEKDAY_COMPANION_CATEGORIES = new Set(["Gravy dish", "Dry dish", "Accompaniment"]);
+
 /**
- * §3 Menu 1 (Mon/Wed/Fri lunch): the 4-item Indian thali aspiration, HP protein
- * main + non-HP dal (Gravy) + non-HP dry sabzi (Dry) + lunch carb. Same form as
- * Menu 2 but the protein main is an HP Gravy/Dry dish rather than a Keto dish.
- *
- * The protein main is the only HP position (one HP source per meal), so both the
- * dal and the sabzi pools exclude HP-tagged dishes (keyed on the `HP` tag, not
- * on dish names, so it holds for any HP protein: chicken on chicken, paneer on
- * paneer). The 4-item aspiration is day-budgeted by the §9 role-aware cap, which
- * drops the dry sabzi (a companion side) on a full-breakfast day, so a Menu 1
- * day lands at the 5-item cap as a 3-item lunch (main + dal + carb) and a
- * light-breakfast day keeps all four. Complete_meal lunches are exempt (a
- * self-sufficient main fills its slot alone), so they reach the Menu 3/Menu 4
- * forms rather than this thali.
- *
- * Cuisine is meal-level: the Indian thali composes Indian-cuisine dishes only, so
- * a non-Indian dish never lands as a lone sabzi/dal in an otherwise-Indian plate
- * (the mixed-cuisine defect). Non-Indian dishes reach the menu (lunch) through
- * the §3.2 international form instead. Keyed on the `cuisine` field, never on
- * dish names.
+ * §3.3 lunch protein-floor pool for an Indian plate: eligible Lunch dishes with
+ * the HP tag or Category=Keto whose cuisine is Indian or that carry the
+ * `cuisine_neutral` tag. The floor draws from here when a composed Indian plate
+ * holds no protein (the carb-only fallback, or a Menu 4 with an empty Keto pool),
+ * so every generated lunch carries protein. Keyed on tag/category/cuisine.
  */
-export function menu1(eligible: Dish[], weekLunchCarbs: Dish[]): Menu1CandidateSet {
-  const lunch = eligible.filter((d) => d.time === "Lunch" && d.cuisine === "Indian");
+function indianProteinFloorPool(lunch: Dish[]): Dish[] {
+  return lunch.filter(
+    (d) =>
+      (hasTag(d, "HP") || d.category === "Keto") &&
+      (d.cuisine === "Indian" || isCuisineNeutral(d)),
+  );
+}
+
+/** §3.4 carb pool: plain Category=Rice Lunch dishes (the rice-affinity target). */
+function riceCarbPool(lunch: Dish[]): Dish[] {
+  return lunch.filter((d) => d.category === "Rice");
+}
+
+/** §3.4 carb pool: plain Category=Chapati Lunch dishes (the default and Roti target). */
+function chapatiCarbPool(lunch: Dish[]): Dish[] {
+  return lunch.filter((d) => d.category === "Chapati");
+}
+
+/**
+ * §3.2 Menu 1 (Mon/Wed/Fri lunch): the Indian weekday plate, HP-led. One protein
+ * lead (HP Gravy/Dry), one affinity-driven carb (§3.4), and budget-filled
+ * companions from the non-HP Indian Gravy/Dry/Accompaniment pool, with the hard
+ * one-Gravy-per-plate rule applied at pick time. Same form as Menu 2, differing
+ * only in the lead's protein source.
+ *
+ * Cuisine is meal-level: the plate composes Indian-cuisine dishes only, so a
+ * non-Indian dish never lands as a lone companion in an otherwise-Indian plate.
+ * Non-Indian lunches reach the menu through the §3.2 international form. Keyed on
+ * the `cuisine` field, never on dish names. The carb pools are not cuisine-gated
+ * (Rice/Chapati dishes are Indian by construction).
+ */
+export function menu1(eligible: Dish[]): Menu1CandidateSet {
+  const lunch = eligible.filter((d) => d.time === "Lunch");
+  const indian = lunch.filter((d) => d.cuisine === "Indian");
   return {
     kind: "menu-1",
-    hp: lunch.filter(
+    hp: indian.filter(
       (d) => hasTag(d, "HP") && (d.category === "Gravy dish" || d.category === "Dry dish"),
     ),
-    // Thali dal (non-HP Gravy) and dry sabzi (non-HP Dry); see field docs.
-    dal: lunch.filter((d) => !hasTag(d, "HP") && d.category === "Gravy dish"),
-    drySabzi: lunch.filter((d) => !hasTag(d, "HP") && d.category === "Dry dish"),
-    lunchCarb: lunchCarbPool(eligible, weekLunchCarbs),
+    companions: indian.filter((d) => !hasTag(d, "HP") && WEEKDAY_COMPANION_CATEGORIES.has(d.category)),
+    proteinFloor: indianProteinFloorPool(lunch),
+    riceCarb: riceCarbPool(lunch),
+    chapatiCarb: chapatiCarbPool(lunch),
   };
 }
 
 /**
- * §3 Menu 2 (Tue/Thu lunch): Keto + non-HP Gravy + non-HP Dry + lunch carb. Like
- * Menu 1 this is the Indian thali, so it composes Indian-cuisine dishes only
- * (meal-level cuisine coherence); non-Indian dishes go through the §3.2
- * international form.
+ * §3.2 Menu 2 (Tue/Thu lunch): the same Indian weekday plate, Keto-led. A Keto
+ * protein lead, an affinity-driven carb, and budget-filled non-HP Indian
+ * companions under the one-Gravy-per-plate rule.
  */
-export function menu2(eligible: Dish[], weekLunchCarbs: Dish[]): Menu2CandidateSet {
-  const lunch = eligible.filter((d) => d.time === "Lunch" && d.cuisine === "Indian");
+export function menu2(eligible: Dish[]): Menu2CandidateSet {
+  const lunch = eligible.filter((d) => d.time === "Lunch");
+  const indian = lunch.filter((d) => d.cuisine === "Indian");
   return {
     kind: "menu-2",
-    keto: lunch.filter((d) => d.category === "Keto"),
-    nonHpGravy: lunch.filter((d) => !hasTag(d, "HP") && d.category === "Gravy dish"),
-    nonHpDry: lunch.filter((d) => !hasTag(d, "HP") && d.category === "Dry dish"),
-    lunchCarb: lunchCarbPool(eligible, weekLunchCarbs),
+    keto: indian.filter((d) => d.category === "Keto"),
+    companions: indian.filter((d) => !hasTag(d, "HP") && WEEKDAY_COMPANION_CATEGORIES.has(d.category)),
+    proteinFloor: indianProteinFloorPool(lunch),
+    riceCarb: riceCarbPool(lunch),
+    chapatiCarb: chapatiCarbPool(lunch),
   };
 }
 
@@ -399,6 +474,7 @@ export function menu3(eligible: Dish[]): Menu3CandidateSet {
     completeMealHp: lunch.filter((d) => hasTag(d, "complete_meal") && hasTag(d, "HP")),
     accompaniment: lunch.filter((d) => d.category === "Accompaniment"),
     dessert: lunch.filter((d) => d.category === "Dessert"),
+    proteinFloor: indianProteinFloorPool(lunch),
   };
 }
 
@@ -410,14 +486,10 @@ export function menu4(eligible: Dish[]): Menu4CandidateSet {
     completeMealNonHp: lunch.filter((d) => hasTag(d, "complete_meal") && !hasTag(d, "HP")),
     keto: lunch.filter((d) => d.category === "Keto"),
     accompaniment: lunch.filter((d) => d.category === "Accompaniment"),
+    proteinFloor: indianProteinFloorPool(lunch),
   };
 }
 
-/**
- * §3.1 lunch carb rule. Default: Chapati. Rice appears at most once per week,
- * so once any weekLunchCarbs contains a Rice dish, Rice drops from the pool.
- * The recency rule does not apply here (§4), so history is not consulted.
- */
 /** §3 international-form anchor categories (the non-Indian main may be any of these). */
 const INTL_ANCHOR_CATEGORIES = new Set(["Gravy dish", "Dry dish", "Keto", "Complete meal"]);
 
@@ -466,17 +538,11 @@ export function menuIntl(eligible: Dish[], anchorDish: Dish | undefined): MenuIn
     anchor: lunch.filter(isIntlAnchor),
     proteinCompanion: lunch.filter((d) => isProtein(d) && matchesAnchor(d)),
     sideCompanion: lunch.filter((d) => isVegSide(d) && matchesAnchor(d)),
+    // §3.4 international carb: register-neutral steamed rice (Category=Rice +
+    // cuisine_neutral). Drawn by the pick only for a `carbAffinity: Rice` anchor,
+    // subject to rice spacing; otherwise the intl form takes no carb.
+    neutralRiceCarb: lunch.filter((d) => d.category === "Rice" && isCuisineNeutral(d)),
   };
-}
-
-export function lunchCarbPool(eligible: Dish[], weekLunchCarbs: Dish[]): Dish[] {
-  const riceAlreadyUsed = weekLunchCarbs.some((d) => d.category === "Rice");
-  return eligible.filter((d) => {
-    if (d.time !== "Lunch") return false;
-    if (d.category === "Chapati") return true;
-    if (d.category === "Rice") return !riceAlreadyUsed;
-    return false;
-  });
 }
 
 export type WeekdaySubstitutionDay = "Mon" | "Tue" | "Wed" | "Thu" | "Fri";
