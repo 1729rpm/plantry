@@ -5,6 +5,7 @@ import {
   QUEUE_EMPTY,
   authorLabel,
   formatWhen,
+  queuedRemovalConfirmed,
   resolveFavoriteRows,
   resolveQueueRows,
   type FavoriteRow,
@@ -85,5 +86,28 @@ describe("empty-state copy", () => {
     for (const copy of [FAVORITES_EMPTY, QUEUE_EMPTY]) {
       expect(copy).not.toMatch(/[–—]/);
     }
+  });
+});
+
+describe("queuedRemovalConfirmed", () => {
+  // The removeFromNextWeekQueue result union (Stream A's binding contract).
+  // Only an explicit ok true confirms the optimistic removal; either failure
+  // reason (and a missing result) reverts, so a soft failure never looks
+  // removed client-side.
+  it("confirms on an explicit ok true", () => {
+    expect(queuedRemovalConfirmed({ ok: true })).toBe(true);
+  });
+
+  it("reverts on ok false with reason no-such-row", () => {
+    expect(queuedRemovalConfirmed({ ok: false, reason: "no-such-row" })).toBe(false);
+  });
+
+  it("reverts on ok false with reason not-queued", () => {
+    expect(queuedRemovalConfirmed({ ok: false, reason: "not-queued" })).toBe(false);
+  });
+
+  it("reverts on a missing or malformed result", () => {
+    expect(queuedRemovalConfirmed(undefined)).toBe(false);
+    expect(queuedRemovalConfirmed(null)).toBe(false);
   });
 });

@@ -127,6 +127,19 @@ export function resolveQueueRows(rows: readonly QueueRow[]): ResolvedQueueItem[]
   });
 }
 
+// The result union removeFromNextWeekQueue returns (Stream A's binding
+// contract): "no-such-row" means the queue id resolves to nothing;
+// "not-queued" means the row exists but is already placed or dropped.
+export type RemoveQueuedResult = { ok: true } | { ok: false; reason: "no-such-row" | "not-queued" };
+
+// Whether a resolved removeFromNextWeekQueue call confirms the optimistic
+// removal. Only an explicit ok true confirms; anything else (either failure
+// reason, or a missing/malformed result) reverts, so a soft failure never
+// looks removed client-side. Pure so the mapping is unit-tested.
+export function queuedRemovalConfirmed(result: RemoveQueuedResult | null | undefined): boolean {
+  return result?.ok === true;
+}
+
 interface WishlistScreenProps {
   identity: Identity;
   onBack: () => void;
@@ -221,19 +234,32 @@ export function WishlistScreen({ identity, onBack }: WishlistScreenProps) {
   async function handleRemoveQueued(item: ResolvedQueueItem) {
     setPendingQueue((prev) => new Set(prev).add(item.id));
     try {
-      // The contract does not document a result union for this mutation (it sets
-      // the row dropped and writes the Changes-feed row), so a resolved call is
-      // success; only an exception reverts.
-      await removeFromNextWeekQueue({ author: identity, queueId: item.id });
+      const result = (await removeFromNextWeekQueue({
+        author: identity,
+        queueId: item.id,
+      })) as RemoveQueuedResult;
+      // Confirmed drop: leave the marker for the prune effect to clear once the
+      // subscription no longer carries the row.
+      if (queuedRemovalConfirmed(result)) return;
+      // ok false: THIS call dropped nothing, so revert rather than fake success.
+      // Both reasons mean the row is already not queued server-side
+      // ("no-such-row": the id resolves to nothing; "not-queued": already placed
+      // or dropped), so after the revert the live subscription removes the row
+      // on its own; a benign race, so no error toast.
+      revertPendingQueue(item.id);
     } catch (err) {
       console.error("removeFromNextWeekQueue threw", err);
-      setPendingQueue((prev) => {
-        const next = new Set(prev);
-        next.delete(item.id);
-        return next;
-      });
+      revertPendingQueue(item.id);
       showToast("Something is off. Try again.");
     }
+  }
+
+  function revertPendingQueue(id: string) {
+    setPendingQueue((prev) => {
+      const next = new Set(prev);
+      next.delete(id);
+      return next;
+    });
   }
 
   return (
