@@ -11,6 +11,7 @@ satiety: High
 prepMinutes: 25
 seasons: All
 cuisine: Thai
+carbAffinity: Rice
 complexity: Medium
 skill: Fry the curry paste in the thick coconut cream first so it splits and turns fragrant
 photo: thai-red-curry-tofu.jpg

@@ -11,6 +11,7 @@ satiety: Medium
 prepMinutes: 40
 seasons: All
 cuisine: Indian
+carbAffinity: Rice
 complexity: Medium
 photo: sambar.jpg
 ---
