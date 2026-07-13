@@ -12,7 +12,8 @@ import {
   menuIntl,
   isIntlAnchor,
   isCuisineNeutral,
-  lunchCarbPool,
+  lunchBudget,
+  LUNCH_MAX_ITEMS,
   shouldSubstituteWeekday,
   selectInternationalSubstitutions,
   planWeekdaySubstitutions,
@@ -233,8 +234,8 @@ describe("composition — docs/engine.md §3", () => {
     });
   });
 
-  describe("§3 Menu 1 (Mon/Wed/Fri lunch)", () => {
-    it("HP pool requires HP tag AND (Gravy dish OR Dry dish) AND Lunch", () => {
+  describe("§3.2 Menu 1 (Mon/Wed/Fri weekday plate)", () => {
+    it("HP lead pool requires HP tag AND (Gravy dish OR Dry dish) AND Indian Lunch", () => {
       const hpGravy = makeDish({
         time: "Lunch",
         category: "Gravy dish",
@@ -251,96 +252,71 @@ describe("composition — docs/engine.md §3", () => {
         tags: ["HP"],
       });
       const nonHpGravy = makeDish({ time: "Lunch", category: "Gravy dish" });
-      const out = menu1([hpGravy, hpDry, hpKeto, nonHpGravy], []);
+      const out = menu1([hpGravy, hpDry, hpKeto, nonHpGravy]);
       expect(out.hp).toEqual([hpGravy, hpDry]);
     });
 
-    it("§3 R4 thali pools: a non-HP Gravy dal pool and a non-HP Dry sabzi pool", () => {
+    it("companion pool is the non-HP Indian Gravy/Dry/Accompaniment dishes", () => {
       const nonHpGravy = makeDish({ time: "Lunch", category: "Gravy dish" });
-      const hpGravy = makeDish({
-        time: "Lunch",
-        category: "Gravy dish",
-        tags: ["HP"],
-      });
+      const hpGravy = makeDish({ time: "Lunch", category: "Gravy dish", tags: ["HP"] });
       const nonHpDry = makeDish({ time: "Lunch", category: "Dry dish" });
       const acc = makeDish({ time: "Lunch", category: "Accompaniment" });
-      const out = menu1([nonHpGravy, hpGravy, nonHpDry, acc], []);
-      // The 4-item thali carries BOTH a dal (non-HP Gravy) and a dry sabzi
-      // (non-HP Dry) around the protein main.
-      // An Accompaniment is no longer a Menu 1 position.
-      expect(out.dal).toEqual([nonHpGravy]);
-      expect(out.drySabzi).toEqual([nonHpDry]);
+      const nonIndian = makeDish({ time: "Lunch", category: "Dry dish", cuisine: "Thai" });
+      const out = menu1([nonHpGravy, hpGravy, nonHpDry, acc, nonIndian]);
+      // Companions are the unified non-HP Indian pool (Gravy + Dry + Accompaniment);
+      // the HP gravy and the non-Indian dish are excluded.
+      expect(out.companions).toEqual([nonHpGravy, nonHpDry, acc]);
+      expect(out.companions.some((d) => d.tags.includes("HP"))).toBe(false);
+      expect(out.companions.some((d) => d.cuisine !== "Indian")).toBe(false);
     });
 
-    it("§3 R4 + one-HP-per-meal: the Dry-sabzi pool excludes HP-tagged dishes", () => {
-      // The Menu 1 main is the HP pick, so the partner is non-HP. An HP-tagged
-      // Dry sabzi (e.g. Chicken bhuna tagged HP) must not be eligible as the
-      // partner of an HP Gravy main: a meal carries one HP source, not two.
-      const hpGravy = makeDish({ time: "Lunch", category: "Gravy dish", tags: ["HP"] });
-      const hpDry = makeDish({
-        time: "Lunch",
-        category: "Dry dish",
-        tags: ["HP"],
-        primaryIngredient: "Chicken",
-      });
-      const plainDry = makeDish({ time: "Lunch", category: "Dry dish" });
-      const acc = makeDish({ time: "Lunch", category: "Accompaniment" });
-      const out = menu1([hpGravy, hpDry, plainDry, acc], []);
-      // The R4 partner pool keeps only the non-HP Dry sabzi.
-      expect(out.drySabzi).toEqual([plainDry]);
-      expect(out.drySabzi.some((d) => d.tags.includes("HP"))).toBe(false);
-    });
-
-    it("§3 R4 partner is property-based: a paneer HP dry sabzi is excluded too", () => {
-      // Proves the exclusion keys on the HP tag, not on names: a paneer-on-paneer
-      // pairing is blocked exactly as chicken-on-chicken is.
-      const hpPaneerGravy = makeDish({
-        time: "Lunch",
-        category: "Gravy dish",
-        tags: ["HP"],
-        primaryIngredient: "Paneer",
-      });
-      const hpPaneerDry = makeDish({
-        time: "Lunch",
-        category: "Dry dish",
-        tags: ["HP"],
-        primaryIngredient: "Paneer",
-      });
-      const plainDry = makeDish({ time: "Lunch", category: "Dry dish" });
-      const out = menu1([hpPaneerGravy, hpPaneerDry, plainDry], []);
-      expect(out.drySabzi).toEqual([plainDry]);
-      expect(out.drySabzi.some((d) => d.tags.includes("HP"))).toBe(false);
-    });
-
-    it("lunchCarb pool defaults to Chapati and includes Rice when not already used this week", () => {
+    it("carb pools split Rice and Chapati; protein floor is HP-or-Keto Indian/neutral", () => {
       const chapati = makeDish({ time: "Lunch", category: "Chapati" });
       const rice = makeDish({ time: "Lunch", category: "Rice" });
-      const out = menu1([chapati, rice], []);
-      expect(out.lunchCarb).toEqual([chapati, rice]);
+      const hpGravy = makeDish({ time: "Lunch", category: "Gravy dish", tags: ["HP"] });
+      const keto = makeDish({ time: "Lunch", category: "Keto" });
+      const neutralProtein = makeDish({
+        time: "Lunch",
+        category: "Dry dish",
+        cuisine: "Thai",
+        tags: ["HP", "cuisine_neutral"],
+      });
+      const out = menu1([chapati, rice, hpGravy, keto, neutralProtein]);
+      expect(out.riceCarb).toEqual([rice]);
+      expect(out.chapatiCarb).toEqual([chapati]);
+      // Floor: the HP Indian gravy, the Keto, and the neutral HP protein (a Thai
+      // dish qualifies only via cuisine_neutral).
+      expect(out.proteinFloor).toEqual([hpGravy, keto, neutralProtein]);
     });
   });
 
-  describe("§3 Menu 2 (Tue/Thu lunch)", () => {
-    it("returns four independent pools: Keto, non-HP Gravy, non-HP Dry, lunch carb", () => {
+  describe("§3.2 Menu 2 (Tue/Thu weekday plate)", () => {
+    it("keto lead pool plus the shared companion/carb/floor pools", () => {
       const keto = makeDish({ time: "Lunch", category: "Keto" });
       const nonHpGravy = makeDish({ time: "Lunch", category: "Gravy dish" });
-      const hpGravy = makeDish({
-        time: "Lunch",
-        category: "Gravy dish",
-        tags: ["HP"],
-      });
+      const hpGravy = makeDish({ time: "Lunch", category: "Gravy dish", tags: ["HP"] });
       const nonHpDry = makeDish({ time: "Lunch", category: "Dry dish" });
-      const hpDry = makeDish({
-        time: "Lunch",
-        category: "Dry dish",
-        tags: ["HP"],
-      });
       const chapati = makeDish({ time: "Lunch", category: "Chapati" });
-      const out = menu2([keto, nonHpGravy, hpGravy, nonHpDry, hpDry, chapati], []);
+      const out = menu2([keto, nonHpGravy, hpGravy, nonHpDry, chapati]);
       expect(out.keto).toEqual([keto]);
-      expect(out.nonHpGravy).toEqual([nonHpGravy]);
-      expect(out.nonHpDry).toEqual([nonHpDry]);
-      expect(out.lunchCarb).toEqual([chapati]);
+      // Companions: non-HP Indian Gravy/Dry (the HP gravy and the Keto lead are excluded).
+      expect(out.companions).toEqual([nonHpGravy, nonHpDry]);
+      expect(out.chapatiCarb).toEqual([chapati]);
+    });
+  });
+
+  describe("§3.1 lunch budget", () => {
+    it("clamps WEEKDAY_CAP - breakfastItemCount to [2, LUNCH_MAX_ITEMS]", () => {
+      expect(LUNCH_MAX_ITEMS).toBe(4);
+      // 2-item breakfast (Mon/Wed/Fri) -> 3-item lunch budget.
+      expect(lunchBudget(2)).toBe(3);
+      // 1-item breakfast (Tue/Thu) -> 4-item lunch budget (the max).
+      expect(lunchBudget(1)).toBe(4);
+      // A 0-item breakfast never lifts the budget above LUNCH_MAX_ITEMS.
+      expect(lunchBudget(0)).toBe(4);
+      // A heavy 3-item breakfast floors the budget at 2.
+      expect(lunchBudget(3)).toBe(2);
+      expect(lunchBudget(4)).toBe(2);
     });
   });
 
@@ -547,37 +523,26 @@ describe("composition — docs/engine.md §3", () => {
     });
   });
 
-  describe("§3.1 lunch carb rule", () => {
-    it("defaults to Chapati when nothing has been picked this week", () => {
+  describe("§3.4 carb pools", () => {
+    it("riceCarb is Category=Rice, chapatiCarb is Category=Chapati, split by category", () => {
       const chapati = makeDish({ time: "Lunch", category: "Chapati" });
       const rice = makeDish({ time: "Lunch", category: "Rice" });
-      const out = lunchCarbPool([chapati, rice], []);
-      expect(out).toEqual([chapati, rice]);
-    });
-
-    it("excludes Rice when a Rice dish has already been picked this week", () => {
-      const chapati = makeDish({ time: "Lunch", category: "Chapati" });
-      const rice = makeDish({ time: "Lunch", category: "Rice" });
-      const ricePicked = makeDish({ time: "Lunch", category: "Rice" });
-      const out = lunchCarbPool([chapati, rice], [ricePicked]);
-      expect(out).toEqual([chapati]);
-    });
-
-    it("excludes non-carb categories regardless of state", () => {
-      const chapati = makeDish({ time: "Lunch", category: "Chapati" });
       const gravy = makeDish({ time: "Lunch", category: "Gravy dish" });
-      const out = lunchCarbPool([chapati, gravy], []);
-      expect(out).toEqual([chapati]);
+      const out = menu1([chapati, rice, gravy]);
+      expect(out.riceCarb).toEqual([rice]);
+      expect(out.chapatiCarb).toEqual([chapati]);
     });
 
-    it("does not apply recency (§4 exemption): never-cooked Rice still in pool", () => {
+    it("both carb pools are static category snapshots (no rice cap; spacing is generation-level)", () => {
+      // The composition pools no longer drop Rice on a rice-already-used week: the
+      // hard rice-spacing rule (§3.4) is applied at pick time in generateWeek, so
+      // the pool just splits by category.
       const chapati = makeDish({ time: "Lunch", category: "Chapati" });
-      const rice = makeDish({ time: "Lunch", category: "Rice" });
-      // Even though a Chapati lunch carb has been "picked" earlier in the week,
-      // both Chapati and Rice still appear (no recency filter).
-      const earlier = makeDish({ time: "Lunch", category: "Chapati" });
-      const out = lunchCarbPool([chapati, rice], [earlier]);
-      expect(out).toEqual([chapati, rice]);
+      const riceA = makeDish({ time: "Lunch", category: "Rice" });
+      const riceB = makeDish({ time: "Lunch", category: "Rice" });
+      const out = menu2([chapati, riceA, riceB]);
+      expect(out.riceCarb).toEqual([riceA, riceB]);
+      expect(out.chapatiCarb).toEqual([chapati]);
     });
   });
 
@@ -868,7 +833,7 @@ describe("composition — docs/engine.md §3", () => {
       expect(pair.optionB.completeCarb).toEqual([ccOk]);
     });
 
-    it("threads weekLunchCarbs into Menu 1 / Menu 2 lunch carb pool", () => {
+    it("composes Menu 1 carb pools by category, ignoring weekLunchCarbs (spacing is §3.4)", () => {
       const chapati = makeDish({ time: "Lunch", category: "Chapati" });
       const rice = makeDish({ time: "Lunch", category: "Rice" });
       const ricePicked = makeDish({ time: "Lunch", category: "Rice" });
@@ -882,10 +847,12 @@ describe("composition — docs/engine.md §3", () => {
         library: [chapati, rice, hp],
         history: emptyHistory,
         season: "Summer",
+        // Retained for the requests.ts consumer; composition no longer reads it.
         weekLunchCarbs: [ricePicked],
       });
       const m1 = out as Menu1CandidateSet;
-      expect(m1.lunchCarb).toEqual([chapati]);
+      expect(m1.riceCarb).toEqual([rice]);
+      expect(m1.chapatiCarb).toEqual([chapati]);
     });
 
     it("throws if a lunch slot has no lunchMenu", () => {

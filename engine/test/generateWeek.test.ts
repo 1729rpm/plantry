@@ -301,11 +301,10 @@ describe("generateWeek — top-level engine", () => {
       expect(week.days[0].fruit!.name).not.toBe("Apple");
     });
 
-    it("§9 role-aware cap drops only companion sides (dry sabzi), never the carb or protein main", () => {
-      // Mon/Wed/Fri have a 2-item breakfast and a 4-item thali (6 items, one over
-      // the 5-item cap), so the role-aware cap trims one droppable side per such
-      // day. It must drop the dry sabzi (a companion side), never the lunch carb
-      // or the protein main, even though the carb is the lowest-satiety item.
+    it("§3.1 budget-aware composition fits the day, so the §9 cap never fires", () => {
+      // Mon/Wed/Fri compose a 3-item lunch (2-item breakfast, budget 3) and Tue/Thu
+      // a 4-item lunch (1-item breakfast, budget 4), so no day exceeds the 5-item
+      // cap and nothing is dropped.
       const week = generateWeek({
         weekStart: "2026-06-08",
         library,
@@ -316,14 +315,9 @@ describe("generateWeek — top-level engine", () => {
         rng: () => 0.1,
         lastSaturdayMenu: null,
       });
-      // Every dropped dish is a companion side (a Dry-dish sabzi here), not a
-      // carb (Chapati/Rice) and not an HP protein main.
-      for (const id of week.droppedDishIds) {
-        const dish = library.find((d) => d.id === id)!;
-        expect(["Chapati", "Rice"]).not.toContain(dish.category);
-        expect(dish.tags.includes("HP")).toBe(false);
-      }
-      // Every Menu-1 weekday lunch still carries its lunch carb and its HP main.
+      // Budget composition means the cap is a safety net that does not fire here.
+      expect(week.droppedDishIds).toEqual([]);
+      // Every Menu-1 weekday lunch carries its carb and its HP main, at 3 items.
       for (const dayName of ["Mon", "Wed", "Fri"] as const) {
         const lunch = week.days
           .find((d) => d.day === dayName)!
@@ -332,12 +326,11 @@ describe("generateWeek — top-level engine", () => {
           true,
         );
         expect(lunch.dishes.some((d) => d.tags.includes("HP"))).toBe(true);
-        // Trimmed to 3 lunch items (main + dal + carb) on a full-breakfast day.
         expect(lunch.dishes.length).toBe(3);
       }
     });
 
-    it("respects §3.1 Rice-at-most-once across the week", () => {
+    it("§3.2 one wet dish per plate: no weekday lunch carries two Gravy dishes", () => {
       const week = generateWeek({
         weekStart: "2026-06-08",
         library,
@@ -348,16 +341,34 @@ describe("generateWeek — top-level engine", () => {
         rng: () => 0.1,
         lastSaturdayMenu: null,
       });
-      const lunchCarbs: Dish[] = [];
       for (const day of week.days) {
         for (const slot of day.slots) {
           if (slot.meal !== "Lunch") continue;
-          for (const dish of slot.dishes) {
-            if (dish.category === "Rice") lunchCarbs.push(dish);
-          }
+          const gravyCount = slot.dishes.filter((d) => d.category === "Gravy dish").length;
+          expect(gravyCount, `${day.day} lunch has ${gravyCount} gravy dishes`).toBeLessThanOrEqual(
+            1,
+          );
         }
       }
-      expect(lunchCarbs.length).toBeLessThanOrEqual(1);
+    });
+
+    it("§3.3 every generated lunch carries protein (HP or Keto)", () => {
+      const week = generateWeek({
+        weekStart: "2026-06-08",
+        library,
+        history: emptyHistory,
+        season: "Summer",
+        ingredients: emptyIngredients,
+        packSizes: emptyPackSizes,
+        rng: () => 0.1,
+        lastSaturdayMenu: null,
+      });
+      for (const day of week.days) {
+        const lunch = day.slots.find((s) => s.meal === "Lunch");
+        if (!lunch) continue;
+        const hasProtein = lunch.dishes.some((d) => d.tags.includes("HP") || d.category === "Keto");
+        expect(hasProtein, `${day.day} lunch has no protein`).toBe(true);
+      }
     });
   });
 
@@ -1145,11 +1156,11 @@ describe("generateWeek — top-level engine", () => {
     });
   });
 
-  describe("§3 Menu 1 4-item thali + §9 role-aware cap (emergent day budget)", () => {
+  describe("§3.2 Menu 1 weekday plate + one-wet rule (budget-aware)", () => {
     // A Menu-1 library with an HP Gravy main, a non-HP Gravy dal, a non-HP Dry
     // sabzi, and a carb. The Mon/Wed/Fri breakfast lead is parameterised: a
-    // Category=Bread lead is served alone (1-item breakfast), a Paratha lead
-    // keeps its accompaniment (2-item breakfast).
+    // Category=Bread lead is served alone (1-item breakfast, budget 4), a Paratha
+    // lead keeps its accompaniment (2-item breakfast, budget 3).
     function libraryForThali(breakfastLead: "Bread" | "Paratha"): Dish[] {
       nextId = 1;
       return [
@@ -1224,7 +1235,7 @@ describe("generateWeek — top-level engine", () => {
       return week.days.find((d) => d.day === "Mon")!.slots.find((s) => s.meal === "Lunch")!;
     }
 
-    it("a light (1-item) breakfast day keeps the full 4-item thali: protein + dal + dry sabzi + carb", () => {
+    it("an HP Gravy lead excludes the dal (one wet dish): protein + carb + dry sabzi", () => {
       const week = generateWeek({
         weekStart: "2026-06-15",
         library: libraryForThali("Bread"),
@@ -1234,21 +1245,25 @@ describe("generateWeek — top-level engine", () => {
         packSizes: emptyPackSizes,
         rng: () => 0.1,
       });
-      // Monday breakfast is a standalone Bread (1 item), so the 4-item thali fits
-      // under the 5-item cap and survives whole.
+      // Monday breakfast is a standalone Bread (1 item), so the lunch budget is 4
+      // (two companion positions). But the lead is a Gravy dish, so the hard
+      // one-wet rule excludes the Dal (also a Gravy) entirely; the only companion
+      // is the Dry sabzi. The plate is three items, not four: a plate short a
+      // companion beats a two-gravy plate (no thin-pool fallback for this rule).
       const monBf = week.days
         .find((d) => d.day === "Mon")!
         .slots.find((s) => s.meal === "Breakfast")!;
       expect(monBf.dishes.length).toBe(1);
       const lunch = monLunch(week);
-      expect(lunch.dishes.length).toBe(4);
+      expect(lunch.dishes.length).toBe(3);
       expect(lunch.dishes[0].name).toBe("Paneer Gravy"); // HP protein main leads
-      expect(lunch.dishes.some((d) => d.name === "Dal")).toBe(true); // non-HP Gravy dal
-      expect(lunch.dishes.some((d) => d.name === "Bhindi Sabzi")).toBe(true); // non-HP Dry sabzi
+      expect(lunch.dishes.some((d) => d.name === "Dal")).toBe(false); // dal excluded (one wet)
+      expect(lunch.dishes.filter((d) => d.category === "Gravy dish").length).toBe(1);
+      expect(lunch.dishes.some((d) => d.name === "Bhindi Sabzi")).toBe(true); // dry sabzi companion
       expect(lunch.dishes.some((d) => d.category === "Chapati")).toBe(true); // lunch carb
     });
 
-    it("a full (2-item) breakfast day: the cap drops the dry sabzi, leaving protein + dal + carb (3 items)", () => {
+    it("a 2-item breakfast day composes a 3-item lunch by budget, not by cap trimming", () => {
       const week = generateWeek({
         weekStart: "2026-06-15",
         library: libraryForThali("Paratha"),
@@ -1263,12 +1278,14 @@ describe("generateWeek — top-level engine", () => {
         .slots.find((s) => s.meal === "Breakfast")!;
       expect(monBf.dishes.length).toBe(2); // Paratha lead + accompaniment
       const lunch = monLunch(week);
-      // 2 breakfast + 4 thali = 6 over the 5-item cap → drop the dry sabzi.
+      // Budget 3 (2 breakfast items): lead + carb + one companion. The Gravy lead
+      // excludes the Dal, so the companion is the Dry sabzi. Nothing is dropped.
+      expect(week.droppedDishIds).toEqual([]);
       expect(lunch.dishes.length).toBe(3);
-      expect(lunch.dishes.some((d) => d.name === "Bhindi Sabzi")).toBe(false); // sabzi dropped
-      expect(lunch.dishes[0].name).toBe("Paneer Gravy"); // protein main protected
-      expect(lunch.dishes.some((d) => d.name === "Dal")).toBe(true); // dal protected
-      expect(lunch.dishes.some((d) => d.category === "Chapati")).toBe(true); // carb protected
+      expect(lunch.dishes.some((d) => d.name === "Bhindi Sabzi")).toBe(true);
+      expect(lunch.dishes[0].name).toBe("Paneer Gravy");
+      expect(lunch.dishes.some((d) => d.name === "Dal")).toBe(false); // one wet dish only
+      expect(lunch.dishes.some((d) => d.category === "Chapati")).toBe(true);
     });
 
     it("keeps every weekday at the §9 5-item cap", () => {
