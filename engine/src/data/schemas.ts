@@ -85,6 +85,16 @@ export const CuisineSchema = z.enum([
 ]);
 export type Cuisine = z.infer<typeof CuisineSchema>;
 
+/**
+ * Carb affinity, the optional §3.4 field naming a lunch main's canonical carb.
+ * `Rice` sends the carb position to the plain Category=Rice pool (kadhi, chhole,
+ * Thai curries); `Roti` to Category=Chapati; absent leaves the default (Chapati),
+ * so most dishes omit it. Keyed on the field, never on dish names. Read only at
+ * the §3 carb position; §1 eligibility and §4 selection never read it.
+ */
+export const CarbAffinitySchema = z.enum(["Rice", "Roti"]);
+export type CarbAffinity = z.infer<typeof CarbAffinitySchema>;
+
 export const DishSchema = z.object({
   id: z.number().int().positive(),
   name: z.string().min(1),
@@ -108,6 +118,13 @@ export const DishSchema = z.object({
    * 7's display/structure split does not apply).
    */
   cuisine: CuisineSchema,
+  /**
+   * Optional carb affinity (docs/engine.md §3.4): the lead's canonical lunch
+   * carb. `Rice` sends the §3 carb position to the plain Rice pool; `Roti` to
+   * Chapati; absent leaves the default (Chapati). Read only at the carb position;
+   * §1 eligibility and §4 selection never read it.
+   */
+  carbAffinity: CarbAffinitySchema.optional(),
   // Enrichment fields (docs/engine.md §12). All optional: a dish file may omit
   // them and parses unchanged; the UI degrades gracefully when they are absent
   // (§11.1 coverage ratchet).
