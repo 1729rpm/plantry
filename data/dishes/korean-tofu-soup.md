@@ -11,6 +11,7 @@ satiety: Medium
 prepMinutes: 25
 seasons: All
 cuisine: Korean
+carbAffinity: Rice
 complexity: Medium
 skill: Keep the tofu in soft chunks; do not stir it to pieces
 photo: korean-tofu-soup.jpg

@@ -11,6 +11,7 @@ satiety: High
 prepMinutes: 30
 seasons: All
 cuisine: Thai
+carbAffinity: Rice
 complexity: Medium
 skill: Fry the green curry paste in coconut cream till it splits before adding liquid
 buySpecially: Boneless chicken, 300g

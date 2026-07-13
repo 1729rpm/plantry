@@ -11,6 +11,7 @@ satiety: Low
 prepMinutes: 25
 seasons: All
 cuisine: Indian
+carbAffinity: Rice
 complexity: Easy
 photo: rasam.jpg
 ---

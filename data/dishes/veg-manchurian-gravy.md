@@ -11,6 +11,7 @@ satiety: Medium
 prepMinutes: 35
 seasons: All
 cuisine: Chinese
+carbAffinity: Rice
 complexity: Medium
 skill: Fry the vegetable balls firm before they go into the sauce so they hold
 photo: veg-manchurian-gravy.jpg

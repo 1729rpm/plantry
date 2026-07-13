@@ -113,6 +113,7 @@ export const SERIALIZED_DISH_FIELDS = [
   "prepMinutes",
   "seasons",
   "cuisine",
+  "carbAffinity",
   "complexity",
   "skill",
   "equipment",
@@ -150,6 +151,10 @@ export function serializeDishFile(file: DishFile): string {
   // Cuisine: a required single-value display/filter field, emitted right after
   // seasons (after the rule-input fields, before the optional enrichment block).
   fm.push(`cuisine: ${dish.cuisine}`);
+  // Carb affinity (docs/engine.md §3.4 / §12), a rule input like tags/cuisine.
+  // Emitted right after cuisine, before the optional enrichment block, only when
+  // present; an absent field serializes byte-identically to today.
+  if (dish.carbAffinity !== undefined) fm.push(`carbAffinity: ${dish.carbAffinity}`);
   // Enrichment frontmatter (docs/engine.md §12). Emitted in a fixed
   // order, each line only when the field is present, so a dish with none of them
   // serializes byte-identically to one without.

@@ -11,6 +11,7 @@ satiety: High
 prepMinutes: 35
 seasons: All
 cuisine: Indian
+carbAffinity: Rice
 complexity: Medium
 prePrep: Soak the chickpeas overnight
 photo: chole.jpg

@@ -43,7 +43,8 @@ export {
   menu2,
   menu3,
   menu4,
-  lunchCarbPool,
+  lunchBudget,
+  LUNCH_MAX_ITEMS,
   shouldSubstituteWeekday,
 } from "./composition.js";
 export type {

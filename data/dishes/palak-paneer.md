@@ -11,6 +11,7 @@ satiety: High
 prepMinutes: 30
 seasons: All
 cuisine: Indian
+carbAffinity: Roti
 complexity: Medium
 photo: palak-paneer.jpg
 ---

@@ -11,6 +11,7 @@ satiety: High
 prepMinutes: 30
 seasons: All
 cuisine: Indian
+carbAffinity: Rice
 complexity: Medium
 skill: Comfortable, keep whisking so the curd does not split
 photo: kadhi.jpg

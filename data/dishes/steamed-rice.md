@@ -3,7 +3,7 @@ id: 272
 name: Steamed rice
 category: Rice
 time: Lunch
-tags: []
+tags: [cuisine_neutral]
 primaryIngredient: Rice
 preferred: No
 active: Yes

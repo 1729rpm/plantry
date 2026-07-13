@@ -33,7 +33,11 @@ At most one weekday lunch per week may substitute Menu 3 or Menu 4 for its defau
 
 **One HP source per meal (all forms).** A single meal (a day's breakfast or a day's lunch) contains at most one HP-tagged dish. Each meal form below picks its protein main first; once an HP dish occupies the meal, the meal's remaining (non-main) positions exclude HP-tagged dishes. This is keyed on the `HP` tag, never on dish names, so it holds for any HP protein (chicken on chicken, paneer on paneer) and across every form: a "Chicken biryani" complete_meal never sits beside a "Chicken salad" HP accompaniment in one Saturday Menu 3. Thin-pool fallback: if excluding HP-tagged dishes would empty a non-main position pool, the unfiltered pool is used so the slot still fills (one HP-main meal with a second HP side beats an incomplete meal). This is rare given the broad companion pools and surfaces as composition signal for the slow loop, not a hard error.
 
-**Self-sufficient mains (all forms).** A self-sufficient main (tagged `complete_meal`, or Category=Complete meal) fills its slot alone: no separate carb, no accompaniment. The signal is the union of the tag and the category, because a dish can be Category=Complete meal without the `complete_meal` tag (White sauce pasta), and the tag alone would miss it. In breakfast Option B a Category=Bread `complete_carb` is served without the accompaniment; a Chilla or Paratha `complete_carb` keeps it. A non-complete-meal gravy that is itself filling (e.g. kadhi) is not structurally distinguishable from a gravy that wants a sabzi, so it carries no suppression and is left to in-week manual swap.
+**One wet dish per meal (all lunch forms), hard.** A lunch plate holds at most one Category=Gravy dish item. When the protein lead is itself a Gravy dish, the companion pool excludes Gravy dishes entirely; when a Gravy companion lands, any further companion position excludes Gravy. This is keyed on Category, never on dish names. Unlike the one-HP rule there is NO thin-pool fallback: a plate one companion short beats a two-gravy plate, so the rule never yields to fill a slot. Two wet dishes on one plate ("2 gravy dishes already") was the recurring over-serving the household kept deleting; this rule removes it at generation time.
+
+**Lunch protein floor (all lunch forms).** Every generated lunch carries protein. After a lunch plate is composed, if no picked item is HP-tagged or Category=Keto, one protein companion is appended (role `protein-floor`, protected): an eligible HP-or-Keto Lunch dish, cuisine-coherent (Indian or `cuisine_neutral` on an Indian plate; same-cuisine-or-`cuisine_neutral` on an international plate), and never a second Category=Gravy dish when the plate already holds one. The floor counts inside the lunch budget (below) but still appends when the plate is at budget (protein beats budget), never past four items. Menu 1/2/3 satisfy it by construction (their lead is HP or Keto); it fires on the carb-only fallback, a Menu 4 with an empty Keto pool, and a self-sufficient non-HP international anchor (a `complete_meal` such as Veg hakka noodles then lands with one protein companion, mirroring Menu 4's Keto position). An empty floor pool leaves the plate protein-less and writes a `warn` incident (a real gap, not steady-state noise).
+
+**Self-sufficient mains (all forms).** A self-sufficient main (tagged `complete_meal`, or Category=Complete meal) fills its slot alone: no separate carb, no accompaniment (the lunch protein floor above still applies to a non-HP one). The signal is the union of the tag and the category, because a dish can be Category=Complete meal without the `complete_meal` tag (White sauce pasta), and the tag alone would miss it. In breakfast Option B a Category=Bread `complete_carb` is served without the accompaniment; a Chilla or Paratha `complete_carb` keeps it. A non-complete-meal gravy that is itself filling (e.g. kadhi) is not structurally distinguishable from a gravy that wants a companion, so it carries no suppression and is left to in-week manual swap.
 
 ### Breakfast
 
@@ -56,29 +60,19 @@ Breakfast chutney (dish-driven, all breakfast slots): the breakfast accompanimen
 
 ### Lunch
 
-**Menu 1 (Mon, Wed, Fri), the 4-item thali aspiration:**
+**Menu 1 (Mon, Wed, Fri) and Menu 2 (Tue, Thu), the Indian weekday plate.** Both keep their menu numbers (Saturday alternation and archive history strings depend on the numbering) but compose one shared form, differing only in the protein lead:
 
-- 1 HP protein main (Category=Gravy dish or Dry dish)
-- 1 non-HP dal (Category=Gravy dish)
-- 1 non-HP dry sabzi (Category=Dry dish)
-- 1 lunch carb (see §3.1)
+- 1 protein lead: Menu 1 an HP-tagged dish (Category=Gravy dish or Dry dish), Menu 2 a Category=Keto dish. Indian cuisine only.
+- 1 carb, picked by the lead's carb affinity (§3.1).
+- companions filling the remaining budget (`lunchBudget - 2` positions, so one or two; see §3.1): the non-HP Indian companion pool, Category in {Gravy dish, Dry dish, Accompaniment}, ranked by §4, under the one-wet-dish rule above. Companion roles map by category: Gravy dish maps to `dal`, Dry dish to `sabzi`, Accompaniment to `accompaniment`.
 
-The Indian weekday lunch aspires to the four-item thali: a protein main with both a dal and a dry sabzi around it, plus the lunch carb. This is the same form as Menu 2 below, differing only in the protein source (an HP Gravy/Dry main rather than a Keto dish). **Cuisine is meal-level: Menu 1 (and Menu 2) compose Indian-cuisine dishes only** (`cuisine === "Indian"`, keyed on the field, never on names), so the Indian thali never lands a lone non-Indian sabzi or dal in an otherwise-Indian plate; non-Indian dishes reach the menu through the international form (Menu intl, §3.2). The protein main is the meal's only HP position; the dal and dry-sabzi pools both exclude HP-tagged dishes (the one-HP-source-per-meal rule above), keyed on the HP tag, not on dish names. The four-item aspiration is day-budgeted by the §9 role-aware cap, not by Menu 1 itself: on a full (2-item) breakfast day the cap drops the dry sabzi (a companion side), so the lunch lands at the 5-item day cap as a 3-item lunch (protein main + dal + carb); on a light (1-item) breakfast day all four survive. Thin pools degrade gracefully (the dal or the sabzi is simply omitted), and a slot with no eligible HP main falls back to a lunch carb so it still fills. Complete_meal lunches are exempt (a self-sufficient main fills its slot alone; see Self-sufficient mains above), so they reach the Menu 3 / Menu 4 forms rather than this thali. Pairing a sabzi with a self-sufficient gravy such as kadhi is left to in-week manual swap.
-
-**Menu 2 (Tue, Thu), the same 4-item thali, Keto-led:**
-
-- 1 Keto dish
-- 1 non-HP Gravy dish (any satiety)
-- 1 non-HP Dry dish
-- 1 lunch carb (see §3.1)
-
-The Keto dish is the meal's protein lead and the only position that may be HP; the Gravy and Dry companions are already non-HP, so one-HP-per-meal holds by construction. Like Menu 1, Menu 2 composes Indian-cuisine dishes only. Tue/Thu carry a 1-item breakfast, so the 4-item thali fits the 5-item day cap whole; the role-aware cap (§9) only trims it on the rare day a Tue/Thu breakfast runs to two or more items.
+The plate composes to the day budget (§3.1) rather than composing four items and trimming: a light breakfast leaves room for a second companion, a full breakfast for one. **Cuisine is meal-level: the plate composes Indian-cuisine dishes only** (`cuisine === "Indian"`, keyed on the field, never on names), so it never lands a lone non-Indian companion in an otherwise-Indian plate; non-Indian dishes reach the menu through the international form (Menu intl, §3.2). The protein lead is the meal's only HP position; the companion pool is non-HP, so one-HP-per-meal holds. The one-wet rule above governs the gravy count: an HP Gravy lead admits no gravy companion (the dal is excluded), while a Dry-dish or Keto lead admits at most one gravy companion. A slot with no eligible protein lead falls back to a carb plus the protein floor so it still fills. Complete_meal lunches are exempt (a self-sufficient main fills its slot alone; see Self-sufficient mains above), so they reach the Menu 3 / Menu 4 forms rather than this plate.
 
 **Menu intl (substituted weekday lunch), the coherent non-Indian form:**
 
 - 1 non-Indian anchor main (`cuisine !== "Indian"`, Category in {Gravy dish, Dry dish, Keto, Complete meal})
 - at most 1 companion, same-cuisine-or-`cuisine_neutral`
-- no Indian carb
+- no Indian carb, except a register-neutral steamed-rice carb for a rice-affinity anchor (§3.1)
 
 Up to two weekday lunches per week run this form instead of the Indian thali (the §3.2 international substitution selects which days and which anchors). The form keeps a meal in one cuisine register: a companion is eligible only when it shares the anchor's cuisine OR carries the `cuisine_neutral` tag (a plain protein that pairs with any register, e.g. grilled chicken breast, boiled eggs). The companion depends on the anchor:
 
@@ -86,7 +80,7 @@ Up to two weekday lunches per week run this form instead of the Indian thali (th
 - A **protein** anchor (HP or Category=Keto) takes at most one same-cuisine-or-neutral NON-HP veg side. The anchor is the meal's one HP source, so the side pool excludes HP-tagged dishes (one HP per meal).
 - A **veg-forward** anchor (not HP, not Keto, not a complete_meal, e.g. Continental baked vegetables) takes one same-cuisine-or-neutral HP/Keto protein companion, so a veg-forward dish is never served without a protein.
 
-The form has no Chapati/Rice position (no Indian carb). The picks carry §9 roles: the anchor is `protein-main`, a veg-forward anchor's protein companion is a protected `protein-floor`, and a protein anchor's veg side is a droppable `accompaniment`. The meal is small (one or two items), so the §9 cap rarely trims it. Thin pools degrade gracefully: a missing companion leaves the anchor as a valid 1-item international meal.
+The form takes no Indian Chapati/Rice carb, with one exception: an anchor with `carbAffinity: Rice` (a Thai, Korean, or Chinese curry) takes a register-neutral steamed-rice carb, a Category=Rice dish carrying the `cuisine_neutral` tag, subject to the same rice-spacing rule as the Indian plate (§3.1); `Roti` affinity never applies on an international plate. The picks carry §9 roles: the anchor is `protein-main`, a veg-forward anchor's protein companion is a protected `protein-floor`, a protein anchor's veg side is a droppable `accompaniment`, and the steamed-rice carb is a protected `carb`. The meal is small, so the §9 cap rarely trims it. Thin pools degrade gracefully: a missing companion leaves the anchor as a valid 1-item international meal (the protein floor still guarantees it carries protein).
 
 **Menu 3 (Saturday), 3 items:**
 
@@ -102,11 +96,23 @@ The form has no Chapati/Rice position (no Indian carb). The picks carry §9 role
 
 The lead is non-HP, so the meal's one HP source (if any) is whichever of the Keto dish or the Accompaniment lands one first; once it does, the later position excludes HP-tagged dishes (with the thin-pool fallback). Breakfast forms apply the same rule: an HP breakfast main excludes an HP partner (a fruit partner is never HP; an HP accompaniment partner is dropped under Option B).
 
-### 3.1 Lunch carb rule
+### 3.1 Lunch budget and carb rule
 
-Default: pick a dish with Category=Chapati.
-Constraint: dishes with Category=Rice appear at most once per week.
-The recency rule (§4) does not apply to lunch carbs.
+**Budget-aware composition.** Breakfast composes first (its forms are unchanged). The weekday lunch then composes to an item budget instead of composing four items and trimming after:
+
+```
+lunchBudget = clamp(WEEKDAY_CAP - breakfastItemCount, 2, LUNCH_MAX_ITEMS)
+```
+
+with `WEEKDAY_CAP = 5` (§9) and `LUNCH_MAX_ITEMS = 4`. `breakfastItemCount` is the count of breakfast items actually placed on that day. Mon/Wed/Fri (2-item breakfast) budget a 3-item lunch; Tue/Thu (1-item breakfast, 2 with the breakfast protein floor) budget a 4- or 3-item lunch. The Menu 1/2 plate spends this budget as protein lead + carb + companions; the companion count is `lunchBudget - 2`. Saturday keeps its own 3-item Menu 3/4 forms and does not use the budget. Because the plate is budget-fit by construction, the §9 cap is a safety net that should not fire in normal generation; an over-cap incident now signals a real defect, not steady state.
+
+**Carb affinity.** The carb is picked by the protein lead's optional `carbAffinity` field (§12):
+
+- `carbAffinity: Rice` picks from the plain Category=Rice pool (kadhi, chhole, Thai and other non-Indian curries).
+- `carbAffinity: Roti` picks from the plain Category=Chapati pool.
+- Absent picks from Category=Chapati, the default, so most leads leave the field unset. (`Roti` therefore resolves to the same pool as absent today; it records the canonical pairing.)
+
+**Rice spacing (hard).** A Category=Rice carb never lands on two consecutive generated days. When a lead's affinity asks for Rice but the previous generated day's lunch carried rice, the carb falls back to Chapati (or, on the international form, is omitted). This replaces the earlier "Rice at most once per week" count: with carb affinity driving rice, a fixed weekly count would fight the affinity, and the household's stated rule ("don't have rice on continuous days") is spacing, not a count. The recency rule (§4) still does not apply to lunch carbs.
 
 ### 3.2 Weekday lunch substitution
 
@@ -245,7 +251,7 @@ The cap is role-aware. Each composed pick carries a structural role from §3: `p
 
 Repeat until at the cap.
 
-The role-aware order makes the per-day budget emergent rather than declared. The 4-item Indian thali (§3 Menu 1 / Menu 2) plus the day's breakfast is trimmed by dropping the dry sabzi first, so a full (2-item) breakfast day lands a 3-item lunch (protein main + dal + carb) while a light (1-item) breakfast day keeps the full 4-item thali, each at the 5-item weekday cap. The earlier satiety-only rule dropped the lunch carb (a low-satiety item) before the sabzi; protecting the carb and protein main is the change.
+The cap is a safety net, not the per-day budget. §3 composes each lunch to the day budget (§3.1: `lunchBudget = clamp(WEEKDAY_CAP - breakfastItemCount, 2, LUNCH_MAX_ITEMS)`), so a normal weekday already lands at or under the 5-item cap (a 2-item breakfast with a 3-item lunch, a 1-item breakfast with a 4-item lunch) and Saturday at its 3-item cap. The cap therefore should not fire in normal generation; when it does, it signals a real defect (an unexpectedly large composed plate), and the role-aware order still protects the carb, protein main, dal, breakfast chutney, and protein floor by dropping a companion side first. An over-cap incident is a genuine warning to investigate, no longer weekly steady-state noise.
 
 ## 10. Ingredient Consolidation
 
@@ -315,6 +321,7 @@ Alongside the blocking validators (§1, §12), a reporting layer in `engine/src/
 - `prepMinutes`: estimated active prep time in minutes. Used by §9 tiebreaker.
 - `seasons`: a season list, or `All` for year-round.
 - `cuisine`: a single cuisine, the human-readable name (Indian, Italian, Chinese, Mexican, Greek, Spanish, Korean, Japanese, Continental, Vietnamese, Lebanese, Mediterranean, Thai). A display, filter, and **§3 composition** field. §3 reads it for meal-level cuisine coherence: the Indian thali (Menu 1/2) composes only `cuisine === "Indian"` dishes, and the international form and its §3.2 selection use `cuisine !== "Indian"` for the anchor pool and same-cuisine companion match. §1 eligibility and §4 selection do not read it (the former per-position cuisine-diversity step is gone, §4). It is the single source of truth for the Explore cuisine filter, the Explore card's cuisine display, and the dish-photo prompt's cuisine slot (engineering.md §4). Dishes with no international cuisine are `Indian`, and `cuisine !== "Indian"` is the non-Indian test. Required on every dish.
+- `carbAffinity` (optional): `Rice` or `Roti`, the canonical lunch carb of a protein-lead dish (§3.1). `Rice` sends the §3 carb position to the plain Category=Rice pool; `Roti` to Category=Chapati; absent leaves the default (Chapati). Set it only where the pairing is canonical (kadhi, chhole, sambar, rasam, and every non-Indian curry-type Gravy anchor take `Rice`; a non-Indian Rice-affinity anchor draws a `cuisine_neutral` steamed rice on the international form). Read only at the carb position; §1 eligibility and §4 selection never read it. `Roti` and absent resolve to the same pool today, so most dishes leave it unset.
 
 Enrichment fields, all optional (absent on a dish parses unchanged; the UI degrades gracefully when missing):
 

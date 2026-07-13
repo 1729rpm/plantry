@@ -1,9 +1,9 @@
 ---
 id: 16
 name: Curd rice
-category: Rice
+category: Complete meal
 time: Lunch
-tags: []
+tags: [complete_meal]
 primaryIngredient: Curd
 preferred: Yes
 active: Yes
