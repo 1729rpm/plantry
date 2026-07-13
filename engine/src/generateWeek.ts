@@ -326,9 +326,7 @@ export function generateWeek(args: GenerateWeekArgs): GeneratedWeek {
       // count sizes this lunch. Default to the 2-item weekday breakfast when a day
       // has no recorded breakfast (Saturday's Menu 3/4 ignore the budget anyway).
       lunchBudget:
-        slot.meal === "Lunch"
-          ? lunchBudget(breakfastItemCountByDay.get(slot.day) ?? 2)
-          : undefined,
+        slot.meal === "Lunch" ? lunchBudget(breakfastItemCountByDay.get(slot.day) ?? 2) : undefined,
       previousDayRice: slot.meal === "Lunch" ? previousLunchDayRice : undefined,
       // §3.2: the substituted day's lead (a complete_meal or an international
       // anchor) is pinned to the lead/anchor position.
@@ -773,8 +771,7 @@ function pickWeekdayCarb(
   riceCarb: Dish[],
   chapatiCarb: Dish[],
 ): Dish | undefined {
-  const wantsRice =
-    lead.carbAffinity === "Rice" && !args.previousDayRice && riceCarb.length > 0;
+  const wantsRice = lead.carbAffinity === "Rice" && !args.previousDayRice && riceCarb.length > 0;
   return rank(args, wantsRice ? riceCarb : chapatiCarb)[0];
 }
 

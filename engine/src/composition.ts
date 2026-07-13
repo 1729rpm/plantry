@@ -405,8 +405,7 @@ const WEEKDAY_COMPANION_CATEGORIES = new Set(["Gravy dish", "Dry dish", "Accompa
 function indianProteinFloorPool(lunch: Dish[]): Dish[] {
   return lunch.filter(
     (d) =>
-      (hasTag(d, "HP") || d.category === "Keto") &&
-      (d.cuisine === "Indian" || isCuisineNeutral(d)),
+      (hasTag(d, "HP") || d.category === "Keto") && (d.cuisine === "Indian" || isCuisineNeutral(d)),
   );
 }
 
@@ -441,7 +440,9 @@ export function menu1(eligible: Dish[]): Menu1CandidateSet {
     hp: indian.filter(
       (d) => hasTag(d, "HP") && (d.category === "Gravy dish" || d.category === "Dry dish"),
     ),
-    companions: indian.filter((d) => !hasTag(d, "HP") && WEEKDAY_COMPANION_CATEGORIES.has(d.category)),
+    companions: indian.filter(
+      (d) => !hasTag(d, "HP") && WEEKDAY_COMPANION_CATEGORIES.has(d.category),
+    ),
     proteinFloor: indianProteinFloorPool(lunch),
     riceCarb: riceCarbPool(lunch),
     chapatiCarb: chapatiCarbPool(lunch),
@@ -459,7 +460,9 @@ export function menu2(eligible: Dish[]): Menu2CandidateSet {
   return {
     kind: "menu-2",
     keto: indian.filter((d) => d.category === "Keto"),
-    companions: indian.filter((d) => !hasTag(d, "HP") && WEEKDAY_COMPANION_CATEGORIES.has(d.category)),
+    companions: indian.filter(
+      (d) => !hasTag(d, "HP") && WEEKDAY_COMPANION_CATEGORIES.has(d.category),
+    ),
     proteinFloor: indianProteinFloorPool(lunch),
     riceCarb: riceCarbPool(lunch),
     chapatiCarb: chapatiCarbPool(lunch),
