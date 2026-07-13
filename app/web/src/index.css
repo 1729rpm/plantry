@@ -2300,6 +2300,190 @@ input {
 }
 
 /* ------------------------------------------------------------------ */
+/* Wishlist                                                            */
+/* ------------------------------------------------------------------ */
+
+/* The Explore header row: the title on the left, the Wishlist affordance on the
+   right (mirrors the Menu head-row layout). */
+.explore__head-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+/* Wishlist entry affordance in the Explore header: a quiet pill with a heart
+   glyph and label, sized to a 44px tap target. */
+.explore__wishlist {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 44px;
+  padding-top: 8px;
+  padding-bottom: 8px;
+  padding-left: 12px;
+  padding-right: 12px;
+  border-radius: var(--pt-radius-pill);
+  border: 1px solid var(--pt-line);
+  background: var(--pt-surface);
+  color: var(--pt-accent);
+  font-size: 14px;
+  font-weight: 600;
+  font-family: var(--pt-font-sans);
+  flex-shrink: 0;
+}
+
+.explore__wishlist-icon {
+  width: 17px;
+  height: 17px;
+  flex-shrink: 0;
+}
+
+/* Sub-screen header, mirroring the Day screen's back header. */
+.wishlist__header {
+  padding-top: calc(env(safe-area-inset-top, 0px) + 24px);
+  padding-bottom: 10px;
+  padding-left: max(var(--pt-gutter), env(safe-area-inset-left, 0px));
+  padding-right: max(var(--pt-gutter), env(safe-area-inset-right, 0px));
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.wishlist__back {
+  font-size: 24px;
+  color: var(--pt-sub);
+  min-width: 44px;
+  min-height: 44px;
+  text-align: left;
+}
+
+.wishlist__title {
+  font-family: var(--pt-font-serif);
+  font-size: 22px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.wishlist__sub {
+  font-size: 13px;
+  color: var(--pt-sub);
+  margin-top: 2px;
+}
+
+.wishlist__body {
+  padding-top: 6px;
+  padding-bottom: 16px;
+  padding-left: max(var(--pt-gutter), env(safe-area-inset-left, 0px));
+  padding-right: max(var(--pt-gutter), env(safe-area-inset-right, 0px));
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.wishlist__section {
+  padding: 14px 16px;
+}
+
+.wishlist__rows {
+  display: flex;
+  flex-direction: column;
+  margin-top: 4px;
+}
+
+/* One favorite or saved-for-next-week row: thumb, a flexible text column, and a
+   trailing remove button. */
+.wishlist__row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding-top: 6px;
+  padding-bottom: 6px;
+}
+
+.wishlist__row-body {
+  flex: 1;
+  min-width: 0;
+}
+
+.wishlist__row-name {
+  font-family: var(--pt-font-serif);
+  font-size: 16.5px;
+  font-weight: 600;
+  line-height: 1.25;
+  color: var(--pt-ink);
+}
+
+.wishlist__row-reason {
+  font-size: 13px;
+  color: var(--pt-ink);
+  margin-top: 2px;
+  font-style: italic;
+}
+
+.wishlist__row-meta {
+  font-size: 12.5px;
+  color: var(--pt-sub);
+  margin-top: 2px;
+  font-family: var(--pt-font-sans);
+}
+
+/* 44px remove tap target, quiet until pressed. */
+.wishlist__remove {
+  min-width: 44px;
+  min-height: 44px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--pt-sub);
+  flex-shrink: 0;
+}
+
+/* "Add a favorite" action, sharing the dashed-accent look of the Day screen's
+   Add affordance. */
+.wishlist__add {
+  width: 100%;
+  text-align: center;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--pt-accent);
+  border: 1.5px dashed var(--pt-accent);
+  border-radius: var(--pt-radius-control);
+  padding-top: 12px;
+  padding-bottom: 12px;
+  margin-top: 12px;
+  min-height: 48px;
+}
+
+.wishlist__empty {
+  padding-top: 12px;
+  padding-bottom: 8px;
+  color: var(--pt-sub);
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+/* A result row in the add-a-favorite sheet: a filled heart marker (currentColor)
+   when the dish is already a favorite, quiet outline otherwise. */
+.fav-add__row--selected .dish-row__name {
+  color: var(--pt-accent);
+}
+
+.fav-add__mark {
+  min-width: 44px;
+  min-height: 44px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--pt-line);
+  flex-shrink: 0;
+}
+
+.fav-add__mark--on {
+  color: var(--pt-accent);
+}
+
+/* ------------------------------------------------------------------ */
 /* Desktop frame (>= 768px). A courtesy surface, not a redesign: the   */
 /* finely-tuned mobile column is left untouched below this breakpoint  */
 /* (zero diff under 768px) and on wide viewports it is centered as an  */

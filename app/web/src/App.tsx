@@ -8,6 +8,7 @@ import { MenuScreen } from "./components/MenuScreen.js";
 import { GroceryScreen } from "./components/GroceryScreen.js";
 import { ChangesScreen } from "./components/ChangesScreen.js";
 import { ExploreScreen } from "./components/ExploreScreen.js";
+import { WishlistScreen } from "./components/WishlistScreen.js";
 import { DayScreen } from "./components/DayScreen.js";
 import { ExitConfirmSheet } from "./components/ExitConfirmSheet.js";
 import { ErrorBoundary } from "./components/ErrorBoundary.js";
@@ -27,6 +28,18 @@ import type { Identity, ShortDay } from "./lib/types.js";
 
 const PASSCODE = import.meta.env.VITE_PLANTRY_PASSCODE ?? "";
 
+// The Wishlist is a sub-view of the Explore tab, navigated exactly like the Menu
+// tab's Day editor: a forward step that pushes ONE view-layer history marker, so
+// browser-Back (and the OS Back gesture) unwinds it. The unified back-stack
+// (lib/backStack.ts) carries a view as { tab, editingDay }; it does equality
+// checks on those two fields but assigns no meaning to editingDay when the tab
+// is not "Menu". So the Explore sub-view rides in the editingDay slot under a
+// sentinel that no ShortDay ("Mon".."Sat") can collide with. App owns applyView,
+// so it is the one place that decodes the sentinel back into the exploreSub
+// state. This keeps the whole sub-view navigation inside App.tsx without
+// changing the shared controller.
+const WISHLIST_MARKER = "wishlist";
+
 export function App() {
   const [authed, setAuthed] = useState<boolean>(() => isAuthValid());
   const [identity, setIdentityState] = useState<Identity | null>(() => getIdentity());
@@ -35,6 +48,10 @@ export function App() {
   // shown over the Menu tab. Null when the Menu list is showing. Set from a day
   // card's Edit; cleared by the Day screen's back affordance or a tab switch.
   const [editingDay, setEditingDay] = useState<ShortDay | null>(null);
+  // The Explore sub-view currently open ("wishlist"), shown over the Explore
+  // tab. Null when the Explore feed is showing. Set from the Explore header's
+  // Wishlist affordance; cleared by the wishlist back affordance or a tab switch.
+  const [exploreSub, setExploreSub] = useState<"wishlist" | null>(null);
   // True while the homepage exit-confirm prompt is showing. Only ever set by the
   // back-stack controller's at-home Back branch (requestExitConfirm below).
   const [exitPrompt, setExitPrompt] = useState<boolean>(false);
@@ -96,8 +113,18 @@ export function App() {
     viewHistory.connect({
       applyView: (view: ViewState) => {
         setExitPrompt(false);
-        setTab(view.tab as TabKey);
-        setEditingDay(view.editingDay as ShortDay | null);
+        const nextTab = view.tab as TabKey;
+        setTab(nextTab);
+        // Decode the Explore sub-view sentinel (see WISHLIST_MARKER). On the
+        // Explore tab an editingDay of the sentinel means the wishlist sub-view;
+        // everywhere else editingDay is a real ShortDay for the Menu editor.
+        if (nextTab === "Explore" && view.editingDay === WISHLIST_MARKER) {
+          setExploreSub("wishlist");
+          setEditingDay(null);
+        } else {
+          setExploreSub(null);
+          setEditingDay(view.editingDay as ShortDay | null);
+        }
       },
       requestExitConfirm: () => {
         setExitPrompt(true);
@@ -126,6 +153,7 @@ export function App() {
     clearIdentity();
     setIdentityState(null);
     setEditingDay(null);
+    setExploreSub(null);
     setTab("Menu");
     // Returning to the IdentityPicker is a return to the app's base; collapse the
     // view stack so history and state stay in sync (resetToHome keeps the live
@@ -137,8 +165,24 @@ export function App() {
   // view entry so a later Back unwinds to the previous tab in visit order.
   function handleTab(next: TabKey) {
     setEditingDay(null);
+    setExploreSub(null);
     setTab(next);
     viewHistory.pushView({ tab: next, editingDay: null });
+  }
+
+  // Forward view navigation: opening the Wishlist sub-view over the Explore tab.
+  // Mirrors handleEditDay: update React state, then push ONE view entry carrying
+  // the sentinel so a later Back unwinds to the Explore feed.
+  function handleOpenWishlist() {
+    setExploreSub("wishlist");
+    viewHistory.pushView({ tab: "Explore", editingDay: WISHLIST_MARKER });
+  }
+
+  // The wishlist's own back affordance. Mirror it onto the controller via a real
+  // history.back() so the in-UI back and the OS Back gesture behave identically
+  // (both land on the Explore feed); applyView then clears exploreSub.
+  function handleWishlistBack() {
+    window.history.back();
   }
 
   // Forward view navigation: opening the Day editor over the Menu tab.
@@ -191,7 +235,12 @@ export function App() {
       );
     }
     if (tab === "Grocery") return <GroceryScreen />;
-    if (tab === "Explore") return <ExploreScreen identity={identity!} />;
+    if (tab === "Explore") {
+      if (exploreSub === "wishlist") {
+        return <WishlistScreen identity={identity!} onBack={handleWishlistBack} />;
+      }
+      return <ExploreScreen identity={identity!} onOpenWishlist={handleOpenWishlist} />;
+    }
     return <ChangesScreen />;
   }
 
@@ -201,7 +250,9 @@ export function App() {
           query error degrades to a recoverable fallback while navigation
           survives. The key on the boundary resets it when the user switches
           tab/editor, so a Reload-free retry is just navigating away and back. */}
-      <ErrorBoundary key={`${tab}:${editingDay ?? ""}`}>{renderActive()}</ErrorBoundary>
+      <ErrorBoundary key={`${tab}:${editingDay ?? ""}:${exploreSub ?? ""}`}>
+        {renderActive()}
+      </ErrorBoundary>
       <TabBar active={tab} onTab={handleTab} changeCount={changeBadgeCount} />
       {exitPrompt && <ExitConfirmSheet onLeave={handleLeave} onStay={handleStay} />}
     </div>

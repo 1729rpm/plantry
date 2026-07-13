@@ -30,6 +30,9 @@ import { DislikeDialog } from "./DislikeDialog.js";
 
 interface ExploreScreenProps {
   identity: Identity;
+  // Open the Wishlist sub-view (favorites + saved-for-next-week). Wired from the
+  // Explore header; the sub-view itself lives in App.tsx renderActive.
+  onOpenWishlist: () => void;
 }
 
 interface ExploreFeedDish {
@@ -54,7 +57,7 @@ function matchesFilters(dishId: number, state: ExploreFilterState): boolean {
   return dishMatchesExploreFilter(dish, state);
 }
 
-export function ExploreScreen({ identity }: ExploreScreenProps) {
+export function ExploreScreen({ identity, onOpenWishlist }: ExploreScreenProps) {
   const week = useQuery(anyApi.queries.week.getCurrentWeek, {}) as CurrentWeek | null | undefined;
   const weekStart = week?.weekStart ?? null;
   const feed = useQuery(anyApi.explore.getExploreFeed, weekStart ? { weekStart } : "skip") as
@@ -188,7 +191,29 @@ export function ExploreScreen({ identity }: ExploreScreenProps) {
   return (
     <div className="screen__scroll">
       <div className="screen__header">
-        <h1 className="screen__title">Explore</h1>
+        <div className="explore__head-row">
+          <h1 className="screen__title">Explore</h1>
+          <button
+            type="button"
+            className="explore__wishlist"
+            aria-label="Open wishlist"
+            onClick={onOpenWishlist}
+          >
+            <svg
+              className="explore__wishlist-icon"
+              viewBox="0 0 22 22"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="1.5"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              aria-hidden="true"
+            >
+              <path d="M11 18.5C11 18.5 3.5 14 3.5 8.75A3.75 3.75 0 0 1 11 6.5a3.75 3.75 0 0 1 7.5 2.25C18.5 14 11 18.5 11 18.5Z" />
+            </svg>
+            Wishlist
+          </button>
+        </div>
         <div className="screen__subtitle">
           {feed === undefined
             ? "Dishes you have not cooked yet"
