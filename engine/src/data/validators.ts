@@ -326,8 +326,8 @@ export function poolCoverageReport(library: Dish[]): PoolCount[] {
     const pair = breakfastWeekdayPair(eligible);
     const single = breakfastSinglePick(eligible);
     const fruit = fruitOfDayPool(eligible);
-    const m1 = menu1(eligible, []);
-    const m2 = menu2(eligible, []);
+    const m1 = menu1(eligible);
+    const m2 = menu2(eligible);
     const m3 = menu3(eligible);
     const m4 = menu4(eligible);
 
@@ -338,19 +338,18 @@ export function poolCoverageReport(library: Dish[]): PoolCount[] {
       ["Breakfast Option C: dry main", pair.optionC.dryMain.length],
       ["Breakfast Option C: plain carb", pair.optionC.plainCarb.length],
       ["Breakfast single (Tue/Thu)", single.pool.length],
-      ["Menu 1: HP", m1.hp.length],
-      ["Menu 1: dal (non-HP Gravy)", m1.dal.length],
-      ["Menu 1: dry sabzi (non-HP Dry)", m1.drySabzi.length],
-      ["Menu 2: Keto", m2.keto.length],
-      ["Menu 2: non-HP Gravy", m2.nonHpGravy.length],
-      ["Menu 2: non-HP Dry", m2.nonHpDry.length],
+      ["Menu 1: protein lead (HP)", m1.hp.length],
+      ["Menu 2: protein lead (Keto)", m2.keto.length],
+      ["Weekday companions (non-HP Gravy/Dry/Accompaniment)", m1.companions.length],
+      ["Lunch protein floor (HP or Keto, Indian)", m1.proteinFloor.length],
       ["Menu 3: complete_meal + HP", m3.completeMealHp.length],
       ["Menu 3: Accompaniment", m3.accompaniment.length],
       ["Menu 3: Dessert", m3.dessert.length],
       ["Menu 4: complete_meal non-HP", m4.completeMealNonHp.length],
       ["Menu 4: Keto", m4.keto.length],
       ["Menu 4: Accompaniment", m4.accompaniment.length],
-      ["Lunch carb (§3.1)", m1.lunchCarb.length],
+      ["Lunch carb: Rice (§3.4)", m1.riceCarb.length],
+      ["Lunch carb: Chapati (§3.4)", m1.chapatiCarb.length],
     ];
     for (const [slot, count] of rows) {
       out.push({ season, slot, count });
