@@ -13,6 +13,8 @@ import { anyApi } from "convex/server";
 import type { CurrentWeek, DishPick, Identity, Meal, MealTime, ShortDay } from "../lib/types.js";
 import { dayLabel, dayDate, mealLabel, mealOrderIndex } from "../lib/days.js";
 import { dishById } from "../lib/library.js";
+import { useWishlist } from "../lib/useWishlist.js";
+import { useFavorites } from "../lib/useFavorites.js";
 import { Card, SectionLabel, PrimaryButton } from "./primitives.js";
 import { DishRow } from "./DishRow.js";
 import { DishActionSheet } from "./DishActionSheet.js";
@@ -63,9 +65,21 @@ export function DayScreen({ day, identity, onBack }: DayScreenProps) {
 
   const [overlay, setOverlay] = useState<Overlay>({ kind: "none" });
   const [actionError, setActionError] = useState<string | null>(null);
+  const [toast, setToast] = useState<string | null>(null);
 
   const skipDay = useMutation(anyApi.dayMutations.skipDay);
   const restoreDay = useMutation(anyApi.dayMutations.restoreDay);
+
+  function showToast(message: string) {
+    setToast(message);
+    window.setTimeout(() => setToast((cur) => (cur === message ? null : cur)), 2600);
+  }
+
+  // Shared wishlist + favorites state for the dish detail / action sheets. The
+  // detail sheet's "Mark as wishlist" and the action sheet's "Mark as favorite"
+  // toggle these household lists (optimistic, one toast surface here).
+  const wishlist = useWishlist(identity, showToast);
+  const favorites = useFavorites(identity, showToast);
 
   const dayState = useMemo(() => {
     if (!week) return null;
@@ -243,6 +257,10 @@ export function DayScreen({ day, identity, onBack }: DayScreenProps) {
               version={version}
               dishLabel={pickLabel(pick)}
               isLibraryDish={pick.dishId !== null}
+              isFavorite={pick.dishId !== null && favorites.isFavorite(pick.dishId)}
+              onToggleFavorite={() => {
+                if (pick.dishId !== null) favorites.toggleLibrary(pick.dishId, pickLabel(pick));
+              }}
               canDelete={isMealTime(overlay.meal)}
               identity={identity}
               onDetails={() =>
@@ -272,6 +290,8 @@ export function DayScreen({ day, identity, onBack }: DayScreenProps) {
               dishId={dishId}
               includeRecipe={pick.includeRecipe ?? false}
               canDelete={isMealTime(overlay.meal)}
+              wishlisted={wishlist.isWishlisted(dishId)}
+              onToggleWishlist={() => wishlist.toggle(dishId, pickLabel(pick))}
               identity={identity}
               onReplace={() =>
                 setOverlay({ kind: "swap", meal: overlay.meal, position: overlay.position })
@@ -335,6 +355,12 @@ export function DayScreen({ day, identity, onBack }: DayScreenProps) {
           onSubmit={handleRestore}
           onClose={closeOverlay}
         />
+      )}
+
+      {toast && (
+        <div className="explore__toast" role="status">
+          {toast}
+        </div>
       )}
     </div>
   );

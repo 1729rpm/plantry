@@ -27,6 +27,9 @@ interface DishDetailSheetProps {
   // Whether this slot offers Delete. False for the Fruit of the day (swap-only,
   // docs/engine.md §3.3), true for breakfast/lunch.
   canDelete: boolean;
+  // Whether this dish is currently on the household wishlist, and the toggle.
+  wishlisted: boolean;
+  onToggleWishlist: () => void;
   identity: Identity;
   onReplace: () => void;
   onDelete: () => void;
@@ -42,6 +45,8 @@ export function DishDetailSheet({
   dishId,
   includeRecipe,
   canDelete,
+  wishlisted,
+  onToggleWishlist,
   identity,
   onReplace,
   onDelete,
@@ -129,6 +134,20 @@ export function DishDetailSheet({
             Delete
           </QuietButton>
         )}
+      </div>
+
+      {/* Centered dashed-underline text button: mark this menu dish onto the
+          household wishlist (a "cook this again" nudge, distinct from the week's
+          menu). Quiet and secondary; turns green when on. */}
+      <div className="detail__wishlist">
+        <button
+          type="button"
+          className={`detail__wishlist-btn${wishlisted ? " detail__wishlist-btn--on" : ""}`}
+          aria-pressed={wishlisted}
+          onClick={onToggleWishlist}
+        >
+          {wishlisted ? "On your wishlist ✓" : "Mark as wishlist"}
+        </button>
       </div>
     </Sheet>
   );

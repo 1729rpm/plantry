@@ -2,9 +2,10 @@
 // the household has not cooked yet, from the 4.2 `getExploreFeed` query (the
 // engine does the ranking and hands each dish its dominant-affinity key; this
 // screen only displays). Filters narrow the grid (Easy to cook, Healthy,
-// Breakfast, Lunch). Tapping a card opens the Explore dish sheet (recipe
-// visible, a plain "why it fits" line, and the Use-this-week / Next-week / Not-
-// for-me actions). Dishes already placed this week or queued for next are hidden
+// Breakfast, Lunch). Each card carries a heart overlay that one-tap toggles the
+// dish on the household wishlist. Tapping a card opens the Explore dish sheet
+// (recipe visible, a plain "why it fits" line, and the Use-this-week / Add-to-
+// wishlist / Not-for-me actions). Dishes already placed this week are hidden
 // server-side by the feed query (Decision 9). Ported from the ExploreScreen in
 // design_handoff/hifi-screens.jsx.
 
@@ -21,6 +22,7 @@ import {
   type ExploreFilterState,
 } from "../lib/dishFilters.js";
 import { dayLabel } from "../lib/days.js";
+import { useWishlist } from "../lib/useWishlist.js";
 import { ComplexityTag, MetaTag, Thumb } from "./primitives.js";
 import { ExploreFilters } from "./ExploreFilters.js";
 import { ExploreDishSheet } from "./ExploreDishSheet.js";
@@ -30,9 +32,6 @@ import { DislikeDialog } from "./DislikeDialog.js";
 
 interface ExploreScreenProps {
   identity: Identity;
-  // Open the Wishlist sub-view (favorites + saved-for-next-week). Wired from the
-  // Explore header; the sub-view itself lives in App.tsx renderActive.
-  onOpenWishlist: () => void;
 }
 
 interface ExploreFeedDish {
@@ -48,7 +47,6 @@ type Overlay =
   | { kind: "sheet"; dish: ExploreFeedDish }
   | { kind: "use-day"; dish: ExploreFeedDish }
   | { kind: "use-reason"; dish: ExploreFeedDish; day: ShortDay; meal: Meal }
-  | { kind: "next-reason"; dish: ExploreFeedDish }
   | { kind: "dislike"; dish: ExploreFeedDish };
 
 function matchesFilters(dishId: number, state: ExploreFilterState): boolean {
@@ -57,7 +55,7 @@ function matchesFilters(dishId: number, state: ExploreFilterState): boolean {
   return dishMatchesExploreFilter(dish, state);
 }
 
-export function ExploreScreen({ identity, onOpenWishlist }: ExploreScreenProps) {
+export function ExploreScreen({ identity }: ExploreScreenProps) {
   const week = useQuery(anyApi.queries.week.getCurrentWeek, {}) as CurrentWeek | null | undefined;
   const weekStart = week?.weekStart ?? null;
   const feed = useQuery(anyApi.explore.getExploreFeed, weekStart ? { weekStart } : "skip") as
@@ -65,7 +63,6 @@ export function ExploreScreen({ identity, onOpenWishlist }: ExploreScreenProps) 
     | undefined;
 
   const addDish = useMutation(anyApi.dayMutations.addDish);
-  const saveForNextWeek = useMutation(anyApi.dayMutations.saveForNextWeek);
   const dislikeDish = useMutation(anyApi.dishDislikes.dislikeDish);
 
   const [filters, setFilters] = useState<ExploreFilterState>(EMPTY_EXPLORE_FILTER);
@@ -98,6 +95,8 @@ export function ExploreScreen({ identity, onOpenWishlist }: ExploreScreenProps) 
     window.setTimeout(() => setToast((cur) => (cur === message ? null : cur)), 2600);
   }
 
+  const wishlist = useWishlist(identity, showToast);
+
   async function handleUse(reason: string, dish: ExploreFeedDish, day: ShortDay, meal: Meal) {
     if (inFlight || !weekStart || !week) return;
     setInFlight(true);
@@ -126,35 +125,6 @@ export function ExploreScreen({ identity, onOpenWishlist }: ExploreScreenProps) 
       }
     } catch (err) {
       console.error("addDish threw", err);
-      setActionError("Something is off. Close and try again.");
-    } finally {
-      setInFlight(false);
-    }
-  }
-
-  async function handleNextWeek(reason: string, dish: ExploreFeedDish) {
-    if (inFlight || !weekStart) return;
-    setInFlight(true);
-    setActionError(null);
-    try {
-      const result = (await saveForNextWeek({
-        author: identity,
-        weekStart,
-        dishId: dish.dishId,
-        reason,
-      })) as { ok: true; queueId: string } | { ok: false; reason: string };
-      if (result.ok) {
-        closeOverlay();
-        showToast(`Saved ${dish.name} for next week`);
-        return;
-      }
-      if (result.reason === "already-queued") {
-        setActionError("That dish is already saved for next week.");
-      } else {
-        setActionError("Something is off. Close and try again.");
-      }
-    } catch (err) {
-      console.error("saveForNextWeek threw", err);
       setActionError("Something is off. Close and try again.");
     } finally {
       setInFlight(false);
@@ -191,29 +161,7 @@ export function ExploreScreen({ identity, onOpenWishlist }: ExploreScreenProps) 
   return (
     <div className="screen__scroll">
       <div className="screen__header">
-        <div className="explore__head-row">
-          <h1 className="screen__title">Explore</h1>
-          <button
-            type="button"
-            className="explore__wishlist"
-            aria-label="Open wishlist"
-            onClick={onOpenWishlist}
-          >
-            <svg
-              className="explore__wishlist-icon"
-              viewBox="0 0 22 22"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="1.5"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              aria-hidden="true"
-            >
-              <path d="M11 18.5C11 18.5 3.5 14 3.5 8.75A3.75 3.75 0 0 1 11 6.5a3.75 3.75 0 0 1 7.5 2.25C18.5 14 11 18.5 11 18.5Z" />
-            </svg>
-            Wishlist
-          </button>
-        </div>
+        <h1 className="screen__title">Explore</h1>
         <div className="screen__subtitle">
           {feed === undefined
             ? "Dishes you have not cooked yet"
@@ -244,6 +192,8 @@ export function ExploreScreen({ identity, onOpenWishlist }: ExploreScreenProps) 
             <ExploreCard
               key={entry.dishId}
               entry={entry}
+              wishlisted={wishlist.isWishlisted(entry.dishId)}
+              onToggleWishlist={() => wishlist.toggle(entry.dishId, entry.name)}
               onOpen={() => setOverlay({ kind: "sheet", dish: entry })}
             />
           ))}
@@ -254,8 +204,9 @@ export function ExploreScreen({ identity, onOpenWishlist }: ExploreScreenProps) 
         <ExploreDishSheet
           dishId={overlay.dish.dishId}
           dominantAffinity={overlay.dish.dominantAffinity}
+          wishlisted={wishlist.isWishlisted(overlay.dish.dishId)}
+          onToggleWishlist={() => wishlist.toggle(overlay.dish.dishId, overlay.dish.name)}
           onUseThisWeek={() => setOverlay({ kind: "use-day", dish: overlay.dish })}
-          onNextWeek={() => setOverlay({ kind: "next-reason", dish: overlay.dish })}
           onDislike={() => setOverlay({ kind: "dislike", dish: overlay.dish })}
           onClose={closeOverlay}
         />
@@ -302,18 +253,6 @@ export function ExploreScreen({ identity, onOpenWishlist }: ExploreScreenProps) 
         />
       )}
 
-      {overlay.kind === "next-reason" && (
-        <ReasonDialog
-          title={`Save ${overlay.dish.name} for next week`}
-          hint="It joins next week's generation as a request. A short reason helps the review."
-          submitLabel="Save for next week"
-          inFlight={inFlight}
-          error={actionError}
-          onSubmit={(reason) => handleNextWeek(reason, overlay.dish)}
-          onClose={inFlight ? () => undefined : closeOverlay}
-        />
-      )}
-
       {overlay.kind === "dislike" && (
         <DislikeDialog
           dishName={overlay.dish.name}
@@ -333,32 +272,71 @@ export function ExploreScreen({ identity, onOpenWishlist }: ExploreScreenProps) 
   );
 }
 
-function ExploreCard({ entry, onOpen }: { entry: ExploreFeedDish; onOpen: () => void }) {
+function ExploreCard({
+  entry,
+  wishlisted,
+  onToggleWishlist,
+  onOpen,
+}: {
+  entry: ExploreFeedDish;
+  wishlisted: boolean;
+  onToggleWishlist: () => void;
+  onOpen: () => void;
+}) {
   const dish = dishById(entry.dishId);
   const photo = dishPhotoUrl(dish);
   return (
-    <button type="button" className="explore-card" onClick={onOpen}>
-      {photo ? (
-        <img className="explore-card__photo" src={photo} alt="" />
-      ) : (
-        <div className="explore-card__photo explore-card__photo--placeholder" aria-hidden="true">
-          <Thumb src={null} size={28} />
-        </div>
-      )}
-      <div className="explore-card__body">
-        <div className="explore-card__name">{entry.name}</div>
-        {dish && (
-          <div className="explore-card__tags">
-            {exploreCardTags(dish).map((tag) =>
-              tag.kind === "difficulty" ? (
-                <ComplexityTag key={tag.label} variant={tag.variant ?? "easy"} label={tag.label} />
-              ) : (
-                <MetaTag key={tag.label} label={tag.label} />
-              ),
-            )}
+    <div className="explore-card">
+      <button type="button" className="explore-card__open" onClick={onOpen}>
+        {photo ? (
+          <img className="explore-card__photo" src={photo} alt="" />
+        ) : (
+          <div className="explore-card__photo explore-card__photo--placeholder" aria-hidden="true">
+            <Thumb src={null} size={28} />
           </div>
         )}
-      </div>
-    </button>
+        <div className="explore-card__body">
+          <div className="explore-card__name">{entry.name}</div>
+          {dish && (
+            <div className="explore-card__tags">
+              {exploreCardTags(dish).map((tag) =>
+                tag.kind === "difficulty" ? (
+                  <ComplexityTag
+                    key={tag.label}
+                    variant={tag.variant ?? "easy"}
+                    label={tag.label}
+                  />
+                ) : (
+                  <MetaTag key={tag.label} label={tag.label} />
+                ),
+              )}
+            </div>
+          )}
+        </div>
+      </button>
+      {/* Heart overlay, top-right of the photo. Outline = not wishlisted, filled
+          accent = wishlisted. One-tap toggle with a confirming toast. */}
+      <button
+        type="button"
+        className="explore-card__heart"
+        aria-label={wishlisted ? `Remove ${entry.name} from wishlist` : `Add ${entry.name} to wishlist`}
+        aria-pressed={wishlisted}
+        onClick={onToggleWishlist}
+      >
+        <svg
+          width="18"
+          height="18"
+          viewBox="0 0 22 22"
+          fill={wishlisted ? "currentColor" : "none"}
+          stroke="currentColor"
+          strokeWidth="1.8"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          aria-hidden="true"
+        >
+          <path d="M11 18.5C11 18.5 3.5 14 3.5 8.75A3.75 3.75 0 0 1 11 6.5a3.75 3.75 0 0 1 7.5 2.25C18.5 14 11 18.5 11 18.5Z" />
+        </svg>
+      </button>
+    </div>
   );
 }
