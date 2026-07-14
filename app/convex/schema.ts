@@ -169,6 +169,10 @@ export default defineSchema({
       v.literal("add"),
       v.literal("skip_day"),
       v.literal("restore_day"),
+      // DEPRECATED (`features/wishlist-favorites-v2` §5): no mutation writes this
+      // kind anymore. The literal stays for exactly one release so existing
+      // `save_next_week` rows still validate until `migrations:wipeNextWeekData`
+      // deletes them; the follow-up PR then drops it from this union.
       v.literal("save_next_week"),
     ),
     // before/after carry the pick state on either side of the change. For `add`
@@ -196,11 +200,14 @@ export default defineSchema({
     .index("by_status", ["status"])
     .index("by_weekStart", ["weekStart"]),
 
-  // Dishes the user saved for next week from the Explore tab. The generation run
-  // reads `queued` rows as engine `requests`, marks placed ones `placed` with the
-  // consuming week, and leaves unplaceable ones `queued` (incident logged). The
-  // slow loop may mark stale rows `dropped` (`features/design-revamp.md` §1.4, §1.8).
-  // `reason` is required (Decision #8: one uniform rule for every fast-loop write).
+  // DEPRECATED, retained transitionally (`features/wishlist-favorites-v2` §5).
+  // "Save for next week" is retired: no code writes or reads this table anymore.
+  // The definition stays for exactly one release so the `migrations:wipeNextWeekData`
+  // mutation can query and delete the rows before the follow-up PR drops the table
+  // (Convex refuses to drop a non-empty table, and a mutation cannot query a table
+  // absent from the schema). Runbook: deploy this PR, run the wipe against prod, then
+  // the follow-up PR removes this table, the `save_next_week` changeKind, and the
+  // migration. Until then it is dead weight, never written.
   nextWeekQueue: defineTable({
     createdAt: v.number(),
     author: v.union(v.literal("rajat"), v.literal("tuhina")),
@@ -229,16 +236,38 @@ export default defineSchema({
     consumedWeekStart: v.union(v.string(), v.null()),
   }).index("by_status", ["status"]),
 
-  // The household's standing favorites list (the wishlist "we want this
-  // regularly" set; `features/wishlist.md`). One shared list: `author` records
-  // who added each row, but either person can remove either person's entry. The
-  // generation run reads every row and passes the dish ids to the engine as
-  // §4-step-4 favorites, so a favorite surfaces about weekly in the generated
-  // menu (subject to the FAVORITE_WEEKLY_CAP promotion budget). Replaces the
-  // git-file `preferred` field as the live preference signal. Parallel in shape
-  // to `nextWeekQueue`/`dishDislikes`; `by_dishId` backs the already-favorite
-  // guard and the remove-by-dish path.
+  // The household's standing favorites list (`features/wishlist-favorites-v2`).
+  // One shared list: `author` records who added each row, but either person can
+  // remove either person's entry. The generation run reads every library-dish row
+  // (createdAt ascending) and passes the ordered dish ids to the engine as the
+  // §4-step-4 guaranteed-placement set, so every library favorite is pinned into
+  // one slot of every generated week. Replaces the git-file `preferred` field as
+  // the live preference signal.
+  //
+  // A favorite is EITHER a library dish (`dishId`, absent `customLabel`) OR a
+  // free-text custom name (`customLabel`, absent `dishId`). Custom favorites are a
+  // display-only reminder in the Yours tab: they have no generation effect (the
+  // engine has no dish to place for a name not in the library). Exactly one of the
+  // two fields is set on a valid row; the mutation enforces this, not the schema.
+  // Loosening `dishId` to optional and adding `customLabel` is additive: every
+  // existing row carries `dishId` and no `customLabel`, so it still validates.
+  // `by_dishId` backs the already-favorite guard and the remove-by-dish path.
   favorites: defineTable({
+    createdAt: v.number(),
+    author: v.union(v.literal("rajat"), v.literal("tuhina")),
+    dishId: v.optional(v.number()), // library favorite; absent for a custom favorite
+    customLabel: v.optional(v.string()), // free-text favorite; absent for a library favorite
+  }).index("by_dishId", ["dishId"]),
+
+  // The household's shared "save it to try" wishlist (`features/wishlist-favorites-v2`).
+  // A one-tap list of library dishes the household wants to try, surfaced in the
+  // Yours tab where any entry can be placed into the week via the day picker
+  // (leaving it on the list). One shared list attributed by `author`; either person
+  // can remove either person's entry, so removal keys on `dishId`. This is a NEW
+  // concept, NOT the retired next-week queue: it never feeds generation. Parallel in
+  // shape to the favorites table (library dishes only, so `dishId` is required);
+  // `by_dishId` backs the already-wishlisted guard and the remove-by-dish path.
+  wishlist: defineTable({
     createdAt: v.number(),
     author: v.union(v.literal("rajat"), v.literal("tuhina")),
     dishId: v.number(),

@@ -16,9 +16,10 @@ import { assertAuthor } from "./lib/author.js";
  * required save-reason). A blank or whitespace-only reason is stored as `null`
  * so the slow loop reads a clean "no reason given" rather than an empty string.
  *
- * Unlike `saveForNextWeek`, a dish may be disliked more than once (each tap is a
- * distinct signal; a repeated dislike is exactly the pattern the slow loop reads
- * as a stronger case, §1.8), so there is no already-disliked guard.
+ * Unlike a favorite or a wishlist entry (set membership, guarded to one row per
+ * dish), a dish may be disliked more than once: each tap is a distinct signal, and a
+ * repeated dislike is exactly the pattern the slow loop reads as a stronger case
+ * (§1.8), so there is no already-disliked guard.
  *
  *   dislikeDish({ author, dishId, reason })
  *     => { ok: true; dislikeId: string }
