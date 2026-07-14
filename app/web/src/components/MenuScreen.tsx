@@ -16,6 +16,8 @@ import { getCachedWeek, setCachedWeek } from "../lib/storage.js";
 import { Avatar, PrimaryButton } from "./primitives.js";
 import { DayCard, type DayCardModel } from "./DayCard.js";
 import { SharePreviewSheet } from "./SharePreviewSheet.js";
+import { ProfileSheet } from "./ProfileSheet.js";
+import { ChangesLogSheet } from "./ChangesLogSheet.js";
 
 // True only when the device reports a genuinely offline network. Reactive via
 // the browser online/offline events so a mid-session network drop flips it.
@@ -52,6 +54,13 @@ interface MenuScreenProps {
   // The chosen day routes into editing. The legacy editor (this slice) renders
   // the whole week and ignores the argument; slice 5.2's Day screen uses it.
   onEditDay: (day: ShortDay) => void;
+  // The unread-changes nudge, shown as a badge on the header avatar (relocated
+  // off the retired Changes tab). Hidden at zero.
+  unreadChanges: number;
+  // This week's total menu-edit count, shown as the Profile's Changes-log hint.
+  changeCount: number;
+  // Advance the seen high-water mark; called when the Changes-log sheet opens.
+  onChangesSeen: () => void;
 }
 
 function buildDayModels(week: CurrentWeek): DayCardModel[] {
@@ -81,32 +90,55 @@ function MenuBody({
   offline,
   onSwitchIdentity,
   onEditDay,
+  unreadChanges,
+  changeCount,
+  onChangesSeen,
 }: {
   week: CurrentWeek;
   identity: Identity;
   offline: boolean;
   onSwitchIdentity: () => void;
   onEditDay: (day: ShortDay) => void;
+  unreadChanges: number;
+  changeCount: number;
+  onChangesSeen: () => void;
 }) {
   const models = useMemo(() => buildDayModels(week), [week]);
 
   const [shareOpen, setShareOpen] = useState(false);
+  const [profileOpen, setProfileOpen] = useState(false);
+  const [changesOpen, setChangesOpen] = useState(false);
+
+  function openChanges() {
+    setProfileOpen(false);
+    setChangesOpen(true);
+    onChangesSeen();
+  }
+
   return (
     <>
       <div className="screen__scroll">
         <div className="screen__header">
           <div className="menu__head-row">
             {/* Brand-led header: the Plantry serif wordmark with the week's
-                full-month date range beneath it. The week's change count now
-                lives on the Changes tab (subtitle + nav badge), not here. */}
+                full-month date range beneath it. The avatar opens the Profile
+                sheet (switch user + the Changes log) and carries the relocated
+                unread-changes nudge badge. */}
             <h1 className="menu__brand">Plantry</h1>
             <button
               type="button"
               className="menu__switch"
-              aria-label="Switch person"
-              onClick={onSwitchIdentity}
+              aria-label="Profile"
+              onClick={() => setProfileOpen(true)}
             >
-              <Avatar who={identity} size={30} />
+              <span className="menu__avatar-wrap">
+                <Avatar who={identity} size={30} />
+                {unreadChanges > 0 && (
+                  <span className="menu__avatar-badge" aria-hidden="true">
+                    {unreadChanges}
+                  </span>
+                )}
+              </span>
             </button>
           </div>
           <div className="menu__subtitle">{weekRangeLabelLong(week.weekStart)} menu</div>
@@ -135,11 +167,28 @@ function MenuBody({
         <PrimaryButton onClick={() => setShareOpen(true)}>Share this week</PrimaryButton>
       </div>
       {shareOpen && <SharePreviewSheet week={week} onClose={() => setShareOpen(false)} />}
+      {profileOpen && (
+        <ProfileSheet
+          identity={identity}
+          changeCount={changeCount}
+          onSwitch={onSwitchIdentity}
+          onOpenChanges={openChanges}
+          onClose={() => setProfileOpen(false)}
+        />
+      )}
+      {changesOpen && <ChangesLogSheet onClose={() => setChangesOpen(false)} />}
     </>
   );
 }
 
-export function MenuScreen({ identity, onSwitchIdentity, onEditDay }: MenuScreenProps) {
+export function MenuScreen({
+  identity,
+  onSwitchIdentity,
+  onEditDay,
+  unreadChanges,
+  changeCount,
+  onChangesSeen,
+}: MenuScreenProps) {
   const result = useQuery(anyApi.queries.week.getCurrentWeek, {}) as CurrentWeek | null | undefined;
   const offline = useIsOffline();
 
@@ -165,6 +214,9 @@ export function MenuScreen({ identity, onSwitchIdentity, onEditDay }: MenuScreen
           offline={offline}
           onSwitchIdentity={onSwitchIdentity}
           onEditDay={onEditDay}
+          unreadChanges={unreadChanges}
+          changeCount={changeCount}
+          onChangesSeen={onChangesSeen}
         />
       );
     }
@@ -203,6 +255,9 @@ export function MenuScreen({ identity, onSwitchIdentity, onEditDay }: MenuScreen
       offline={offline}
       onSwitchIdentity={onSwitchIdentity}
       onEditDay={onEditDay}
+      unreadChanges={unreadChanges}
+      changeCount={changeCount}
+      onChangesSeen={onChangesSeen}
     />
   );
 }
