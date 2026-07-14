@@ -500,9 +500,9 @@ input {
   display: inline-flex;
 }
 
-/* Count badge on the Changes tab: a small accent circle with onAccent text and
-   a surface ring so it reads as a pip lifted off the icon. Hidden at zero (the
-   element is not rendered then). */
+/* Count badge on the Yours tab (the wishlist count): a small accent circle with
+   onAccent text and a surface ring so it reads as a pip lifted off the icon.
+   Hidden at zero (the element is not rendered then). */
 .tab-bar__badge {
   position: absolute;
   top: -6px;
@@ -2172,14 +2172,41 @@ input {
 }
 
 .explore-card {
+  position: relative;
   background: var(--pt-surface);
   border: 1px solid var(--pt-line);
   border-radius: var(--pt-radius-card);
   overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+/* The card body button (photo + name + tags). The heart overlay is a sibling,
+   not nested, so tapping it never triggers the card-open. */
+.explore-card__open {
   text-align: left;
   display: flex;
   flex-direction: column;
   padding: 0;
+  width: 100%;
+}
+
+/* Heart overlay, pinned to the photo's top-right corner. A 34px circular
+   surface-filled tap target with a subtle lift; the SVG inside inherits its
+   color (accent) via currentColor, filled when wishlisted, outline when not. */
+.explore-card__heart {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  width: 34px;
+  height: 34px;
+  border-radius: var(--pt-radius-pill);
+  background: var(--pt-surface);
+  color: var(--pt-accent);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 1px 4px rgba(44, 36, 27, 0.22);
 }
 
 .explore-card__photo {
@@ -2230,7 +2257,7 @@ input {
   flex: 1.4;
 }
 
-.explore-sheet__action-next {
+.explore-sheet__action-wishlist {
   flex: 1;
 }
 
@@ -2300,113 +2327,65 @@ input {
 }
 
 /* ------------------------------------------------------------------ */
-/* Wishlist                                                            */
+/* Yours (favorites + wishlist)                                        */
 /* ------------------------------------------------------------------ */
 
-/* The Explore header row: the title on the left, the Wishlist affordance on the
-   right (mirrors the Menu head-row layout). */
-.explore__head-row {
+/* The two-section body: Your favorites, then Your wishlist, 16px apart. */
+.yours__body {
   display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-}
-
-/* Wishlist entry affordance in the Explore header: a quiet pill with a heart
-   glyph and label, sized to a 44px tap target. */
-.explore__wishlist {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  min-height: 44px;
-  padding-top: 8px;
-  padding-bottom: 8px;
-  padding-left: 12px;
-  padding-right: 12px;
-  border-radius: var(--pt-radius-pill);
-  border: 1px solid var(--pt-line);
-  background: var(--pt-surface);
-  color: var(--pt-accent);
-  font-size: 14px;
-  font-weight: 600;
-  font-family: var(--pt-font-sans);
-  flex-shrink: 0;
-}
-
-.explore__wishlist-icon {
-  width: 17px;
-  height: 17px;
-  flex-shrink: 0;
-}
-
-/* Sub-screen header, mirroring the Day screen's back header. */
-.wishlist__header {
-  padding-top: calc(env(safe-area-inset-top, 0px) + 24px);
-  padding-bottom: 10px;
+  flex-direction: column;
+  gap: 16px;
+  padding-top: 4px;
+  padding-bottom: 24px;
   padding-left: max(var(--pt-gutter), env(safe-area-inset-left, 0px));
   padding-right: max(var(--pt-gutter), env(safe-area-inset-right, 0px));
+}
+
+/* Each section's card sits below its green SectionLabel. Rows carry their own
+   vertical padding; the card only pads its sides. An empty card pads a roomy
+   block so the one-line empty state reads centered. */
+.yours__card {
+  margin-top: 8px;
+  padding: 4px 16px;
+}
+
+.yours__card--empty {
+  padding: 20px 16px;
+}
+
+/* One favorite or wishlist row: an optional row-open button (wishlist thumb +
+   text), a flexible text column, and trailing actions. 11px vertical padding
+   with hairline separators, none after the last row. */
+.yours__row {
   display: flex;
   align-items: center;
   gap: 12px;
+  padding-top: 11px;
+  padding-bottom: 11px;
+  border-bottom: 1px solid var(--pt-line);
 }
 
-.wishlist__back {
-  font-size: 24px;
-  color: var(--pt-sub);
-  min-width: 44px;
-  min-height: 44px;
+.yours__row--last {
+  border-bottom: none;
+}
+
+/* The tappable body of a wishlist row (thumb + name + meta) that opens the dish
+   detail sheet. Favorite rows have no photo and use .yours__row-body directly. */
+.yours__row-open {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex: 1;
+  min-width: 0;
   text-align: left;
 }
 
-.wishlist__title {
-  font-family: var(--pt-font-serif);
-  font-size: 22px;
-  font-weight: 700;
-  white-space: nowrap;
-}
-
-.wishlist__sub {
-  font-size: 13px;
-  color: var(--pt-sub);
-  margin-top: 2px;
-}
-
-.wishlist__body {
-  padding-top: 6px;
-  padding-bottom: 16px;
-  padding-left: max(var(--pt-gutter), env(safe-area-inset-left, 0px));
-  padding-right: max(var(--pt-gutter), env(safe-area-inset-right, 0px));
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-}
-
-.wishlist__section {
-  padding: 14px 16px;
-}
-
-.wishlist__rows {
-  display: flex;
-  flex-direction: column;
-  margin-top: 4px;
-}
-
-/* One favorite or saved-for-next-week row: thumb, a flexible text column, and a
-   trailing remove button. */
-.wishlist__row {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  padding-top: 6px;
-  padding-bottom: 6px;
-}
-
-.wishlist__row-body {
+.yours__row-body {
   flex: 1;
   min-width: 0;
 }
 
-.wishlist__row-name {
+.yours__row-name {
   font-family: var(--pt-font-serif);
   font-size: 16.5px;
   font-weight: 600;
@@ -2414,22 +2393,30 @@ input {
   color: var(--pt-ink);
 }
 
-.wishlist__row-reason {
-  font-size: 13px;
-  color: var(--pt-ink);
-  margin-top: 2px;
-  font-style: italic;
-}
-
-.wishlist__row-meta {
+.yours__row-meta {
   font-size: 12.5px;
   color: var(--pt-sub);
   margin-top: 2px;
   font-family: var(--pt-font-sans);
 }
 
+/* The wishlist "Use" pill: an accent-outlined action that opens the day picker
+   to place the dish into the week. */
+.yours__use {
+  flex-shrink: 0;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--pt-accent);
+  border: 1px solid var(--pt-accent);
+  border-radius: var(--pt-radius-pill);
+  padding: 7px 14px;
+  min-height: 34px;
+  font-family: var(--pt-font-sans);
+  background: var(--pt-surface);
+}
+
 /* 44px remove tap target, quiet until pressed. */
-.wishlist__remove {
+.yours__remove {
   min-width: 44px;
   min-height: 44px;
   display: inline-flex;
@@ -2440,8 +2427,8 @@ input {
 }
 
 /* "Add a favorite" action, sharing the dashed-accent look of the Day screen's
-   Add affordance. */
-.wishlist__add {
+   Add affordance. Sits below the favorites card. */
+.yours__add {
   width: 100%;
   text-align: center;
   font-size: 14px;
@@ -2451,36 +2438,113 @@ input {
   border-radius: var(--pt-radius-control);
   padding-top: 12px;
   padding-bottom: 12px;
-  margin-top: 12px;
+  margin-top: 10px;
   min-height: 48px;
 }
 
-.wishlist__empty {
-  padding-top: 12px;
-  padding-bottom: 8px;
+.yours__empty {
   color: var(--pt-sub);
-  font-size: 14px;
+  font-size: 13.5px;
   line-height: 1.5;
+  text-align: center;
 }
 
-/* A result row in the add-a-favorite sheet: a filled heart marker (currentColor)
-   when the dish is already a favorite, quiet outline otherwise. */
-.fav-add__row--selected .dish-row__name {
-  color: var(--pt-accent);
-}
+/* ------------------------------------------------------------------ */
+/* Profile sheet + relocated unread-changes badge                      */
+/* ------------------------------------------------------------------ */
 
-.fav-add__mark {
-  min-width: 44px;
-  min-height: 44px;
+/* Wraps the header avatar so the unread badge pins to its top-right corner. */
+.menu__avatar-wrap {
+  position: relative;
   display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  color: var(--pt-line);
-  flex-shrink: 0;
 }
 
-.fav-add__mark--on {
+/* The unread-changes nudge, relocated from the old Changes tab onto the avatar:
+   a small accent circle with a surface ring, hidden at zero. */
+.menu__avatar-badge {
+  position: absolute;
+  top: -4px;
+  left: 100%;
+  margin-left: -12px;
+  min-width: 16px;
+  height: 16px;
+  padding: 0 4px;
+  border-radius: 8px;
+  background: var(--pt-accent);
+  color: var(--pt-on-accent);
+  box-shadow: 0 0 0 2px var(--pt-surface);
+  font-family: var(--pt-font-sans);
+  font-size: 10px;
+  font-weight: 700;
+  line-height: 16px;
+  text-align: center;
+}
+
+.profile__head {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 6px 0 14px;
+}
+
+.profile__name {
+  font-family: var(--pt-font-serif);
+  font-size: 20px;
+  font-weight: 700;
+}
+
+.profile__sub {
+  font-size: 12.5px;
+  color: var(--pt-sub);
+  margin-top: 1px;
+}
+
+/* The Changes-log sheet's feed list. */
+.changes-log__list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-top: 6px;
+}
+
+/* ------------------------------------------------------------------ */
+/* Dish detail sheet: "Mark as wishlist" text button (week context)    */
+/* ------------------------------------------------------------------ */
+.detail__wishlist {
+  text-align: center;
+  margin-top: 12px;
+}
+
+/* A quiet, secondary dashed-underline text button. Sub color when off, green
+   when the dish is on the wishlist. The dashed underline wraps only the text. */
+.detail__wishlist-btn {
+  font-size: 13.5px;
+  font-weight: 600;
+  color: var(--pt-sub);
+  padding: 12px 16px;
+  min-height: 44px;
+  font-family: var(--pt-font-sans);
+  border-bottom: 1.5px dashed var(--pt-line);
+}
+
+.detail__wishlist-btn--on {
+  color: var(--pt-green);
+}
+
+/* The add-a-favorite sheet's custom free-text row: a dashed-accent full-width
+   button saving the typed name as a display-only custom favorite. */
+.fav-add__custom {
+  width: 100%;
+  text-align: center;
+  font-size: 14px;
+  font-weight: 600;
   color: var(--pt-accent);
+  border: 1.5px dashed var(--pt-accent);
+  border-radius: var(--pt-radius-control);
+  padding-top: 12px;
+  padding-bottom: 12px;
+  margin-top: 10px;
+  font-family: var(--pt-font-sans);
 }
 
 /* ------------------------------------------------------------------ */
