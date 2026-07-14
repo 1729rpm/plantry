@@ -445,6 +445,30 @@ export const restoreDay = mutation({
 });
 
 /**
+ * DEPRECATED, retained as an inert no-op stub (`features/wishlist-favorites-v2` §5).
+ * "Save for next week" is retired: this backend deploys before the frontend that
+ * removes the call (Stream B), so the currently-deployed prod PWA still invokes
+ * `saveForNextWeek` from Explore. Deleting it outright would make those live calls
+ * throw "function not found" during the A->B window. The stub keeps the name and
+ * signature but performs NO writes and returns a benign success shape, so the old UI
+ * neither throws nor writes new deprecated rows. Because it writes nothing, no fresh
+ * `nextWeekQueue` or `save_next_week` rows appear after the migration wipe, so the
+ * follow-up schema-drop still validates. Removed in the same follow-up PR that drops
+ * the `nextWeekQueue` table and the `save_next_week` change-kind.
+ */
+export const saveForNextWeek = mutation({
+  args: {
+    author: v.string(),
+    weekStart: v.string(),
+    dishId: v.number(),
+    reason: v.string(),
+  },
+  handler: async (): Promise<{ ok: true; queueId: string }> => {
+    return { ok: true, queueId: "deprecated-noop" };
+  },
+});
+
+/**
  * Sets the `includeRecipe` share preference on one dish entry in one (day, meal)
  * slot of `currentWeek`. A share preference, NOT a menu change, so it does NOT
  * write a `manualChanges` row. It still bumps `version` for optimistic
