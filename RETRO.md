@@ -39,7 +39,7 @@ run only reads entries appended since.
 - Recurrence: recurring (will hit every stream whose brief copies the same gate list)
 - Impact: one red CI run and one extra engineer round trip per stream; no wrong code shipped.
 - Proposed level: brief-template
-- Status: open
+- Status: fixed (PR #221) — new-stream.md gains a "run `npm run format:check` before pushing" brief line (CI runs Prettier as its own step).
 
 ## 2026-07-13  Untracked feature specs in the main dir block the post-merge pull
 - Area: coordination
@@ -47,7 +47,7 @@ run only reads entries appended since.
 - Recurrence: systemic (every feature under the specs-committed-by-activation-stream model)
 - Impact: a stale main dir masquerading as synced; caught this session by re-checking `git log` after the pull.
 - Proposed level: process-doc
-- Status: open
+- Status: fixed (PR #221) — development.md §3 step 7 notes the post-merge `git pull --ff-only` can abort on the now-tracked untracked spec; confirm the pull landed with `git log`.
 
 ## 2026-06-16  Crawl gate cannot reach SSO-walled Vercel previews
 - Area: infra
@@ -143,7 +143,7 @@ run only reads entries appended since.
 - Recurrence: systemic (every finalized week that gets edited afterward)
 - Impact: recency, Saturday alternation, and fruit rotation rank against partly fictional history; dishes actually cooked can rank as never-cooked and vice versa.
 - Proposed level: process-doc or engine (either finalize at week end as the archive semantics assume, or make the archive follow post-finalize edits to a final week); needs a MAINTENANCE.md §6 triage with Rajat since it touches when he taps Finalize.
-- Status: open
+- Status: triaged (PR #221) — surfaced to Rajat; it touches when he taps Finalize, so it needs his call (finalize-at-week-end semantics vs archive-follows-post-finalize-edits). Not actioned autonomously.
 
 ## 2026-07-12  Convex dev smoke from a fresh worktree has two traps (stale dist bundle, anonymous .env.local)
 - Area: tooling
@@ -151,7 +151,7 @@ run only reads entries appended since.
 - Recurrence: systemic (every engineer worktree that pushes to the dev deployment)
 - Impact: ~10 minutes lost per stream; worse, a smoke "pass" against the anonymous local backend can be mistaken for a dev-deployment verification.
 - Proposed level: tooling (exclude `dist/` from the Convex bundle or clean it in the smoke path; seed the correct dev deployment into worktree env propagation) + brief-template (name both traps in briefs that include a dev smoke)
-- Status: open
+- Status: fixed (PR #221) — brief half: new-stream.md names both traps (stale `dist/` bundle, anonymous `.env.local`). The `dist/`-exclude / env-propagation tooling half is flagged for a separate focused chore, not done here.
 
 ## 2026-07-13  An Opus engineer subagent was killed mid-rebase by a session usage limit
 - Area: tooling
@@ -159,7 +159,7 @@ run only reads entries appended since.
 - Recurrence: systemic (any long-running engineer subagent can hit a usage or session limit mid-task, and a rebase is the worst moment to lose one)
 - Impact: near-loss of an in-flight rebase; recovery depended on transcript-resume being available, which is not guaranteed.
 - Proposed level: brief-template (engineer briefs for long-running or rebase-owning streams plan for interruption: commit early and push early so an intact remote branch always exists to resume from, and never sit on a large uncommitted working tree across a rebase)
-- Status: open
+- Status: fixed (PR #221) — new-stream.md gains a "commit and push early on long-running or rebase-owning streams" brief line.
 
 ## 2026-07-13  scripts/smoke.mjs is referenced by ops docs but does not exist on main
 - Area: tooling
@@ -167,4 +167,4 @@ run only reads entries appended since.
 - Recurrence: systemic (every verification pass that follows the ops docs to `scripts/smoke.mjs` hits the same missing file)
 - Impact: verification is ad hoc and non-reproducible; a documented smoke path that does not exist erodes trust in the ops docs and costs time re-improvising the check per stream.
 - Proposed level: tooling + process-doc (either restore a committed `scripts/smoke.mjs` that the ops docs already assume, or update every reference to point at the real crawl-harness path; flag for the MAINTENANCE.md §6 reconcile-ops pass to reconcile the references against reality)
-- Status: open
+- Status: wont-fix (PR #221) — the reconcile-ops 2026-07-14 pass confirmed no live ops `.md` references `scripts/smoke.mjs`; the committed crawl/smoke harness is `app/web/e2e/smoke.mjs` with a `CRAWL_URL` remote mode (#109). Verification standardizes on that path; a committed prod-smoke wrapper is a separate tooling decision surfaced to Rajat.
