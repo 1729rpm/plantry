@@ -308,8 +308,23 @@ export function generateWeek(args: GenerateWeekArgs): GeneratedWeek {
     season,
     reservedSlots: favoriteReserved,
   });
+  // Track which favorite is pinned to which slot, and the set of all pinned
+  // favorite ids. A favorite is guaranteed EXACTLY ONCE: it leads its own pinned
+  // slot (promotePins), and it must not also be drawn by ordinary ranking on any
+  // OTHER slot. Because slots compose in schedule order, a favorite pinned to a
+  // later day is still "fresh" (within-week recency has not demoted it) when an
+  // earlier day composes, so a companion/side pool could otherwise draw it there and
+  // place it twice. We prevent that by excluding every pinned favorite from the
+  // natural selectable pool of every slot except the one it is pinned to (below).
+  const favoriteIdBySlot = new Map<string, Set<number>>();
+  const allPinnedFavoriteIds = new Set<number>();
   for (const placement of favoritePlan.placements) {
     addPin(placement.day, placement.meal, placement.dishId);
+    const key = slotKey(placement.day, placement.meal);
+    const set = favoriteIdBySlot.get(key) ?? new Set<number>();
+    set.add(placement.dishId);
+    favoriteIdBySlot.set(key, set);
+    allPinnedFavoriteIds.add(placement.dishId);
   }
 
   const slotResults: GeneratedWeekSlot[] = [];
@@ -363,11 +378,22 @@ export function generateWeek(args: GenerateWeekArgs): GeneratedWeek {
     };
     const slotSubstitution =
       slot.meal === "Lunch" ? substitutionByDay.get(slot.day as WeekdaySubstitutionDay) : undefined;
+    // §4 step 4 exactly-once: every favorite pinned to a DIFFERENT slot is excluded
+    // from this slot's selectable pools, so ordinary ranking cannot draw it here and
+    // place it a second time. The favorite pinned to THIS slot is not excluded, so
+    // promotePins still leads it into its own slot. Empty for a slot with no
+    // pinned-elsewhere favorites, so behaviour is unchanged when there are none.
+    const thisSlotFavorites = favoriteIdBySlot.get(slotKey(slot.day, slot.meal));
+    const excludeDishIds =
+      allPinnedFavoriteIds.size === 0
+        ? undefined
+        : new Set([...allPinnedFavoriteIds].filter((id) => !(thisSlotFavorites?.has(id) ?? false)));
     const roledPicks = pickSlot({
       slot,
       candidateSet,
       compositionHistory,
       consolidationContext,
+      excludeDishIds,
       withinWeekDishIds: rankingInputs.withinWeekDishIds,
       // §4 step 6 protein diversity IS applied in generation (the main loop):
       // a later HP-main slot prefers a protein the week has not used yet.
@@ -538,6 +564,15 @@ interface PickSlotArgs {
    * by protein. Soft with fallback.
    */
   usedHpMainProteinFamilies?: ReadonlySet<string>;
+  /**
+   * §4 step 4 exactly-once: dish ids of favorites pinned to a DIFFERENT slot this
+   * week. Every ranked pool for this slot filters these out before ranking, so
+   * ordinary selection can never draw a favorite that belongs to another day and
+   * place it twice. The favorite pinned to THIS slot is deliberately absent from
+   * this set, so `promotePins` still leads it here. Undefined or empty leaves every
+   * pool unchanged.
+   */
+  excludeDishIds?: ReadonlySet<number>;
   sameDayBreakfastPrimaryIngredient?: string;
   /**
    * §3.1 budget-aware composition: the lunch item budget for this slot
@@ -643,9 +678,24 @@ function applyLunchProteinFloor(
   return picks;
 }
 
+/**
+ * §4 step 4 exactly-once: drop every favorite pinned to a different slot from a
+ * candidate pool before ranking it, so a favorite that belongs to another day can
+ * never be drawn here and placed twice. The favorite pinned to THIS slot is not in
+ * `excludeDishIds`, so it survives and `promotePins` still leads it. No-op when the
+ * set is empty (the common no-favorites case), so behaviour is otherwise unchanged.
+ */
+function excludePinnedElsewhere(
+  pool: Dish[],
+  excludeDishIds: ReadonlySet<number> | undefined,
+): Dish[] {
+  if (!excludeDishIds || excludeDishIds.size === 0) return pool;
+  return pool.filter((d) => !excludeDishIds.has(d.id));
+}
+
 function rank(args: PickSlotArgs, pool: Dish[]): Dish[] {
   const ranked = rankCandidates({
-    pool,
+    pool: excludePinnedElsewhere(pool, args.excludeDishIds),
     history: args.compositionHistory,
     sameDayBreakfastPrimaryIngredient: args.sameDayBreakfastPrimaryIngredient,
     consolidationContext: args.consolidationContext,
@@ -664,7 +714,7 @@ function rank(args: PickSlotArgs, pool: Dish[]): Dish[] {
  */
 function rankHpMain(args: PickSlotArgs, pool: Dish[]): Dish[] {
   const ranked = rankCandidates({
-    pool,
+    pool: excludePinnedElsewhere(pool, args.excludeDishIds),
     history: args.compositionHistory,
     sameDayBreakfastPrimaryIngredient: args.sameDayBreakfastPrimaryIngredient,
     consolidationContext: args.consolidationContext,

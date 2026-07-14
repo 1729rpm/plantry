@@ -270,3 +270,227 @@ describe("generateWeek guaranteed-favorites end-to-end (features/wishlist-favori
     expect(baseline.unplacedFavorites).toEqual([]);
   });
 });
+
+// ---------------------------------------------------------------------------
+// Synthetic library: reproduces the multi-position double-placement guarded by the
+// exactly-once fix. A favorite drawn as an ordinary companion on an earlier day than
+// the slot it is pinned to would otherwise be placed twice. This case cannot arise
+// from a single-position HP lead (the live-data fixtures above), so it needs a
+// non-HP companion favorite in a broad companion pool.
+// ---------------------------------------------------------------------------
+
+let synthId = 1;
+function makeSynthDish(overrides: Partial<import("../src/data/schemas.js").Dish> = {}) {
+  const id = synthId++;
+  return {
+    id,
+    name: `Dish ${id}`,
+    category: "Gravy dish",
+    time: "Lunch",
+    tags: [],
+    primaryIngredient: "Paneer",
+    preferred: "No",
+    active: "Yes",
+    satiety: "Medium",
+    prepMinutes: 30,
+    seasons: "All",
+    cuisine: "Indian",
+    ...overrides,
+  } as import("../src/data/schemas.js").Dish;
+}
+
+/** A library that fills a full week with Indian Menu-1/2 lunches (no substitution). */
+function makeSynthLibrary() {
+  return [
+    makeSynthDish({
+      name: "Idli Sambar",
+      time: "Breakfast",
+      category: "Complete meal",
+      tags: ["complete_meal"],
+      primaryIngredient: "Idli batter",
+    }),
+    makeSynthDish({
+      name: "Apple",
+      time: "Breakfast",
+      category: "Fruit",
+      tags: ["fruit"],
+      primaryIngredient: "Apple",
+    }),
+    makeSynthDish({
+      name: "Poha",
+      time: "Breakfast",
+      category: "Complete meal",
+      tags: ["complete_meal"],
+      primaryIngredient: "Poha",
+    }),
+    makeSynthDish({
+      name: "Banana",
+      time: "Breakfast",
+      category: "Fruit",
+      tags: ["fruit"],
+      primaryIngredient: "Banana",
+    }),
+    makeSynthDish({
+      name: "Upma",
+      time: "Breakfast",
+      category: "Complete meal",
+      tags: ["complete_meal"],
+      primaryIngredient: "Semolina",
+    }),
+    makeSynthDish({
+      name: "Masala Dosa",
+      time: "Breakfast",
+      category: "Complete meal",
+      tags: ["complete_meal"],
+      primaryIngredient: "Dosa batter",
+    }),
+    // Lunch HP mains (Menu-1 leads).
+    makeSynthDish({
+      name: "Paneer Butter Masala",
+      time: "Lunch",
+      category: "Gravy dish",
+      tags: ["HP"],
+      primaryIngredient: "Paneer",
+    }),
+    makeSynthDish({
+      name: "Chicken Curry",
+      time: "Lunch",
+      category: "Gravy dish",
+      tags: ["HP"],
+      primaryIngredient: "Chicken",
+    }),
+    makeSynthDish({
+      name: "Fish Curry",
+      time: "Lunch",
+      category: "Gravy dish",
+      tags: ["HP"],
+      primaryIngredient: "Fish",
+    }),
+    // Non-HP companions (the broad companion pool a favorite can be drawn from).
+    makeSynthDish({
+      name: "Aloo Gobi",
+      time: "Lunch",
+      category: "Dry dish",
+      primaryIngredient: "Cauliflower",
+    }),
+    makeSynthDish({
+      name: "Cabbage Sabzi",
+      time: "Lunch",
+      category: "Dry dish",
+      primaryIngredient: "Cabbage",
+    }),
+    makeSynthDish({
+      name: "Dal Tadka",
+      time: "Lunch",
+      category: "Gravy dish",
+      primaryIngredient: "Dal",
+    }),
+    makeSynthDish({
+      name: "Cucumber Raita",
+      time: "Lunch",
+      category: "Accompaniment",
+      primaryIngredient: "Curd",
+    }),
+    makeSynthDish({
+      name: "Onion Salad",
+      time: "Lunch",
+      category: "Accompaniment",
+      primaryIngredient: "Onion",
+    }),
+    makeSynthDish({
+      name: "Chapati",
+      time: "Lunch",
+      category: "Chapati",
+      primaryIngredient: "Wheat flour",
+    }),
+    makeSynthDish({
+      name: "Jeera Rice",
+      time: "Lunch",
+      category: "Rice",
+      primaryIngredient: "Rice",
+    }),
+    // Keto leads so any Menu-2 weekday lunch still fills.
+    makeSynthDish({
+      name: "Stir-fry Tofu",
+      time: "Lunch",
+      category: "Keto",
+      primaryIngredient: "Tofu",
+    }),
+    makeSynthDish({
+      name: "Egg Bhurji",
+      time: "Lunch",
+      category: "Keto",
+      primaryIngredient: "Egg",
+    }),
+    // Saturday Menu 3/4 needs a complete_meal + dessert.
+    makeSynthDish({
+      name: "Biryani Chicken",
+      time: "Lunch",
+      category: "Complete meal",
+      tags: ["complete_meal", "HP"],
+      primaryIngredient: "Chicken",
+    }),
+    makeSynthDish({
+      name: "Veg Pulao",
+      time: "Lunch",
+      category: "Complete meal",
+      tags: ["complete_meal"],
+      primaryIngredient: "Rice",
+    }),
+    makeSynthDish({
+      name: "Gulab Jamun",
+      time: "Lunch",
+      category: "Dessert",
+      primaryIngredient: "Khoya",
+    }),
+    makeSynthDish({
+      name: "Rasmalai",
+      time: "Lunch",
+      category: "Dessert",
+      primaryIngredient: "Milk",
+    }),
+  ];
+}
+
+describe("generateWeek favorites are placed exactly once (multi-position de-dup)", () => {
+  it("never places a companion favorite twice when it is pinned to a later day than one it is drawn on", () => {
+    synthId = 1;
+    const library = makeSynthLibrary();
+    const pbm = library.find((d) => d.name === "Paneer Butter Masala")!;
+    const alooGobi = library.find((d) => d.name === "Aloo Gobi")!;
+    // Oldest-first: the HP main claims the first accepting lunch day, so the
+    // distinct-days preference deflects the non-HP companion favorite to a later
+    // day. Without the exactly-once exclusion, the earlier day draws the companion
+    // as a fresh side and the later day pins it again, placing it twice.
+    const week = generateWeek({
+      weekStart: "2026-06-08", // Summer
+      library,
+      history: [],
+      season: "Summer",
+      ingredients: [],
+      packSizes: [],
+      rng: () => 0.1,
+      lastSaturdayMenu: null,
+      favoriteDishIds: [pbm.id, alooGobi.id],
+    });
+
+    const counts = new Map<number, number>();
+    for (const day of week.days) {
+      for (const slot of day.slots) {
+        for (const dish of slot.dishes) counts.set(dish.id, (counts.get(dish.id) ?? 0) + 1);
+      }
+    }
+    // The regression the fix guards: no favorite (indeed no dish) appears twice.
+    for (const fav of [pbm.id, alooGobi.id]) {
+      const c = counts.get(fav) ?? 0;
+      const name = library.find((d) => d.id === fav)!.name;
+      expect(c, `favorite ${name} placed ${c}x in one week`).toBeLessThan(2);
+    }
+    // Each favorite is still placed exactly once XOR reported unplaced.
+    for (const fav of [pbm.id, alooGobi.id]) {
+      const placed = (counts.get(fav) ?? 0) === 1;
+      const unplaced = week.unplacedFavorites.includes(fav);
+      expect(placed !== unplaced, `favorite ${fav} must be placed-once XOR unplaced`).toBe(true);
+    }
+  });
+});
