@@ -15,6 +15,52 @@ work queue for /reconcile-docs and /reconcile-ops; or "none".
 
 ---
 
+## 2026-07-13  Wishlist page: favorites and saved-for-next-week (Phase 6)
+
+The Explore tab gains a Wishlist sub-view (#214). It opens from a header
+affordance and holds two sections. Favorites lists the household's current
+favorites as rows and an "Add a favorite" button opens the FavoriteAddSheet,
+which searches the whole baked library (including inactive and out-of-season
+dishes, since favorites are a standing list) with selected states and optimistic
+toggles that revert on failure. Saved for next week finally renders the
+next-week queue: each saved row shows the reason, who saved it, and when, and is
+removable; a removal writes a `manualChanges` delete row so it surfaces in the
+Changes feed. Both sections carry empty states. The sub-view rides the existing
+App.tsx view-layer history (the Menu-tab Day-editor pattern) under a `"wishlist"`
+sentinel in the `editingDay` slot, so browser-Back and the OS Back gesture unwind
+it without touching `lib/backStack.ts`. A view-history sub-screen navigation is
+reachable from the sub-view.
+Why: saved dishes vanished after the finalize toast because nothing read the
+queue, and favorites had no manage UI.
+Updated: docs/product.md §3 (What Plantry produces: the Explore tab description
+omits the Wishlist sub-view) and §6 (Scope: managing favorites and the
+saved-for-next-week queue in the app is not yet in scope) are stale, name them.
+
+## 2026-07-13  Favorites frequency and wishlist backend (Phase 6)
+
+Favorites become a live household dial the engine obeys (#217). In the engine,
+`byFavorites` replaces `byPreferredYes` at §4 step 4: a stable partition that
+promotes the favorites set, capped at `FAVORITE_WEEKLY_CAP = 6` placements per
+generated week, with `favoriteDishIds` threaded through the v3
+`deriveSlotRankingInputs` and the `generateWeek` loop (absent or empty is a
+no-op, so existing callers are unchanged). The `preferred` frontmatter is still
+parsed but is no longer a §4 input, and the swap ranker deliberately stays
+favorites-free (documented at the call site); weekly cadence emerges from the
+existing within-week recency step, not from due-date arithmetic. In Convex, a new
+`favorites` table (`by_dishId`) with `favorites.ts` `addFavorite`/`removeFavorite`
+(modeled on `dishDislikes.ts`), `queries/favorites.ts` `listFavorites`,
+`queries/nextWeekQueue.ts` `listQueuedNextWeek`, and a public
+`removeFromNextWeekQueue` that returns an explicit `ok` union, drops the queue row,
+and writes a `manualChanges` `changeKind: "delete"` row; `generateCurrentWeek`
+collects the favorites table and passes `favoriteDishIds` to the engine.
+Why: favorites need a live dial the engine actually obeys, not a static git field
+(evidence: the weekly avocado-toast re-adds and "Tuhina loves rajma").
+Updated: docs/engine.md §4 and §12 landed in this PR itself; docs/engineering.md
+§3 (Convex schema: the favorites table is missing from the schema sketch) and §5
+(Read paths and write paths: listFavorites, listQueuedNextWeek, and
+removeFromNextWeekQueue are missing from the read/write path list) are now stale,
+name them.
+
 ## 2026-07-13 Engine v3: plate composition (Phase 5)
 
 Weekday lunch composition moves from compose-then-trim to budget-fit plates

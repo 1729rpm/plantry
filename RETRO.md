@@ -152,3 +152,19 @@ run only reads entries appended since.
 - Impact: ~10 minutes lost per stream; worse, a smoke "pass" against the anonymous local backend can be mistaken for a dev-deployment verification.
 - Proposed level: tooling (exclude `dist/` from the Convex bundle or clean it in the smoke path; seed the correct dev deployment into worktree env propagation) + brief-template (name both traps in briefs that include a dev smoke)
 - Status: open
+
+## 2026-07-13  An Opus engineer subagent was killed mid-rebase by a session usage limit
+- Area: tooling
+- What happened: during the wishlist feature an Opus engineer subagent was terminated mid-rebase when its session hit a usage limit. The work was not lost only because it was recovered by resuming from the transcript; had the interruption landed during an uncommitted edit or a half-applied rebase with no transcript to resume, the stream would have had to restart.
+- Recurrence: systemic (any long-running engineer subagent can hit a usage or session limit mid-task, and a rebase is the worst moment to lose one)
+- Impact: near-loss of an in-flight rebase; recovery depended on transcript-resume being available, which is not guaranteed.
+- Proposed level: brief-template (engineer briefs for long-running or rebase-owning streams plan for interruption: commit early and push early so an intact remote branch always exists to resume from, and never sit on a large uncommitted working tree across a rebase)
+- Status: open
+
+## 2026-07-13  scripts/smoke.mjs is referenced by ops docs but does not exist on main
+- Area: tooling
+- What happened: the wishlist prod verification wanted the standard smoke script, but `scripts/smoke.mjs` is referenced by operational-doc and registry precedent (the RETRO PR #174 entries and the crawl/smoke workflow language) yet is not present on `main`. The prod smoke had to be improvised via the UI crawl harness instead of running a committed smoke script.
+- Recurrence: systemic (every verification pass that follows the ops docs to `scripts/smoke.mjs` hits the same missing file)
+- Impact: verification is ad hoc and non-reproducible; a documented smoke path that does not exist erodes trust in the ops docs and costs time re-improvising the check per stream.
+- Proposed level: tooling + process-doc (either restore a committed `scripts/smoke.mjs` that the ops docs already assume, or update every reference to point at the real crawl-harness path; flag for the MAINTENANCE.md §6 reconcile-ops pass to reconcile the references against reality)
+- Status: open
