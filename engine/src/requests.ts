@@ -78,7 +78,7 @@ export function slotKey(day: Day, meal: Meal): string {
  * in any position pool of the slot's candidate set. Out-of-season, inactive, and
  * wrong-meal-time dishes never appear in a pool, so they are rejected here.
  */
-function slotAcceptsDish(args: {
+export function slotAcceptsDish(args: {
   slot: SlotPlan;
   dishId: number;
   library: Dish[];

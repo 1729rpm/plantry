@@ -59,36 +59,9 @@ export interface RankCandidatesArgs {
    * with `proteinFamiliesUsedAsHpMain`.
    */
   usedHpMainProteinFamilies?: ReadonlySet<string>;
-  /**
-   * §4 step 4 favorites: the household's standing wishlist dish ids
-   * (`features/wishlist.md`). A candidate whose id is in this set ranks above a
-   * non-favorite as a stable partition, replacing the former Preferred=Yes
-   * tiebreak as the §4 preference signal. Undefined or empty leaves the step a
-   * no-op, so every caller without favorites is unchanged. Build it from the
-   * Convex `favorites` table.
-   */
-  favoriteDishIds?: ReadonlySet<number>;
-  /**
-   * §4 step 4 weekly promotion budget: the count of favorite dishes already
-   * placed earlier in the week being generated. Once it reaches
-   * `FAVORITE_WEEKLY_CAP` the favorites step no-ops for the rest of the week (see
-   * `byFavorites`). Defaults to 0, so a single-slot caller that never threads it
-   * (the swap picker) promotes favorites normally within its one slot.
-   */
-  favoritesPlacedThisWeek?: number;
 }
 
 const LUNCH_CARB_CATEGORIES = new Set(["Chapati", "Rice"]);
-
-/**
- * §4 step 4 weekly promotion budget: the most favorite dishes the favorites step
- * promotes into one generated week. The generateWeek loop counts favorite picks
- * placed so far and passes that count to `byFavorites`; once it reaches this cap
- * the step no-ops for the rest of the week, so a long favorites list cannot swamp
- * rotation and discovery. A one-line tunable: raise it to let more of a long
- * favorites list surface each week, lower it to protect rotation.
- */
-export const FAVORITE_WEEKLY_CAP = 6;
 
 /**
  * §4.6 protein-family normalization. Collapses `primaryIngredient` values that
@@ -232,51 +205,13 @@ export function byIngredientConsolidation(
 }
 
 /**
- * §4 step 4: favorites rank above non-favorites. A dish whose id is in
- * `favoriteDishIds` (the household's standing wishlist, `features/wishlist.md`)
- * leads; the rest follow. Stable: within each group the order from the previous
- * step is preserved, so steps 5 and 6 still dominate inside the favorite and
- * non-favorite groups. This is the §4 preference signal; the `preferred`
- * frontmatter field stays parsed (§12) but is no longer read here.
- *
- * Weekly promotion budget: `favoritesPlacedThisWeek` is the number of favorite
- * dishes already placed earlier in the week being generated. Once it reaches
- * `FAVORITE_WEEKLY_CAP` the step is a no-op for the rest of the week, so a long
- * favorites list cannot swamp rotation and discovery. An absent or empty
- * `favoriteDishIds` also leaves the step a no-op, so every caller without
- * favorites is unchanged.
- *
- * Weekly cadence is emergent, not scheduled: step 5 (within-week recency) already
- * sinks an already-placed favorite below fresh alternatives, so a favorite lands
- * about once a week with no due-date arithmetic here.
- */
-export function byFavorites(
-  pool: Dish[],
-  favoriteDishIds: ReadonlySet<number> | undefined,
-  favoritesPlacedThisWeek: number,
-): Dish[] {
-  if (!favoriteDishIds || favoriteDishIds.size === 0) return pool;
-  if (favoritesPlacedThisWeek >= FAVORITE_WEEKLY_CAP) return pool;
-  const favorites: Dish[] = [];
-  const rest: Dish[] = [];
-  for (const dish of pool) {
-    if (favoriteDishIds.has(dish.id)) {
-      favorites.push(dish);
-    } else {
-      rest.push(dish);
-    }
-  }
-  return [...favorites, ...rest];
-}
-
-/**
  * §4 step 5: within-week recency. A candidate already placed earlier in the
  * week being generated (its id is in `withinWeekDishIds`) is treated as the
  * most-recently-used dish, so it sinks below every fresh (not-yet-placed)
  * candidate. Applied near-last and as a stable partition, it dominates steps 1
- * to 4: a dish that consolidation (step 3) or Preferred=Yes (step 4) re-promoted
- * is still pushed below the fresh alternatives, so a broad pool's favourite
- * cannot win every Mon/Wed/Fri slot identically.
+ * to 3: a dish that consolidation (step 3) re-promoted is still pushed below the
+ * fresh alternatives, so a broad pool's top candidate cannot win every Mon/Wed/
+ * Fri slot identically.
  * Exempt dishes (fruit, lunch carbs) are never in the demotion set, so they keep
  * their place. Fallback: if every candidate has already been placed this week,
  * demoting them all equals demoting none, so the pool is returned unchanged and
@@ -380,17 +315,18 @@ export function isHpMain(dish: Dish): boolean {
  * two dominant terminal partitions, step 5 (within-week recency) and step 6
  * (within-week protein diversity, HP mains only), run after all the tie-breaks so
  * an already-placed dish sinks below a fresh one and a repeated protein sinks
- * below a fresh one. Cuisine is no longer a §4 ranking concern: it is now a §3
- * meal-level composition concern (the international lunch form, §3/§3.2), so the
- * former per-position cuisine-diversity step is gone. Returns a stable
- * permutation of the input pool.
+ * below a fresh one. Step 4 (favorites) is no longer a ranking partition: favorites
+ * are now a guaranteed placement pass (`planFavorites`, pinned in `generateWeek`
+ * exactly like a §6 request), so they never enter this per-pool ranking. Cuisine is
+ * likewise no longer a §4 ranking concern: it is now a §3 meal-level composition
+ * concern (the international lunch form, §3/§3.2), so the former per-position
+ * cuisine-diversity step is gone. Returns a stable permutation of the input pool.
  */
 export function rankCandidates(args: RankCandidatesArgs): Dish[] {
   const step1 = byLongestUnused(args.pool, args.history);
   const step2 = byNoSameDayPrimaryIngredient(step1, args.sameDayBreakfastPrimaryIngredient);
   const step3 = byIngredientConsolidation(step2, args.consolidationContext);
-  const step4 = byFavorites(step3, args.favoriteDishIds, args.favoritesPlacedThisWeek ?? 0);
-  const step5 = byWithinWeekRecency(step4, args.withinWeekDishIds);
+  const step5 = byWithinWeekRecency(step3, args.withinWeekDishIds);
   const step6 = byProteinDiversity(step5, args.usedHpMainProteinFamilies);
   return step6;
 }

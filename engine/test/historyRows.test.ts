@@ -61,6 +61,7 @@ function makeWeek(): GeneratedWeek {
     ],
     droppedDishIds: [],
     incidents: [],
+    unplacedFavorites: [],
   };
 }
 
