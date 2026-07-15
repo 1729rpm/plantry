@@ -33,6 +33,30 @@ run only reads entries appended since.
 
 ---
 
+## 2026-07-15  Green engine tests missed a double-placement bug the guaranteed-favorites pass could produce
+- Area: verification
+- What happened: Stream A's guaranteed-favorites pass could place a favorite twice in one week (a favorite pinned on one day was also drawn by ordinary selection on an earlier day; the reconciliation only flagged under-placement, and `placedIds` being a Set hid the duplicate). All 619 engine tests were green because the favorites fixture used only exclusive-slot HP-gravy mains, which structurally cannot double-place; the companion-pool path that breaks was never exercised. Only an adversarial EM review caught it.
+- Recurrence: recurring (any locked-invariant engine change whose tests do not span the pool shapes that can violate it)
+- Impact: a core locked guarantee ("no favorite twice in a week") would have shipped broken; caught pre-merge by the review, fixed via pool-exclusion plus a companion-favorite fixture that goes 4x -> <=1.
+- Proposed level: ci-test / process-doc; favorites fixtures must include a multi-position companion pool, and locked-invariant engine changes get an adversarial review by default rather than trusting a green suite.
+- Status: open
+
+## 2026-07-15  Rebasing onto a PR that changed .prettierignore silently broke format:check
+- Area: ci
+- What happened: after Stream B rebased onto Stream A, `npm run format:check` went red in CI because A's merge had modified `.prettierignore`, shifting prettier's scope onto six frontend files B authored; B's post-rebase gate list ran typecheck/eslint/stylelint/tests/build but not format:check, so it looked green locally. The merge gate caught the red check before merge. This is a recurrence of the 2026-07-13 "brief omitted format:check" entry (fixed in #221 for `/new-stream`-generated briefs) via a new trigger: hand-authored EM briefs did not carry the #221 brief line, and the config change made a clean branch drift on rebase.
+- Recurrence: recurring (every stream that rebases onto a base PR touching lint/format config, and every hand-authored brief that omits the #221 gate line)
+- Impact: one red CI run and one fix round trip; no wrong code shipped (merge gate held).
+- Proposed level: brief-template; every engineer brief (hand-authored included, not only `/new-stream` output) must require the FULL gate set including format:check after every rebase, called out specifically when the base PR touched lint/format config.
+- Status: open
+
+## 2026-07-15  A lane-scoped removal orphaned an out-of-lane caller
+- Area: coordination
+- What happened: Stream A removed "Save for next week" within its own lane (engine/, app/convex/) but the deleted `markQueueDropped` mutation was still referenced by `scripts/slow-loop-mark-applied.mjs`, and `MAINTENANCE.md` / the slow-loop command brief still documented the `nextWeekQueue` signal. A's lane-scoped gates could not see the out-of-lane caller; it surfaced only because A flagged it by hand in its PR.
+- Recurrence: recurring (any stream that deletes an exported symbol other lanes may call)
+- Impact: low this time (the orphaned call is guarded and the queue is always empty, so nothing broke), but a differently-shaped removal could break the next `/slow-loop`; fixed in the close-out PR.
+- Proposed level: process-doc; a stream that removes an exported function/table must run a repo-wide caller grep across all lanes (not just its own) before merge, and the EM checks it during review.
+- Status: open
+
 ## 2026-07-13  Engineer-brief gate list omitted the Prettier format check
 - Area: ci
 - What happened: PR #215's engineer ran the brief's listed local gates (lint, typecheck, test) and pushed; CI failed on the separate `npm run format:check` step, costing a fix round trip. The brief template names lint/typecheck/tests/simulation but not format:check, which CI runs as its own step.

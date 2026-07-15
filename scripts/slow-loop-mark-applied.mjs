@@ -3,17 +3,15 @@
 // PR. Reads the PR body from PR_BODY, the merged PR URL from PR_URL, and the
 // Convex prod key from CONVEX_DEPLOY_KEY. Parses the "Consumed comments by
 // cluster" section (and the flat "Consumed comment IDs" / "Consumed incident
-// IDs" fallbacks) and runs the internal mutations in app/convex/comments.ts,
-// app/convex/manualChangesMutations.ts, and app/convex/nextWeekQueueMutations.ts
-// via `npx convex run --prod`. Exits 0 even when the body is unparseable; the
-// action is best-effort and must not block a merge.
+// IDs" fallbacks) and runs the internal mutations in app/convex/comments.ts and
+// app/convex/manualChangesMutations.ts via `npx convex run --prod`. Exits 0 even
+// when the body is unparseable; the action is best-effort and must not block a
+// merge.
 //
-// Cluster blocks may also carry `next_week_queue_ids:` (consumed nextWeekQueue
-// rows the slow loop decided to drop) and `dislike_ids:` (consumed dishDislikes
-// rows). The queue ids are marked `dropped` via the real mutation. The dislike
-// ids are parsed tolerantly but NOT yet written back: the `dishDislikes`
-// write-back mutation is not yet built, so until it lands dislike ids are
-// logged and not written back. See MAINTENANCE.md §3.
+// Cluster blocks may also carry `dislike_ids:` (consumed dishDislikes rows). The
+// dislike ids are parsed tolerantly but NOT yet written back: the `dishDislikes`
+// write-back mutation is not yet built, so until it lands dislike ids are logged
+// and not written back. See MAINTENANCE.md §3.
 //
 // Run locally for unit testing:
 //   PR_BODY="$(cat sample-pr-body.md)" PR_URL=https://example/pr/1 \
@@ -49,7 +47,6 @@ if (!DRY_RUN && !convexKey) {
  *   comment_ids: abc123, def456
  *   manual_change_ids: -
  *   incident_ids: -
- *   next_week_queue_ids: -
  *   dislike_ids: -
  *   ```
  *
@@ -58,23 +55,21 @@ if (!DRY_RUN && !convexKey) {
  *   comment_ids: ghi789
  *   manual_change_ids: mno345
  *   incident_ids: jkl012
- *   next_week_queue_ids: q111
  *   dislike_ids: d222
  *   ```
  *
  * Returns {
  *   appliedComments, reviewedNoChangeComments,
  *   appliedManualChanges, reviewedNoChangeManualChanges,
- *   incidents, queueIds, dislikeIds
+ *   incidents, dislikeIds
  * } with deduped ids. Outcome must be one of "applied" or "reviewed_no_change";
  * any other value skips the cluster's comment and manual-change ids and logs a
  * warning.
  *
- * `manual_change_ids`, `next_week_queue_ids`, and `dislike_ids` are all optional
- * in the fence to preserve backward compatibility with PRs authored before the
- * fields existed (`manual_change_ids` predates Stream I; the queue and dislike
- * fields predate slice 9.1). Queue ids and dislike ids are outcome-independent:
- * a consumed queue row is dropped and a consumed dislike is resolved regardless
+ * `manual_change_ids` and `dislike_ids` are both optional in the fence to
+ * preserve backward compatibility with PRs authored before the fields existed
+ * (`manual_change_ids` predates Stream I; the dislike field predates slice 9.1).
+ * Dislike ids are outcome-independent: a consumed dislike is resolved regardless
  * of the cluster's comment/manual-change outcome, so they are collected from
  * every recognized cluster block (no outcome gating).
  */
@@ -84,7 +79,6 @@ function parseClusters(body) {
   const appliedManualChanges = new Set();
   const reviewedNoChangeManualChanges = new Set();
   const incidents = new Set();
-  const queueIds = new Set();
   const dislikeIds = new Set();
 
   const re = /```cluster\s*\n([\s\S]*?)```/g;
@@ -105,7 +99,6 @@ function parseClusters(body) {
     const commentIds = parseIdList(fields.comment_ids ?? "");
     const manualChangeIds = parseIdList(fields.manual_change_ids ?? "");
     const incidentIds = parseIdList(fields.incident_ids ?? "");
-    const nextWeekQueueIds = parseIdList(fields.next_week_queue_ids ?? "");
     const clusterDislikeIds = parseIdList(fields.dislike_ids ?? "");
 
     if (outcome === "applied") {
@@ -121,10 +114,9 @@ function parseClusters(body) {
         )}; skipping its comment and manual-change ids.`,
       );
     }
-    // Incident, queue, and dislike ids are outcome-independent: consumed
-    // regardless of the comment/manual-change outcome for the cluster.
+    // Incident and dislike ids are outcome-independent: consumed regardless of
+    // the comment/manual-change outcome for the cluster.
     for (const id of incidentIds) incidents.add(id);
-    for (const id of nextWeekQueueIds) queueIds.add(id);
     for (const id of clusterDislikeIds) dislikeIds.add(id);
   }
 
@@ -134,7 +126,6 @@ function parseClusters(body) {
     appliedManualChanges: [...appliedManualChanges],
     reviewedNoChangeManualChanges: [...reviewedNoChangeManualChanges],
     incidents: [...incidents],
-    queueIds: [...queueIds],
     dislikeIds: [...dislikeIds],
     clusterCount,
   };
@@ -154,27 +145,24 @@ function parseIdList(raw) {
  *   Consumed comment IDs: a, b, c
  *   Consumed manual-change IDs: m, n
  *   Consumed incident IDs: d, e
- *   Consumed next-week-queue IDs: q1, q2
  *   Consumed dislike IDs: d1
- * Returns { commentIds, manualChangeIds, incidentIds, queueIds, dislikeIds }.
+ * Returns { commentIds, manualChangeIds, incidentIds, dislikeIds }.
  * Used only when the per-cluster section is absent; we cannot tell outcome from
  * these, so the action treats all comments AND all manual changes as `applied`
  * (conservative default: a PR that touches files is more likely to have applied
- * than no-change clusters). Queue and dislike rows are outcome-independent, so
- * the flat values map straight through. The queue and dislike flat lines are
- * absent in older PR bodies and read as empty.
+ * than no-change clusters). Dislike rows are outcome-independent, so the flat
+ * values map straight through. The dislike flat line is absent in older PR
+ * bodies and reads as empty.
  */
 function parseFlatLists(body) {
   const commentLine = body.match(/^Consumed comment IDs:\s*(.*)$/im);
   const manualChangeLine = body.match(/^Consumed manual-change IDs:\s*(.*)$/im);
   const incidentLine = body.match(/^Consumed incident IDs:\s*(.*)$/im);
-  const queueLine = body.match(/^Consumed next-week-queue IDs:\s*(.*)$/im);
   const dislikeLine = body.match(/^Consumed dislike IDs:\s*(.*)$/im);
   return {
     commentIds: commentLine ? parseIdList(commentLine[1]) : [],
     manualChangeIds: manualChangeLine ? parseIdList(manualChangeLine[1]) : [],
     incidentIds: incidentLine ? parseIdList(incidentLine[1]) : [],
-    queueIds: queueLine ? parseIdList(queueLine[1]) : [],
     dislikeIds: dislikeLine ? parseIdList(dislikeLine[1]) : [],
   };
 }
@@ -187,7 +175,6 @@ let reviewedNoChangeCommentIds = clusters.reviewedNoChangeComments;
 let appliedManualChangeIds = clusters.appliedManualChanges;
 let reviewedNoChangeManualChangeIds = clusters.reviewedNoChangeManualChanges;
 let incidentIds = clusters.incidents;
-let queueIds = clusters.queueIds;
 let dislikeIds = clusters.dislikeIds;
 
 if (clusters.clusterCount === 0) {
@@ -196,7 +183,6 @@ if (clusters.clusterCount === 0) {
     flat.commentIds.length === 0 &&
     flat.manualChangeIds.length === 0 &&
     flat.incidentIds.length === 0 &&
-    flat.queueIds.length === 0 &&
     flat.dislikeIds.length === 0
   ) {
     console.log("[slow-loop-mark-applied] no cluster blocks and no flat ID lines; exiting clean.");
@@ -210,12 +196,11 @@ if (clusters.clusterCount === 0) {
   appliedManualChangeIds = flat.manualChangeIds;
   reviewedNoChangeManualChangeIds = [];
   incidentIds = flat.incidentIds;
-  queueIds = flat.queueIds;
   dislikeIds = flat.dislikeIds;
 }
 
 console.log(
-  `[slow-loop-mark-applied] comments: applied=${appliedCommentIds.length} reviewed_no_change=${reviewedNoChangeCommentIds.length}; manual-changes: applied=${appliedManualChangeIds.length} reviewed_no_change=${reviewedNoChangeManualChangeIds.length}; incidents=${incidentIds.length}; next-week-queue=${queueIds.length}; dislikes=${dislikeIds.length}`,
+  `[slow-loop-mark-applied] comments: applied=${appliedCommentIds.length} reviewed_no_change=${reviewedNoChangeCommentIds.length}; manual-changes: applied=${appliedManualChangeIds.length} reviewed_no_change=${reviewedNoChangeManualChangeIds.length}; incidents=${incidentIds.length}; dislikes=${dislikeIds.length}`,
 );
 
 // Dislikes are parsed for forward-compatibility but NOT written back here: the
@@ -237,7 +222,6 @@ if (DRY_RUN) {
       appliedManualChangeIds,
       reviewedNoChangeManualChangeIds,
       incidentIds,
-      queueIds,
       dislikeIds,
       prUrl,
     }),
@@ -286,12 +270,6 @@ if (reviewedNoChangeManualChangeIds.length > 0) {
 if (incidentIds.length > 0) {
   runConvex("comments:markIncidentsResolved", {
     incidentIds,
-    resolvedPr: prUrl,
-  });
-}
-if (queueIds.length > 0) {
-  runConvex("nextWeekQueueMutations:markQueueDropped", {
-    queueIds,
     resolvedPr: prUrl,
   });
 }

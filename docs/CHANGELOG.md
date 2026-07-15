@@ -15,6 +15,79 @@ work queue for /reconcile-docs and /reconcile-ops; or "none".
 
 ---
 
+## 2026-07-15  Retire the next-week signal from the slow loop (Phase 7 close-out)
+
+The slow-loop pipeline drops the retired `nextWeekQueue` signal (#225): the mark-applied
+script stops parsing and dropping queue ids, and `MAINTENANCE.md`, the `/slow-loop`
+command brief, and the test fixtures no longer list next-week saves as an input channel.
+This follows the app-side and backend removal (#222, #223) and closes out Phase 7 (the
+spec is archived, the PLAN row is shipped, the tag is `phase-7-complete`).
+Why: #223 removed the `nextWeekQueue` table and its mutations, leaving the slow-loop
+script calling a deleted function and the ops docs describing a channel that no longer
+exists.
+Updated: none (the operational docs are brought current in this PR).
+
+## 2026-07-15  Drop the transitional next-week schema (Phase 7)
+
+The transitional next-week scaffolding is removed (#224): the `nextWeekQueue` table, the
+`save_next_week` `manualChanges.changeKind` literal, the three inert no-op stubs
+(`saveForNextWeek`, `removeFromNextWeekQueue`, `listQueuedNextWeek`), and the spent
+`migrations.ts` wipe. The deploy validates because production carries no `nextWeekQueue`
+rows and no `save_next_week` changes (the #223 wipe migration ran to zero).
+Why: #223 kept the table and enum for one release so the wipe migration could run
+against a schema that still defined them; with prod clean, the definitions are dead.
+Updated: docs/engineering.md §3 (the Convex schema sketch still lists nextWeekQueue) is
+stale; name it.
+
+## 2026-07-15  Yours tab: wishlist, favorites, profile sheet (Phase 7)
+
+The Changes tab becomes a Yours tab (#222) holding two shared household lists:
+favorites (each row "Added by {who} · in every week's menu", with an "Add a favorite"
+button) and a new one-tap wishlist (44px thumb rows with a "Use" pill that opens the
+day picker; the dish stays on the list). The Menu-header avatar now opens a Profile
+sheet (switch identity, plus the relocated Changes log rendered as a tall sheet) and
+carries the relocated unread-changes badge that the Changes tab used to show. Explore
+cards gain a 34px heart overlay (one-tap wishlist toggle); the Explore dish sheet gains
+a quiet "Add to wishlist", the Menu dish detail sheet a "Mark as wishlist" text button,
+and the dish action sheet a "Mark as favorite" row; the Add-favorite sheet gains a
+dashed custom free-text row for names not in the library. Every "Save for next week"
+surface is removed. Two deliberate deltas from the handoff: the Yours tab heart uses a
+1.5 stroke to match the live sibling tab icons, and "Not for me" is kept Explore-only.
+Why: the household's lists deserve a first-class home, favorites needed to be a real
+"every week" promise, and the wishlist wanted a lighter one-tap "save to try" model
+than the auto-generation queue it replaces.
+Updated: docs/product.md §3 (the Explore Wishlist sub-view and the Changes-tab
+description are stale) and §6 (managing favorites and the wishlist is now in scope, the
+next-week queue is gone); docs/engineering.md §5 (read/write paths: the new
+wishlist/favorites contracts, the removed next-week functions). Name them.
+
+## 2026-07-15  Guaranteed favorites, wishlist backend, next-week removal (Phase 7)
+
+Favorites become a guaranteed weekly placement pass (#223). The engine pins every
+library favorite into exactly one slot in each generated week (a breakfast favorite
+into a breakfast, a lunch favorite into a lunch plate), spread across distinct days,
+composition-locks always winning: when the full set cannot be placed without breaking
+one wet per plate, the 5-item cap, the protein floor, or budget-fit, the oldest-added
+favorites are placed and the rest are returned as `unplacedFavorites` and logged as one
+warn incident per week. A pinned favorite is excluded from every other day's selectable
+pool, so it can never appear twice. This retires the Phase 6 capped `byFavorites` /
+`FAVORITE_WEEKLY_CAP` promotion. In Convex, a new shared `wishlist` table (`by_dishId`)
+with `addToWishlist`/`removeFromWishlist`/`listWishlist`, the `favorites` table extended
+with an optional `customLabel` for free-text favorites (with `addCustomFavorite` and
+`removeFavoriteById`), and `generateCurrentWeek` reads library favorites createdAt
+ascending and logs the unplaced-favorite incident. "Save for next week" is removed with
+a transitional-schema wipe migration: the `nextWeekQueue` table and the
+`save_next_week` `manualChanges` kind are retained one release, an idempotent
+`migrations:wipeNextWeekData` clears the rows (run against prod, 0 rows), and a
+follow-up PR drops the table and the enum.
+Why: favorites needed to be an actual every-week guarantee, not a capped ranking bias,
+and the next-week queue's auto-generation model was replaced by the lighter one-tap
+wishlist, so its storage and the save-reason machinery come out.
+Updated: docs/engine.md §4 step 4, §6, and §12 landed in this PR; docs/engineering.md
+§3 (schema: the new wishlist table, the favorites customLabel) and §5 (read/write
+paths: the new wishlist/favorites functions, the removed next-week functions) are
+stale. Name them.
+
 ## 2026-07-13  Wishlist page: favorites and saved-for-next-week (Phase 6)
 
 The Explore tab gains a Wishlist sub-view (#214). It opens from a header

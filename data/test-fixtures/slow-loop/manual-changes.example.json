@@ -126,24 +126,5 @@
     "status": "queued",
     "resolvedAt": null,
     "resolvedPr": null
-  },
-  {
-    "_id": "mc_fixture_007",
-    "createdAt": 1718323200000,
-    "author": "tuhina",
-    "weekStart": "2026-06-01",
-    "changeKind": "save_next_week",
-    "before": {
-      "dishId": null,
-      "customLabel": null
-    },
-    "after": {
-      "dishId": 102,
-      "customLabel": null
-    },
-    "reason": "Saw this in Explore and want it next week; we keep not getting it in the generated menu.",
-    "status": "queued",
-    "resolvedAt": null,
-    "resolvedPr": null
   }
 ]

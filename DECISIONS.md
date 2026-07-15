@@ -19,6 +19,42 @@ Decisions Rajat must approve go in the "Open items" list in `features/phase2.md`
 
 ---
 
+## 2026-07-15 10:20 IST  Fold the retired next-week slow-loop cleanup into the close-out PR
+
+**Stream:** Phase 7 close-out (cross-stream)
+**Context:** Stream A's removal of "Save for next week" left the slow-loop pipeline referencing a deleted mutation (`scripts/slow-loop-mark-applied.mjs` calling `markQueueDropped`) and stale `nextWeekQueue` guidance in `MAINTENANCE.md` and the `slow-loop.md` command brief.
+**Options considered:** (a) a broad `/reconcile-ops` pass; (b) a targeted chore removing just the retired `nextWeekQueue` signal, folded into the close-out PR; (c) leave it (the script call is guarded and never fires now).
+**Chosen:** (b). The `markQueueDropped` call is guarded (`if (queueIds.length > 0)`) and dead now that the queue is always empty, so nothing is breaking, but a dead reference to a deleted mutation plus stale operator guidance is worth removing while the context is fresh. A full `/reconcile-ops` would pull in unrelated drift; this is a mechanical single-signal removal, right-sized as a chore. Canonical docs (`docs/engineering.md`, `docs/product.md`) that also mention the queue are left for `/reconcile-docs` (flagged in the CHANGELOG Updated: lines).
+**Reversibility:** easy; the change is deletions with the script re-verified by a dry-run.
+**Right-size check (per `docs/product.md` §4):** problem size is one retired signal channel; fix level is a mechanical removal across the ops script, the two ops docs, and a fixture; generality: none needed, it is a one-concept excision.
+
+## 2026-07-15 09:05 IST  Accept Stream B's two handoff deviations
+
+**Stream:** B (frontend)
+**Context:** Stream B's PR #222 shipped two deliberate departures from the hi-fi handoff, both flagged in its diagnosis card and confirmed by the crawl-and-compare.
+**Options considered:** send back to match the handoff pixel-for-pixel, or accept the reasoned deltas.
+**Chosen:** accept both. The Yours tab heart uses a 1.5 stroke (handoff shows 1.7) to match the three live sibling tab icons, so the set reads as one family; "Not for me" (dislike) is kept Explore-only and omitted from the Yours-context dish sheet, because offering "dislike" on a dish you just wishlisted is contradictory. Both improve on a literal handoff read.
+**Reversibility:** trivial; either is a one-line revert.
+**Right-size check (per `docs/product.md` §4):** problem size is two small UI details; fix level is accept-as-built with the rationale recorded; generality: the "match the live icon family over the handoff's isolated value" rule is reusable.
+
+## 2026-07-15 04:10 IST  Accept Stream A's transitional-schema deviation from the spec
+
+**Stream:** A (engine + Convex)
+**Context:** The spec (§4.1) said remove the `nextWeekQueue` table and the `save_next_week` enum in Stream A's PR. Convex refuses to drop a non-empty table, and a merge auto-deploy is atomic, so a wipe-then-drop must span two deploys.
+**Options considered:** force the single-PR removal (not possible without a pre-wipe), or accept a transitional schema kept one release with an idempotent wipe migration and a follow-up drop PR.
+**Chosen:** accept the transitional approach. It is more correct than the spec: A keeps the table + enum + three inert no-op stubs one release, ships `migrations:wipeNextWeekData`, and a follow-up PR drops them once prod is empty. This also removes the A-to-B deploy-gap hazard (the stubs keep the still-deployed old frontend from throwing).
+**Reversibility:** full; the follow-up drop is a separate reviewed PR.
+**Right-size check (per `docs/product.md` §4):** problem size is a breaking schema change against a live DB; fix level is the standard Convex transitional-schema-plus-migration pattern; generality: this is the reusable recipe for any future table/enum removal here.
+
+## 2026-07-14 16:40 IST  Run Streams A and B in parallel, A merging first
+
+**Stream:** cross-stream (A + B)
+**Context:** Phase 7 splits into a backend/engine stream (A: engine/, app/convex/) and a frontend stream (B: app/web/). B depends on A's Convex contracts.
+**Options considered:** sequence B strictly after A merges, or run both in parallel with A merging first.
+**Chosen:** run in parallel. The lanes are disjoint by directory, the spec pins A's contract names so B binds them untyped (`anyApi.*`) and rebases onto A before merge, and the dependency is a merge-and-deploy gate (backend-first), not a build input. Parallel-by-default per `docs/development.md` §1; the EM holds B's merge until A is merged and Deploy Convex is green.
+**Reversibility:** easy; if a contract shifts, B rebinds three files.
+**Right-size check (per `docs/product.md` §4):** problem size is two-stream sequencing; fix level is parallel execution with a pinned-contract seam; generality: the standard disjoint-lane parallel pattern this repo already uses.
+
 ## 2026-07-12 20:15 IST  Accept the generated 2026-07-13 week despite preferred-staple repeats
 
 **Stream:** menu-prep session (cross-stream, weekly operation)
