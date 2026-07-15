@@ -7,10 +7,8 @@ import type { Doc } from "../_generated/dataModel.js";
  *
  * Returns every `manualChanges` row for one `weekStart`, newest first, so the
  * Changes log can render the week's edits (swap, custom, delete, add, skip_day,
- * restore_day) with author, time, and reason. ("Save for next week" is retired,
- * `features/wishlist-favorites-v2` §5; no new `save_next_week` rows are written and
- * the migration wipes the old ones.) The client merges in the queued `comments` for
- * the same week separately (the comments query
+ * restore_day) with author, time, and reason. The client merges in the queued
+ * `comments` for the same week separately (the comments query
  * already exists); this query deliberately does NOT join comments server-side,
  * keeping each signal channel its own query and its own subscription.
  *
