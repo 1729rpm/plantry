@@ -66,8 +66,6 @@ export {
   byLongestUnused,
   byNoSameDayPrimaryIngredient,
   byIngredientConsolidation,
-  byFavorites,
-  FAVORITE_WEEKLY_CAP,
 } from "./priority.js";
 export type { RankCandidatesArgs, ConsolidationContext } from "./priority.js";
 export {
@@ -105,8 +103,10 @@ export {
 export type { DishMacros } from "./nutrition.js";
 export { rankPickerAlternatives } from "./pickerRanking.js";
 export type { PickerRankingArgs } from "./pickerRanking.js";
-export { planRequests, slotKey } from "./requests.js";
+export { planRequests, slotKey, slotAcceptsDish } from "./requests.js";
 export type { PlanRequestsArgs, PlanRequestsResult, RequestPlacement } from "./requests.js";
+export { planFavorites } from "./favorites.js";
+export type { PlanFavoritesArgs, PlanFavoritesResult, FavoritePlacement } from "./favorites.js";
 export { rankExplore } from "./explore.js";
 export type { ExploreRankedDish, ExploreAffinityKey, RankExploreArgs } from "./explore.js";
 export { deriveHistoryRows } from "./historyRows.js";

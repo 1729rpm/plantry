@@ -4,8 +4,6 @@ import {
   byLongestUnused,
   byNoSameDayPrimaryIngredient,
   byIngredientConsolidation,
-  byFavorites,
-  FAVORITE_WEEKLY_CAP,
   byWithinWeekRecency,
   withinWeekRecencySet,
   byProteinDiversity,
@@ -208,65 +206,6 @@ describe("priority — docs/engine.md §4", () => {
     });
   });
 
-  describe("§4 step 4: favorites over non-favorites", () => {
-    it("ranks a favorite above a non-favorite", () => {
-      const plain = makeDish({ name: "Plain" });
-      const fav = makeDish({ name: "Fav" });
-      const out = byFavorites([plain, fav], new Set([fav.id]), 0);
-      expect(out.map((d) => d.name)).toEqual(["Fav", "Plain"]);
-    });
-
-    it("preserves prior-step order within the favorite and non-favorite groups (stable partition)", () => {
-      const favA = makeDish({ name: "FavA" });
-      const plainA = makeDish({ name: "PlainA" });
-      const favB = makeDish({ name: "FavB" });
-      const plainB = makeDish({ name: "PlainB" });
-      // Prior step left them interleaved; step 4 pulls both favorites above both
-      // non-favorites while keeping favA before favB and plainA before plainB, so
-      // later steps still dominate within each group.
-      const out = byFavorites([favA, plainA, favB, plainB], new Set([favA.id, favB.id]), 0);
-      expect(out.map((d) => d.name)).toEqual(["FavA", "FavB", "PlainA", "PlainB"]);
-    });
-
-    it("is a no-op when no favorites set is supplied", () => {
-      const a = makeDish({ name: "A" });
-      const b = makeDish({ name: "B" });
-      const out = byFavorites([a, b], undefined, 0);
-      expect(out.map((d) => d.name)).toEqual(["A", "B"]);
-    });
-
-    it("is a no-op for an empty favorites set", () => {
-      const a = makeDish({ name: "A" });
-      const b = makeDish({ name: "B" });
-      const out = byFavorites([a, b], new Set<number>(), 0);
-      expect(out.map((d) => d.name)).toEqual(["A", "B"]);
-    });
-
-    it("no-ops once FAVORITE_WEEKLY_CAP favorites have been placed this week", () => {
-      const plain = makeDish({ name: "Plain" });
-      const fav = makeDish({ name: "Fav" });
-      const favSet = new Set([fav.id]);
-      // Under the cap: the favorite is promoted.
-      const under = byFavorites([plain, fav], favSet, FAVORITE_WEEKLY_CAP - 1);
-      expect(under.map((d) => d.name)).toEqual(["Fav", "Plain"]);
-      // At the cap: the step is a no-op, so input order is preserved.
-      const atCap = byFavorites([plain, fav], favSet, FAVORITE_WEEKLY_CAP);
-      expect(atCap.map((d) => d.name)).toEqual(["Plain", "Fav"]);
-      // Above the cap: still a no-op.
-      const overCap = byFavorites([plain, fav], favSet, FAVORITE_WEEKLY_CAP + 3);
-      expect(overCap.map((d) => d.name)).toEqual(["Plain", "Fav"]);
-    });
-
-    it("no longer reads the preferred field (it is not a §4 input)", () => {
-      // A Preferred=Yes non-favorite is NOT promoted; only membership in the
-      // favorites set matters now.
-      const preferredNonFav = makeDish({ name: "PreferredNonFav", preferred: "Yes" });
-      const plainFav = makeDish({ name: "PlainFav", preferred: "No" });
-      const out = byFavorites([preferredNonFav, plainFav], new Set([plainFav.id]), 0);
-      expect(out.map((d) => d.name)).toEqual(["PlainFav", "PreferredNonFav"]);
-    });
-  });
-
   describe("§4 step 5: within-week recency", () => {
     it("is a no-op when no within-week set is supplied", () => {
       const a = makeDish({ name: "A" });
@@ -325,37 +264,27 @@ describe("priority — docs/engine.md §4", () => {
       expect(out.map((d) => d.name)).toEqual(["A", "B"]);
     });
 
-    it("dominates favorites end-to-end: a placed favorite still sinks below a fresh alternative", () => {
-      // Step 4 (favorites) promotes the favorite to the front, but step 5
-      // (within-week recency) is a dominant terminal partition: a favorite already
-      // placed this week sinks below the fresh non-favorite. This is the emergent
-      // weekly cadence, no favorite twice in one week (features/wishlist.md §3).
-      const placedFavorite = makeDish({
-        name: "PlacedFavorite",
-        primaryIngredient: "Chicken",
-      });
-      const freshPlain = makeDish({
-        name: "FreshPlain",
-        primaryIngredient: "Paneer",
-      });
-      const favSet = new Set([placedFavorite.id]);
+    it("sinks an already-placed dish below a fresh alternative end-to-end", () => {
+      // Within-week recency (step 5) is a dominant terminal partition applied by
+      // rankCandidates: a dish already placed this week sinks below a fresh
+      // alternative even after the earlier tie-break steps, so a broad pool's top
+      // candidate cannot win two slots in one week.
+      const placed = makeDish({ name: "Placed", primaryIngredient: "Chicken" });
+      const fresh = makeDish({ name: "Fresh", primaryIngredient: "Paneer" });
       const baseline = rankCandidates({
-        pool: [freshPlain, placedFavorite],
+        pool: [placed, fresh],
         history: [],
-        favoriteDishIds: favSet,
       });
-      // Without the within-week set, the favorite is promoted to the front.
-      expect(baseline.map((d) => d.name)).toEqual(["PlacedFavorite", "FreshPlain"]);
+      // Without the within-week set, input order (both fresh) is preserved.
+      expect(baseline.map((d) => d.name)).toEqual(["Placed", "Fresh"]);
 
       const withWithinWeek = rankCandidates({
-        pool: [freshPlain, placedFavorite],
+        pool: [placed, fresh],
         history: [],
-        favoriteDishIds: favSet,
-        withinWeekDishIds: new Set([placedFavorite.id]),
+        withinWeekDishIds: new Set([placed.id]),
       });
-      // With it, the placed favorite sinks below the fresh alternative: step 5
-      // dominates step 4, so the same favorite cannot win two slots in one week.
-      expect(withWithinWeek.map((d) => d.name)).toEqual(["FreshPlain", "PlacedFavorite"]);
+      // With it, the placed dish sinks below the fresh alternative.
+      expect(withWithinWeek.map((d) => d.name)).toEqual(["Fresh", "Placed"]);
     });
   });
 
@@ -379,57 +308,52 @@ describe("priority — docs/engine.md §4", () => {
   });
 
   describe("rankCandidates end-to-end composition", () => {
-    it("composes all four steps with each breaking ties from the previous", () => {
+    it("composes the tie-break steps with each breaking ties from the previous", () => {
       // Build a pool where each step is decisive:
       //  - step 1 longest-unused puts dishes in order: old, middle, new
-      //  - step 2 same-day Paneer match pushes the "PaneerNew" dish down
+      //  - step 2 same-day Paneer match pushes the Paneer dish down
       //  - step 3 is a no-op
-      //  - step 4 lifts favorites within each group
+      // Favorites are no longer a ranking step (they are a guaranteed placement
+      // pass in generateWeek), so ranking ends after the step-1-3 tie-breaks here.
       const old = makeDish({
         name: "OldChicken",
         primaryIngredient: "Chicken",
       });
-      const middleFavPaneer = makeDish({
-        name: "MiddlePaneerFav",
+      const middlePaneer = makeDish({
+        name: "MiddlePaneer",
         primaryIngredient: "Paneer",
       });
       const middlePlain = makeDish({
         name: "MiddleFishPlain",
         primaryIngredient: "Fish",
       });
-      const newishFav = makeDish({
-        name: "NewishPrawnFav",
+      const newishPrawn = makeDish({
+        name: "NewishPrawn",
         primaryIngredient: "Prawn",
       });
       const history: MenuHistoryRow[] = [
         historyRow(old.id, old.name, "2026-01-05"),
-        historyRow(middleFavPaneer.id, middleFavPaneer.name, "2026-03-02"),
+        historyRow(middlePaneer.id, middlePaneer.name, "2026-03-02"),
         historyRow(middlePlain.id, middlePlain.name, "2026-03-02"),
-        historyRow(newishFav.id, newishFav.name, "2026-05-04"),
+        historyRow(newishPrawn.id, newishPrawn.name, "2026-05-04"),
       ];
 
       const out = rankCandidates({
-        pool: [newishFav, middlePlain, middleFavPaneer, old],
+        pool: [newishPrawn, middlePlain, middlePaneer, old],
         history,
         sameDayBreakfastPrimaryIngredient: "Paneer",
-        favoriteDishIds: new Set([middleFavPaneer.id, newishFav.id]),
       });
 
       // After step 1 (oldest first, stable index for ties):
-      //   [OldChicken, MiddlePaneerFav, MiddleFishPlain, NewishPrawnFav]
+      //   [OldChicken, MiddlePaneer, MiddleFishPlain, NewishPrawn]
       // After step 2 (push Paneer matches to bottom):
-      //   [OldChicken, MiddleFishPlain, NewishPrawnFav, MiddlePaneerFav]
-      // After step 3 (no-op):
-      //   [OldChicken, MiddleFishPlain, NewishPrawnFav, MiddlePaneerFav]
-      // After step 4 (favorites lifted, stable within group):
-      //   Fav group in step-3 order: [NewishPrawnFav, MiddlePaneerFav]
-      //   non-Fav group in step-3 order: [OldChicken, MiddleFishPlain]
-      //   final: [NewishPrawnFav, MiddlePaneerFav, OldChicken, MiddleFishPlain]
+      //   [OldChicken, MiddleFishPlain, NewishPrawn, MiddlePaneer]
+      // After step 3 (no-op) and no favorites step: unchanged.
       expect(out.map((d) => d.name)).toEqual([
-        "NewishPrawnFav",
-        "MiddlePaneerFav",
         "OldChicken",
         "MiddleFishPlain",
+        "NewishPrawn",
+        "MiddlePaneer",
       ]);
     });
 
@@ -457,28 +381,26 @@ describe("priority — docs/engine.md §4", () => {
       expect(out.map((d) => d.name)).toEqual(["RecentMango", "OldBanana"]);
     });
 
-    it("respects recency exemption for lunch carbs and still lifts a favorite", () => {
-      const recentChapatiFav = makeDish({
-        name: "ChapatiFav",
+    it("respects recency exemption for lunch carbs (never reorders by date)", () => {
+      const recentChapati = makeDish({
+        name: "ChapatiRecent",
         category: "Chapati",
       });
-      const oldRicePlain = makeDish({
-        name: "RicePlain",
+      const oldRice = makeDish({
+        name: "RiceOld",
         category: "Rice",
       });
       const history = [
-        historyRow(recentChapatiFav.id, recentChapatiFav.name, "2026-05-04"),
-        historyRow(oldRicePlain.id, oldRicePlain.name, "2026-01-05"),
+        historyRow(recentChapati.id, recentChapati.name, "2026-05-04"),
+        historyRow(oldRice.id, oldRice.name, "2026-01-05"),
       ];
-      // Step 1 exempt (both are lunch carbs), so pool stays as input.
-      // Step 4 lifts the favorite ChapatiFav above RicePlain regardless (carbs are
-      // exempt from steps 1 and 5, not from the favorites step).
+      // Step 1 exempt (both are lunch carbs), so the pool stays in input order
+      // despite the differing last-cooked dates.
       const out = rankCandidates({
-        pool: [oldRicePlain, recentChapatiFav],
+        pool: [recentChapati, oldRice],
         history,
-        favoriteDishIds: new Set([recentChapatiFav.id]),
       });
-      expect(out.map((d) => d.name)).toEqual(["ChapatiFav", "RicePlain"]);
+      expect(out.map((d) => d.name)).toEqual(["ChapatiRecent", "RiceOld"]);
     });
 
     it("step 3 reorders the pool when a ledger with non-zero leftover is supplied", () => {

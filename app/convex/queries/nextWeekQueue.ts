@@ -2,22 +2,17 @@ import { query } from "../_generated/server.js";
 import type { Doc } from "../_generated/dataModel.js";
 
 /**
- * Returns the `queued` `nextWeekQueue` rows, sorted by `createdAt` ascending
- * (placement order, so "what lands next week" reads top-down: the next generation
- * consumes queued rows oldest first). Raw rows only: the client resolves the dish
- * name and photo from the baked engine library by `dishId`. Backs the "Saved for
- * next week" section of the wishlist page (`features/wishlist.md` §5), which
- * finally reads the queue the save flow has been writing. Mirrors
- * `listQueuedComments`/`listQueuedManualChanges`.
+ * DEPRECATED, retained as an inert no-op stub (`features/wishlist-favorites-v2` §5).
+ * "Save for next week" is retired, but this backend deploys before the frontend that
+ * removes the subscription (Stream B), so the currently-deployed prod PWA still reads
+ * `listQueuedNextWeek` from the old wishlist screen. The stub keeps the name and
+ * signature but always returns an empty list (the queue is wiped and never written
+ * again), so the old UI renders an empty section rather than throwing. Removed in the
+ * same follow-up PR that drops the `nextWeekQueue` table.
  */
 export const listQueuedNextWeek = query({
   args: {},
-  handler: async (ctx): Promise<Doc<"nextWeekQueue">[]> => {
-    const queued = await ctx.db
-      .query("nextWeekQueue")
-      .withIndex("by_status", (q) => q.eq("status", "queued"))
-      .collect();
-    queued.sort((a, b) => a.createdAt - b.createdAt);
-    return queued;
+  handler: async (): Promise<Doc<"nextWeekQueue">[]> => {
+    return [];
   },
 });

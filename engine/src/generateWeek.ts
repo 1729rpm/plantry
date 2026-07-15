@@ -34,6 +34,7 @@ import {
 import { applyPick, emptyLedger, type IngredientLedger } from "./consolidation.js";
 import { applyCap, type SlotPick, type PickRole } from "./cap.js";
 import { planRequests, slotKey } from "./requests.js";
+import { planFavorites } from "./favorites.js";
 import { lastCookedMap, toLongDay } from "./historyRows.js";
 
 export interface GenerateWeekArgs {
@@ -61,15 +62,17 @@ export interface GenerateWeekArgs {
    */
   requests?: number[];
   /**
-   * §4 step 4 favorites: the household's standing wishlist dish ids
-   * (`features/wishlist.md`, the Convex `favorites` table). Each generated slot
-   * ranks a favorite candidate above a non-favorite (§4 step 4, `byFavorites`),
-   * up to `FAVORITE_WEEKLY_CAP` favorite placements per week, after which the
-   * favorites step no-ops for the rest of the week. Absent or empty leaves every
-   * slot's ranking identical to a no-favorites run, so every existing caller is
-   * unchanged.
+   * §4 step 4 favorites: the household's library favorite dish ids
+   * (`features/wishlist-favorites-v2`, the Convex `favorites` table), ordered
+   * oldest-added first (`createdAt` ascending). Each is guaranteed into one slot of
+   * the week by the placement pass (`planFavorites`), pinned exactly like a §6
+   * request; when the full set cannot all be placed under the §3 composition locks
+   * the oldest win and the rest are reported in `GeneratedWeek.unplacedFavorites`.
+   * Custom/free-text favorites are not passed here (the engine has no dish to
+   * place). Absent or empty leaves generation byte-identical to a no-favorites run,
+   * so every existing caller is unchanged.
    */
-  favoriteDishIds?: ReadonlySet<number>;
+  favoriteDishIds?: readonly number[];
 }
 
 export interface GeneratedWeekSlot {
@@ -103,6 +106,15 @@ export interface GeneratedWeek {
   droppedDishIds: number[];
   /** Human-readable warnings ("Friday over cap (5), dropped: ..."). */
   incidents: string[];
+  /**
+   * §4 step 4 favorites: library favorite ids the guaranteed placement pass could
+   * not land this week (no accepting slot under the §3 composition locks, or a §9
+   * cap drop), in oldest-first order. The engine never breaks a lock to force a
+   * favorite; it reports the unplaced ones so the Convex layer can log one incident
+   * per generated week naming them. Empty when every favorite landed (and always
+   * empty for a run with no favorites).
+   */
+  unplacedFavorites: number[];
 }
 
 /** Inputs both ranking paths derive identically from the dishes placed so far. */
@@ -132,14 +144,6 @@ interface SlotRankingInputs {
   /** §4 step 5 within-week recency: ids of non-exempt dishes already placed. */
   withinWeekDishIds: ReadonlySet<number>;
   /**
-   * §4 step 4 weekly promotion budget: the count of favorite dishes already
-   * placed this week (picks whose id is in `favoriteDishIds`). Threaded exactly
-   * like `withinWeekDishIds`: derived fresh each slot from the running picks, so
-   * once it reaches `FAVORITE_WEEKLY_CAP` the favorites step (`byFavorites`)
-   * no-ops for the rest of the week. Zero when no `favoriteDishIds` was supplied.
-   */
-  favoritesPlacedThisWeek: number;
-  /**
    * §4 step 6 within-week protein diversity: protein families already spent on
    * an HP main this week. Derived here for both paths, but ONLY the main
    * generation loop threads it into ranking; `rankCandidatesForSlot`
@@ -156,13 +160,6 @@ interface DeriveSlotRankingInputsArgs {
   /** Cross-week history seed; combine with `inWeekHistory` for composition/§4. */
   ingredients: Ingredient[];
   packSizes: PackSizeHeader[];
-  /**
-   * §4 step 4 favorites: the wishlist dish ids, so the derivation can count how
-   * many favorites have been placed this week (`favoritesPlacedThisWeek`).
-   * Undefined leaves the count 0, which is what the swap-time ranker
-   * (`rankCandidatesForSlot`) passes so favorites never reorder a swap.
-   */
-  favoriteDishIds?: ReadonlySet<number>;
 }
 
 /**
@@ -180,11 +177,10 @@ interface DeriveSlotRankingInputsArgs {
  * that path and keeps the derivation in one place.
  */
 function deriveSlotRankingInputs(args: DeriveSlotRankingInputsArgs): SlotRankingInputs {
-  const { picks, weekStart, ingredients, packSizes, favoriteDishIds } = args;
+  const { picks, weekStart, ingredients, packSizes } = args;
 
   let ledger: IngredientLedger = emptyLedger(packSizes);
   const inWeekHistory: MenuHistoryRow[] = [];
-  let favoritesPlacedThisWeek = 0;
   for (const dish of picks) {
     ledger = applyPick(ledger, dish, ingredients);
     inWeekHistory.push({
@@ -194,7 +190,6 @@ function deriveSlotRankingInputs(args: DeriveSlotRankingInputsArgs): SlotRanking
       dishName: dish.name,
       dishId: dish.id,
     });
-    if (favoriteDishIds && favoriteDishIds.has(dish.id)) favoritesPlacedThisWeek += 1;
   }
   const weekLunchCarbs = picks.filter((d) => d.category === "Chapati" || d.category === "Rice");
 
@@ -203,7 +198,6 @@ function deriveSlotRankingInputs(args: DeriveSlotRankingInputsArgs): SlotRanking
     weekLunchCarbs,
     inWeekHistory,
     withinWeekDishIds: withinWeekRecencySet(picks),
-    favoritesPlacedThisWeek,
     usedHpMainProteinFamilies: proteinFamiliesUsedAsHpMain(picks),
   };
 }
@@ -228,7 +222,7 @@ export function generateWeek(args: GenerateWeekArgs): GeneratedWeek {
     lastSaturdayMenu,
     userRequestedDishId,
     requests = [],
-    favoriteDishIds,
+    favoriteDishIds = [],
   } = args;
 
   const baseSchedule = weekSchedule({ weekStart, lastSaturdayMenu, rng });
@@ -282,11 +276,55 @@ export function generateWeek(args: GenerateWeekArgs): GeneratedWeek {
   // Per-slot pinned dish ids: a request forces its dish to the front of the
   // accepting slot's ranked pool (overriding §4 recency for that position).
   const pinsBySlot = new Map<string, number[]>();
-  for (const placement of requestPlan.placements) {
-    const key = slotKey(placement.day, placement.meal);
+  const addPin = (day: Day, meal: Meal, dishId: number) => {
+    const key = slotKey(day, meal);
     const list = pinsBySlot.get(key) ?? [];
-    list.push(placement.dishId);
+    list.push(dishId);
     pinsBySlot.set(key, list);
+  };
+  for (const placement of requestPlan.placements) {
+    addPin(placement.day, placement.meal, placement.dishId);
+  }
+
+  // §4 step 4 guaranteed favorites placement. Every library favorite is pinned
+  // into one accepting slot of the week, spread across distinct days, oldest-added
+  // first, using the SAME pinning mechanism as a §6 request (front of the accepting
+  // slot's ranked pool, overriding §4 recency for that position). Favorites never
+  // displace a §3.2 substitution slot or a slot an earlier request claimed, so both
+  // are reserved. Custom/free-text favorites are not passed here. Placement respects
+  // the dish's meal implicitly: a wrong-meal dish never appears in a slot's pools, so
+  // the planner routes a breakfast favorite to a breakfast slot and a lunch favorite
+  // to a lunch plate. Favorites that no slot accepts under the locks are reported in
+  // `unplacedFavorites` (below), never forced.
+  const favoriteReserved = new Set<string>(reservedSlots);
+  for (const placement of requestPlan.placements) {
+    favoriteReserved.add(slotKey(placement.day, placement.meal));
+  }
+  const favoritePlan = planFavorites({
+    favoriteDishIds,
+    schedule,
+    library,
+    history,
+    season,
+    reservedSlots: favoriteReserved,
+  });
+  // Track which favorite is pinned to which slot, and the set of all pinned
+  // favorite ids. A favorite is guaranteed EXACTLY ONCE: it leads its own pinned
+  // slot (promotePins), and it must not also be drawn by ordinary ranking on any
+  // OTHER slot. Because slots compose in schedule order, a favorite pinned to a
+  // later day is still "fresh" (within-week recency has not demoted it) when an
+  // earlier day composes, so a companion/side pool could otherwise draw it there and
+  // place it twice. We prevent that by excluding every pinned favorite from the
+  // natural selectable pool of every slot except the one it is pinned to (below).
+  const favoriteIdBySlot = new Map<string, Set<number>>();
+  const allPinnedFavoriteIds = new Set<number>();
+  for (const placement of favoritePlan.placements) {
+    addPin(placement.day, placement.meal, placement.dishId);
+    const key = slotKey(placement.day, placement.meal);
+    const set = favoriteIdBySlot.get(key) ?? new Set<number>();
+    set.add(placement.dishId);
+    favoriteIdBySlot.set(key, set);
+    allPinnedFavoriteIds.add(placement.dishId);
   }
 
   const slotResults: GeneratedWeekSlot[] = [];
@@ -325,7 +363,6 @@ export function generateWeek(args: GenerateWeekArgs): GeneratedWeek {
       weekStart,
       ingredients,
       packSizes,
-      favoriteDishIds,
     });
     const compositionHistory: MenuHistoryRow[] = [...history, ...rankingInputs.inWeekHistory];
     const candidateSet = composeSlot({
@@ -341,20 +378,26 @@ export function generateWeek(args: GenerateWeekArgs): GeneratedWeek {
     };
     const slotSubstitution =
       slot.meal === "Lunch" ? substitutionByDay.get(slot.day as WeekdaySubstitutionDay) : undefined;
+    // §4 step 4 exactly-once: every favorite pinned to a DIFFERENT slot is excluded
+    // from this slot's selectable pools, so ordinary ranking cannot draw it here and
+    // place it a second time. The favorite pinned to THIS slot is not excluded, so
+    // promotePins still leads it into its own slot. Empty for a slot with no
+    // pinned-elsewhere favorites, so behaviour is unchanged when there are none.
+    const thisSlotFavorites = favoriteIdBySlot.get(slotKey(slot.day, slot.meal));
+    const excludeDishIds =
+      allPinnedFavoriteIds.size === 0
+        ? undefined
+        : new Set([...allPinnedFavoriteIds].filter((id) => !(thisSlotFavorites?.has(id) ?? false)));
     const roledPicks = pickSlot({
       slot,
       candidateSet,
       compositionHistory,
       consolidationContext,
+      excludeDishIds,
       withinWeekDishIds: rankingInputs.withinWeekDishIds,
       // §4 step 6 protein diversity IS applied in generation (the main loop):
       // a later HP-main slot prefers a protein the week has not used yet.
       usedHpMainProteinFamilies: rankingInputs.usedHpMainProteinFamilies,
-      // §4 step 4 favorites: promote wishlist dishes into this slot, capped at
-      // FAVORITE_WEEKLY_CAP placements per week. Both the ids and the running
-      // placed-count are threaded so byFavorites can no-op once the cap is hit.
-      favoriteDishIds,
-      favoritesPlacedThisWeek: rankingInputs.favoritesPlacedThisWeek,
       sameDayBreakfastPrimaryIngredient:
         slot.meal === "Lunch" ? sameDayBreakfastPrimary.get(slot.day) : undefined,
       // §3.1 budget: the same day's breakfast has already composed, so its item
@@ -479,11 +522,27 @@ export function generateWeek(args: GenerateWeekArgs): GeneratedWeek {
     incidents.push(`Requested ${name} could not be placed (no composition slot accepts it)`);
   }
 
+  // §4 step 4 reconciliation: a favorite is guaranteed only if it survives into the
+  // final week. A pinned favorite can still be absent if the §9 cap dropped it or the
+  // accepting slot's pick branch never drew from the pool that held it. Report every
+  // favorite that did not land (planner-unplaceable or dropped), in the input's
+  // oldest-first order, deduped. Unlike a request, an unplaced favorite is NOT pushed
+  // as an engine incident string here: the Convex layer logs one incident per week
+  // from `unplacedFavorites`, so the engine keeps its incident list to §6/§9 warnings.
+  const seenFavorite = new Set<number>();
+  const unplacedFavorites: number[] = [];
+  for (const id of favoriteDishIds) {
+    if (seenFavorite.has(id)) continue;
+    seenFavorite.add(id);
+    if (!placedIds.has(id)) unplacedFavorites.push(id);
+  }
+
   return {
     weekStart,
     days: cappedDays,
     droppedDishIds: capped.droppedDishIds,
     incidents,
+    unplacedFavorites,
   };
 }
 
@@ -506,19 +565,14 @@ interface PickSlotArgs {
    */
   usedHpMainProteinFamilies?: ReadonlySet<string>;
   /**
-   * §4 step 4 favorites: the household's wishlist dish ids. Threaded into every
-   * rankCandidates call for this slot (both `rank` and `rankHpMain`), so a
-   * favorite candidate ranks above a non-favorite in every position pool, exactly
-   * where the former Preferred=Yes tiebreak used to act.
+   * §4 step 4 exactly-once: dish ids of favorites pinned to a DIFFERENT slot this
+   * week. Every ranked pool for this slot filters these out before ranking, so
+   * ordinary selection can never draw a favorite that belongs to another day and
+   * place it twice. The favorite pinned to THIS slot is deliberately absent from
+   * this set, so `promotePins` still leads it here. Undefined or empty leaves every
+   * pool unchanged.
    */
-  favoriteDishIds?: ReadonlySet<number>;
-  /**
-   * §4 step 4 weekly promotion budget: favorite dishes already placed this week.
-   * Passed straight through to `byFavorites`, which no-ops the favorites step once
-   * it reaches FAVORITE_WEEKLY_CAP. Same per-slot value for every position of the
-   * slot (derived once per slot, like withinWeekDishIds).
-   */
-  favoritesPlacedThisWeek?: number;
+  excludeDishIds?: ReadonlySet<number>;
   sameDayBreakfastPrimaryIngredient?: string;
   /**
    * §3.1 budget-aware composition: the lunch item budget for this slot
@@ -624,15 +678,28 @@ function applyLunchProteinFloor(
   return picks;
 }
 
+/**
+ * §4 step 4 exactly-once: drop every favorite pinned to a different slot from a
+ * candidate pool before ranking it, so a favorite that belongs to another day can
+ * never be drawn here and placed twice. The favorite pinned to THIS slot is not in
+ * `excludeDishIds`, so it survives and `promotePins` still leads it. No-op when the
+ * set is empty (the common no-favorites case), so behaviour is otherwise unchanged.
+ */
+function excludePinnedElsewhere(
+  pool: Dish[],
+  excludeDishIds: ReadonlySet<number> | undefined,
+): Dish[] {
+  if (!excludeDishIds || excludeDishIds.size === 0) return pool;
+  return pool.filter((d) => !excludeDishIds.has(d.id));
+}
+
 function rank(args: PickSlotArgs, pool: Dish[]): Dish[] {
   const ranked = rankCandidates({
-    pool,
+    pool: excludePinnedElsewhere(pool, args.excludeDishIds),
     history: args.compositionHistory,
     sameDayBreakfastPrimaryIngredient: args.sameDayBreakfastPrimaryIngredient,
     consolidationContext: args.consolidationContext,
     withinWeekDishIds: args.withinWeekDishIds,
-    favoriteDishIds: args.favoriteDishIds,
-    favoritesPlacedThisWeek: args.favoritesPlacedThisWeek,
   });
   return promotePins(ranked, args.pinnedDishIds);
 }
@@ -647,14 +714,12 @@ function rank(args: PickSlotArgs, pool: Dish[]): Dish[] {
  */
 function rankHpMain(args: PickSlotArgs, pool: Dish[]): Dish[] {
   const ranked = rankCandidates({
-    pool,
+    pool: excludePinnedElsewhere(pool, args.excludeDishIds),
     history: args.compositionHistory,
     sameDayBreakfastPrimaryIngredient: args.sameDayBreakfastPrimaryIngredient,
     consolidationContext: args.consolidationContext,
     withinWeekDishIds: args.withinWeekDishIds,
     usedHpMainProteinFamilies: args.usedHpMainProteinFamilies,
-    favoriteDishIds: args.favoriteDishIds,
-    favoritesPlacedThisWeek: args.favoritesPlacedThisWeek,
   });
   return promotePins(ranked, args.pinnedDishIds);
 }
@@ -1179,12 +1244,10 @@ export function rankCandidatesForSlot(args: RankCandidatesForSlotArgs): Dish[] {
       // is not passed on here. Leaving it off is the documented choice, not an
       // oversight; pass it through only if step 6 is intentionally added to swaps.
       //
-      // §4 step 4 favorites is likewise DELIBERATELY OMITTED here: a swap is a
-      // deliberate user choice over the broad picker pool, so favorites do not
-      // reorder the alternatives offered (spec §3: "§5 picker ranking and §7
-      // Explore are untouched by favorites"). deriveSlotRankingInputs was called
-      // above without favoriteDishIds, so favoritesPlacedThisWeek is 0 and no
-      // favoriteDishIds is threaded into this rankCandidates call.
+      // §4 step 4 favorites never touch the swap picker either: favorites are a
+      // guaranteed placement pass in `generateWeek` (`planFavorites`), not a ranking
+      // input, so a swap offers alternatives by recency and consolidation without a
+      // favorites tilt (spec §3: swaps and Explore adds are untouched by favorites).
     });
     for (const dish of r) {
       if (seen.has(dish.id)) continue;

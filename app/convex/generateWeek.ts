@@ -50,16 +50,15 @@ export function seasonOf(isoDate: string): Season {
  *     author: "system", updatedAt: now }`. A slot with no picks (cap drop
  *     wiped it) is skipped.
  *
- * Next-week queue (`features/design-revamp.md` §1.5, §3.2): before generating,
- * the run reads every `queued` `nextWeekQueue` row and passes its `dishId` as a
- * `requests` input to the engine. The engine places each requested dish into a
- * slot whose §3 composition accepts it (overriding §4 recency) or, if no slot
- * accepts it, emits an incident and does not place it. After generation, each
- * queue row whose dish actually landed in the week is marked `placed` with
- * `consumedWeekStart = weekStart`; rows whose dish could not be placed stay
- * `queued` (the engine's incident is persisted, and the slow loop re-reads them
- * next run). An empty queue (production today) yields no requests and leaves
- * generation byte-identical to before.
+ * Favorites (`features/wishlist-favorites-v2` §3, §4): before generating, the run
+ * reads every library-dish `favorites` row (createdAt ascending) and passes the
+ * ordered dish ids to the engine's §4-step-4 guaranteed-placement pass. The engine
+ * pins each favorite into one slot of the week (spread across distinct days,
+ * oldest-added first) and returns the ones it could not place under the §3
+ * composition locks as `unplacedFavorites`, which this run logs as one warn incident
+ * naming them. Custom (free-text) favorites carry no `dishId`, so they are skipped
+ * here (display-only). An empty favorites set leaves generation byte-identical to a
+ * run with no favorites.
  *
  * History input (docs/engine.md Inputs, §8): the engine's historical record is
  * the baked seed history (`@plantry/engine/history`, a periodic snapshot) plus
@@ -90,27 +89,20 @@ export const generateCurrentWeek = internalMutation({
     weekId: Id<"currentWeek">;
     version: number;
     incidentCount: number;
-    placedQueueDishIds: number[];
   }> => {
     const season = seasonOf(args.weekStart);
 
-    // §1.5 next-week queue: queued saves become engine `requests`, in
-    // insertion order (createdAt ascending) so an earlier save outranks a
-    // later one when two compete for one accepting slot.
-    const queued = await ctx.db
-      .query("nextWeekQueue")
-      .withIndex("by_status", (q) => q.eq("status", "queued"))
-      .collect();
-    queued.sort((a, b) => a.createdAt - b.createdAt);
-    const requests = queued.map((row) => row.dishId);
-
-    // §4 step 4 favorites: the household's standing favorites list. Every row's
-    // dish id becomes a favorite the engine promotes (up to FAVORITE_WEEKLY_CAP
-    // placements per week), replacing the git-file `preferred` field as the live
-    // preference signal (`features/wishlist.md`). An empty table yields an empty
-    // set, so the favorites step is a no-op and generation is identical to before.
+    // §4 step 4 favorites: the household's standing favorites list drives the
+    // engine's guaranteed-placement pass. Read the library-dish rows (a custom
+    // free-text favorite carries no `dishId` and is display-only, so it is skipped),
+    // ordered createdAt ascending so the oldest win when the set overflows the
+    // week's capacity. An empty list yields an empty array, so the pass is a no-op
+    // and generation is identical to a household with no favorites.
     const favoriteRows = await ctx.db.query("favorites").collect();
-    const favoriteDishIds = new Set(favoriteRows.map((row) => row.dishId));
+    favoriteRows.sort((a, b) => a.createdAt - b.createdAt);
+    const favoriteDishIds = favoriteRows
+      .map((row) => row.dishId)
+      .filter((id): id is number => id !== undefined);
 
     // Historical record = baked seed + every finalized week in `weekArchive`,
     // so recency-driven rules see weeks finalized since the last bake.
@@ -118,8 +110,8 @@ export const generateCurrentWeek = internalMutation({
     const mergedHistory: MenuHistoryRow[] = [...history, ...archiveToHistoryRows(archives)];
 
     // The engine composes §1 schedule -> §2 alternation -> §3 composition
-    // -> §3.2 substitution -> §4 priority -> §5 cap -> §6 consolidation, then
-    // places §6 requested dishes ahead of recency where composition accepts them.
+    // -> §3.2 substitution -> §4 priority -> §5 cap -> §6 consolidation, pinning
+    // §4-step-4 favorites into slots whose composition accepts them.
     const generated: GeneratedWeek = generateWeek({
       weekStart: args.weekStart,
       library: dishes,
@@ -129,20 +121,8 @@ export const generateCurrentWeek = internalMutation({
       packSizes,
       rng: args.rng !== undefined ? () => args.rng as number : undefined,
       userRequestedDishId: args.userRequestedDishId,
-      requests,
       favoriteDishIds,
     });
-
-    // A requested dish "landed" iff it appears anywhere in the generated week
-    // (the engine drops it from `days` when no slot's composition accepts it or
-    // the §5 cap removes it). Compute the placed set from the result so the
-    // queue rows reflect what actually shipped, not just what was requested.
-    const placedDishIds = new Set<number>();
-    for (const day of generated.days) {
-      for (const slot of day.slots) {
-        for (const dish of slot.dishes) placedDishIds.add(dish.id);
-      }
-    }
 
     const now = Date.now();
     const toDishEntry = (dishId: number) => ({
@@ -201,24 +181,37 @@ export const generateCurrentWeek = internalMutation({
       });
     }
 
-    // Mark each consumed queue row: rows whose dish landed become `placed` with
-    // the consuming week; rows whose dish could not be placed stay `queued` (the
-    // engine already logged the incident above) so next week's run retries them.
-    const placedQueueDishIds: number[] = [];
-    for (const row of queued) {
-      if (!placedDishIds.has(row.dishId)) continue;
-      await ctx.db.patch(row._id, {
-        status: "placed",
-        consumedWeekStart: args.weekStart,
+    // §4 step 4: log one warn incident per week naming the library favorites the
+    // engine could not pin without breaking a §3 composition lock or running out of
+    // accepting slots. The engine returns these in `unplacedFavorites` rather than as
+    // incident strings, so the fast loop stays silent while the slow loop sees a real
+    // "your favorites did not all fit this week" signal (with the dish ids and the
+    // week). No incident row when every favorite landed.
+    let incidentCount = generated.incidents.length;
+    if (generated.unplacedFavorites.length > 0) {
+      const names = generated.unplacedFavorites.map((id) => {
+        const dish = dishes.find((d) => d.id === id);
+        return dish ? dish.name : `dish ${id}`;
       });
-      placedQueueDishIds.push(row.dishId);
+      await ctx.db.insert("incidents", {
+        createdAt: now,
+        source: "engine",
+        severity: "warn",
+        context: {
+          weekStart: args.weekStart,
+          weekId,
+          unplacedFavoriteDishIds: generated.unplacedFavorites,
+        },
+        message: `Favorites not placed this week (composition locks or capacity): ${names.join(", ")}`,
+        resolvedAt: null,
+      });
+      incidentCount += 1;
     }
 
     return {
       weekId,
       version: 1,
-      incidentCount: generated.incidents.length,
-      placedQueueDishIds,
+      incidentCount,
     };
   },
 });

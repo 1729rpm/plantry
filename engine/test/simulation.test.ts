@@ -3,8 +3,7 @@ import { generateWeek } from "../src/generateWeek.js";
 import { deriveHistoryRows } from "../src/historyRows.js";
 import { aggregateGroceryList, type GroceryDayPicks } from "../src/groceryList.js";
 import { loadLiveData } from "./loadLive.js";
-import { isHpMain, proteinFamily, FAVORITE_WEEKLY_CAP } from "../src/priority.js";
-import { eligibleDishes } from "../src/eligibility.js";
+import { isHpMain, proteinFamily } from "../src/priority.js";
 import type { Day } from "../src/eligibility.js";
 import type { Dish, MenuHistoryRow, Season } from "../src/data/schemas.js";
 
@@ -357,119 +356,5 @@ describe("forward simulation harness", () => {
     const order = week.days.map((d) => d.day);
     const expected = WEEKDAY_ORDER.filter((d) => order.includes(d));
     expect(order).toEqual(expected);
-  });
-});
-
-/**
- * §4 step 4 favorites fixture (features/wishlist.md §3). Generates a Monsoon week
- * against the live library with a favorites set and asserts the three feature
- * contracts: (a) a favorite absent from last week's history lands this week, (b)
- * no favorite repeats within one week (emergent from §4 step 5 within-week
- * recency, no due-date arithmetic), and (c) at most FAVORITE_WEEKLY_CAP favorite
- * placements per generated week, so a long favorites list cannot swamp rotation.
- *
- * Favorites are drawn from the live eligible pool so the fixture tracks the real
- * library, not hand-built dishes: a set of non-exempt HP-main lunch dishes, which
- * the favorites step promotes into the weekday protein-lead positions. Non-exempt
- * so within-week recency (step 5) genuinely governs their repeats (fruit and
- * lunch carbs are recency-exempt and would be allowed to recur).
- */
-describe("favorites frequency (features/wishlist.md §3)", () => {
-  const { library, ingredients, packSizes, history: seedHistory } = loadLiveData();
-  const weekStart = "2026-06-15"; // Monsoon
-  const season = seasonOf(weekStart);
-
-  // Eligible Monsoon dishes for both meals. The lunch HP mains (HP-tagged
-  // Gravy/Dry/Complete meal/Keto) land as the weekday protein lead, so a favorite
-  // among them reliably surfaces when promoted.
-  const eligibleLunch = eligibleDishes({
-    library,
-    history: seedHistory,
-    season,
-    slot: { day: "Mon", meal: "Lunch" },
-  });
-  const eligibleBreakfast = eligibleDishes({
-    library,
-    history: seedHistory,
-    season,
-    slot: { day: "Mon", meal: "Breakfast" },
-  });
-  const eligibleAll = [
-    ...new Map([...eligibleBreakfast, ...eligibleLunch].map((d) => [d.id, d])).values(),
-  ];
-  const favoriteMains = eligibleLunch.filter((d) => isHpMain(d));
-
-  // Dish ids cooked in the most recent history week: a favorite drawn from
-  // outside this set is genuinely "absent last week".
-  const lastWeekStart = seedHistory.reduce((max, r) => (r.weekStart > max ? r.weekStart : max), "");
-  const lastWeekDishIds = new Set(
-    seedHistory.filter((r) => r.weekStart === lastWeekStart).map((r) => r.dishId),
-  );
-
-  function generate(favoriteDishIds?: ReadonlySet<number>) {
-    return generateWeek({
-      weekStart,
-      library,
-      history: seedHistory,
-      season,
-      ingredients,
-      packSizes,
-      rng: makeRng(42),
-      favoriteDishIds,
-    });
-  }
-
-  /** Every dish id placed in the week, one entry per placement (repeats counted). */
-  function placedDishIds(week: ReturnType<typeof generateWeek>): number[] {
-    return week.days.flatMap((d) => d.slots.flatMap((s) => s.dishes.map((dish) => dish.id)));
-  }
-
-  it("(a) a favorite absent from last week's history lands this week", () => {
-    // Favorite several eligible HP mains that were not cooked last week. Promotion
-    // (§4 step 4) surfaces at least one of them into this week's menu, so a
-    // favorite the household wants lands without any due-date arithmetic.
-    const absentLastWeek = favoriteMains.filter((d) => !lastWeekDishIds.has(d.id)).slice(0, 12);
-    expect(absentLastWeek.length, "expected eligible favorites absent last week").toBeGreaterThan(
-      0,
-    );
-    const favoriteDishIds = new Set(absentLastWeek.map((d) => d.id));
-    const placed = new Set(placedDishIds(generate(favoriteDishIds)));
-    const landed = absentLastWeek.filter((d) => placed.has(d.id));
-    expect(landed.length, "no favorite absent last week landed").toBeGreaterThan(0);
-    // Every landed favorite was genuinely absent from last week's history.
-    for (const d of landed) expect(lastWeekDishIds.has(d.id)).toBe(false);
-  });
-
-  it("(b) no favorite repeats within one week", () => {
-    // A broad favorites set of eligible HP mains; within-week recency (§4 step 5)
-    // must keep each favorite to at most one placement in the week, so the weekly
-    // cadence is emergent, no favorite twice in one week.
-    const favoriteDishIds = new Set(favoriteMains.map((d) => d.id));
-    const week = generate(favoriteDishIds);
-    const counts = new Map<number, number>();
-    for (const id of placedDishIds(week)) {
-      if (favoriteDishIds.has(id)) counts.set(id, (counts.get(id) ?? 0) + 1);
-    }
-    for (const [id, count] of counts) {
-      const dish = library.find((d) => d.id === id);
-      expect(count, `favorite ${dish?.name} (${id}) placed ${count}x in one week`).toBeLessThan(2);
-    }
-  });
-
-  it("(c) promotion stops after FAVORITE_WEEKLY_CAP placements", () => {
-    // Isolate promotion from natural rotation: favorite only eligible dishes that
-    // do NOT appear in the unfavorited week, so every favorite placement is a pure
-    // promotion (the favorites step, not longest-unused, put it there). The weekly
-    // budget then caps promotion at FAVORITE_WEEKLY_CAP: byFavorites no-ops once
-    // the count reaches the cap, so no further favorite is promoted this week.
-    const naturalIds = new Set(placedDishIds(generate()));
-    const promotionOnly = eligibleAll.filter((d) => !naturalIds.has(d.id));
-    // Far more promotable favorites than the cap, so the cap is the binding limit.
-    expect(promotionOnly.length).toBeGreaterThan(FAVORITE_WEEKLY_CAP);
-    const favoriteDishIds = new Set(promotionOnly.map((d) => d.id));
-    const favoritePlacements = placedDishIds(generate(favoriteDishIds)).filter((id) =>
-      favoriteDishIds.has(id),
-    ).length;
-    expect(favoritePlacements).toBe(FAVORITE_WEEKLY_CAP);
   });
 });

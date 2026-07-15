@@ -445,19 +445,16 @@ export const restoreDay = mutation({
 });
 
 /**
- * Saves a library dish for next week by inserting a `queued` row into
- * `nextWeekQueue`. The next generation run reads queued rows as engine
- * `requests` (4.2). Reason required (Decision #8). Writes a `manualChanges` row
- * with `changeKind: "save_next_week"` (day-level: no meal/position; after carries
- * the saved dish id for the activity feed) in the same transaction.
- *
- *   saveForNextWeek({ author, weekStart, dishId, reason })
- *     => { ok: true; queueId: string }
- *      | { ok: false; reason: "dish-not-in-library" | "already-queued" }
- *
- * `weekStart` is recorded on the `manualChanges` row so the save appears in the
- * current week's activity feed; the queue row itself is week-agnostic until a
- * generation run consumes it (`consumedWeekStart`).
+ * DEPRECATED, retained as an inert no-op stub (`features/wishlist-favorites-v2` §5).
+ * "Save for next week" is retired: this backend deploys before the frontend that
+ * removes the call (Stream B), so the currently-deployed prod PWA still invokes
+ * `saveForNextWeek` from Explore. Deleting it outright would make those live calls
+ * throw "function not found" during the A->B window. The stub keeps the name and
+ * signature but performs NO writes and returns a benign success shape, so the old UI
+ * neither throws nor writes new deprecated rows. Because it writes nothing, no fresh
+ * `nextWeekQueue` or `save_next_week` rows appear after the migration wipe, so the
+ * follow-up schema-drop still validates. Removed in the same follow-up PR that drops
+ * the `nextWeekQueue` table and the `save_next_week` change-kind.
  */
 export const saveForNextWeek = mutation({
   args: {
@@ -466,61 +463,8 @@ export const saveForNextWeek = mutation({
     dishId: v.number(),
     reason: v.string(),
   },
-  handler: async (
-    ctx,
-    args,
-  ): Promise<
-    { ok: true; queueId: string } | { ok: false; reason: "dish-not-in-library" | "already-queued" }
-  > => {
-    assertAuthor(args.author);
-    const trimmedReason = args.reason.trim();
-    if (trimmedReason.length === 0) {
-      throw new ConvexError("reason must not be empty after trimming");
-    }
-
-    const dish = dishes.find((d) => d.id === args.dishId);
-    if (!dish) {
-      return { ok: false, reason: "dish-not-in-library" };
-    }
-
-    // Decision #9 hides already-queued dishes in Explore, but guard the mutation
-    // too so a stale client cannot double-queue the same dish.
-    const queued = await ctx.db
-      .query("nextWeekQueue")
-      .withIndex("by_status", (q) => q.eq("status", "queued"))
-      .collect();
-    if (queued.some((row) => row.dishId === args.dishId)) {
-      return { ok: false, reason: "already-queued" };
-    }
-
-    const now = Date.now();
-    const queueId = await ctx.db.insert("nextWeekQueue", {
-      createdAt: now,
-      author: args.author,
-      dishId: args.dishId,
-      reason: trimmedReason,
-      status: "queued",
-      consumedWeekStart: null,
-    });
-
-    await ctx.db.insert("manualChanges", {
-      createdAt: now,
-      author: args.author,
-      weekStart: args.weekStart,
-      // A save targets next week, not a day of this week, so there is no natural
-      // `day`; omit it (the schema makes `day` optional for day-less kinds). The
-      // dish saved is the load-bearing value and lives in `after.dishId`; the
-      // activity feed (4.2) keys this kind off `after`, not `day`.
-      changeKind: "save_next_week",
-      before: { dishId: null, customLabel: null },
-      after: { dishId: args.dishId, customLabel: null },
-      reason: trimmedReason,
-      status: "queued",
-      resolvedAt: null,
-      resolvedPr: null,
-    });
-
-    return { ok: true, queueId };
+  handler: async (): Promise<{ ok: true; queueId: string }> => {
+    return { ok: true, queueId: "deprecated-noop" };
   },
 });
 

@@ -8,6 +8,10 @@ coverage/
 # byte-identical in CI, so Prettier must not reflow these markdown tables.
 data/
 design_handoff/
+# Design-handoff reference prototypes (runnable HTML/JSX + assets), delivered
+# as-is and owned by the handoff, not the formatter. Same rationale as
+# design_handoff/ above; reflowing the prototype adds churn with no benefit.
+features/*/handoff/
 package-lock.json
 # Frozen history: retired plans, handoffs, and specs kept for the record, not
 # current truth. Reflowing them adds churn with no benefit.

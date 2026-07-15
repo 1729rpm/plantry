@@ -73,12 +73,12 @@ export const getExploreFeed = query({
       catalog,
     });
 
-    // Decision 9: hide dishes already placed in the current week or queued for
-    // next, so the tab keeps its "new on the plate" promise. Placed = any dish
-    // id appearing in a current-week slot for `weekStart`; queued = any dish id
-    // on a `queued` nextWeekQueue row (the queue is week-agnostic until a
-    // generation run consumes it, so all queued rows are excluded). Both reads
-    // are server-side so the wire payload is already trimmed.
+    // Decision 9: hide dishes already placed in the current week, so the tab keeps
+    // its "new on the plate" promise. Placed = any dish id appearing in a
+    // current-week slot for `weekStart`. The read is server-side so the wire payload
+    // is already trimmed. (The retired next-week queue exclusion is gone with the
+    // queue itself, `features/wishlist-favorites-v2` §5; the wishlist never hides an
+    // Explore dish.)
     const week = await ctx.db
       .query("currentWeek")
       .withIndex("by_weekStart", (q) => q.eq("weekStart", args.weekStart))
@@ -91,11 +91,6 @@ export const getExploreFeed = query({
         }
       }
     }
-    const queued = await ctx.db
-      .query("nextWeekQueue")
-      .withIndex("by_status", (q) => q.eq("status", "queued"))
-      .collect();
-    for (const row of queued) scheduled.add(row.dishId);
 
     return ranked
       .filter((entry) => !scheduled.has(entry.dish.id))
