@@ -198,7 +198,10 @@ export function useFavorites(
           return; // prune effect drops the marker when the query settles
         }
         // Already gone (a race): leave it hidden, the live query will agree.
-        if (result && (result.reason === "not-a-favorite" || result.reason === "no-such-row")) {
+        if (
+          result &&
+          (result.reason === "not-a-favorite" || result.reason === "no-such-favorite")
+        ) {
           return;
         }
         revertHidden(row._id);
