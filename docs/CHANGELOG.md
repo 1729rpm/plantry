@@ -15,6 +15,30 @@ work queue for /reconcile-docs and /reconcile-ops; or "none".
 
 ---
 
+## 2026-07-15  Retire the next-week signal from the slow loop (Phase 7 close-out)
+
+The slow-loop pipeline drops the retired `nextWeekQueue` signal (#225): the mark-applied
+script stops parsing and dropping queue ids, and `MAINTENANCE.md`, the `/slow-loop`
+command brief, and the test fixtures no longer list next-week saves as an input channel.
+This follows the app-side and backend removal (#222, #223) and closes out Phase 7 (the
+spec is archived, the PLAN row is shipped, the tag is `phase-7-complete`).
+Why: #223 removed the `nextWeekQueue` table and its mutations, leaving the slow-loop
+script calling a deleted function and the ops docs describing a channel that no longer
+exists.
+Updated: none (the operational docs are brought current in this PR).
+
+## 2026-07-15  Drop the transitional next-week schema (Phase 7)
+
+The transitional next-week scaffolding is removed (#224): the `nextWeekQueue` table, the
+`save_next_week` `manualChanges.changeKind` literal, the three inert no-op stubs
+(`saveForNextWeek`, `removeFromNextWeekQueue`, `listQueuedNextWeek`), and the spent
+`migrations.ts` wipe. The deploy validates because production carries no `nextWeekQueue`
+rows and no `save_next_week` changes (the #223 wipe migration ran to zero).
+Why: #223 kept the table and enum for one release so the wipe migration could run
+against a schema that still defined them; with prod clean, the definitions are dead.
+Updated: docs/engineering.md §3 (the Convex schema sketch still lists nextWeekQueue) is
+stale; name it.
+
 ## 2026-07-15  Yours tab: wishlist, favorites, profile sheet (Phase 7)
 
 The Changes tab becomes a Yours tab (#222) holding two shared household lists:
