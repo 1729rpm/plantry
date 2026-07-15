@@ -319,7 +319,9 @@ function ExploreCard({
       <button
         type="button"
         className="explore-card__heart"
-        aria-label={wishlisted ? `Remove ${entry.name} from wishlist` : `Add ${entry.name} to wishlist`}
+        aria-label={
+          wishlisted ? `Remove ${entry.name} from wishlist` : `Add ${entry.name} to wishlist`
+        }
         aria-pressed={wishlisted}
         onClick={onToggleWishlist}
       >

@@ -96,7 +96,13 @@ export function YoursScreen({ identity }: YoursScreenProps) {
     setOverlay({ kind: "use-day", dishId, name });
   }
 
-  async function handleUse(reason: string, dishId: number, name: string, day: ShortDay, meal: Meal) {
+  async function handleUse(
+    reason: string,
+    dishId: number,
+    name: string,
+    day: ShortDay,
+    meal: Meal,
+  ) {
     if (inFlight || !week) return;
     setInFlight(true);
     setActionError(null);
@@ -140,7 +146,9 @@ export function YoursScreen({ identity }: YoursScreenProps) {
       <div className="yours__body">
         <section>
           <SectionLabel>Your favorites</SectionLabel>
-          <Card className={`yours__card${favoriteRows && favoriteRows.length ? "" : " yours__card--empty"}`}>
+          <Card
+            className={`yours__card${favoriteRows && favoriteRows.length ? "" : " yours__card--empty"}`}
+          >
             {favoriteRows === undefined ? (
               <div className="yours__empty">Loading favorites...</div>
             ) : favoriteRows.length === 0 ? (
@@ -176,7 +184,9 @@ export function YoursScreen({ identity }: YoursScreenProps) {
 
         <section>
           <SectionLabel>Your wishlist</SectionLabel>
-          <Card className={`yours__card${wishlistRows && wishlistRows.length ? "" : " yours__card--empty"}`}>
+          <Card
+            className={`yours__card${wishlistRows && wishlistRows.length ? "" : " yours__card--empty"}`}
+          >
             {wishlistRows === undefined ? (
               <div className="yours__empty">Loading wishlist...</div>
             ) : wishlistRows.length === 0 ? (

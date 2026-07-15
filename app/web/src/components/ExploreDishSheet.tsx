@@ -70,10 +70,7 @@ export function ExploreDishSheet({
         <PrimaryButton className="explore-sheet__action-use" onClick={onUseThisWeek}>
           Use this week
         </PrimaryButton>
-        <QuietButton
-          className="explore-sheet__action-wishlist"
-          onClick={onToggleWishlist}
-        >
+        <QuietButton className="explore-sheet__action-wishlist" onClick={onToggleWishlist}>
           {wishlisted ? "Wishlisted ✓" : "Add to wishlist"}
         </QuietButton>
       </div>

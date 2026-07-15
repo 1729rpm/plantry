@@ -46,10 +46,7 @@ export function wishlistRemovedToast(dishName: string): string {
   return `Removed ${dishName} from your wishlist`;
 }
 
-export function useWishlist(
-  identity: Identity,
-  showToast: (message: string) => void,
-): WishlistApi {
+export function useWishlist(identity: Identity, showToast: (message: string) => void): WishlistApi {
   const rows = useQuery(anyApi.queries.wishlist.listWishlist, {}) as WishlistRow[] | undefined;
   const add = useMutation(anyApi.wishlist.addToWishlist);
   const remove = useMutation(anyApi.wishlist.removeFromWishlist);

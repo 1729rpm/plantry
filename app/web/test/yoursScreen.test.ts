@@ -7,10 +7,7 @@ import {
   favoriteName,
 } from "../src/components/YoursScreen.js";
 import type { FavoriteRow } from "../src/lib/useFavorites.js";
-import {
-  wishlistAddedToast,
-  wishlistRemovedToast,
-} from "../src/lib/useWishlist.js";
+import { wishlistAddedToast, wishlistRemovedToast } from "../src/lib/useWishlist.js";
 
 // The Yours tab's pure display logic and the pinned copy. Live behaviour
 // (subscriptions, optimistic add/remove, the Use flow) is exercised by the
@@ -18,9 +15,7 @@ import {
 
 describe("empty-state copy", () => {
   it("matches the handoff wording exactly", () => {
-    expect(FAVORITES_EMPTY).toBe(
-      "No favorites yet. A favorite gets a place in every week's menu.",
-    );
+    expect(FAVORITES_EMPTY).toBe("No favorites yet. A favorite gets a place in every week's menu.");
     expect(WISHLIST_EMPTY).toBe(
       "Nothing on the wishlist. Mark a dish from Explore or any dish page.",
     );
@@ -71,8 +66,6 @@ describe("favoriteName", () => {
 describe("wishlist toast copy", () => {
   it("confirms an add and a remove with the dish name", () => {
     expect(wishlistAddedToast("Chana masala")).toBe("Chana masala is on your wishlist");
-    expect(wishlistRemovedToast("Chana masala")).toBe(
-      "Removed Chana masala from your wishlist",
-    );
+    expect(wishlistRemovedToast("Chana masala")).toBe("Removed Chana masala from your wishlist");
   });
 });

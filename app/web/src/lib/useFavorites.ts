@@ -50,9 +50,7 @@ export function useFavorites(
   identity: Identity,
   showToast: (message: string) => void,
 ): FavoritesApi {
-  const rawRows = useQuery(anyApi.queries.favorites.listFavorites, {}) as
-    | FavoriteRow[]
-    | undefined;
+  const rawRows = useQuery(anyApi.queries.favorites.listFavorites, {}) as FavoriteRow[] | undefined;
   const addFavorite = useMutation(anyApi.favorites.addFavorite);
   const addCustomFavorite = useMutation(anyApi.favorites.addCustomFavorite);
   const removeFavorite = useMutation(anyApi.favorites.removeFavorite);
@@ -66,9 +64,7 @@ export function useFavorites(
   const liveLibraryIds = useMemo(
     () =>
       new Set(
-        (rawRows ?? [])
-          .filter((r) => typeof r.dishId === "number")
-          .map((r) => r.dishId as number),
+        (rawRows ?? []).filter((r) => typeof r.dishId === "number").map((r) => r.dishId as number),
       ),
     [rawRows],
   );
