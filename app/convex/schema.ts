@@ -140,11 +140,10 @@ export default defineSchema({
     createdAt: v.number(),
     author: v.union(v.literal("rajat"), v.literal("tuhina")),
     weekStart: v.string(), // ISO date of the Monday, mirrors currentWeek.weekStart
-    // Optional because some change kinds have no natural day. A `save_next_week`
-    // targets next week (not a day of this week), so it omits `day` entirely
-    // rather than carrying a non-semantic placeholder. Day-scoped kinds (swap,
-    // custom, delete, add, skip_day, restore_day) still set it. Loosening
-    // required->optional is additive: existing rows all carry `day` and validate.
+    // Optional at the schema level. Every current change kind (swap, custom,
+    // delete, add, skip_day, restore_day) sets it, but the field stays loose so
+    // pre-existing rows all validate; tightening it to required would be a
+    // breaking change with no benefit.
     day: v.optional(
       v.union(
         v.literal("Mon"),
@@ -155,9 +154,9 @@ export default defineSchema({
         v.literal("Sat"),
       ),
     ),
-    // Optional because day-level kinds (skip_day, restore_day, save_next_week)
-    // are not scoped to a single (meal, position). Loosening required->optional
-    // is additive: existing swap/custom rows still carry both and validate.
+    // Optional because day-level kinds (skip_day, restore_day) are not scoped to
+    // a single (meal, position). Loosening required->optional is additive:
+    // existing swap/custom rows still carry both and validate.
     // "fruit" is the swap target for the Fruit of the day (docs/engine.md §3.3);
     // widening the union is additive (existing rows carry breakfast/lunch).
     meal: v.optional(v.union(v.literal("breakfast"), v.literal("lunch"), v.literal("fruit"))),
@@ -169,11 +168,6 @@ export default defineSchema({
       v.literal("add"),
       v.literal("skip_day"),
       v.literal("restore_day"),
-      // DEPRECATED (`features/wishlist-favorites-v2` §5): no mutation writes this
-      // kind anymore. The literal stays for exactly one release so existing
-      // `save_next_week` rows still validate until `migrations:wipeNextWeekData`
-      // deletes them; the follow-up PR then drops it from this union.
-      v.literal("save_next_week"),
     ),
     // before/after carry the pick state on either side of the change. For `add`
     // the before is a null entry; for `delete` the after is a null entry. Day-level
@@ -200,29 +194,12 @@ export default defineSchema({
     .index("by_status", ["status"])
     .index("by_weekStart", ["weekStart"]),
 
-  // DEPRECATED, retained transitionally (`features/wishlist-favorites-v2` §5).
-  // "Save for next week" is retired: no code writes or reads this table anymore.
-  // The definition stays for exactly one release so the `migrations:wipeNextWeekData`
-  // mutation can query and delete the rows before the follow-up PR drops the table
-  // (Convex refuses to drop a non-empty table, and a mutation cannot query a table
-  // absent from the schema). Runbook: deploy this PR, run the wipe against prod, then
-  // the follow-up PR removes this table, the `save_next_week` changeKind, and the
-  // migration. Until then it is dead weight, never written.
-  nextWeekQueue: defineTable({
-    createdAt: v.number(),
-    author: v.union(v.literal("rajat"), v.literal("tuhina")),
-    dishId: v.number(),
-    reason: v.string(),
-    status: v.union(v.literal("queued"), v.literal("placed"), v.literal("dropped")),
-    consumedWeekStart: v.union(v.string(), v.null()), // ISO Monday once placed; null while queued
-  }).index("by_status", ["status"]),
-
   // Dishes the user disliked from the Explore tab. A dislike is a slow-loop input
   // only, never a change to the current week, so it lives in its own table and is
-  // NOT a `manualChanges` kind (Decision #12). Parallel in shape to
-  // `nextWeekQueue`. Rows are written `queued` by `dislikeDish` and read by the
-  // slow loop, which clusters them and may deactivate or down-rank a dish under
-  // right-size discipline; the loop marks consumed rows `applied` or `dismissed`.
+  // NOT a `manualChanges` kind (Decision #12). Rows are written `queued` by
+  // `dislikeDish` and read by the slow loop, which clusters them and may deactivate
+  // or down-rank a dish under right-size discipline; the loop marks consumed rows
+  // `applied` or `dismissed`.
   // The fast loop never acts on a dislike: no re-rank, no auto-hide (Principle 5).
   // `reason` is OPTIONAL (a dislike is a lightweight tap, unlike Decision #8's
   // required save-reason); `consumedWeekStart` is null until the slow loop
