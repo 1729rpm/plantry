@@ -21,9 +21,9 @@ surfaces the mismatch before any code is written.
 | 4     | Menu composition v2                   | Meal-level cuisine, 4-item thali, and the role-aware cap compose the generated week                                                                                                      | shipped  |
 | 5     | Engine v3                             | Generated lunches compose one-wet, budget-fit, protein-floored plates with main-driven carbs                                                                                             | shipped  |
 | 6     | Wishlist page and favorites frequency | Favorites and the next-week queue are visible and editable in the app, and favorites surface about weekly in generation                                                                  | shipped  |
-| 7     | Yours tab (wishlist and favorites v2) | A Yours tab holds the household's wishlist and favorites, favorites are guaranteed into every generated week, the profile sheet carries the Changes log, and the next-week queue is gone | building |
+| 7     | Yours tab (wishlist and favorites v2) | A Yours tab holds the household's wishlist and favorites, favorites are guaranteed into every generated week, the profile sheet carries the Changes log, and the next-week queue is gone | shipped |
 
-Phase 7 is in flight (`features/wishlist-favorites-v2/spec.md`). Future phases are
+No phase is in flight. Future phases are
 added here when they are planned, not
 before. On phase close the row flips to shipped, the spec moves to
 `archive/features/`, and the close is tagged `phase-<n>-complete`
