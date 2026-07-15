@@ -4,7 +4,7 @@
 // this identical body: the Menu-tab DishDetailSheet, the Explore feed's
 // ExploreDishSheet, and the swap picker's replace-confirm view. It owns no
 // actions and no mutations: callers pass the dish and render their own action
-// buttons (Replace/Remove, Use this week/Next week, Replace dish) below it.
+// buttons (Replace/Remove, Use this week/Add to wishlist, Replace dish) below it.
 //
 // Variations between surfaces are passed as props, not branched here:
 //   - `metaSuffix`: extra text after the meal label in the meta line (Explore

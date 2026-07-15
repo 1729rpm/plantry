@@ -27,7 +27,7 @@ interface ManualChangeRow {
   author: Identity;
   weekStart: string;
   day?: ShortDay;
-  changeKind: "swap" | "custom" | "delete" | "add" | "skip_day" | "restore_day" | "save_next_week";
+  changeKind: "swap" | "custom" | "delete" | "add" | "skip_day" | "restore_day";
   before: { dishId: number | null; customLabel: string | null };
   after: { dishId: number | null; customLabel: string | null };
   reason: string;
@@ -103,8 +103,6 @@ function changeHeadline(row: ManualChangeRow): string {
       return row.day ? `Skipped ${dayLabel(row.day)}` : "Skipped a day";
     case "restore_day":
       return row.day ? `Restored ${dayLabel(row.day)}` : "Restored a day";
-    case "save_next_week":
-      return `Saved ${pickName(row.after)} for next week`;
     default:
       return "Changed the menu";
   }
@@ -212,11 +210,11 @@ export function changesSubtitle(count: number): string {
 // "3 swaps, 1 skip this week". Counts the manualChanges feed only (comments are
 // feedback, not edits to the menu). Adds and custom one-offs both read as
 // "added"; swaps as "swaps"; deletes as "removed"; skip/restore as "skips" /
-// "restores"; saves as "saved for next week". Returns the empty-state string
-// when there are no changes. No internal label leaks (Principle 7).
+// "restores". Returns the empty-state string when there are no changes. No
+// internal label leaks (Principle 7).
 export function deriveSummaryLine(changes: ManualChangeRow[]): string {
   if (changes.length === 0) return "No changes this week yet";
-  const counts = { swap: 0, added: 0, removed: 0, skip: 0, restore: 0, saved: 0 };
+  const counts = { swap: 0, added: 0, removed: 0, skip: 0, restore: 0 };
   for (const row of changes) {
     switch (row.changeKind) {
       case "swap":
@@ -235,9 +233,6 @@ export function deriveSummaryLine(changes: ManualChangeRow[]): string {
       case "restore_day":
         counts.restore += 1;
         break;
-      case "save_next_week":
-        counts.saved += 1;
-        break;
     }
   }
   const parts: string[] = [];
@@ -247,12 +242,11 @@ export function deriveSummaryLine(changes: ManualChangeRow[]): string {
   if (counts.removed) parts.push(plural(counts.removed, "dish deleted", "dishes deleted"));
   if (counts.skip) parts.push(plural(counts.skip, "skip", "skips"));
   if (counts.restore) parts.push(plural(counts.restore, "restore", "restores"));
-  if (counts.saved) parts.push(`${counts.saved} saved for next week`);
   if (parts.length === 0) return "No changes this week yet";
   return `${parts.join(", ")} this week`;
 }
 
-function FeedEntryCard({ entry }: { entry: FeedEntry }) {
+export function FeedEntryCard({ entry }: { entry: FeedEntry }) {
   return (
     <Card className="change-entry">
       <Avatar who={entry.author} size={28} />
@@ -267,7 +261,18 @@ function FeedEntryCard({ entry }: { entry: FeedEntry }) {
   );
 }
 
-export function ChangesScreen() {
+// The live changes feed for the current week: the two Convex subscriptions
+// (manualChanges + queued comments) folded into a newest-first feed, plus the
+// loading flag and the this-week menu-edit count. The Changes tab is gone; this
+// feed now renders inside the Profile's Changes-log sheet (ChangesLogSheet), so
+// the query wiring lives in a hook both the sheet and any future surface reuse.
+export interface ChangesFeed {
+  feed: FeedEntry[];
+  loading: boolean;
+  count: number;
+}
+
+export function useChangesFeed(): ChangesFeed {
   const week = useQuery(anyApi.queries.week.getCurrentWeek, {}) as CurrentWeek | null | undefined;
   const weekStart = week?.weekStart;
 
@@ -286,32 +291,7 @@ export function ChangesScreen() {
     return buildFeed(changes ?? [], comments ?? [], weekStart);
   }, [changes, comments, weekStart]);
 
-  const loading = week === undefined || (weekStart && changes === undefined);
+  const loading = week === undefined || (weekStart !== undefined && changes === undefined);
 
-  // The subtitle leads with the count of this week's menu edits (the
-  // manualChanges feed), falling back to the quiet zero-state line at zero.
-  const subtitle = changesSubtitle(changeCount(changes ?? []));
-
-  return (
-    <div className="screen__scroll">
-      <div className="screen__header">
-        <h1 className="screen__title">Changes</h1>
-        <div className="screen__subtitle">{subtitle}</div>
-      </div>
-      {loading ? (
-        <div className="empty-state">Loading changes...</div>
-      ) : feed.length === 0 ? (
-        <div className="empty-state">
-          <div className="empty-state__title">No changes yet</div>
-          The week is as the menu was made. Every edit, with who made it and why, shows up here.
-        </div>
-      ) : (
-        <div className="screen__list">
-          {feed.map((entry) => (
-            <FeedEntryCard key={entry.key} entry={entry} />
-          ))}
-        </div>
-      )}
-    </div>
-  );
+  return { feed, loading, count: changeCount(changes ?? []) };
 }

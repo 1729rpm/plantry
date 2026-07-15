@@ -150,9 +150,9 @@ export function MetaTag({ label }: { label: string }) {
   return <span className="meta-tag">{label}</span>;
 }
 
-export type TabKey = "Menu" | "Grocery" | "Explore" | "Changes";
+export type TabKey = "Menu" | "Grocery" | "Explore" | "Yours";
 
-const TABS: TabKey[] = ["Menu", "Grocery", "Explore", "Changes"];
+const TABS: TabKey[] = ["Menu", "Grocery", "Explore", "Yours"];
 
 // Minimal single-stroke line icons, one per tab. Inline SVG (no icon library, per
 // engineering.md §1). Each inherits the tab button's color via currentColor:
@@ -209,8 +209,11 @@ const TAB_ICONS: Record<TabKey, ReactNode> = {
       <path d="m14.2 7.8-1.7 4.7-4.7 1.7 1.7-4.7 4.7-1.7Z" />
     </svg>
   ),
-  // Changes: a two-arrow swap (in-week dish swaps + queued changes).
-  Changes: (
+  // Yours: a heart (the household's favorites + wishlist). Kept at the 1.5
+  // stroke of its three siblings so the tab-icon family reads as one set (the
+  // handoff draws every tab icon a touch heavier at 1.7; matching the live
+  // siblings wins here).
+  Yours: (
     <svg
       className="tab-bar__icon"
       viewBox="0 0 22 22"
@@ -221,7 +224,7 @@ const TAB_ICONS: Record<TabKey, ReactNode> = {
       strokeLinejoin="round"
       aria-hidden="true"
     >
-      <path d="M5 8h10l-2.5-2.5M17 14H7l2.5 2.5" />
+      <path d="M11 18.5C11 18.5 3.5 14 3.5 8.75A3.75 3.75 0 0 1 11 6.5a3.75 3.75 0 0 1 7.5 2.25C18.5 14 11 18.5 11 18.5Z" />
     </svg>
   ),
 };
@@ -229,18 +232,20 @@ const TAB_ICONS: Record<TabKey, ReactNode> = {
 export function TabBar({
   active,
   onTab,
-  changeCount = 0,
+  wishlistCount = 0,
 }: {
   active: TabKey;
   onTab: (tab: TabKey) => void;
-  // Count of this week's menu edits, shown as a badge on the Changes tab.
-  // Hidden at zero, so a quiet week shows the plain tab.
-  changeCount?: number;
+  // Count of dishes on the household wishlist, shown as a badge on the Yours
+  // tab. Hidden at zero, so an empty wishlist shows the plain tab. The
+  // unread-changes nudge is no longer here: it moved onto the Menu-header avatar
+  // when the Changes tab became the Yours tab.
+  wishlistCount?: number;
 }) {
   return (
     <nav className="tab-bar" aria-label="Primary">
       {TABS.map((tab) => {
-        const badge = tab === "Changes" && changeCount > 0 ? changeCount : 0;
+        const badge = tab === "Yours" && wishlistCount > 0 ? wishlistCount : 0;
         return (
           <button
             key={tab}
