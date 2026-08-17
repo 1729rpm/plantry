@@ -15,6 +15,26 @@ work queue for /reconcile-docs and /reconcile-ops; or "none".
 
 ---
 
+## 2026-08-17  The reason on a menu change is optional everywhere
+
+No edit to the week demands a written reason any more. The six mutations that still
+threw on an empty reason (`skipDay`, `restoreDay`, `deleteDish`, `addDish`,
+`addCustomOneOff`, `appendCustomDish`) now trim it and store `""` when none is given,
+matching what `swapDish` has done since June. The shared `ReasonDialog` that every one
+of those flows routes through keeps its submit button live with an empty field, reads
+"Why this change? (optional)", and no longer autofocuses the textarea, so the on-screen
+keyboard stops covering the confirm button for a field the user is free to skip. A
+skipped day with no reason renders no quote block on the day card and the day banner.
+The day-level "Note for the weekly review" composer still requires text: that note is
+not attached to a menu change and its text is the whole payload.
+Why: Rajat and Tuhina edit the week several times a week and a mandatory "why" on every
+swap, add, delete, and skip taxed the fast loop for a signal the slow loop reads only
+when it is genuinely offered. An optional reason still reaches `manualChanges`; a forced
+one produced filler.
+Updated: none (`docs/product.md` §2 and §6 and `docs/engineering.md` §3 and §7 are
+brought current in this PR). Pre-existing drift left alone, for `/reconcile-docs`: both
+docs still describe the retired save-for-next-week write and the `nextWeekQueue` table.
+
 ## 2026-08-17  Engine v4 falsified by simulation; phase reopens as v4.1
 
 The approved engine v4 spec is amended to v4.1 before any implementation starts (#226).

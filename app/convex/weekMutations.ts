@@ -53,6 +53,19 @@ const CAP_MEAL: Record<SlotMeal, CapMeal> = {
   fruit: "Fruit",
 };
 
+// The archive's coarser placement source (`features/engine-v4.md` §10.5, §10.7).
+// The live pick distinguishes a swap from a custom one-off because the slow loop
+// attributes them differently; the archive does not, because both answer the one
+// question its readers ask ("did a human put this here"). Keyed by the exhaustive
+// live source union, so adding a live source forces an entry here at compile time
+// rather than archiving under a missing key at runtime.
+type ArchiveSource = "generated" | "hand";
+const ARCHIVE_SOURCE: Record<DishPickShape["source"], ArchiveSource> = {
+  generated: "generated",
+  swapped: "hand",
+  custom: "hand",
+};
+
 /**
  * Replaces one position within one (day, meal) slot of `currentWeek` with a
  * custom one-off label (a free-text dish that is not in the library).
@@ -67,7 +80,7 @@ const CAP_MEAL: Record<SlotMeal, CapMeal> = {
  *     position: number,                      // 0-based within slot.dishes
  *     customLabel: string,
  *     version: number,                       // optimistic concurrency from caller
- *     reason: string,                        // required, trimmed
+ *     reason: string,                        // optional, trimmed; may be empty
  *   }) => { ok: true; version: number }
  *      | { ok: false; reason: "version-mismatch" | "no-current-week"
  *                           | "no-such-slot" | "no-such-position" }
@@ -75,7 +88,8 @@ const CAP_MEAL: Record<SlotMeal, CapMeal> = {
  * Behavior:
  *   - Validates `author` via `assertAuthor`; rejects with a `ConvexError` otherwise.
  *   - Trims `customLabel`; rejects with a `ConvexError` if empty.
- *   - Trims `reason`; empty -> ConvexError("reason must not be empty after trimming").
+ *   - Trims `reason`; an empty reason is allowed and stored as "" (every fast-loop
+ *     edit makes the reason optional).
  *   - Looks up the `currentWeek` row by `weekStart` via the `by_weekStart` index.
  *     Missing row -> { ok: false, reason: "no-current-week" }.
  *   - If `row.version !== args.version` -> { ok: false, reason: "version-mismatch" }.
@@ -125,10 +139,9 @@ export const addCustomOneOff = mutation({
     if (trimmedLabel.length === 0) {
       throw new ConvexError("customLabel must not be empty after trimming");
     }
+    // The reason is optional on every fast-loop edit (Decision #8 amended): an
+    // empty reason is stored as "" and the Changes feed simply shows no note.
     const trimmedReason = args.reason.trim();
-    if (trimmedReason.length === 0) {
-      throw new ConvexError("reason must not be empty after trimming");
-    }
 
     const week = await ctx.db
       .query("currentWeek")
@@ -217,7 +230,7 @@ export const addCustomOneOff = mutation({
  *     meal: "breakfast" | "lunch",           // fruit is category-locked, no custom dish
  *     customLabel: string,
  *     version: number,                       // optimistic concurrency from caller
- *     reason: string,                        // required, trimmed
+ *     reason: string,                        // optional, trimmed; may be empty
  *   }) => { ok: true; version: number; position: number }
  *      | { ok: false; reason: "version-mismatch" | "no-current-week"
  *                           | "no-such-slot" }
@@ -225,7 +238,8 @@ export const addCustomOneOff = mutation({
  * Behavior mirrors `addDish` and `addCustomOneOff`:
  *   - Validates `author` via `assertAuthor`; rejects with a `ConvexError` otherwise.
  *   - Trims `customLabel`; empty -> ConvexError("customLabel must not be empty after trimming").
- *   - Trims `reason`; empty -> ConvexError("reason must not be empty after trimming").
+ *   - Trims `reason`; an empty reason is allowed and stored as "" (every fast-loop
+ *     edit makes the reason optional).
  *   - Looks up `currentWeek` by `weekStart`; missing -> { ok: false, reason: "no-current-week" }.
  *   - Optimistic version check; mismatch -> { ok: false, reason: "version-mismatch" }.
  *   - Locates the `(day, meal)` slot; missing -> { ok: false, reason: "no-such-slot" }.
@@ -274,10 +288,9 @@ export const appendCustomDish = mutation({
     if (trimmedLabel.length === 0) {
       throw new ConvexError("customLabel must not be empty after trimming");
     }
+    // The reason is optional on every fast-loop edit (Decision #8 amended): an
+    // empty reason is stored as "" and the Changes feed simply shows no note.
     const trimmedReason = args.reason.trim();
-    if (trimmedReason.length === 0) {
-      throw new ConvexError("reason must not be empty after trimming");
-    }
 
     const week = await ctx.db
       .query("currentWeek")
@@ -429,6 +442,7 @@ export const finalizeWeek = mutation({
       meal: CapMeal;
       dishName: string;
       dishId: number;
+      source: ArchiveSource;
     }[] = [];
     for (const slot of week.slots as SlotShape[]) {
       if (skipped.has(slot.day)) continue;
@@ -441,6 +455,7 @@ export const finalizeWeek = mutation({
           meal: CAP_MEAL[slot.meal],
           dishName,
           dishId: pick.dishId,
+          source: ARCHIVE_SOURCE[pick.source],
         });
       }
     }

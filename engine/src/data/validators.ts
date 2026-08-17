@@ -192,6 +192,169 @@ export function validateIngredientNamesResolve(
 }
 
 /**
+ * Categories a `pairsWith` PARTNER may carry: the union of the categories every
+ * companion position pool in `engine/src/composition.ts` can hold. The Indian
+ * plate's companion pool takes Gravy dish, Dry dish and Accompaniment; the
+ * standalone plate's protein side takes HP-or-Keto (so Keto too); Saturday's
+ * third item takes Accompaniment or Dessert.
+ *
+ * Everything else is a category NO companion position can hold, so a partner
+ * carrying one can never be placed: Chapati and Rice are the carb position (which
+ * `carbAffinity` picks, not rule 7), Bread has no lunch position pool at all,
+ * Complete meal and the breakfast categories lead their own slot rather than
+ * companion one, and Fruit sits outside lunch composition entirely.
+ *
+ * Held here rather than imported from `composition.ts` deliberately: this is the
+ * validator's own statement of what the composition rules can place, so a
+ * composition change that narrows a pool cannot silently make a shipped pair
+ * legal-looking. The §13 parity rule keeps the two honest.
+ */
+const PAIRS_WITH_PARTNER_CATEGORIES: ReadonlySet<string> = new Set([
+  "Gravy dish",
+  "Dry dish",
+  "Accompaniment",
+  "Keto",
+  "Dessert",
+]);
+
+/**
+ * True when a dish can occupy a LEAD position, the only position from which
+ * rule 7 ever fires. The lead pools are: an Indian plate's HP-or-Keto protein
+ * lead, a standalone plate's complete-meal or non-Indian anchor lead, and
+ * Saturday's complete-meal lead. A dish outside all three (a plain dal, a plain
+ * sabzi, a carb) is only ever a companion itself, so a `pairsWith` list on it is
+ * data that can never fire.
+ */
+function canLeadALunch(dish: Dish): boolean {
+  if (dish.time !== "Lunch") return false;
+  if (dish.tags.includes("HP")) return true;
+  if (dish.category === "Keto") return true;
+  if (dish.category === "Complete meal" || dish.tags.includes("complete_meal")) return true;
+  // Non-Indian anchor of the standalone plate. The anchor categories are
+  // Gravy/Dry/Keto/Complete meal; Keto and Complete meal already returned true
+  // above (they lead regardless of cuisine), so only these two remain.
+  return dish.cuisine !== "Indian" && (dish.category === "Gravy dish" || dish.category === "Dry dish");
+}
+
+/** The seasons a dish is eligible in, expanded from the `All` shorthand. */
+function seasonSet(dish: Dish): ReadonlySet<Season> {
+  if (dish.seasons === "All") return new Set(ALL_SEASONS);
+  return new Set(dish.seasons);
+}
+
+/**
+ * The blocking gate on `pairsWith` (`features/engine-v4.md` §10.3 rule 7), the
+ * same class as `validateIngredientNamesResolve`.
+ *
+ * Name resolution alone is NOT enough, and its absence is the defect this exists
+ * to prevent: five of the six original seed pairs were written from the eaten
+ * record without checking them against the composition rules, every one of them
+ * resolved to a real dish, and every one was unplaceable. The one that logged an
+ * error every week it fired (`soya chunks masala + vegetable korma`) named two
+ * Gravy dishes, which plate rule 1 forbids outright. So this validator rejects a
+ * pair the composition rules can never place, not merely a name that fails to
+ * resolve:
+ *
+ * (a) the name resolves to exactly one library dish (unresolved or ambiguous
+ *     both fail);
+ * (b) the list holds no duplicate and no self-reference;
+ * (c) the lead can actually occupy a lead position, since rule 7 fires nowhere
+ *     else (`canLeadALunch`);
+ * (d) the partner is Active and is a Lunch dish (companion pools are lunch pools);
+ * (e) the partner's category is one a companion position pool can hold
+ *     (`PAIRS_WITH_PARTNER_CATEGORIES`);
+ * (f) plate rule 1, one gravy per lunch, hard and with no fallback: a Gravy lead
+ *     may not name a Gravy partner;
+ * (g) the two share at least one season, or they can never be eligible together.
+ *
+ * What it deliberately does NOT check: the within-week and 7-day recency rules,
+ * which are per-week state rather than properties of the pair, and the item and
+ * time budgets, which depend on the rest of the day. Rule 7's own precedence
+ * (never over the one-gravy rule, never over the exploration slot, never over
+ * within-week no-repeat) governs those at composition time.
+ */
+export function validatePairsWithResolve(files: DishFile[]): void {
+  const byName = new Map<string, Dish[]>();
+  for (const f of files) {
+    const list = byName.get(f.dish.name) ?? [];
+    list.push(f.dish);
+    byName.set(f.dish.name, list);
+  }
+
+  const problems: string[] = [];
+  for (const f of files) {
+    const lead = f.dish;
+    const names = lead.pairsWith;
+    if (names === undefined) continue;
+
+    const ref = `dish ${lead.id} ("${lead.name}")`;
+    if (!canLeadALunch(lead)) {
+      problems.push(
+        `${ref}: has pairsWith but can never occupy a lead position (time=${lead.time}, category=${lead.category}, tags=[${lead.tags.join(", ")}], cuisine=${lead.cuisine}), so rule 7 could never fire`,
+      );
+    }
+
+    const seen = new Set<string>();
+    for (const name of names) {
+      if (seen.has(name)) {
+        problems.push(`${ref}: pairsWith names "${name}" more than once`);
+        continue;
+      }
+      seen.add(name);
+
+      if (name === lead.name) {
+        problems.push(`${ref}: pairsWith names itself`);
+        continue;
+      }
+
+      const matches = byName.get(name);
+      if (matches === undefined) {
+        problems.push(`${ref}: pairsWith name "${name}" does not resolve to a library dish`);
+        continue;
+      }
+      if (matches.length > 1) {
+        problems.push(
+          `${ref}: pairsWith name "${name}" is ambiguous, it resolves to ${matches.length} dishes (ids ${matches.map((d) => d.id).join(", ")})`,
+        );
+        continue;
+      }
+      const partner = matches[0];
+
+      if (partner.active !== "Yes") {
+        problems.push(`${ref}: pairsWith partner "${name}" is inactive, so it can never be placed`);
+      }
+      if (partner.time !== "Lunch") {
+        problems.push(
+          `${ref}: pairsWith partner "${name}" is a ${partner.time} dish; companion position pools are lunch pools`,
+        );
+      }
+      if (!PAIRS_WITH_PARTNER_CATEGORIES.has(partner.category)) {
+        problems.push(
+          `${ref}: pairsWith partner "${name}" is Category=${partner.category}, which no companion position pool can hold (holdable: ${Array.from(PAIRS_WITH_PARTNER_CATEGORIES).sort().join(", ")})`,
+        );
+      }
+      if (lead.category === "Gravy dish" && partner.category === "Gravy dish") {
+        problems.push(
+          `${ref}: pairsWith partner "${name}" is a second Gravy dish, which plate rule 1 (one gravy per lunch, hard, no fallback) forbids`,
+        );
+      }
+      const leadSeasons = seasonSet(lead);
+      const partnerSeasons = seasonSet(partner);
+      const overlap = Array.from(leadSeasons).some((s) => partnerSeasons.has(s));
+      if (!overlap) {
+        problems.push(
+          `${ref}: pairsWith partner "${name}" shares no season with the lead (lead ${JSON.stringify(lead.seasons)}, partner ${JSON.stringify(partner.seasons)}), so the two are never eligible together`,
+        );
+      }
+    }
+  }
+
+  if (problems.length > 0) {
+    throw new Error(`validatePairsWithResolve: ${problems.join(" | ")}`);
+  }
+}
+
+/**
  * Per-file round-trip gate: re-serializing a parsed dish file reproduces the
  * on-disk bytes exactly. Run by the round-trip test against every file on disk.
  */

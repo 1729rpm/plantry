@@ -12,6 +12,7 @@ import {
   validateCatalogGroups,
   validateDishFiles,
   validateIngredientNamesResolve,
+  validatePairsWithResolve,
   validateMenuHistoryAgainstLibrary,
   validatePackSizesUsed,
 } from "../src/data/validators.js";
@@ -119,6 +120,7 @@ export function bake(options: BakeOptions): BakeOutput {
   validateDishFiles(dishFiles);
   validateCatalogGroups(catalog);
   validateIngredientNamesResolve(dishFiles, catalog);
+  validatePairsWithResolve(dishFiles);
   validatePackSizesUsed(packSizes, ingredients);
   validateMenuHistoryAgainstLibrary(history, dishes);
 
