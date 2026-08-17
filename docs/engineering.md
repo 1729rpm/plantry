@@ -96,7 +96,7 @@ manualChanges                          # append-only log of user edits
   changeKind: "swap" | "custom" | "delete" | "add" | "skip_day" | "restore_day" | "save_next_week"
   before: { dishId: number | null, customLabel: string | null }
   after:  { dishId: number | null, customLabel: string | null }
-  reason: string                       # user-provided, non-empty after trim
+  reason: string                       # user-provided, optional; "" when none given
   status: "queued" | "in_review" | "applied" | "dismissed" | "reviewed_no_change"
   resolvedAt: number | null
   resolvedPr: string | null
@@ -127,7 +127,7 @@ dishDislikes                           # dishes disliked from Explore ("Not for 
   createdAt: number
   author: "rajat" | "tuhina"
   dishId: number                       # library dish id
-  reason: string | null                # optional, unlike the reason-required writes
+  reason: string | null                # optional, as on every reason-bearing write
   status: "queued" | "applied" | "dismissed"
   consumedWeekStart: string | null     # set once the slow loop consumes the row
 
@@ -202,9 +202,9 @@ Coverage is complete: every active dish carries a photo (a coverage report asser
 **Write (swap a dish):**
 
 1. Frontend optimistically updates the UI.
-2. Convex mutation `swapDish({ author, weekStart, day, meal, position, newDishId, reason, version })` validates: `version` matches the loaded version (optimistic concurrency); the (day, meal) slot exists and `position` is within `slot.dishes`; the new dish is in the library, is Active, and is in season; for a breakfast or lunch slot it must match the meal-time, and for a fruit slot it must be Category=Fruit instead; `reason` is non-empty after trim. Per `docs/product.md` §4 Principle 4 the fast loop stays permissive; §3 composition eligibility is not validated at swap time.
+2. Convex mutation `swapDish({ author, weekStart, day, meal, position, newDishId, reason, version })` validates: `version` matches the loaded version (optimistic concurrency); the (day, meal) slot exists and `position` is within `slot.dishes`; the new dish is in the library, is Active, and is in season; for a breakfast or lunch slot it must match the meal-time, and for a fruit slot it must be Category=Fruit instead. The `reason` is optional: it is trimmed and an empty one stores as "". Per `docs/product.md` §4 Principle 4 the fast loop stays permissive; §3 composition eligibility is not validated at swap time.
 3. On success the slot's `dishes[position]` updates to `{ dishId: newDishId, customLabel: null, source: "swapped", author, updatedAt: now }`, `version` increments, and a `manualChanges` row inserts in the same Convex transaction carrying the slot's pre-change `before`, the new `after`, the user's `reason`, `changeKind: "swap"`, and `status: "queued"`. The grocery list is re-derived by the engine on read.
-4. On failure the frontend rolls back. The tagged-union return distinguishes recoverable reasons (`version-mismatch`, `no-current-week`, `no-such-slot`, `no-such-position`, `dish-not-in-library`, `dish-not-meal-time`, `dish-not-fruit`, `dish-not-active-or-in-season`) the UI handles inline; `dish-not-fruit` is the fruit-slot analogue of `dish-not-meal-time`. Missing or empty `author` or `reason` throws.
+4. On failure the frontend rolls back. The tagged-union return distinguishes recoverable reasons (`version-mismatch`, `no-current-week`, `no-such-slot`, `no-such-position`, `dish-not-in-library`, `dish-not-meal-time`, `dish-not-fruit`, `dish-not-active-or-in-season`) the UI handles inline; `dish-not-fruit` is the fruit-slot analogue of `dish-not-meal-time`. A missing or empty `author` throws; an empty `reason` does not.
 
 **Write (custom dish):** A custom dish is a free-text dish that is not in the library. It can replace a position or be appended as an extra dish; both record `changeKind: "custom"` and feed the slow loop, which may promote a repeatedly requested custom dish into a library dish.
 
@@ -215,12 +215,12 @@ Coverage is complete: every active dish carries a photo (a coverage report asser
 **Write (delete a dish):**
 
 1. Frontend calls `deleteDish({ author, weekStart, day, meal, position, reason, version })`.
-2. Validates author, non-empty trimmed `reason`, version, slot, and position. Removes `slot.dishes[position]`, increments `version`, and inserts a `manualChanges` row with `changeKind: "delete"`, `before` = the removed pick, `after` = a null entry. Delete is permissive: it may leave the day below its composition shape (the share image simply shows fewer items). Recoverable reasons: `version-mismatch`, `no-current-week`, `no-such-slot`, `no-such-position`.
+2. Validates author, version, slot, and position (the `reason` is optional and trimmed). Removes `slot.dishes[position]`, increments `version`, and inserts a `manualChanges` row with `changeKind: "delete"`, `before` = the removed pick, `after` = a null entry. Delete is permissive: it may leave the day below its composition shape (the share image simply shows fewer items). Recoverable reasons: `version-mismatch`, `no-current-week`, `no-such-slot`, `no-such-position`.
 
 **Write (add a library dish to a day):**
 
 1. Frontend calls `addDish({ author, weekStart, day, meal, newDishId, reason, version })`.
-2. Validates author, non-empty trimmed `reason`, version, slot, and the dish (in library, meal-time, Active, in season; same hard filters as swap, no §3 composition check). Appends `{ dishId: newDishId, customLabel: null, source: "swapped", author, updatedAt: now }` to `slot.dishes`, increments `version`, and inserts a `manualChanges` row with `changeKind: "add"`, `before` = a null entry, `after` = the added dish. Returns the new `position`. Recoverable reasons: `version-mismatch`, `no-current-week`, `no-such-slot`, `dish-not-in-library`, `dish-not-meal-time`, `dish-not-active-or-in-season`.
+2. Validates author, version, slot, and the dish (the `reason` is optional and trimmed; the dish must be in the library, meal-time, Active, in season; same hard filters as swap, no §3 composition check). Appends `{ dishId: newDishId, customLabel: null, source: "swapped", author, updatedAt: now }` to `slot.dishes`, increments `version`, and inserts a `manualChanges` row with `changeKind: "add"`, `before` = a null entry, `after` = the added dish. Returns the new `position`. Recoverable reasons: `version-mismatch`, `no-current-week`, `no-such-slot`, `dish-not-in-library`, `dish-not-meal-time`, `dish-not-active-or-in-season`.
 
 **Write (skip / restore a day):**
 

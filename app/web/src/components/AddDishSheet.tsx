@@ -7,13 +7,13 @@
 // surface, and the chosen library dish routes to the slot its own meal-time
 // names, so there is NO destination control for library dishes. Cross-meal
 // placement of a library dish is done via Replace only (spec decision 1).
-// Picking a library dish opens the shared reason dialog.
+// Picking a library dish opens the shared confirm dialog (optional reason).
 //
 // A custom dish has no meal-time of its own, so the one destination point is
 // the custom path: when the day has both addable meals it shows a minimal
 // breakfast/lunch selector before the reason dialog; when only one meal is
 // addable (e.g. Saturday = lunch) it routes there with no selector. Both paths
-// require a reason (fast-loop edit) via the shared ReasonDialog.
+// confirm through the shared ReasonDialog, whose reason is optional.
 // Ported from the AddDishSheet overlay in design_handoff/hifi-overlays.jsx.
 
 import { useEffect, useMemo, useState } from "react";

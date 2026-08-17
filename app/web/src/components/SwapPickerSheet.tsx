@@ -8,8 +8,8 @@
 // "Replace dish" action and an OPTIONAL reason field: leaving the reason empty
 // still goes through (the product owner chose "Confirm + optional reason"). The
 // custom one-off path has no library dish to show, so it stays on the shared
-// ReasonDialog with a required reason. On submit either path calls its mutation
-// with the live version for optimistic concurrency. Ported from the
+// ReasonDialog, whose reason is optional too. On submit either path calls its
+// mutation with the live version for optimistic concurrency. Ported from the
 // SwapPickerSheet overlay in design_handoff/hifi-overlays.jsx. The ranking
 // lives in Convex, not here.
 
@@ -94,7 +94,7 @@ export function SwapPickerSheet({
   const [inFlight, setInFlight] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
   // Optional reason for the library replace-confirm view. The custom one-off
-  // path captures its (required) reason through ReasonDialog instead.
+  // path captures its (also optional) reason through ReasonDialog instead.
   const [reason, setReason] = useState<string>("");
 
   function backToPicker() {
@@ -260,8 +260,8 @@ export function SwapPickerSheet({
     );
   }
 
-  // Custom one-off: no library dish to preview, so the required-reason dialog
-  // stays the confirm surface.
+  // Custom one-off: no library dish to preview, so the shared confirm dialog
+  // (with its optional reason) stays the confirm surface.
   if (choice) {
     return (
       <ReasonDialog
