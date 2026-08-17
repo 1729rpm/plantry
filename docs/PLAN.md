@@ -22,6 +22,7 @@ surfaces the mismatch before any code is written.
 | 5     | Engine v3                             | Generated lunches compose one-wet, budget-fit, protein-floored plates with main-driven carbs                                                                                             | shipped |
 | 6     | Wishlist page and favorites frequency | Favorites and the next-week queue are visible and editable in the app, and favorites surface about weekly in generation                                                                  | shipped |
 | 7     | Yours tab (wishlist and favorites v2) | A Yours tab holds the household's wishlist and favorites, favorites are guaranteed into every generated week, the profile sheet carries the Changes log, and the next-week queue is gone | shipped |
+| 8     | Engine v4.1                           | Generated weeks pass the §10.8 verification gate: a 25-week self-feeding simulation plus three independent evaluations meet all seven acceptance thresholds                                | building |
 
 No phase is in flight. Future phases are
 added here when they are planned, not

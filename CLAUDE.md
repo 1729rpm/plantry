@@ -30,7 +30,7 @@ Read order by task:
 
 ## Currently building
 
-> _none_
+> `features/engine-v4.md` — Engine v4.1: frequency-first selection with a saturating count, simplified templates, and a whole-day prep-time budget. Build against §10; no stream merges until the §10.8 verification gate passes.
 
 When no feature is active, this line reads "_none_". It resets to `_none_` on feature close-out, when the last stream of a feature merges (`docs/development.md` §3 step 8).
 
