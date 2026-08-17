@@ -2,9 +2,11 @@ import { describe, it, expect } from "vitest";
 import {
   composeSlot,
   fruitOfDayPool,
-  breakfastOptionB,
-  breakfastOptionC,
-  breakfastSinglePick,
+  breakfastSlot,
+  isBreakfastMain,
+  breakfastMainNeedsPlainCarb,
+  isSubstantialCompanion,
+  plateHasCarb,
   menu1,
   menu2,
   menu3,
@@ -20,12 +22,10 @@ import {
   excludeHpIfMealHasHp,
   isHp,
   isSelfSufficientMain,
-  isStandaloneBreakfastBread,
   breakfastMainCarriesChutney,
 } from "../src/composition.js";
 import type {
-  BreakfastWeekdayPairCandidateSet,
-  BreakfastSinglePickCandidateSet,
+  BreakfastCandidateSet,
   Menu1CandidateSet,
   Menu2CandidateSet,
   Menu3CandidateSet,
@@ -57,20 +57,11 @@ function makeDish(overrides: Partial<Dish> = {}): Dish {
 const emptyHistory: MenuHistoryRow[] = [];
 
 function breakfast(day: SlotPlan["day"]): SlotPlan {
-  return {
-    day,
-    meal: "Breakfast",
-    itemCount: day === "Mon" || day === "Wed" || day === "Fri" ? 2 : 1,
-  };
+  return { day, meal: "Breakfast" };
 }
 
 function lunch(day: SlotPlan["day"], lunchMenu: 1 | 2 | 3 | 4): SlotPlan {
-  return {
-    day,
-    meal: "Lunch",
-    itemCount: lunchMenu === 2 ? 4 : 3,
-    lunchMenu,
-  };
+  return { day, meal: "Lunch", lunchMenu };
 }
 
 describe("composition — docs/engine.md §3", () => {
@@ -93,35 +84,38 @@ describe("composition — docs/engine.md §3", () => {
     });
   });
 
-  describe("§3 breakfast Mon/Wed/Fri Option B: complete_carb + accompaniment", () => {
-    it("includes complete_carb Breakfast dishes in pool B.completeCarb", () => {
-      const cc = makeDish({
+  describe("§3 breakfast, the single widened form (§10.4)", () => {
+    it("main pool is complete_meal OR complete_carb OR Category=Dry dish, Breakfast only", () => {
+      const cm = makeDish({
         time: "Breakfast",
-        category: "Paratha",
-        tags: ["complete_carb"],
+        category: "Complete meal",
+        tags: ["complete_meal"],
       });
-      const plain = makeDish({ time: "Breakfast", category: "Paratha" });
-      const out = breakfastOptionB([cc, plain]);
-      expect(out.completeCarb).toEqual([cc]);
-    });
-
-    it("requires Time=Breakfast and Category=Accompaniment for B.accompaniment", () => {
-      const acc = makeDish({ time: "Breakfast", category: "Accompaniment" });
-      const lunchAcc = makeDish({ time: "Lunch", category: "Accompaniment" });
-      const out = breakfastOptionB([acc, lunchAcc]);
-      expect(out.accompaniment).toEqual([acc]);
-    });
-  });
-
-  describe("§3 breakfast Mon/Wed/Fri Option C: breakfast dry main + plain breakfast carb", () => {
-    it("requires Time=Breakfast and Category=Dry dish for C.dryMain", () => {
+      const cc = makeDish({ time: "Breakfast", category: "Paratha", tags: ["complete_carb"] });
       const dry = makeDish({ time: "Breakfast", category: "Dry dish" });
-      const lunchDry = makeDish({ time: "Lunch", category: "Dry dish" });
-      const out = breakfastOptionC([dry, lunchDry]);
-      expect(out.dryMain).toEqual([dry]);
+      const plainCarb = makeDish({ time: "Breakfast", category: "Bread" });
+      const lunchCm = makeDish({
+        time: "Lunch",
+        category: "Complete meal",
+        tags: ["complete_meal"],
+      });
+      const out = breakfastSlot([cm, cc, dry, plainCarb, lunchCm]);
+      expect(out.kind).toBe("breakfast");
+      expect(out.main).toEqual([cm, cc, dry]);
     });
 
-    it("excludes complete_carb-tagged carbs from C.plainCarb", () => {
+    it("restores the Category=Dry dish breakfast mains the two old forms stranded", () => {
+      // The old Mon/Wed/Fri pair tried Option B first and only fell through to
+      // Option C when Option B's pools were EMPTY, and the Tue/Thu single pick's
+      // pool excluded Dry dishes outright. So a Dry-dish breakfast main was
+      // unreachable on every day of the week. It is now an ordinary candidate.
+      const bhurji = makeDish({ time: "Breakfast", category: "Dry dish", tags: ["HP"] });
+      const cc = makeDish({ time: "Breakfast", category: "Paratha", tags: ["complete_carb"] });
+      expect(breakfastSlot([bhurji, cc]).main).toContain(bhurji);
+      expect(isBreakfastMain(bhurji)).toBe(true);
+    });
+
+    it("plainCarb pool is Bread/Paratha/Chilla without complete_carb", () => {
       const plain = makeDish({ time: "Breakfast", category: "Bread" });
       const stuffed = makeDish({
         time: "Breakfast",
@@ -129,39 +123,19 @@ describe("composition — docs/engine.md §3", () => {
         tags: ["complete_carb"],
       });
       const chilla = makeDish({ time: "Breakfast", category: "Chilla" });
-      const out = breakfastOptionC([plain, stuffed, chilla]);
+      const lunchBread = makeDish({ time: "Lunch", category: "Bread" });
+      const out = breakfastSlot([plain, stuffed, chilla, lunchBread]);
       expect(out.plainCarb).toEqual([plain, chilla]);
     });
-  });
 
-  describe("§3 breakfast Tue/Thu single pick: complete_meal OR complete_carb", () => {
-    it("includes both complete_meal and complete_carb Breakfast dishes", () => {
-      const cm = makeDish({
-        time: "Breakfast",
-        category: "Complete meal",
-        tags: ["complete_meal"],
-      });
-      const cc = makeDish({
-        time: "Breakfast",
-        category: "Paratha",
-        tags: ["complete_carb"],
-      });
-      const plain = makeDish({ time: "Breakfast", category: "Bread" });
-      const out = breakfastSinglePick([cm, cc, plain]);
-      expect(out.pool).toEqual([cm, cc]);
+    it("chutney pool is the Category=Accompaniment Breakfast dishes", () => {
+      const chutney = makeDish({ time: "Breakfast", category: "Accompaniment" });
+      const lunchAcc = makeDish({ time: "Lunch", category: "Accompaniment" });
+      const cc = makeDish({ time: "Breakfast", category: "Chilla", tags: ["complete_carb"] });
+      expect(breakfastSlot([chutney, lunchAcc, cc]).chutney).toEqual([chutney]);
     });
 
-    it("excludes Lunch dishes even when complete_meal-tagged", () => {
-      const lunchCm = makeDish({
-        time: "Lunch",
-        category: "Complete meal",
-        tags: ["complete_meal"],
-      });
-      const out = breakfastSinglePick([lunchCm]);
-      expect(out.pool).toEqual([]);
-    });
-
-    it("§3 R3 ketoCompanion pool is the HP Category=Keto breakfast dishes", () => {
+    it("ketoCompanion pool is the HP Category=Keto breakfast dishes", () => {
       const hpKeto = makeDish({
         time: "Breakfast",
         category: "Keto",
@@ -170,20 +144,35 @@ describe("composition — docs/engine.md §3", () => {
       });
       const nonHpKeto = makeDish({ time: "Breakfast", category: "Keto" });
       const hpLunchKeto = makeDish({ time: "Lunch", category: "Keto", tags: ["HP"] });
-      const cc = makeDish({ time: "Breakfast", category: "Paratha", tags: ["complete_carb"] });
-      const out = breakfastSinglePick([hpKeto, nonHpKeto, hpLunchKeto, cc]);
-      // Only the HP, Breakfast, Category=Keto dish qualifies as a companion.
+      const out = breakfastSlot([hpKeto, nonHpKeto, hpLunchKeto]);
       expect(out.ketoCompanion).toEqual([hpKeto]);
     });
 
-    it("§3 chutney pool is the Category=Accompaniment Breakfast dishes", () => {
-      const chutney = makeDish({ time: "Breakfast", category: "Accompaniment" });
-      const lunchAcc = makeDish({ time: "Lunch", category: "Accompaniment" });
-      const cc = makeDish({ time: "Breakfast", category: "Chilla", tags: ["complete_carb"] });
-      const out = breakfastSinglePick([chutney, lunchAcc, cc]);
-      // Only the Breakfast accompaniment is a chutney candidate (lunch excluded
-      // by the Time=Breakfast filter the candidate set applies).
-      expect(out.chutney).toEqual([chutney]);
+    it("breakfastMainNeedsPlainCarb is true only for a Dry-dish main", () => {
+      expect(breakfastMainNeedsPlainCarb(makeDish({ category: "Dry dish" }))).toBe(true);
+      expect(breakfastMainNeedsPlainCarb(makeDish({ category: "Complete meal" }))).toBe(false);
+      expect(breakfastMainNeedsPlainCarb(makeDish({ category: "Bread" }))).toBe(false);
+      expect(breakfastMainNeedsPlainCarb(makeDish({ category: "Chilla" }))).toBe(false);
+    });
+  });
+
+  describe("§3 plate rule 9 predicates (§10.3)", () => {
+    it("isSubstantialCompanion is Gravy dish or Dry dish, never an Accompaniment", () => {
+      expect(isSubstantialCompanion(makeDish({ category: "Gravy dish" }))).toBe(true);
+      expect(isSubstantialCompanion(makeDish({ category: "Dry dish" }))).toBe(true);
+      expect(isSubstantialCompanion(makeDish({ category: "Accompaniment" }))).toBe(false);
+      expect(isSubstantialCompanion(makeDish({ category: "Dessert" }))).toBe(false);
+      expect(isSubstantialCompanion(makeDish({ category: "Keto" }))).toBe(false);
+    });
+
+    it("plateHasCarb is true for a Chapati or Rice item on the plate", () => {
+      const roti = makeDish({ category: "Chapati", time: "Lunch" });
+      const rice = makeDish({ category: "Rice", time: "Lunch" });
+      const curry = makeDish({ category: "Gravy dish", time: "Lunch" });
+      expect(plateHasCarb([curry, roti])).toBe(true);
+      expect(plateHasCarb([curry, rice])).toBe(true);
+      expect(plateHasCarb([curry])).toBe(false);
+      expect(plateHasCarb([])).toBe(false);
     });
   });
 
@@ -198,29 +187,6 @@ describe("composition — docs/engine.md §3", () => {
       expect(isSelfSufficientMain(categoried)).toBe(true);
       expect(isSelfSufficientMain(both)).toBe(true);
       expect(isSelfSufficientMain(neither)).toBe(false);
-    });
-
-    it("isStandaloneBreakfastBread is true only for a Category=Bread complete_carb", () => {
-      const bread = makeDish({
-        time: "Breakfast",
-        category: "Bread",
-        tags: ["complete_carb"],
-      });
-      const paratha = makeDish({
-        time: "Breakfast",
-        category: "Paratha",
-        tags: ["complete_carb"],
-      });
-      const chilla = makeDish({
-        time: "Breakfast",
-        category: "Chilla",
-        tags: ["complete_carb"],
-      });
-      const plainBread = makeDish({ time: "Breakfast", category: "Bread" });
-      expect(isStandaloneBreakfastBread(bread)).toBe(true);
-      expect(isStandaloneBreakfastBread(paratha)).toBe(false);
-      expect(isStandaloneBreakfastBread(chilla)).toBe(false);
-      expect(isStandaloneBreakfastBread(plainBread)).toBe(false);
     });
 
     it("breakfastMainCarriesChutney is true only for a Chilla or Paratha main", () => {
@@ -306,17 +272,18 @@ describe("composition — docs/engine.md §3", () => {
   });
 
   describe("§3.1 lunch budget", () => {
-    it("clamps WEEKDAY_CAP - breakfastItemCount to [2, LUNCH_MAX_ITEMS]", () => {
+    it("clamps DAY_MAX_ITEMS - breakfastItemCount to [2, LUNCH_MAX_ITEMS]", () => {
       expect(LUNCH_MAX_ITEMS).toBe(4);
-      // 2-item breakfast (Mon/Wed/Fri) -> 3-item lunch budget.
-      expect(lunchBudget(2)).toBe(3);
-      // 1-item breakfast (Tue/Thu) -> 4-item lunch budget (the max).
+      // 2-item breakfast -> 4 items left in the day, capped by the plate's shape.
+      expect(lunchBudget(2)).toBe(4);
+      // 1-item breakfast -> 5 left, still capped at LUNCH_MAX_ITEMS.
       expect(lunchBudget(1)).toBe(4);
-      // A 0-item breakfast never lifts the budget above LUNCH_MAX_ITEMS.
+      // Saturday has no breakfast at all; the plate ceiling still holds.
       expect(lunchBudget(0)).toBe(4);
-      // A heavy 3-item breakfast floors the budget at 2.
-      expect(lunchBudget(3)).toBe(2);
+      // A heavy breakfast eats into the lunch, floored at 2 so a plate is never
+      // less than a protein and a carb.
       expect(lunchBudget(4)).toBe(2);
+      expect(lunchBudget(5)).toBe(2);
     });
   });
 
@@ -688,38 +655,29 @@ describe("composition — docs/engine.md §3", () => {
   });
 
   describe("composeSlot dispatch", () => {
-    it("dispatches Mon Breakfast to the savoury breakfast pair set", () => {
+    it("dispatches every breakfast day to the one breakfast form", () => {
       const cc = makeDish({
         time: "Breakfast",
         category: "Paratha",
         tags: ["complete_carb"],
       });
-      const out = composeSlot({
-        slot: breakfast("Mon"),
-        library: [cc],
-        history: emptyHistory,
-        season: "Summer",
-      });
-      const pair = out as BreakfastWeekdayPairCandidateSet;
-      expect(pair.kind).toBe("breakfast-pair");
-      expect(pair.optionB.completeCarb).toEqual([cc]);
-    });
-
-    it("dispatches Tue Breakfast to the single-pick set", () => {
       const cm = makeDish({
         time: "Breakfast",
         category: "Complete meal",
         tags: ["complete_meal"],
       });
-      const out = composeSlot({
-        slot: breakfast("Tue"),
-        library: [cm],
-        history: emptyHistory,
-        season: "Summer",
-      });
-      const single = out as BreakfastSinglePickCandidateSet;
-      expect(single.kind).toBe("breakfast-single");
-      expect(single.pool).toEqual([cm]);
+      // Mon and Tue used to dispatch to two different forms with two different
+      // pools; §10.4 gives every day the same one.
+      for (const day of ["Mon", "Tue", "Wed", "Thu", "Fri"] as const) {
+        const out = composeSlot({
+          slot: breakfast(day),
+          library: [cc, cm],
+          history: emptyHistory,
+          season: "Summer",
+        }) as BreakfastCandidateSet;
+        expect(out.kind).toBe("breakfast");
+        expect(out.main).toEqual([cc, cm]);
+      }
     });
 
     it("dispatches Mon Lunch to Menu 1", () => {
@@ -796,7 +754,7 @@ describe("composition — docs/engine.md §3", () => {
         primaryIngredient: "Chicken Breast",
       });
       const out = composeSlot({
-        slot: { day: "Tue", meal: "Lunch", itemCount: 2, intlAnchorDishId: 500 },
+        slot: { day: "Tue", meal: "Lunch", intlAnchorDishId: 500 },
         library: [anchor],
         history: emptyHistory,
         season: "Summer",
@@ -829,8 +787,8 @@ describe("composition — docs/engine.md §3", () => {
         history: emptyHistory,
         season: "Summer",
       });
-      const pair = out as BreakfastWeekdayPairCandidateSet;
-      expect(pair.optionB.completeCarb).toEqual([ccOk]);
+      const set = out as BreakfastCandidateSet;
+      expect(set.main).toEqual([ccOk]);
     });
 
     it("composes Menu 1 carb pools by category, ignoring weekLunchCarbs (spacing is §3.4)", () => {
@@ -861,7 +819,6 @@ describe("composition — docs/engine.md §3", () => {
           slot: {
             day: "Mon",
             meal: "Lunch",
-            itemCount: 3,
           },
           library: [],
           history: emptyHistory,

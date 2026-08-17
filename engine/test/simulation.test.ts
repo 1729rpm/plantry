@@ -196,9 +196,17 @@ describe("forward simulation harness", () => {
 
       // The week's HP mains, normalized to protein families. The HP main of a
       // meal is its first HP-main dish (Gravy/Dry/Complete meal/Keto + HP tag).
+      // Scoped to LUNCH. Breakfast is deliberately excluded: the §3 breakfast
+      // protein floor draws from the HP Category=Keto Breakfast pool, which the
+      // live library fills with exactly one dish (boiled eggs). §4.6 is a soft
+      // rule with a fresh-alternative fallback, so a one-dish pool means Egg can
+      // be a breakfast HP main on every day the floor fires, whatever the ranking
+      // does. That is a content gap, not a rule failure, and asserting against it
+      // here would pin the engine to the size of one pool.
       const hpMainFamilies: string[] = [];
       for (const day of week.days) {
         for (const slot of day.slots) {
+          if (slot.meal !== "Lunch") continue;
           const main = slot.dishes.find((d) => isHpMain(d));
           if (main) hpMainFamilies.push(proteinFamily(main));
         }

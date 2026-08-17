@@ -6,7 +6,6 @@ export type LunchMenu = 1 | 2 | 3 | 4;
 export interface SlotPlan {
   day: Day;
   meal: Meal;
-  itemCount: number;
   lunchMenu?: LunchMenu;
   /**
    * §3.2 international substitution: when set, this lunch slot runs the §3
@@ -43,14 +42,6 @@ function weekdayLunchMenu(day: Day): LunchMenu {
   return day === "Mon" || day === "Wed" || day === "Fri" ? 1 : 2;
 }
 
-function weekdayBreakfastItemCount(day: Day): number {
-  return day === "Mon" || day === "Wed" || day === "Fri" ? 2 : 1;
-}
-
-function weekdayLunchItemCount(day: Day): number {
-  return day === "Mon" || day === "Wed" || day === "Fri" ? 3 : 4;
-}
-
 function pickSaturdayMenu(lastSaturdayMenu: 3 | 4 | null | undefined, rng: () => number): 3 | 4 {
   if (lastSaturdayMenu === 3) return 4;
   if (lastSaturdayMenu === 4) return 3;
@@ -63,26 +54,12 @@ export function weekSchedule(args: WeekScheduleArgs): SlotPlan[] {
 
   const slots: SlotPlan[] = [];
   for (const day of WEEKDAYS) {
-    slots.push({
-      day,
-      meal: "Breakfast",
-      itemCount: weekdayBreakfastItemCount(day),
-    });
-    slots.push({
-      day,
-      meal: "Lunch",
-      itemCount: weekdayLunchItemCount(day),
-      lunchMenu: weekdayLunchMenu(day),
-    });
+    slots.push({ day, meal: "Breakfast" });
+    slots.push({ day, meal: "Lunch", lunchMenu: weekdayLunchMenu(day) });
   }
 
   const saturdayMenu = pickSaturdayMenu(args.lastSaturdayMenu, rng);
-  slots.push({
-    day: "Sat",
-    meal: "Lunch",
-    itemCount: 3,
-    lunchMenu: saturdayMenu,
-  });
+  slots.push({ day: "Sat", meal: "Lunch", lunchMenu: saturdayMenu });
 
   return slots;
 }
