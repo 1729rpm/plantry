@@ -3,7 +3,7 @@ id: 44
 name: Prawn salad
 category: Accompaniment
 time: Lunch
-tags: [HP]
+tags: [HP, cuisine_neutral]
 primaryIngredient: Prawn
 preferred: No
 active: Yes

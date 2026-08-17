@@ -19,6 +19,7 @@ export {
   validateDishFiles,
   validateCatalogGroups,
   validateIngredientNamesResolve,
+  validatePairsWithResolve,
   validateDishFileRoundTrip,
   coverageReport,
   poolCoverageReport,
