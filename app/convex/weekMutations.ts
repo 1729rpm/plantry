@@ -53,6 +53,19 @@ const CAP_MEAL: Record<SlotMeal, CapMeal> = {
   fruit: "Fruit",
 };
 
+// The archive's coarser placement source (`features/engine-v4.md` §10.5, §10.7).
+// The live pick distinguishes a swap from a custom one-off because the slow loop
+// attributes them differently; the archive does not, because both answer the one
+// question its readers ask ("did a human put this here"). Keyed by the exhaustive
+// live source union, so adding a live source forces an entry here at compile time
+// rather than archiving under a missing key at runtime.
+type ArchiveSource = "generated" | "hand";
+const ARCHIVE_SOURCE: Record<DishPickShape["source"], ArchiveSource> = {
+  generated: "generated",
+  swapped: "hand",
+  custom: "hand",
+};
+
 /**
  * Replaces one position within one (day, meal) slot of `currentWeek` with a
  * custom one-off label (a free-text dish that is not in the library).
@@ -429,6 +442,7 @@ export const finalizeWeek = mutation({
       meal: CapMeal;
       dishName: string;
       dishId: number;
+      source: ArchiveSource;
     }[] = [];
     for (const slot of week.slots as SlotShape[]) {
       if (skipped.has(slot.day)) continue;
@@ -441,6 +455,7 @@ export const finalizeWeek = mutation({
           meal: CAP_MEAL[slot.meal],
           dishName,
           dishId: pick.dishId,
+          source: ARCHIVE_SOURCE[pick.source],
         });
       }
     }

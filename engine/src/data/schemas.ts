@@ -125,6 +125,23 @@ export const DishSchema = z.object({
    * §1 eligibility and §4 selection never read it.
    */
   carbAffinity: CarbAffinitySchema.optional(),
+  /**
+   * Optional stable pairing (`features/engine-v4.md` §10.3 rule 7): the exact
+   * library names of dishes this one is habitually eaten with. When this dish is
+   * placed as a lead, a named partner leads its slot's companion pool, subject to
+   * plate rules 1 and 2 and never overriding the one-gravy rule, the exploration
+   * slot, or within-week no-repeat.
+   *
+   * `validatePairsWithResolve` is the blocking gate. It rejects a name that does
+   * not resolve to a library dish AND a partner the composition rules can never
+   * place: a category no companion position pool holds (Bread, Chapati, Rice,
+   * Complete meal), a second Gravy dish against a Gravy lead (plate rule 1 is
+   * hard, no fallback), an inactive partner, a non-Lunch partner, and a partner
+   * whose seasons never overlap the lead's. Absent on almost every dish: a pair
+   * earns its place from the eaten record AND from that composition check, never
+   * from the record alone.
+   */
+  pairsWith: z.array(z.string().min(1)).min(1).optional(),
   // Enrichment fields (docs/engine.md §12). All optional: a dish file may omit
   // them and parses unchanged; the UI degrades gracefully when they are absent
   // (§11.1 coverage ratchet).
@@ -248,11 +265,31 @@ export type DayName = z.infer<typeof DayNameSchema>;
 
 export const IsoDateSchema = z.string().regex(/^\d{4}-\d{2}-\d{2}$/);
 
+/**
+ * How a dish came to be on the plate of a finalized week (`features/engine-v4.md`
+ * §10.5 and §10.7). `generated` is an engine placement the household left alone;
+ * `hand` is a placement the household chose (a swap or a custom one-off), which
+ * is the stronger preference signal. The live `currentWeek` pick carries the
+ * finer `generated | swapped | custom`; finalize collapses swapped and custom to
+ * `hand` when it writes the archive row, because every consumer of this signal
+ * asks only "did a human put this here".
+ */
+export const HistorySourceSchema = z.enum(["generated", "hand"]);
+export type HistorySource = z.infer<typeof HistorySourceSchema>;
+
 export const MenuHistoryRowSchema = z.object({
   weekStart: IsoDateSchema,
   day: DayNameSchema,
   meal: HistoryMealSchema,
   dishName: z.string().min(1),
   dishId: z.number().int().positive(),
+  /**
+   * Optional placement source. Absent on every row from the seed file
+   * (data/menu_history.md carries no such column) and on every `weekArchive` row
+   * finalized before the field shipped, so every consumer must treat absent as
+   * "unknown" and fall back to the plain, unweighted behaviour. It is carried
+   * only by rows derived from a `weekArchive` document that has it.
+   */
+  source: HistorySourceSchema.optional(),
 });
 export type MenuHistoryRow = z.infer<typeof MenuHistoryRowSchema>;

@@ -100,6 +100,22 @@ export default defineSchema({
         meal: v.union(v.literal("Breakfast"), v.literal("Lunch"), v.literal("Fruit")),
         dishName: v.string(),
         dishId: v.number(),
+        // How the dish came to be on the plate (`features/engine-v4.md` §10.5,
+        // §10.7): "generated" is an engine placement the household left alone,
+        // "hand" is one the household chose. `finalizeWeek` derives it from the
+        // live `currentWeek` pick's finer `generated | swapped | custom`, folding
+        // swapped and custom into "hand", because every consumer asks only "did a
+        // human put this here".
+        //
+        // OPTIONAL, and it has to be: Convex validates every existing row against
+        // the new schema on deploy, so a required field would reject every
+        // `weekArchive` document finalized before this shipped and fail the
+        // deploy. Absent therefore reads as "finalized before the field existed",
+        // and every reader treats it as unknown and falls back to unweighted
+        // behaviour. There is no backfill: the source of a week already archived
+        // is not recoverable, and stamping "generated" on it would be a fabricated
+        // signal. The field fills in from the next finalize onward.
+        source: v.optional(v.union(v.literal("generated"), v.literal("hand"))),
       }),
     ),
   }).index("by_weekStart", ["weekStart"]),

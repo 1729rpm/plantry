@@ -3,7 +3,7 @@ id: 77
 name: Fish fry
 category: Dry dish
 time: Lunch
-tags: [HP]
+tags: [HP, cuisine_neutral]
 primaryIngredient: Fish
 preferred: Yes
 active: Yes

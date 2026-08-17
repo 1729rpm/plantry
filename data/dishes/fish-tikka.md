@@ -11,6 +11,7 @@ satiety: High
 prepMinutes: 25
 seasons: All
 cuisine: Indian
+pairsWith: [Kadhi]
 complexity: Medium
 buySpecially: Firm boneless fish fillets, 300g
 prePrep: Marinate the fish for at least an hour ahead
