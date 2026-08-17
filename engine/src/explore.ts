@@ -49,6 +49,100 @@ import { dishProtein, proteinBand } from "./nutrition.js";
  * Explore tab (§7).
  */
 
+/**
+ * ============================================================================
+ * The weekly exploration slot (`features/engine-v4.md` §10.5)
+ * ============================================================================
+ *
+ * Distinct from `rankExplore` below, which powers the Explore TAB. This is the
+ * one position per generated week that is deliberately ranked for novelty rather
+ * than for what the household already eats, so the repertoire can grow without
+ * anyone going looking for a new dish.
+ *
+ * Two rules, both of which exist because of measured failures:
+ *
+ *   - It ROTATES across the week's companion positions rather than sitting on
+ *     Friday. A fixed novelty position is a fixed position: the same weekday's
+ *     companion is the only one that ever sees a new dish, so 19 of 20 explored
+ *     dishes were served exactly once in 25 weeks and coverage stalled at 52 of
+ *     261 active dishes.
+ *   - Rule 7 (`pairsWith`) can no longer consume it. Rule 7 took the single
+ *     novelty slot on 6 of 25 Fridays, which is a quarter of the year's
+ *     discovery budget spent on a pairing the household already knows.
+ *
+ * Retention is the other half and lives in `priority.ts`: a dish this slot
+ * introduces and the household keeps earns `EXPLORE_RETENTION_CREDIT`, so it
+ * re-enters ordinary ranking at frequency credit 2 instead of 1 and can actually
+ * compete for a normal slot the following week.
+ */
+
+/** A companion position that is eligible to carry the week's exploration slot. */
+export interface ExplorationPosition {
+  /** Short day name, e.g. "Wed". */
+  day: string;
+  /** Meal the position sits in. */
+  meal: string;
+  /** Index of the position within its slot's pick order. */
+  index: number;
+}
+
+/** Whole weeks between the epoch and an ISO Monday; the rotation counter. */
+function weekIndex(weekStart: string): number {
+  return Math.floor(new Date(`${weekStart}T00:00:00Z`).getTime() / (7 * 86400000));
+}
+
+/**
+ * Pick which of this week's companion positions carries the exploration slot.
+ *
+ * Deterministic and RNG-free (the engine has no randomness anywhere), but it
+ * advances by one position per calendar week, so over a run every companion
+ * position takes its turn. The rotation is keyed on the week's absolute index
+ * rather than on a counter carried in state, so a regenerated week always lands
+ * on the same position and two runs of the same week agree.
+ *
+ * Callers pass the positions in a stable order (schedule order). An empty list
+ * returns undefined, which means "this week has no exploration slot" and is the
+ * correct answer for a week whose composition produced no companion positions.
+ */
+export function chooseExplorationPosition(args: {
+  weekStart: string;
+  positions: readonly ExplorationPosition[];
+}): ExplorationPosition | undefined {
+  const { weekStart, positions } = args;
+  if (positions.length === 0) return undefined;
+  const index = ((weekIndex(weekStart) % positions.length) + positions.length) % positions.length;
+  return positions[index];
+}
+
+/**
+ * Rank a pool for the exploration slot: PURE longest-unused with never-cooked
+ * first. Deliberately ignores both the saturating frequency credit and the
+ * repeat guard, because this is the one position whose whole job is to propose
+ * something the household has not eaten. Applying frequency here would rank the
+ * proven repertoire first and there would be no discovery at all; applying the
+ * guard is pointless when the leading candidates have never been cooked.
+ *
+ * Ties (including the never-cooked dishes, which all tie) break by dish id
+ * ascending, so the ranking is deterministic and input-order-independent.
+ */
+export function rankExploration(pool: Dish[], history: MenuHistoryRow[]): Dish[] {
+  const lastCooked = new Map<number, string>();
+  for (const row of history) {
+    const existing = lastCooked.get(row.dishId);
+    if (existing === undefined || row.weekStart > existing)
+      lastCooked.set(row.dishId, row.weekStart);
+  }
+  return [...pool].sort((a, b) => {
+    const aDate = lastCooked.get(a.id);
+    const bDate = lastCooked.get(b.id);
+    if (aDate === undefined && bDate !== undefined) return -1;
+    if (bDate === undefined && aDate !== undefined) return 1;
+    if (aDate !== undefined && bDate !== undefined && aDate !== bDate)
+      return aDate < bDate ? -1 : 1;
+    return a.id - b.id;
+  });
+}
+
 /** The structured "why it fits" key. The UI phrases it; the engine never does. */
 export type ExploreAffinityKey = "shared-ingredient" | "protein-match" | "familiar-category";
 

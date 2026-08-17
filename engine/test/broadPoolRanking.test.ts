@@ -7,9 +7,13 @@ import type { Dish, MenuHistoryRow, PackSizeHeader } from "../src/data/schemas.j
  * Stream H: the non-restrictive swap picker (in `app/convex/swap.ts`) collects
  * every Active + in-season + meal-time-matching dish and hands it to
  * `rankCandidates`. These tests verify that `rankCandidates` correctly ranks
- * such a broad pool by §4 priority (longest-unused first, with the ingredient-
- * ledger tilt), so the convex-side picker's contract (described in
- * `features/multi-dish-slots.md`) holds at the engine layer.
+ * such a broad pool by §4 priority, so the convex-side picker's contract
+ * (described in `features/multi-dish-slots.md`) holds at the engine layer.
+ *
+ * §4's primary sort changed in engine v4.1 (`features/engine-v4.md` §10.2): it is
+ * saturating frequency, with longest-unused demoted to the tiebreak beneath it.
+ * Longest-unused first was an anti-preference chooser (it proposes whatever the
+ * household has avoided longest), which is what these assertions used to pin.
  */
 
 let nextId = 1;
@@ -43,7 +47,7 @@ function historyRow(dishId: number, dishName: string, weekStart: string): MenuHi
 }
 
 describe("Stream H broad-pool ranking", () => {
-  it("longest-unused dish surfaces first across categories", () => {
+  it("the most-eaten dish surfaces first across categories, longest-unused breaking ties", () => {
     nextId = 1;
     // Broad lunch pool mixing categories that would be split across multiple
     // composition pools (HP, non-HP gravy, accompaniment, lunch carb): the
@@ -63,11 +67,15 @@ describe("Stream H broad-pool ranking", () => {
     ];
 
     const ranked = rankCandidates({ pool, history });
-    // Never-cooked Salad outranks both cooked dishes; Aloo Gobi outranks
-    // Rajma; lunch carb keeps its input slot (it is exempt).
     const ids = ranked.map((d) => d.id);
-    expect(ids.indexOf(accompaniment.id)).toBeLessThan(ids.indexOf(nonHpGravy.id));
+    // Both cooked dishes carry frequency credit 1 and outrank never-cooked
+    // Salad at credit 0: §4 now proposes what the household actually cooks.
+    expect(ids.indexOf(nonHpGravy.id)).toBeLessThan(ids.indexOf(accompaniment.id));
+    expect(ids.indexOf(hp.id)).toBeLessThan(ids.indexOf(accompaniment.id));
+    // Tied on credit, so the longest-unused tiebreak decides between them and
+    // puts Aloo Gobi (last quarter) ahead of Rajma (last week).
     expect(ids.indexOf(nonHpGravy.id)).toBeLessThan(ids.indexOf(hp.id));
+    // The lunch carb is still in the pool: it is recency-exempt, never dropped.
     expect(ids).toContain(lunchCarb.id);
   });
 

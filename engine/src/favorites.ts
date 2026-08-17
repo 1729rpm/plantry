@@ -36,6 +36,28 @@ import { slotAcceptsDish, slotKey } from "./requests.js";
  *
  * The pass is a no-op for an empty favorite set: no pins, no reports, so generation is
  * byte-identical to a household with no favorites.
+ *
+ * ---------------------------------------------------------------------------
+ * `features/engine-v4.md` §10.6, two decisions this module holds the line on
+ * ---------------------------------------------------------------------------
+ *
+ * **There is no `timesPerWeek` dial, and there will not be one.** The v4 draft
+ * proposed letting a favorite ask for two placements a week. It is withdrawn: in
+ * simulation `timesPerWeek: 2` produced two placements on 0 of 25 weeks (a Keto
+ * Indian lunch dish has only three accepting positions and other favorites claim
+ * them first), its supporting evidence was always a single week in six, and it
+ * was the direct cause of twelve consecutive-day repeats. `planFavorites` takes
+ * dish ids, not (id, count) pairs, so the shape of the input is the guarantee:
+ * one favorite is one placement.
+ *
+ * **A pinned favorite is subject to within-week no-repeat.** The pin overrides
+ * §4 recency for the ONE slot it claims, and nothing else. It never entitles the
+ * dish to a second position, whether through an ordinary companion pool or
+ * through plate rule 7 (`pairsWith`). This module enforces its half by planning
+ * exactly one slot per dish id (`seen`); `generateWeek` enforces the other half
+ * by excluding every pinned favorite from the selectable pool of every slot it is
+ * not pinned to. The old spec asserted this invariant in words while the code
+ * violated it, which is how a favorite came to land on consecutive days.
  */
 
 /** A single favorite resolved to the slot it will be pinned into. */
@@ -143,4 +165,38 @@ export function planFavorites(args: PlanFavoritesArgs): PlanFavoritesResult {
   }
 
   return { placements, unplacedDishIds };
+}
+
+/**
+ * The `unplaced-favorite` incident predicate (`features/engine-v4.md` §10.6).
+ *
+ * A favorite is unplaced if and only if IT IS NOT IN THE FINISHED WEEK. That
+ * sounds obvious and the obvious version is not what a planner-based predicate
+ * computes. `planFavorites` reports which favorites it could not find a free
+ * accepting slot for, which is a different question: a dish the planner skipped
+ * can still land, because composition places dishes the pinning pass never
+ * touched. Boiled eggs is the standing example. It is a favorite, it is also what
+ * the breakfast protein-floor attach rule reaches for, and it appeared in all 25
+ * simulated weeks while being logged as unplaced on 15 of them. Fifteen of 52
+ * incidents were false, which is enough noise to make the signal worthless.
+ *
+ * So the predicate reads the generated week, not the plan. Pass every favorite id
+ * the run was given (oldest-first) and the set of dish ids the finished week
+ * actually holds; the result is the ids to name in one incident, deduped and in
+ * oldest-first order. `planFavorites().unplacedDishIds` remains useful for
+ * diagnosing WHY the pinning pass skipped a dish, but it must not be the thing
+ * that fires the incident.
+ */
+export function unplacedFavorites(
+  favoriteDishIds: readonly number[],
+  placedDishIds: ReadonlySet<number>,
+): number[] {
+  const seen = new Set<number>();
+  const unplaced: number[] = [];
+  for (const id of favoriteDishIds) {
+    if (seen.has(id)) continue;
+    seen.add(id);
+    if (!placedDishIds.has(id)) unplaced.push(id);
+  }
+  return unplaced;
 }
