@@ -117,11 +117,11 @@ describe("poolCoverageReport", () => {
     const pools = poolCoverageReport(library);
     const seasons = new Set(pools.map((p) => p.season));
     expect(seasons).toEqual(new Set(["Summer", "Monsoon", "Winter"]));
-    // 18 slot rows per season (see the report's slot table). Engine v3 folded the
-    // Menu 1/2 dal + dry-sabzi rows into one weekday-companion row and added a
-    // protein-floor row, and split the single lunch-carb row into Rice + Chapati
-    // (§3.4). Net: 19 -> 18.
-    expect(pools.filter((p) => p.season === "Summer").length).toBe(18);
+    // 17 slot rows per season (see the report's slot table). Engine v4.1 replaced
+    // the five breakfast rows (two Option B pools, two Option C pools, the Tue/Thu
+    // single pool) with the four pools of the one breakfast form (§10.4): main,
+    // plain carb, chutney, protein floor. Net: 18 -> 17.
+    expect(pools.filter((p) => p.season === "Summer").length).toBe(17);
     // Counts are non-negative integers.
     for (const p of pools) expect(p.count).toBeGreaterThanOrEqual(0);
   });

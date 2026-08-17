@@ -1,7 +1,6 @@
 import type { Dish, DishTag, MenuHistoryRow, Season } from "./data/schemas.js";
-import type { Day } from "./eligibility.js";
 import { eligibleDishes } from "./eligibility.js";
-import { WEEKDAY_CAP } from "./cap.js";
+import { DAY_MAX_ITEMS } from "./cap.js";
 import { lastCookedMap } from "./historyRows.js";
 import type { SlotPlan } from "./schedule.js";
 
@@ -10,40 +9,60 @@ import type { SlotPlan } from "./schedule.js";
  * sub-clause of docs/engine.md §3; ranking among pools is §4's job.
  */
 export type CandidateSet =
-  | BreakfastWeekdayPairCandidateSet
-  | BreakfastSinglePickCandidateSet
+  | BreakfastCandidateSet
   | Menu1CandidateSet
   | Menu2CandidateSet
   | Menu3CandidateSet
   | Menu4CandidateSet
   | MenuIntlCandidateSet;
 
-export interface BreakfastWeekdayPairCandidateSet {
-  kind: "breakfast-pair";
-  optionB: { completeCarb: Dish[]; accompaniment: Dish[] };
-  optionC: { dryMain: Dish[]; plainCarb: Dish[] };
-}
-
-export interface BreakfastSinglePickCandidateSet {
-  kind: "breakfast-single";
-  pool: Dish[];
+/**
+ * §3 breakfast, one form for every breakfast day (`features/engine-v4.md`
+ * §10.4). There is a single ranked main pool and every other item is attached by
+ * a property of the main that won, so the slot has no Option A/B/C branch to
+ * choose between and no day-shaped pool difference.
+ *
+ * The old shape had two forms (a Mon/Wed/Fri pair that tried "Option B" first
+ * and only fell back to "Option C" when Option B's pools were empty, and a
+ * Tue/Thu single pick whose pool was `complete_meal`/`complete_carb` only).
+ * Between them they stranded every Category=Dry dish breakfast main: Option B's
+ * pools were never empty, so Option C never ran, and the single pick's pool
+ * excluded them outright. Anda bhurji, paneer bhurji, egg podimas and vegetable
+ * omelette were therefore unreachable on every day of the week. Widening the main
+ * pool to include them, and attaching their plain carb by property, is what §10.4
+ * asks for.
+ */
+export interface BreakfastCandidateSet {
+  kind: "breakfast";
   /**
-   * §3 R3 breakfast protein floor companion pool: HP Category=Keto breakfast
-   * dishes (boiled eggs, keto bhurji). When the picked single main carries no
-   * `HP` tag, `pickBreakfastSingle` appends the top-ranked companion here,
-   * making a 2-item breakfast. Empty pool → the floor degrades to the 1-item
-   * breakfast. Picked from this pool only at HP count 0, so it never produces
-   * two HP in the meal (it composes with one-HP-per-meal).
+   * The breakfast main pool: a dish tagged `complete_meal` or `complete_carb`,
+   * OR a Category=Dry dish breakfast main (which then draws a plain carb from
+   * `plainCarb`). Ranked by §4; the winner decides what else the slot carries.
    */
-  ketoCompanion: Dish[];
+  main: Dish[];
+  /**
+   * Plain breakfast carb pool (Time=Breakfast, Category in {Bread, Paratha,
+   * Chilla}, without `complete_carb`). Drawn only when the main is a Dry dish,
+   * which is the v3 Option C form (anda bhurji with toast, paneer bhurji with
+   * plain paratha). Empty pool → the dry main is served alone.
+   */
+  plainCarb: Dish[];
   /**
    * §3 dish-driven breakfast chutney pool: every eligible Category=Accompaniment
-   * Breakfast dish. `pickBreakfastSingle` appends one chutney from here when the
-   * picked single main is a Chilla or Paratha (`breakfastMainCarriesChutney`),
-   * so a cheela/paratha breakfast carries its chutney even on the single pick.
-   * Empty pool → the chutney is simply omitted.
+   * Breakfast dish. Drawn when the main is a Chilla or Paratha
+   * (`breakfastMainCarriesChutney`), so a cheela or paratha is never served
+   * without its chutney. Empty pool → the chutney is simply omitted.
    */
   chutney: Dish[];
+  /**
+   * §3 breakfast protein floor companion pool: HP Category=Keto breakfast dishes
+   * (boiled eggs, keto bhurji). Drawn when the composed breakfast holds no HP
+   * dish AND the main carries no chutney (§10.4: a main that already carries a
+   * chutney does not additionally gain the HP Keto side, which is the
+   * combination that produced the 3-item breakfasts). Drawn only at HP count 0,
+   * so it never produces two HP in the meal.
+   */
+  ketoCompanion: Dish[];
 }
 
 /**
@@ -164,21 +183,27 @@ export interface ComposeSlotArgs {
 }
 
 /**
- * §3.1 hard per-lunch item ceiling. A lunch never composes more than four items;
- * the day budget clamps to this, so a lunch is budget-fit by construction and the
- * §9 cap is a safety net that should not fire in normal generation.
+ * §3.1 hard per-lunch item ceiling. A lunch never composes more than four items,
+ * whatever the day's remaining item budget allows. This is a shape rule, not a
+ * capacity rule: a protein lead, a carb, and two companions is the largest plate
+ * the household has ever eaten, so the ceiling records the plate's form while
+ * §9's `DAY_MAX_ITEMS` records the day's capacity.
  */
 export const LUNCH_MAX_ITEMS = 4;
 
 /**
- * §3.1 budget-aware lunch item count. Breakfast composes first; the lunch then
- * composes to `clamp(WEEKDAY_CAP - breakfastItemCount, 2, LUNCH_MAX_ITEMS)`
- * items instead of composing four and trimming after. Mon/Wed/Fri (2-item
- * breakfast) budget three; Tue/Thu (1-item breakfast) budget four. Saturday keeps
- * its own 3-item Menu 3/4 forms and does not use this.
+ * §3.1 budget-aware lunch item count: `clamp(DAY_MAX_ITEMS - breakfastItemCount,
+ * 2, LUNCH_MAX_ITEMS)`. Breakfast composes first and the lunch composes to what
+ * is left, rather than composing four items and trimming after.
+ *
+ * This is only the ITEM half of the budget. The §9 prep-minute budget is checked
+ * per candidate at pick time (`fitsDayBudget`), because it depends on which
+ * dishes actually landed, not on how many. At observed prep times the minute
+ * budget is usually the one that binds, which is why the item number is set a
+ * notch above the observed envelope.
  */
 export function lunchBudget(breakfastItemCount: number): number {
-  return Math.min(Math.max(WEEKDAY_CAP - breakfastItemCount, 2), LUNCH_MAX_ITEMS);
+  return Math.min(Math.max(DAY_MAX_ITEMS - breakfastItemCount, 2), LUNCH_MAX_ITEMS);
 }
 
 /** Composition entry point. Mirrors docs/engine.md §3. */
@@ -192,10 +217,7 @@ export function composeSlot(args: ComposeSlotArgs): CandidateSet {
   });
 
   if (slot.meal === "Breakfast") {
-    if (isBigBreakfastDay(slot.day)) {
-      return breakfastWeekdayPair(eligible);
-    }
-    return breakfastSinglePick(eligible);
+    return breakfastSlot(eligible);
   }
 
   // §3.2 international substitution: when a non-Indian anchor is pinned on this
@@ -230,15 +252,8 @@ export function composeSlot(args: ComposeSlotArgs): CandidateSet {
  */
 export function candidateSetPools(set: CandidateSet): Dish[][] {
   switch (set.kind) {
-    case "breakfast-pair":
-      return [
-        set.optionB.completeCarb,
-        set.optionB.accompaniment,
-        set.optionC.dryMain,
-        set.optionC.plainCarb,
-      ];
-    case "breakfast-single":
-      return [set.pool, set.ketoCompanion, set.chutney];
+    case "breakfast":
+      return [set.main, set.plainCarb, set.chutney, set.ketoCompanion];
     case "menu-1":
       return [set.hp, set.companions, set.proteinFloor, set.riceCarb, set.chapatiCarb];
     case "menu-2":
@@ -250,10 +265,6 @@ export function candidateSetPools(set: CandidateSet): Dish[][] {
     case "menu-intl":
       return [set.anchor, set.proteinCompanion, set.sideCompanion, set.neutralRiceCarb];
   }
-}
-
-function isBigBreakfastDay(day: Day): boolean {
-  return day === "Mon" || day === "Wed" || day === "Fri";
 }
 
 function hasTag(dish: Dish, tag: DishTag): boolean {
@@ -275,28 +286,20 @@ export function isSelfSufficientMain(dish: Dish): boolean {
   return hasTag(dish, "complete_meal") || dish.category === "Complete meal";
 }
 
-/**
- * §3 R1 breakfast Option B served-alone signal. A `complete_carb` lead is
- * served without its accompaniment only when it is a Category=Bread dish
- * (avocado toast, masala toast). A Chilla or Paratha `complete_carb` keeps its
- * accompaniment (garlic chutney with cheela, etc.). Keyed on category, never on
- * dish names.
- */
-export function isStandaloneBreakfastBread(dish: Dish): boolean {
-  return hasTag(dish, "complete_carb") && dish.category === "Bread";
-}
-
 const BREAKFAST_CHUTNEY_CARRIER_CATEGORIES = new Set(["Chilla", "Paratha"]);
 
 /**
  * §3 dish-driven breakfast chutney signal. A breakfast main whose Category is
  * Chilla or Paratha carries a breakfast chutney (Category=Accompaniment,
- * Time=Breakfast) in ANY breakfast slot, including the Tue/Thu single pick.
- * This makes the accompaniment a property of the main dish rather than of the
- * slot form: Option B already pairs a chutney with its Chilla/Paratha
- * complete_carb lead, and the single pick now does the same. Keyed on category,
- * never on dish names. The Category=Bread "served alone" suppression
- * (`isStandaloneBreakfastBread`) is unaffected: Bread is not a carrier.
+ * Time=Breakfast). This is what makes the accompaniment a property of the main
+ * dish rather than of the day: a cheela or a paratha is never served without its
+ * chutney, and every other main (a Category=Bread `complete_carb` such as avocado
+ * toast, a `complete_meal` such as poha) is served alone. Keyed on category,
+ * never on dish names.
+ *
+ * It also suppresses the breakfast protein floor (`features/engine-v4.md`
+ * §10.4): a main that already carries a chutney does not additionally gain the HP
+ * Keto side, which is the combination that produced the 3-item breakfasts.
  */
 export function breakfastMainCarriesChutney(dish: Dish): boolean {
   return BREAKFAST_CHUTNEY_CARRIER_CATEGORIES.has(dish.category);
@@ -324,43 +327,48 @@ export function excludeHpIfMealHasHp(pool: Dish[], mealHasHp: boolean): Dish[] {
 
 const PLAIN_BREAKFAST_CARB_CATEGORIES = new Set(["Bread", "Paratha", "Chilla"]);
 
-/** §3 Breakfast Mon/Wed/Fri Option B: complete_carb + breakfast accompaniment. */
-export function breakfastOptionB(eligible: Dish[]): {
-  completeCarb: Dish[];
-  accompaniment: Dish[];
-} {
-  return {
-    completeCarb: eligible.filter((d) => d.time === "Breakfast" && hasTag(d, "complete_carb")),
-    accompaniment: eligible.filter((d) => d.time === "Breakfast" && d.category === "Accompaniment"),
-  };
-}
-
-/** §3 Breakfast Mon/Wed/Fri Option C: breakfast dry main + plain breakfast carb. */
-export function breakfastOptionC(eligible: Dish[]): {
-  dryMain: Dish[];
-  plainCarb: Dish[];
-} {
-  return {
-    dryMain: eligible.filter((d) => d.time === "Breakfast" && d.category === "Dry dish"),
-    plainCarb: eligible.filter(
-      (d) =>
-        d.time === "Breakfast" &&
-        PLAIN_BREAKFAST_CARB_CATEGORIES.has(d.category) &&
-        !hasTag(d, "complete_carb"),
-    ),
-  };
+/**
+ * §3 breakfast main predicate (`features/engine-v4.md` §10.4). A breakfast main
+ * is a Time=Breakfast dish that is either self-standing enough to lead the slot
+ * (`complete_meal` or `complete_carb`) or a Category=Dry dish, which leads the
+ * slot with a plain breakfast carb attached. Keyed on tag and category, never on
+ * dish names.
+ *
+ * The Dry-dish arm is the whole point of the widening: it is the only route by
+ * which anda bhurji, paneer bhurji, egg podimas and vegetable omelette reach a
+ * breakfast at all.
+ */
+export function isBreakfastMain(dish: Dish): boolean {
+  if (dish.time !== "Breakfast") return false;
+  return hasTag(dish, "complete_meal") || hasTag(dish, "complete_carb") || dish.category === "Dry dish";
 }
 
 /**
- * §3 Breakfast Mon/Wed/Fri composite: exposes both savoury options as pools.
- * Breakfast is savoury only (the fruit-bearing Option A is retired; fruit is
- * now the standalone Fruit of the day, §3.3 / the engine's per-day fruit pick).
+ * §3 breakfast main that draws a plain carb: a Category=Dry dish main (the v3
+ * Option C form). A `complete_meal` or `complete_carb` main brings its own carb,
+ * so it draws none.
  */
-export function breakfastWeekdayPair(eligible: Dish[]): BreakfastWeekdayPairCandidateSet {
+export function breakfastMainNeedsPlainCarb(dish: Dish): boolean {
+  return dish.category === "Dry dish";
+}
+
+/**
+ * §3 breakfast, the single form (`features/engine-v4.md` §10.4). One main pool
+ * plus the three attachment pools; which attachments actually land is decided by
+ * the main that wins, not by the day. Breakfast is savoury only (the
+ * fruit-bearing Option A is retired; fruit is the standalone Fruit of the day,
+ * §3.3).
+ */
+export function breakfastSlot(eligible: Dish[]): BreakfastCandidateSet {
+  const breakfast = eligible.filter((d) => d.time === "Breakfast");
   return {
-    kind: "breakfast-pair",
-    optionB: breakfastOptionB(eligible),
-    optionC: breakfastOptionC(eligible),
+    kind: "breakfast",
+    main: breakfast.filter(isBreakfastMain),
+    plainCarb: breakfast.filter(
+      (d) => PLAIN_BREAKFAST_CARB_CATEGORIES.has(d.category) && !hasTag(d, "complete_carb"),
+    ),
+    chutney: breakfast.filter((d) => d.category === "Accompaniment"),
+    ketoCompanion: breakfast.filter((d) => isHp(d) && d.category === "Keto"),
   };
 }
 
@@ -376,24 +384,30 @@ export function fruitOfDayPool(eligible: Dish[]): Dish[] {
   return eligible.filter((d) => d.category === "Fruit");
 }
 
-/**
- * §3 Breakfast Tue/Thu single pick: complete_meal OR complete_carb, plus the §3
- * R3 protein-floor companion pool (HP Category=Keto breakfast dishes). The main
- * is picked from `pool`; if it carries no `HP` tag, `pickBreakfastSingle`
- * appends one companion from `ketoCompanion` for a 2-item breakfast.
- */
-export function breakfastSinglePick(eligible: Dish[]): BreakfastSinglePickCandidateSet {
-  const breakfast = eligible.filter((d) => d.time === "Breakfast");
-  return {
-    kind: "breakfast-single",
-    pool: breakfast.filter((d) => hasTag(d, "complete_meal") || hasTag(d, "complete_carb")),
-    ketoCompanion: breakfast.filter((d) => isHp(d) && d.category === "Keto"),
-    chutney: breakfast.filter((d) => d.category === "Accompaniment"),
-  };
-}
-
 /** §3.2 companion categories: the non-HP Indian sides that fill the plate budget. */
 const WEEKDAY_COMPANION_CATEGORIES = new Set(["Gravy dish", "Dry dish", "Accompaniment"]);
+
+/**
+ * §3 plate rule 9 (`features/engine-v4.md` §10.3): a substantial companion, the
+ * only kind that may be a carb plate's SOLE companion. Category=Gravy dish or
+ * Dry dish, i.e. a dal/curry or a sabzi. An Accompaniment (salad, raita,
+ * chutney) is only ever an ADDITIONAL item, never the thing a roti is eaten
+ * with.
+ *
+ * Verified against the household record: 0 of 16 observed carb lunches lacked a
+ * gravy or a sabzi. The engine produced 27 of 81 before this rule, all of them
+ * the same shape (a Keto lead, a roti, and a salad).
+ *
+ * Keyed on Category, never on dish names.
+ */
+export function isSubstantialCompanion(dish: Dish): boolean {
+  return dish.category === "Gravy dish" || dish.category === "Dry dish";
+}
+
+/** True when a plate already carries a lunch carb (Category in {Chapati, Rice}). */
+export function plateHasCarb(picks: readonly Dish[]): boolean {
+  return picks.some((d) => d.category === "Chapati" || d.category === "Rice");
+}
 
 /**
  * §3.3 lunch protein-floor pool for an Indian plate: eligible Lunch dishes with

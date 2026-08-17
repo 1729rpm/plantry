@@ -23,7 +23,10 @@ function makeDish(overrides: Partial<Dish> = {}): Dish {
     preferred: "No",
     active: "Yes",
     satiety: "Medium",
-    prepMinutes: 30,
+    // 15 minutes, so a full six-item day costs 90 of the §9 120-minute budget and
+    // the STRUCTURE under test is what sizes the plate. The budget itself has its
+    // own tests below, which use expensive dishes on purpose.
+    prepMinutes: 15,
     seasons: "All",
     cuisine: "Indian",
     ...overrides,
@@ -221,7 +224,7 @@ describe("generateWeek — top-level engine", () => {
       expect(dayNames).toEqual(["Mon", "Tue", "Wed", "Thu", "Fri", "Sat"]);
     });
 
-    it("returns 5 items on each weekday (2 breakfast + 3/4 lunch) and 3 on Saturday", () => {
+    it("composes each weekday to the §9 item budget and Saturday to its Menu 3/4 form", () => {
       const week = generateWeek({
         weekStart: "2026-06-08",
         library,
@@ -235,10 +238,15 @@ describe("generateWeek — top-level engine", () => {
       const dishesPerDay = week.days.map((d) =>
         d.slots.reduce((sum, s) => sum + s.dishes.length, 0),
       );
-      // Mon/Wed/Fri: 2 breakfast + 3 lunch = 5
-      // Tue/Thu: 1 breakfast + 4 lunch = 5
-      // Sat: 3
-      expect(dishesPerDay).toEqual([5, 5, 5, 5, 5, 3]);
+      // Breakfast is dish-driven (§10.4): a Chilla/Paratha main draws its chutney
+      // (2 items), a complete_meal main is served alone and then takes the protein
+      // floor (2 items). Lunch composes to the rest of the day's item budget
+      // (§3.1: clamp(6 - breakfastItems, 2, 4)), so a weekday lands at the 6-item
+      // backstop wherever the thin fixture pools can fill it, and Saturday, which
+      // has no breakfast, at its 3-item Menu 3/4 form. A position whose pool this
+      // small library has already spent lands short rather than repeating a dish,
+      // which is why one weekday sits at 5.
+      expect(dishesPerDay).toEqual([6, 6, 6, 5, 6, 3]);
     });
 
     it("§3.3 puts a Fruit of the day on every day Mon-Sat, Saturday included", () => {
@@ -301,10 +309,9 @@ describe("generateWeek — top-level engine", () => {
       expect(week.days[0].fruit!.name).not.toBe("Apple");
     });
 
-    it("§3.1 budget-aware composition fits the day, so the §9 cap never fires", () => {
-      // Mon/Wed/Fri compose a 3-item lunch (2-item breakfast, budget 3) and Tue/Thu
-      // a 4-item lunch (1-item breakfast, budget 4), so no day exceeds the 5-item
-      // cap and nothing is dropped.
+    it("§3.1/§9 budget-aware composition fits the day, so nothing is ever dropped", () => {
+      // Every plate composes to the day budget as it goes, so no day can exceed
+      // either §9 limit and nothing is ever dropped.
       const week = generateWeek({
         weekStart: "2026-06-08",
         library,
@@ -315,9 +322,16 @@ describe("generateWeek — top-level engine", () => {
         rng: () => 0.1,
         lastSaturdayMenu: null,
       });
-      // Budget composition means the cap is a safety net that does not fire here.
-      expect(week.droppedDishIds).toEqual([]);
-      // Every Menu-1 weekday lunch carries its carb and its HP main, at 3 items.
+      // §9: nothing is dropped and no day breaches either limit.
+      for (const day of week.days) {
+        const dishes = day.slots.flatMap((s) => s.dishes);
+        expect(dishes.length, `${day.day} items`).toBeLessThanOrEqual(6);
+        expect(
+          dishes.reduce((sum, d) => sum + d.prepMinutes, 0),
+          `${day.day} minutes`,
+        ).toBeLessThanOrEqual(120);
+      }
+      // Every Menu-1 weekday lunch carries its carb and its HP main, at 4 items.
       for (const dayName of ["Mon", "Wed", "Fri"] as const) {
         const lunch = week.days
           .find((d) => d.day === dayName)!
@@ -326,7 +340,7 @@ describe("generateWeek — top-level engine", () => {
           true,
         );
         expect(lunch.dishes.some((d) => d.tags.includes("HP"))).toBe(true);
-        expect(lunch.dishes.length).toBe(3);
+        expect(lunch.dishes.length).toBe(4);
       }
     });
 
@@ -548,8 +562,8 @@ describe("generateWeek — top-level engine", () => {
           ),
         );
       expect(weekdaysWithPinned.length).toBe(1);
-      // The substituted day's lunch should have 3 items (Menu 3 or 4 form),
-      // not 3 (Menu 1) or 4 (Menu 2). For an HP-tagged lead it's Menu 3 form.
+      // The substituted day's lunch runs the Menu 3 form (3 items: complete_meal
+      // + HP lead, Accompaniment, Dessert) rather than the day's Menu 1/2 plate.
       const substitutedDay = weekdaysWithPinned[0];
       const lunchSlot = substitutedDay.slots.find((s) => s.meal === "Lunch")!;
       expect(lunchSlot.dishes.length).toBe(3);
@@ -1263,7 +1277,7 @@ describe("generateWeek — top-level engine", () => {
       expect(lunch.dishes.some((d) => d.category === "Chapati")).toBe(true); // lunch carb
     });
 
-    it("a 2-item breakfast day composes a 3-item lunch by budget, not by cap trimming", () => {
+    it("a 2-item breakfast day composes its lunch by budget, not by cap trimming", () => {
       const week = generateWeek({
         weekStart: "2026-06-15",
         library: libraryForThali("Paratha"),
@@ -1278,9 +1292,10 @@ describe("generateWeek — top-level engine", () => {
         .slots.find((s) => s.meal === "Breakfast")!;
       expect(monBf.dishes.length).toBe(2); // Paratha lead + accompaniment
       const lunch = monLunch(week);
-      // Budget 3 (2 breakfast items): lead + carb + one companion. The Gravy lead
-      // excludes the Dal, so the companion is the Dry sabzi. Nothing is dropped.
-      expect(week.droppedDishIds).toEqual([]);
+      // Budget 4 (6 items less a 2-item breakfast): lead + carb + two companions,
+      // but the Gravy lead excludes the Dal under the one-wet rule and the only
+      // other companion is the Dry sabzi, so the plate lands at 3. Nothing is
+      // dropped; the plate is simply one companion short (§10.1).
       expect(lunch.dishes.length).toBe(3);
       expect(lunch.dishes.some((d) => d.name === "Bhindi Sabzi")).toBe(true);
       expect(lunch.dishes[0].name).toBe("Paneer Gravy");
@@ -1288,7 +1303,7 @@ describe("generateWeek — top-level engine", () => {
       expect(lunch.dishes.some((d) => d.category === "Chapati")).toBe(true);
     });
 
-    it("keeps every weekday at the §9 5-item cap", () => {
+    it("keeps every weekday inside the §9 day budget", () => {
       const week = generateWeek({
         weekStart: "2026-06-15",
         library: libraryForThali("Paratha"),
@@ -1300,8 +1315,10 @@ describe("generateWeek — top-level engine", () => {
       });
       for (const dayName of ["Mon", "Tue", "Wed", "Thu", "Fri"] as const) {
         const day = week.days.find((d) => d.day === dayName)!;
-        const items = day.slots.reduce((sum, s) => sum + s.dishes.length, 0);
-        expect(items, `${dayName} has ${items} items`).toBeLessThanOrEqual(5);
+        const dishes = day.slots.flatMap((s) => s.dishes);
+        expect(dishes.length, `${dayName} has ${dishes.length} items`).toBeLessThanOrEqual(6);
+        const minutes = dishes.reduce((sum, d) => sum + d.prepMinutes, 0);
+        expect(minutes, `${dayName} costs ${minutes} minutes`).toBeLessThanOrEqual(120);
       }
     });
   });

@@ -14,8 +14,7 @@ import { serializeDishFile } from "./serialize.js";
 import { deriveDishMacros } from "../nutrition.js";
 import { eligibleDishes } from "../eligibility.js";
 import {
-  breakfastWeekdayPair,
-  breakfastSinglePick,
+  breakfastSlot,
   fruitOfDayPool,
   menu1,
   menu2,
@@ -323,8 +322,7 @@ export function poolCoverageReport(library: Dish[]): PoolCount[] {
       slot: { day: "Mon", meal: "Lunch" },
     });
 
-    const pair = breakfastWeekdayPair(eligible);
-    const single = breakfastSinglePick(eligible);
+    const breakfast = breakfastSlot(eligible);
     const fruit = fruitOfDayPool(eligible);
     const m1 = menu1(eligible);
     const m2 = menu2(eligible);
@@ -333,11 +331,10 @@ export function poolCoverageReport(library: Dish[]): PoolCount[] {
 
     const rows: Array<[string, number]> = [
       ["Fruit of the day (§3.3)", fruit.length],
-      ["Breakfast Option B: complete_carb", pair.optionB.completeCarb.length],
-      ["Breakfast Option B: accompaniment", pair.optionB.accompaniment.length],
-      ["Breakfast Option C: dry main", pair.optionC.dryMain.length],
-      ["Breakfast Option C: plain carb", pair.optionC.plainCarb.length],
-      ["Breakfast single (Tue/Thu)", single.pool.length],
+      ["Breakfast: main", breakfast.main.length],
+      ["Breakfast: plain carb", breakfast.plainCarb.length],
+      ["Breakfast: chutney", breakfast.chutney.length],
+      ["Breakfast: protein floor (HP Keto)", breakfast.ketoCompanion.length],
       ["Menu 1: protein lead (HP)", m1.hp.length],
       ["Menu 2: protein lead (Keto)", m2.keto.length],
       ["Weekday companions (non-HP Gravy/Dry/Accompaniment)", m1.companions.length],
