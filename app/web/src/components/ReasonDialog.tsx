@@ -1,9 +1,9 @@
-// Shared reason dialog. Every fast-loop write that requires a reason (swap,
-// custom one-off, delete, skip, restore) routes its reason capture through this
-// one component (Decision #8, the Stream I pattern). Quick-fill chips prefill
-// the text field; the text field is required (the submit button stays disabled
-// until the trimmed text is non-empty). Ported from the ReasonDialog overlay in
-// design_handoff/hifi-overlays.jsx; the chip set matches the handoff.
+// Shared confirm dialog for fast-loop writes (add, custom one-off, delete,
+// skip, restore) with an OPTIONAL reason (Decision #8, amended: no change in
+// the app ever demands a note). Quick-fill chips prefill the text field; the
+// submit button is always live, and submitting with an empty field sends "" so
+// the change lands with no note attached. Ported from the ReasonDialog overlay
+// in design_handoff/hifi-overlays.jsx; the chip set matches the handoff.
 
 import { useState } from "react";
 import { Sheet, Chip, PrimaryButton } from "./primitives.js";
@@ -39,7 +39,7 @@ export function ReasonDialog({
 }: ReasonDialogProps) {
   const [text, setText] = useState<string>("");
   const trimmed = text.trim();
-  const canSubmit = trimmed.length > 0 && !inFlight;
+  const canSubmit = !inFlight;
 
   return (
     <Sheet onClose={onClose}>
@@ -52,13 +52,14 @@ export function ReasonDialog({
           </Chip>
         ))}
       </div>
+      {/* No autoFocus: the note is optional, so opening the keyboard over the
+          confirm button would push a field the user is free to skip. */}
       <textarea
         className="reason__text"
         rows={3}
         value={text}
-        autoFocus
-        aria-label="Reason"
-        placeholder="Why this change?"
+        aria-label="Reason (optional)"
+        placeholder="Why this change? (optional)"
         onChange={(e) => setText(e.target.value)}
         disabled={inFlight}
       />

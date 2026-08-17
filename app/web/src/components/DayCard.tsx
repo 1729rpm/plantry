@@ -103,7 +103,11 @@ export function DayCard({ model, weekStart, status, onEdit }: DayCardProps) {
         {model.skipReason !== null ? (
           <div className="day-card__skipped">
             <div className="day-card__skipped-title">Skipped</div>
-            <div className="day-card__skipped-reason">&ldquo;{model.skipReason}&rdquo;</div>
+            {/* The skip reason is optional, so an empty one renders nothing
+                rather than a pair of empty quote marks. */}
+            {model.skipReason.trim() !== "" && (
+              <div className="day-card__skipped-reason">&ldquo;{model.skipReason}&rdquo;</div>
+            )}
           </div>
         ) : (
           meals.map((slot) => (

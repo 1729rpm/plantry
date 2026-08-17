@@ -181,7 +181,10 @@ export function DayScreen({ day, identity, onBack }: DayScreenProps) {
         <div className="day-screen__body">
           <Card className="day-screen__skipped">
             <div className="day-screen__skipped-title">This day is skipped</div>
-            <div className="day-screen__skipped-reason">&ldquo;{skip.reason}&rdquo;</div>
+            {/* The skip reason is optional; with none given we show no quote. */}
+            {skip.reason.trim() !== "" && (
+              <div className="day-screen__skipped-reason">&ldquo;{skip.reason}&rdquo;</div>
+            )}
             <div className="day-screen__skipped-note">No dishes, no groceries counted for it.</div>
             <PrimaryButton onClick={() => setOverlay({ kind: "restore" })}>
               Restore this day

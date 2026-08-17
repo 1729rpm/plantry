@@ -1,5 +1,5 @@
 import { mutation } from "./_generated/server.js";
-import { v, ConvexError } from "convex/values";
+import { v } from "convex/values";
 import { dishes } from "@plantry/engine/library";
 import type { Season } from "@plantry/engine";
 import { assertAuthor } from "./lib/author.js";
@@ -60,8 +60,8 @@ function seasonOf(isoDate: string): Season {
  * Removes one position from one (day, meal) slot of `currentWeek` (before = the
  * dish removed, after = null). The fast loop is permissive: delete may leave the
  * day below its composition shape (Decision #11); the share image simply shows
- * fewer items. Reason required (Decision #8). Writes a `manualChanges` row with
- * `changeKind: "delete"` in the same transaction (the `swapDish` pattern).
+ * fewer items. Reason optional (Decision #8, amended). Writes a `manualChanges`
+ * row with `changeKind: "delete"` in the same transaction (the `swapDish` pattern).
  *
  *   deleteDish({ author, weekStart, day, meal, position, version, reason })
  *     => { ok: true; version: number }
@@ -89,10 +89,9 @@ export const deleteDish = mutation({
       }
   > => {
     assertAuthor(args.author);
+    // The reason is optional on every fast-loop edit (Decision #8 amended): an
+    // empty reason is stored as "" and the Changes feed simply shows no note.
     const trimmedReason = args.reason.trim();
-    if (trimmedReason.length === 0) {
-      throw new ConvexError("reason must not be empty after trimming");
-    }
 
     const week = await ctx.db
       .query("currentWeek")
@@ -163,8 +162,8 @@ export const deleteDish = mutation({
  * is a safety net the real client never trips, not a filter the user can hit.
  * Active+season stays a hard filter; §3 composition eligibility is NOT enforced
  * (signal for the slow loop, per `docs/product.md` §4 Principle 4). Reason
- * required (Decision #8). Writes a `manualChanges` row with `changeKind: "add"`
- * in the same transaction.
+ * optional (Decision #8, amended). Writes a `manualChanges` row with
+ * `changeKind: "add"` in the same transaction.
  *
  *   addDish({ author, weekStart, day, meal, newDishId, version, reason })
  *     => { ok: true; version: number; position: number }
@@ -200,10 +199,9 @@ export const addDish = mutation({
       }
   > => {
     assertAuthor(args.author);
+    // The reason is optional on every fast-loop edit (Decision #8 amended): an
+    // empty reason is stored as "" and the Changes feed simply shows no note.
     const trimmedReason = args.reason.trim();
-    if (trimmedReason.length === 0) {
-      throw new ConvexError("reason must not be empty after trimming");
-    }
 
     const week = await ctx.db
       .query("currentWeek")
@@ -292,7 +290,7 @@ export const addDish = mutation({
 /**
  * Marks a day skipped for the current week by appending to
  * `currentWeek.skippedDays`. The day's dishes are never removed, so restore is
- * lossless (`restoreDay`). Reason required (Decision #8). Writes a
+ * lossless (`restoreDay`). Reason optional (Decision #8, amended). Writes a
  * `manualChanges` row with `changeKind: "skip_day"` (day-level: no meal/position,
  * null before/after) in the same transaction.
  *
@@ -317,10 +315,9 @@ export const skipDay = mutation({
     | { ok: false; reason: "version-mismatch" | "no-current-week" | "already-skipped" }
   > => {
     assertAuthor(args.author);
+    // The reason is optional on every fast-loop edit (Decision #8 amended): an
+    // empty reason is stored as "" and the Changes feed simply shows no note.
     const trimmedReason = args.reason.trim();
-    if (trimmedReason.length === 0) {
-      throw new ConvexError("reason must not be empty after trimming");
-    }
 
     const week = await ctx.db
       .query("currentWeek")
@@ -371,7 +368,7 @@ export const skipDay = mutation({
 /**
  * Restores a previously skipped day by removing it from
  * `currentWeek.skippedDays`. Lossless: the day's dishes were never removed.
- * Reason required (Decision #8). Writes a `manualChanges` row with
+ * Reason optional (Decision #8, amended). Writes a `manualChanges` row with
  * `changeKind: "restore_day"` (day-level: no meal/position, null before/after)
  * in the same transaction.
  *
@@ -396,10 +393,9 @@ export const restoreDay = mutation({
     | { ok: false; reason: "version-mismatch" | "no-current-week" | "not-skipped" }
   > => {
     assertAuthor(args.author);
+    // The reason is optional on every fast-loop edit (Decision #8 amended): an
+    // empty reason is stored as "" and the Changes feed simply shows no note.
     const trimmedReason = args.reason.trim();
-    if (trimmedReason.length === 0) {
-      throw new ConvexError("reason must not be empty after trimming");
-    }
 
     const week = await ctx.db
       .query("currentWeek")
