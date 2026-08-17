@@ -41,11 +41,7 @@ import {
   spendDayBudget,
   type DayBudget,
 } from "./cap.js";
-import {
-  chooseExplorationPosition,
-  rankExploration,
-  type ExplorationPosition,
-} from "./explore.js";
+import { chooseExplorationPosition, rankExploration, type ExplorationPosition } from "./explore.js";
 import { planRequests, slotKey } from "./requests.js";
 import { planFavorites, unplacedFavorites } from "./favorites.js";
 import { toLongDay } from "./historyRows.js";
@@ -597,7 +593,8 @@ function explorationPositions(schedule: readonly SlotPlan[]): ExplorationPositio
     if (slot.meal !== "Lunch") continue;
     // Menu 1/2 place lead + carb before the first companion; the Menu 3/4 and
     // international forms place the lead and then the companion.
-    const index = slot.intlAnchorDishId === undefined && (slot.lunchMenu === 1 || slot.lunchMenu === 2) ? 2 : 1;
+    const index =
+      slot.intlAnchorDishId === undefined && (slot.lunchMenu === 1 || slot.lunchMenu === 2) ? 2 : 1;
     positions.push({ day: slot.day, meal: slot.meal, index });
   }
   return positions;

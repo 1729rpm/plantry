@@ -20,7 +20,6 @@ import type { Dish } from "../src/data/schemas.js";
 
 function dish(overrides: Partial<Dish> & { id: number; prepMinutes: number }): Dish {
   return {
-    id: overrides.id,
     name: `Dish ${overrides.id}`,
     category: "Dry dish",
     time: "Lunch",
@@ -29,11 +28,10 @@ function dish(overrides: Partial<Dish> & { id: number; prepMinutes: number }): D
     preferred: "No",
     active: "Yes",
     satiety: "Medium",
-    prepMinutes: overrides.prepMinutes,
     seasons: "All",
     cuisine: "Indian",
     ...overrides,
-  } as Dish;
+  };
 }
 
 describe("day budget — docs/engine.md §9", () => {
@@ -61,33 +59,33 @@ describe("day budget — docs/engine.md §9", () => {
 
   describe("fitsDayBudget", () => {
     it("accepts a dish that leaves the day inside both limits", () => {
-      expect(fitsDayBudget({ minutesUsed: 60, itemsUsed: 3 }, dish({ id: 1, prepMinutes: 30 }))).toBe(
-        true,
-      );
+      expect(
+        fitsDayBudget({ minutesUsed: 60, itemsUsed: 3 }, dish({ id: 1, prepMinutes: 30 })),
+      ).toBe(true);
     });
 
     it("accepts a dish that lands exactly on the minute budget", () => {
-      expect(fitsDayBudget({ minutesUsed: 90, itemsUsed: 3 }, dish({ id: 1, prepMinutes: 30 }))).toBe(
-        true,
-      );
+      expect(
+        fitsDayBudget({ minutesUsed: 90, itemsUsed: 3 }, dish({ id: 1, prepMinutes: 30 })),
+      ).toBe(true);
     });
 
     it("rejects a dish that would breach the minute budget by one minute", () => {
-      expect(fitsDayBudget({ minutesUsed: 90, itemsUsed: 3 }, dish({ id: 1, prepMinutes: 31 }))).toBe(
-        false,
-      );
+      expect(
+        fitsDayBudget({ minutesUsed: 90, itemsUsed: 3 }, dish({ id: 1, prepMinutes: 31 })),
+      ).toBe(false);
     });
 
     it("accepts a dish that lands exactly on the item backstop", () => {
-      expect(fitsDayBudget({ minutesUsed: 10, itemsUsed: 5 }, dish({ id: 1, prepMinutes: 5 }))).toBe(
-        true,
-      );
+      expect(
+        fitsDayBudget({ minutesUsed: 10, itemsUsed: 5 }, dish({ id: 1, prepMinutes: 5 })),
+      ).toBe(true);
     });
 
     it("rejects a dish that would breach the item backstop, however quick", () => {
-      expect(fitsDayBudget({ minutesUsed: 10, itemsUsed: 6 }, dish({ id: 1, prepMinutes: 0 }))).toBe(
-        false,
-      );
+      expect(
+        fitsDayBudget({ minutesUsed: 10, itemsUsed: 6 }, dish({ id: 1, prepMinutes: 0 })),
+      ).toBe(false);
     });
 
     it("checks both limits together: either one breaching is a no", () => {
@@ -98,9 +96,9 @@ describe("day budget — docs/engine.md §9", () => {
 
   describe("spendDayBudget", () => {
     it("adds the dish's prep minutes and one item", () => {
-      expect(spendDayBudget({ minutesUsed: 20, itemsUsed: 1 }, dish({ id: 1, prepMinutes: 25 }))).toEqual(
-        { minutesUsed: 45, itemsUsed: 2 },
-      );
+      expect(
+        spendDayBudget({ minutesUsed: 20, itemsUsed: 1 }, dish({ id: 1, prepMinutes: 25 })),
+      ).toEqual({ minutesUsed: 45, itemsUsed: 2 });
     });
 
     it("is pure: the input budget is not mutated", () => {

@@ -340,7 +340,9 @@ const PLAIN_BREAKFAST_CARB_CATEGORIES = new Set(["Bread", "Paratha", "Chilla"]);
  */
 export function isBreakfastMain(dish: Dish): boolean {
   if (dish.time !== "Breakfast") return false;
-  return hasTag(dish, "complete_meal") || hasTag(dish, "complete_carb") || dish.category === "Dry dish";
+  return (
+    hasTag(dish, "complete_meal") || hasTag(dish, "complete_carb") || dish.category === "Dry dish"
+  );
 }
 
 /**

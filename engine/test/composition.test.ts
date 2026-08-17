@@ -754,7 +754,7 @@ describe("composition — docs/engine.md §3", () => {
         primaryIngredient: "Chicken Breast",
       });
       const out = composeSlot({
-        slot: { day: "Tue", meal: "Lunch", itemCount: 2, intlAnchorDishId: 500 },
+        slot: { day: "Tue", meal: "Lunch", intlAnchorDishId: 500 },
         library: [anchor],
         history: emptyHistory,
         season: "Summer",
@@ -819,7 +819,6 @@ describe("composition — docs/engine.md §3", () => {
           slot: {
             day: "Mon",
             meal: "Lunch",
-            itemCount: 3,
           },
           library: [],
           history: emptyHistory,

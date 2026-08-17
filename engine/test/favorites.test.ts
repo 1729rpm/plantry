@@ -265,7 +265,6 @@ describe("generateWeek guaranteed-favorites end-to-end (features/wishlist-favori
     const withEmpty = generate([]);
     expect(withEmpty.days).toEqual(baseline.days);
     expect(withEmpty.incidents).toEqual(baseline.incidents);
-    expect(withEmpty.droppedDishIds).toEqual(baseline.droppedDishIds);
     expect(withEmpty.unplacedFavorites).toEqual([]);
     expect(baseline.unplacedFavorites).toEqual([]);
   });

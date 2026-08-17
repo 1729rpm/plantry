@@ -16,18 +16,21 @@ Bangalore seasons: Summer (March to May), Monsoon (June to September), Winter (O
 
 ## 2. Weekly Schedule
 
-| Day           | Fruit   | Breakfast | Lunch                      | Items |
-| ------------- | ------- | --------- | -------------------------- | ----- |
-| Mon, Wed, Fri | 1 fruit | 2 items   | Menu 1 (3 items)           | 5     |
-| Tue, Thu      | 1 fruit | 1 item    | Menu 2 (4 items)           | 5     |
-| Sat           | 1 fruit | (none)    | Menu 3 or Menu 4 (3 items) | 3     |
-| Sun           | (none)  | (none)    | (none)                     | 0     |
+| Day        | Fruit   | Breakfast | Lunch            |
+| ---------- | ------- | --------- | ---------------- |
+| Mon to Fri | 1 fruit | breakfast | Menu 1 or Menu 2 |
+| Sat        | 1 fruit | (none)    | Menu 3 or Menu 4 |
+| Sun        | (none)  | (none)    | (none)           |
 
-Every day Mon to Sat also carries a Fruit of the day (one in-season fruit, §3.3), Saturday included even though it has no breakfast. The fruit sits outside the breakfast and lunch slots and outside the §9 item cap, so the "Items" column above (the capped breakfast + lunch count) is unchanged by it.
+Menu 1 runs on Mon, Wed and Fri, Menu 2 on Tue and Thu. The numbering is load-bearing: the Saturday alternation and the archive's history strings depend on it.
+
+**The schedule fixes which forms run on which day, not how many items they hold.** A slot plan carries no item count. Breakfast composes one main and attaches what that main calls for (§3), so it lands at one or two items depending on the dish. Lunch composes to the day's remaining budget (§3.1, §9). The size of a day is therefore a property of the dishes that landed, not a number written down in advance, which is the whole of §10.1: a menu is composed to a budget the household has, never composed large and trimmed back.
+
+Every day Mon to Sat also carries a Fruit of the day (one in-season fruit, §3.3), Saturday included even though it has no breakfast. The fruit sits outside the breakfast and lunch slots and outside the §9 day budget: it spends none of the day's minutes and none of its item slots.
 
 Saturday alternates between Menu 3 and Menu 4. Read `menu_history.md` for the most recent Saturday and pick the other menu. If history is empty, pick at random.
 
-At most one weekday lunch per week may substitute Menu 3 or Menu 4 for its default Menu 1 or Menu 2. On the substituted day the lunch item count matches the substituted menu (3 items); the day's total drops accordingly. See §3.2 for the trigger.
+Up to two weekday lunches per week may run the international form and at most one further weekday lunch may substitute Menu 3 or Menu 4 for its default Menu 1 or Menu 2. See §3.2 for the triggers.
 
 ## 3. Slot Composition
 
@@ -35,28 +38,33 @@ At most one weekday lunch per week may substitute Menu 3 or Menu 4 for its defau
 
 **One wet dish per meal (all lunch forms), hard.** A lunch plate holds at most one Category=Gravy dish item. When the protein lead is itself a Gravy dish, the companion pool excludes Gravy dishes entirely; when a Gravy companion lands, any further companion position excludes Gravy. This is keyed on Category, never on dish names. Unlike the one-HP rule there is NO thin-pool fallback: a plate one companion short beats a two-gravy plate, so the rule never yields to fill a slot. Two wet dishes on one plate ("2 gravy dishes already") was the recurring over-serving the household kept deleting; this rule removes it at generation time.
 
-**Lunch protein floor (all lunch forms).** Every generated lunch carries protein. After a lunch plate is composed, if no picked item is HP-tagged or Category=Keto, one protein companion is appended (role `protein-floor`, protected): an eligible HP-or-Keto Lunch dish, cuisine-coherent (Indian or `cuisine_neutral` on an Indian plate; same-cuisine-or-`cuisine_neutral` on an international plate), and never a second Category=Gravy dish when the plate already holds one. The floor counts inside the lunch budget (below) but still appends when the plate is at budget (protein beats budget), never past four items. Menu 1/2/3 satisfy it by construction (their lead is HP or Keto); it fires on the carb-only fallback, a Menu 4 with an empty Keto pool, and a self-sufficient non-HP international anchor (a `complete_meal` such as Veg hakka noodles then lands with one protein companion, mirroring Menu 4's Keto position). An empty floor pool leaves the plate protein-less and writes a `warn` incident (a real gap, not steady-state noise).
+**A carb is never eaten with a salad alone (all lunch forms), hard.** On any plate carrying a carb (Category in {Chapati, Rice}), at least one companion is a Category=Gravy dish or Dry dish, that is a dal, a curry or a sabzi. An Accompaniment (salad, raita, chutney) is only ever an ADDITIONAL item on such a plate, never its sole companion, so the first companion position of a carb plate draws from the Gravy/Dry pool only and a later position draws from the whole companion pool. Where the budget allows one companion, the Accompaniment pool is therefore excluded from it. Like the one-wet rule this has no thin-pool fallback: a plate one companion short beats a roti with nothing to eat it with. Verified against the record: 0 of 16 observed carb lunches lacked a gravy or a sabzi, while the pre-rule engine produced 27 of 81, every one of them a Keto lead with a roti and a salad.
 
-**Self-sufficient mains (all forms).** A self-sufficient main (tagged `complete_meal`, or Category=Complete meal) fills its slot alone: no separate carb, no accompaniment (the lunch protein floor above still applies to a non-HP one). The signal is the union of the tag and the category, because a dish can be Category=Complete meal without the `complete_meal` tag (White sauce pasta), and the tag alone would miss it. In breakfast Option B a Category=Bread `complete_carb` is served without the accompaniment; a Chilla or Paratha `complete_carb` keeps it. A non-complete-meal gravy that is itself filling (e.g. kadhi) is not structurally distinguishable from a gravy that wants a companion, so it carries no suppression and is left to in-week manual swap.
+**Precedence between the plate rules.** The hard rules (one HP per meal, one wet per plate, the carb rule above, the protein floor) constrain the POOL a position may draw from, and every ranking, including the §4.8 exploration slot's, then chooses inside that pool. So a plate rule can never be bypassed by a ranking, and no plate rule may consume the exploration slot: a pairing rule (`pairsWith`, §12) proposes a companion but never overrides the one-wet rule, never takes the week's novelty position, and never places a dish the within-week no-repeat rule (§4 step 5) excludes.
+
+**Lunch protein floor (all lunch forms).** Every generated lunch carries protein. After a lunch plate is composed, if no picked item is HP-tagged or Category=Keto, one protein companion is appended (role `protein-floor`, protected): an eligible HP-or-Keto Lunch dish, cuisine-coherent (Indian or `cuisine_neutral` on an Indian plate; same-cuisine-or-`cuisine_neutral` on an international plate), and never a second Category=Gravy dish when the plate already holds one. The floor counts inside the lunch budget (below) but still appends when the plate is out of minutes (protein beats budget, §9), never past four items or the §9 item backstop. Menu 1/2/3 satisfy it by construction (their lead is HP or Keto); it fires on the carb-only fallback, a Menu 4 with an empty Keto pool, and a self-sufficient non-HP international anchor (a `complete_meal` such as Veg hakka noodles then lands with one protein companion, mirroring Menu 4's Keto position). On a plate carrying a carb the floor prefers a Gravy or Dry dish, so it cannot itself create a carb plate with no substantial companion. An empty floor pool leaves the plate protein-less and writes a `warn` incident (a real gap, not steady-state noise).
+
+**Self-sufficient mains (all forms).** A self-sufficient main (tagged `complete_meal`, or Category=Complete meal) fills its slot alone: no separate carb, no accompaniment (the lunch protein floor above still applies to a non-HP one). The signal is the union of the tag and the category, because a dish can be Category=Complete meal without the `complete_meal` tag (White sauce pasta), and the tag alone would miss it. At breakfast the same signal runs through the attachment rules below: a Category=Bread `complete_carb` and a `complete_meal` are served alone, while a Chilla or Paratha main keeps its chutney. A non-complete-meal gravy that is itself filling (e.g. kadhi) is not structurally distinguishable from a gravy that wants a companion, so it carries no suppression and is left to in-week manual swap.
 
 ### Breakfast
 
 Breakfast is savoury only: the Fruit of the day (§3.3) is its own section, never a breakfast item.
 
-Mon, Wed, Fri (2 items), pick exactly one option per day:
+**One form, every day.** Every breakfast slot Mon to Fri composes the same way: rank one main pool, place the winner, then attach what the WINNER calls for. There is no day-shaped option to choose between, and the item count (one or two) falls out of the dish rather than being fixed in advance.
 
-- Option B: 1 dish with `complete_carb` tag, plus 1 breakfast accompaniment (Category=Accompaniment, Time=Breakfast). A Category=Bread `complete_carb` lead (avocado toast, masala toast) is self-sufficient: it is served without the accompaniment, a 1-item breakfast. A Chilla or Paratha `complete_carb` keeps its accompaniment.
-- Option C: 1 breakfast main (Category=Dry dish, Time=Breakfast), plus 1 plain breakfast carb (Time=Breakfast, Category in {Bread, Paratha, Chilla}, without `complete_carb` tag)
+**The main pool.** A Time=Breakfast dish that is either tagged `complete_meal` or `complete_carb`, or is Category=Dry dish. The Dry-dish arm is what makes anda bhurji, paneer bhurji, egg podimas and vegetable omelette reachable: the two forms this replaced (a Mon/Wed/Fri pair that only fell through to its dry-main option when the other option's pools were EMPTY, and a Tue/Thu single pick whose pool excluded Dry dishes outright) stranded every one of them on every day of the week. Whether a stranded dish then gets SERVED is §4's business, not §3's; a never-cooked main still has to climb the frequency ranking like any other candidate.
 
-The fruit-bearing Option A is retired (fruit is now §3.3), so both 2-item options are savoury. A consequence: a `complete_meal` breakfast dish, which Option A used to lead, now appears only on the Tue/Thu single-item slot below.
+**Attachments, keyed on the main.**
 
-Tue, Thu (1 item, plus the protein floor and the dish-driven chutney below):
+- A Category=Dry dish main draws 1 plain breakfast carb (Time=Breakfast, Category in {Bread, Paratha, Chilla}, without `complete_carb`): anda bhurji with toast, paneer bhurji with plain paratha. An empty carb pool serves the main alone.
+- A Chilla or Paratha main draws 1 breakfast chutney (Category=Accompaniment, Time=Breakfast), so a cheela or a paratha is never served without it. An empty chutney pool omits it.
+- Anything else is self-sufficient and served alone: a Category=Bread `complete_carb` (avocado toast, masala toast) and a `complete_meal` (poha, upma).
 
-- 1 dish with `complete_meal` OR `complete_carb` tag
+The chutney is a property of the main dish, not of the slot, which is why it is expressed this way rather than as a fixed second position.
 
-Breakfast protein floor (Tue/Thu single pick): when the single breakfast main carries no `HP` tag, the slot adds one HP Category=Keto companion (e.g. boiled eggs), making a 2-item breakfast. It fires only on a no-HP breakfast, so it never conflicts with the one-HP-per-meal cap; an empty companion pool falls back to a 1-item breakfast. Mon/Wed/Fri, already two items, are left to in-week manual addition.
+**Breakfast protein floor.** When the composed breakfast holds no `HP` dish AND its main carries no chutney, the slot adds one HP Category=Keto companion (boiled eggs), making a 2-item breakfast. It fires only at HP count zero, so it never conflicts with one-HP-per-meal, and an empty companion pool falls back to the 1-item breakfast. The chutney exception matters: a main with both a chutney and an HP Keto side is the 3-item breakfast that drove most of the retired cap's over-cap days.
 
-Breakfast chutney (dish-driven, all breakfast slots): the breakfast accompaniment is a property of the main dish, not of the slot form. A breakfast main whose Category is Chilla or Paratha carries one breakfast chutney (Category=Accompaniment, Time=Breakfast) in every breakfast slot, including the Tue/Thu single pick, so a cheela or paratha is never served without its chutney. This is what Option B already does for its Chilla/Paratha `complete_carb` lead; the single pick now does the same. A Category=Bread `complete_carb` stays self-sufficient and is served alone (above). On the single pick the chutney composes with the protein floor: a non-HP chilla may carry both an HP Keto floor companion and a non-HP chutney (a 3-item breakfast), which is acceptable; the §9 role-aware cap trims if the day then runs over. An empty chutney pool omits it.
+The fruit-bearing Option A is retired (fruit is now §3.3), so every breakfast form is savoury.
 
 ### Lunch
 
@@ -64,9 +72,9 @@ Breakfast chutney (dish-driven, all breakfast slots): the breakfast accompanimen
 
 - 1 protein lead: Menu 1 an HP-tagged dish (Category=Gravy dish or Dry dish), Menu 2 a Category=Keto dish. Indian cuisine only.
 - 1 carb, picked by the lead's carb affinity (§3.1).
-- companions filling the remaining budget (`lunchBudget - 2` positions, so one or two; see §3.1): the non-HP Indian companion pool, Category in {Gravy dish, Dry dish, Accompaniment}, ranked by §4, under the one-wet-dish rule above. Companion roles map by category: Gravy dish maps to `dal`, Dry dish to `sabzi`, Accompaniment to `accompaniment`.
+- companions filling the remaining budget (`lunchBudget - 2` positions, so one or two; see §3.1): the non-HP Indian companion pool, Category in {Gravy dish, Dry dish, Accompaniment}, ranked by §4, under the one-wet-dish rule and the carb rule above. Each position is filled against the day's remaining minutes, so a companion that would take the day past its budget is skipped for the next candidate that fits.
 
-The plate composes to the day budget (§3.1) rather than composing four items and trimming: a light breakfast leaves room for a second companion, a full breakfast for one. **Cuisine is meal-level: the plate composes Indian-cuisine dishes only** (`cuisine === "Indian"`, keyed on the field, never on names), so it never lands a lone non-Indian companion in an otherwise-Indian plate; non-Indian dishes reach the menu through the international form (Menu intl, §3.2). The protein lead is the meal's only HP position; the companion pool is non-HP, so one-HP-per-meal holds. The one-wet rule above governs the gravy count: an HP Gravy lead admits no gravy companion (the dal is excluded), while a Dry-dish or Keto lead admits at most one gravy companion. A slot with no eligible protein lead falls back to a carb plus the protein floor so it still fills. Complete_meal lunches are exempt (a self-sufficient main fills its slot alone; see Self-sufficient mains above), so they reach the Menu 3 / Menu 4 forms rather than this plate.
+The plate composes to the day budget (§3.1, §9) rather than composing four items and trimming: a light breakfast or a quick plate leaves room for a second companion, a heavy one does not. **Cuisine is meal-level: the plate composes Indian-cuisine dishes only** (`cuisine === "Indian"`, keyed on the field, never on names), so it never lands a lone non-Indian companion in an otherwise-Indian plate; non-Indian dishes reach the menu through the international form (Menu intl, §3.2). The protein lead is the meal's only HP position; the companion pool is non-HP, so one-HP-per-meal holds. The one-wet rule above governs the gravy count: an HP Gravy lead admits no gravy companion (the dal is excluded), while a Dry-dish or Keto lead admits at most one gravy companion. The carb rule then governs what the first companion may be: with a roti or rice on the plate it is a gravy or a sabzi, never a salad. A slot with no eligible protein lead falls back to a carb plus the protein floor so it still fills. Complete_meal lunches are exempt (a self-sufficient main fills its slot alone; see Self-sufficient mains above), so they reach the Menu 3 / Menu 4 forms rather than this plate.
 
 **Menu intl (substituted weekday lunch), the coherent non-Indian form:**
 
@@ -80,7 +88,7 @@ Up to two weekday lunches per week run this form instead of the Indian thali (th
 - A **protein** anchor (HP or Category=Keto) takes at most one same-cuisine-or-neutral NON-HP veg side. The anchor is the meal's one HP source, so the side pool excludes HP-tagged dishes (one HP per meal).
 - A **veg-forward** anchor (not HP, not Keto, not a complete_meal, e.g. Continental baked vegetables) takes one same-cuisine-or-neutral HP/Keto protein companion, so a veg-forward dish is never served without a protein.
 
-The form takes no Indian Chapati/Rice carb, with one exception: an anchor with `carbAffinity: Rice` (a Thai, Korean, or Chinese curry) takes a register-neutral steamed-rice carb, a Category=Rice dish carrying the `cuisine_neutral` tag, subject to the same rice-spacing rule as the Indian plate (§3.1); `Roti` affinity never applies on an international plate. The picks carry §9 roles: the anchor is `protein-main`, a veg-forward anchor's protein companion is a protected `protein-floor`, a protein anchor's veg side is a droppable `accompaniment`, and the steamed-rice carb is a protected `carb`. The meal is small, so the §9 cap rarely trims it. Thin pools degrade gracefully: a missing companion leaves the anchor as a valid 1-item international meal (the protein floor still guarantees it carries protein).
+The form takes no Indian Chapati/Rice carb, with one exception: an anchor with `carbAffinity: Rice` (a Thai, Korean, or Chinese curry) takes a register-neutral steamed-rice carb, a Category=Rice dish carrying the `cuisine_neutral` tag, subject to the same rice-spacing rule as the Indian plate (§3.1); `Roti` affinity never applies on an international plate. When the steamed rice lands, the carb rule applies to the one side as it does on the Indian plate: the side is then a gravy or a dry veg, not a salad. Thin pools degrade gracefully: a missing companion leaves the anchor as a valid 1-item international meal (the protein floor still guarantees it carries protein).
 
 **Menu 3 (Saturday), 3 items:**
 
@@ -98,13 +106,19 @@ The lead is non-HP, so the meal's one HP source (if any) is whichever of the Ket
 
 ### 3.1 Lunch budget and carb rule
 
-**Budget-aware composition.** Breakfast composes first (its forms are unchanged). The weekday lunch then composes to an item budget instead of composing four items and trimming after:
+**Budget-aware composition.** Breakfast composes first. The lunch then composes to what is left of the day, in items and in minutes, instead of composing to a fixed size and trimming after.
+
+The item half:
 
 ```
-lunchBudget = clamp(WEEKDAY_CAP - breakfastItemCount, 2, LUNCH_MAX_ITEMS)
+lunchBudget = clamp(DAY_MAX_ITEMS - breakfastItemCount, 2, LUNCH_MAX_ITEMS)
 ```
 
-with `WEEKDAY_CAP = 5` (§9) and `LUNCH_MAX_ITEMS = 4`. `breakfastItemCount` is the count of breakfast items actually placed on that day. Mon/Wed/Fri (2-item breakfast) budget a 3-item lunch; Tue/Thu (1-item breakfast, 2 with the breakfast protein floor) budget a 4- or 3-item lunch. The Menu 1/2 plate spends this budget as protein lead + carb + companions; the companion count is `lunchBudget - 2`. Saturday keeps its own 3-item Menu 3/4 forms and does not use the budget. Because the plate is budget-fit by construction, the §9 cap is a safety net that should not fire in normal generation; an over-cap incident now signals a real defect, not steady state.
+with `DAY_MAX_ITEMS = 6` (§9) and `LUNCH_MAX_ITEMS = 4`. `breakfastItemCount` is the count of breakfast items actually placed on that day, so a 2-item breakfast leaves a 4-item lunch and a 3-item one leaves 3. `LUNCH_MAX_ITEMS` is a shape rule, not a capacity rule: a protein lead, a carb and two companions is the largest plate the household has eaten, so the plate never grows past it however much of the day is unspent. The Menu 1/2 plate spends the budget as protein lead + carb + companions, so the companion count is `lunchBudget - 2`. Saturday has no breakfast, so its Menu 3/4 form composes against the whole day.
+
+The minute half is checked per candidate rather than per position, because it depends on WHICH dishes land, not how many: at each position the plate takes the first candidate in ranked order that keeps the day inside `DAY_PREP_BUDGET_MINUTES` (§9). At the household's observed prep times this is usually the limit that binds, which is why the item backstop sits a notch above the observed envelope.
+
+**Nothing is dropped.** A candidate that would breach either limit is skipped for the next that fits; when no candidate fits, the position lands empty and the week reports a `budget-short` incident naming it. A plate one companion short beats a plate that costs more time than the household has, the same principle as the one-wet rule. There is no post-hoc trim anywhere in the pipeline.
 
 **Carb affinity.** The carb is picked by the protein lead's optional `carbAffinity` field (§12):
 
@@ -145,9 +159,11 @@ The supporting items (Accompaniment, Dessert) are then picked per §4 from their
 Every day Mon to Sat carries exactly one Fruit of the day, Saturday included even though it has no breakfast. The fruit is its own section, separate from breakfast and lunch: it is not a breakfast item, not a lunch item, and not subject to the breakfast/lunch composition forms above.
 
 - **Eligibility.** The candidate pool is every dish that is Active, in-season (§1), and Category=Fruit.
-- **Selection.** Pick the longest-unused eligible fruit dish (§4 step 1, oldest last-cooked date first; never-cooked counts as longest unused). Fruit stays recency-exempt (§4), so the within-week no-repeat rule does not apply to it: when the eligible pool is thin the same fruit may recur across days of one week, which is intended, not a defect.
-- **Cap.** The Fruit of the day is outside the §9 item cap. It is a fruit, not a meal item, so it never counts toward the 5-item weekday cap or the 3-item Saturday cap and is never a cap-drop candidate.
-- **Grocery and history.** A fruit dish is a real library dish with ingredient rows, so its ingredients flow into the grocery list (§8 skip-aware aggregation) like any other day dish. The fruit pick appends its own skip-aware `Fruit` history row on finalize (§8), separate from the day's breakfast and lunch rows and carried even on Saturday (which has no breakfast or lunch). That row feeds only the §3.3 longest-unused fruit rotation, which reads it to rotate fruit across weeks; it does not feed the §4 within-week recency step, from which fruit stays exempt, so the same fruit may still recur within a thin-pool week.
+- **Selection.** Fruit is planned for the whole week at once, not picked per day and not dealt round robin. Each day in turn is narrowed to the fruits used fewest times so far in that week, that narrowed set is ranked by §4 (saturating frequency, then longest unused, with the §4.7 repeat guard applying), and its leader takes the day. Each pick is fed forward as a same-day history row, so the next day's guard measures a real gap rather than treating the whole week as one date. **Fruit holds no recency exemption** (§4): it ranks like any other role.
+  Two properties follow, and both were defects before. The narrowing caps any one fruit at `ceil(days / poolSize)` days of a week, which is the most a pool of that size allows and is what stops a thin in-season pool putting one fruit on four days. Ranking per day, rather than ranking once and dealing the result out by day index, is what stops the slot settling into a fixed weekday rotation: ordering the pool once and wrapping by index is a fixed cycle by construction, and it produced two distinct fruits across 150 days, one of them for 108 consecutive days, while eight of nine eligible in-season fruits were never served.
+- **Budget.** The Fruit of the day is outside the §9 day budget. It is a fruit, not a meal item, so it spends none of the day's minutes and none of its item slots.
+- **Grocery and history.** A fruit dish is a real library dish with ingredient rows, so its ingredients flow into the grocery list (§8 skip-aware aggregation) like any other day dish. The fruit pick appends its own skip-aware `Fruit` history row on finalize (§8), separate from the day's breakfast and lunch rows and carried even on Saturday (which has no breakfast or lunch). That row feeds §4 like any other, so a fruit served this week is subject to the repeat guard and the frequency credit next week.
+- **Pool depth is a content constraint, not a rule one.** With three eligible fruits and six days no rule can serve more than three distinct fruits in a week, and each will take two days. That is arithmetic; widening a thin season's fruit pool is a data change.
 
 ## 4. Selection Priority
 
@@ -231,7 +247,7 @@ Generation accepts an optional list of requested dish ids. Each requested dish m
 - **Unplaceable requests.** A request that no slot's composition accepts (out of season, inactive, an unknown id, or no fitting free slot remains) produces an incident and is not placed. Generation never crashes and never forces a dish into an incompatible slot. The dish stays queued; the caller re-queues it the following week.
 - **Minimal by design.** A request is a list of dish ids, not a generic directive language: no calendar awareness, no per-day pinning (a request cannot say "place this on Friday"). That can earn its way in later if it proves needed (Principle 1, Principle 8).
 
-The mechanism is additive: with no requests, generation behaves exactly as §2 to §5 describe, so every existing caller is unchanged. A request that lands in a slot is then subject to the same §9 cap as any other pick; the cap dropping a placed request is reported as a §9 incident, so a requested dish is always either placed exactly once or accounted for by an incident.
+The mechanism is additive: with no requests, generation behaves exactly as §2 to §5 describe, so every existing caller is unchanged. A request that lands in a slot is subject to the same §9 day budget as any other pick, so a request whose position could not be filled inside the budget is reported as an incident. A requested dish is therefore always either placed exactly once or accounted for by an incident.
 
 ## 7. Explore Ranking
 
@@ -256,21 +272,27 @@ A skipped day is a fast-loop override applied after generation. Generation itsel
 
 Both are pure, additive functions: the skipped-day input defaults to none, so every existing caller is unchanged. The running app wires the override through the Convex `skippedDays` field, the skip-aware grocery query, the finalize archive exclusion, and the "Skipped" rendering on the Menu tab and the menu share image.
 
-## 9. Item Cap
+## 9. Day Budget
 
-Cap: 5 items per weekday, 3 on Saturday.
+Every day is composed to a whole-day budget, and nothing is ever dropped.
 
-The cap counts breakfast and lunch items only. The Fruit of the day (§3.3) is outside the cap: it is a fruit, not a meal item, so it never counts toward the per-day total and is never a cap-drop candidate.
+- **Prep budget: 120 minutes** of summed `prepMinutes` across the day's breakfast and lunch items.
+- **Item backstop: 6 items** across breakfast and lunch.
 
-The cap is role-aware. Each composed pick carries a structural role from §3: `protein-main`, `dal`, `sabzi`, `carb`, `accompaniment`, `dessert`, `breakfast-main`, `breakfast-accompaniment`, or `protein-floor`. When §3 composition produces a menu over the cap, drop picks one at a time:
+Both numbers sit at the envelope of what the household has actually eaten: their busiest observed day is exactly 120 minutes and their largest is 5 items, so the item rule keeps one item of headroom and is a backstop rather than the thing that sizes the plate. The prep budget is what binds: at observed prep times a day runs out of minutes before it runs out of item slots. Both are uniform across the week; there is no separate Saturday number, so a Saturday can carry a proper weekend lunch.
 
-1. Drop only a droppable companion side (role `sabzi`, `accompaniment`, or `dessert`) while any remains. The carb, protein main, dal, breakfast main, breakfast chutney (`breakfast-accompaniment`), and protein floor are protected: they are never dropped while a droppable side is still on the day.
-2. Among the droppable sides, drop the lowest Satiety; among those the longest Prep Min; among those the later position in the day (earlier slots win).
-3. Fallback (rare): if the day is still over the cap with no droppable side left, drop the worst pick overall by the same Satiety then Prep Min then position order, so the day still resolves.
+The Fruit of the day (§3.3) is outside both limits. It is a fruit, not a meal item.
 
-Repeat until at the cap.
+**Composed as a budget, never as a post-hoc trim.**
 
-The cap is a safety net, not the per-day budget. §3 composes each lunch to the day budget (§3.1: `lunchBudget = clamp(WEEKDAY_CAP - breakfastItemCount, 2, LUNCH_MAX_ITEMS)`), so a normal weekday already lands at or under the 5-item cap (a 2-item breakfast with a 3-item lunch, a 1-item breakfast with a 4-item lunch) and Saturday at its 3-item cap. The cap therefore should not fire in normal generation; when it does, it signals a real defect (an unexpectedly large composed plate), and the role-aware order still protects the carb, protein main, dal, breakfast chutney, and protein floor by dropping a companion side first. An over-cap incident is a genuine warning to investigate, no longer weekly steady-state noise.
+1. Breakfast composes first (§3), spending from the day's budget as it places.
+2. The same day's lunch composes to the remaining minutes and items (§3.1).
+3. At each position, the plate takes the first candidate in ranked order that fits both limits; a candidate that would breach either is skipped for the next that fits.
+4. When no candidate fits, the position lands empty, the plate is one companion short, and the week records a `budget-short` incident naming the position.
+
+The old rule was a post-hoc cap (5 items per weekday, 3 on Saturday) applied after composition, which dropped picks in a role-aware order. It is retired in full, along with the pick roles that existed only to order those drops. The premise was false: a menu that has already been composed is the wrong place to discover it is too much work, and the household's complaint was never about the number of items but about the time and the shape. A day is now correct by construction, so a `budget-short` incident is a genuine signal that a pool is too thin or too slow, not weekly steady-state noise.
+
+Two positions may spend past the minute budget, never past the item backstop, because a plate without them is a worse outcome than a long day: the §3.3 lunch protein floor (protein beats budget) is the only one today.
 
 ## 10. Ingredient Consolidation
 
@@ -336,10 +358,11 @@ Alongside the blocking validators (§1, §12), a reporting layer in `engine/src/
 - `primaryIngredient`: dominant fresh or packaged ingredient. Drives §4.2 same-day deprioritisation and §10 consolidation. A free categorization label, not required to match a catalog ingredient name. Use `Mixed Veg` when no single vegetable dominates (it never triggers consolidation but does trigger same-day deduplication).
 - `preferred`: Yes/No. Parsed and retained, but not a selection input: §4 step 4 pins the household's live favorites list (the `favorites` table, curated in the app), not this field. It stays on the dish files for reference and possible future use.
 - `active`: Yes/No. Eligibility filter per §1.
-- `satiety`: High, Medium, or Low. Used by §9.
-- `prepMinutes`: estimated active prep time in minutes. Used by §9 tiebreaker.
+- `satiety`: High, Medium, or Low. A display field; the retired §9 item cap used it to order drops and nothing reads it as a rule input today.
+- `prepMinutes`: estimated active prep time in minutes. The §9 whole-day prep budget sums it across a day's breakfast and lunch items, so it is a hard composition input: a dish whose prep time will not fit the day's remaining minutes is skipped for one that does.
 - `seasons`: a season list, or `All` for year-round.
 - `cuisine`: a single cuisine, the human-readable name (Indian, Italian, Chinese, Mexican, Greek, Spanish, Korean, Japanese, Continental, Vietnamese, Lebanese, Mediterranean, Thai). A display, filter, and **§3 composition** field. §3 reads it for meal-level cuisine coherence: the Indian thali (Menu 1/2) composes only `cuisine === "Indian"` dishes, and the international form and its §3.2 selection use `cuisine !== "Indian"` for the anchor pool and same-cuisine companion match. §1 eligibility and §4 selection do not read it (the former per-position cuisine-diversity step is gone, §4). It is the single source of truth for the Explore cuisine filter, the Explore card's cuisine display, and the dish-photo prompt's cuisine slot (engineering.md §4). Dishes with no international cuisine are `Indian`, and `cuisine !== "Indian"` is the non-Indian test. Required on every dish.
+- `pairsWith` (optional): a list of dish names, each of which must resolve to a library dish by exact name (a blocking validator, like the ingredient rows). Names the canonical partner of a lead dish, so that when the lead is placed its partner leads the companion pool of the same plate. **It proposes, it never overrides** (§3): it cannot put a second gravy on a plate, cannot supply a carb plate's sole companion in place of a gravy or a sabzi, cannot consume the §4.8 exploration slot, and cannot place a dish the within-week no-repeat rule (§4 step 5) excludes. A pair that the composition rules cannot actually place is dead data, so any new pair is validated against the plate rules before it ships.
 - `carbAffinity` (optional): `Rice` or `Roti`, the canonical lunch carb of a protein-lead dish (§3.1). `Rice` sends the §3 carb position to the plain Category=Rice pool; `Roti` to Category=Chapati; absent leaves the default (Chapati). Set it only where the pairing is canonical (kadhi, chhole, sambar, rasam, and every non-Indian curry-type Gravy anchor take `Rice`; a non-Indian Rice-affinity anchor draws a `cuisine_neutral` steamed rice on the international form). Read only at the carb position; §1 eligibility and §4 selection never read it. `Roti` and absent resolve to the same pool today, so most dishes leave it unset.
 
 Enrichment fields, all optional (absent on a dish parses unchanged; the UI degrades gracefully when missing):

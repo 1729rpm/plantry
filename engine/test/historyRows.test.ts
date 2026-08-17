@@ -59,7 +59,6 @@ function makeWeek(): GeneratedWeek {
         fruit: friFruit,
       },
     ],
-    droppedDishIds: [],
     incidents: [],
     unplacedFavorites: [],
   };
