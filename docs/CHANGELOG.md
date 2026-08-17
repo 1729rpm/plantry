@@ -15,6 +15,28 @@ work queue for /reconcile-docs and /reconcile-ops; or "none".
 
 ---
 
+## 2026-08-17  Engine v4 falsified by simulation; phase reopens as v4.1
+
+The approved engine v4 spec is amended to v4.1 before any implementation starts (#226).
+A throwaway prototype of the v4 rules was built in an isolated worktree and used to
+generate 25 self-feeding weeks, then audited by three independent evaluators; eleven
+defects surfaced, two of them critical, and Rajat's review of the simulated menus added
+two more. The prototype was a faithful implementation (templates 100 percent conformant,
+seven of eight plate rules 100 percent, the ranker reproduced 250 of 250 picks by
+independent re-derivation), so every defect sits in the specification rather than the
+code. The amendment lands as `features/engine-v4.md` section 10, which supersedes section
+3; sections 3 to 7 are retained unedited as the record of what was wrong. Phase 8 opens
+as building, and a 25-week simulation plus the same three evaluations becomes a mandatory
+gate (section 10.8) that every behaviour-changing stream in the phase must pass before
+merge.
+Why: the two critical defects are rule interactions, not rule bugs (frequency-first plus
+a recency exemption is an absorbing state; a hard 7-day guard plus deterministic
+tiebreaks delays an incumbent by exactly one weekday rather than suppressing it), and
+neither is reachable by reasoning about a rule in isolation. Catching them in simulation
+cost a day; catching them after implementation would have cost a phase.
+Updated: none (docs/engine.md is unchanged until streams A and B land; this PR touches no
+code path).
+
 ## 2026-07-15  Retire the next-week signal from the slow loop (Phase 7 close-out)
 
 The slow-loop pipeline drops the retired `nextWeekQueue` signal (#225): the mark-applied

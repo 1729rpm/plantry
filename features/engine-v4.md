@@ -2,7 +2,7 @@
 
 Status: **v4.1 ACTIVE. Build against §10, not §3.** Approved 2026-08-11, falsified by prototype simulation 2026-08-17, amended the same day. The eleven defects (D1 to D9 in §8 from the simulation and evaluators, D10 to D11 in §9 from Rajat's review) are all resolved in §10, which supersedes §3 wherever they disagree. §3 to §7 are retained unedited as the record of what was wrong; do not implement them.
 
-**No stream in this phase merges until the §10.8 verification gate passes.**
+**No behaviour-changing stream in this phase merges until the §10.8 verification gate passes.** The gate scopes to streams A, B and C, which change what the engine generates. This activation PR lands documentation only and touches no code path, so it is outside the gate; it has to land first for the gate to exist.
 
 This document describes the target rule engine in full. On implementation it supersedes the matching sections of `docs/engine.md`; each stream pairs its `docs/engine.md` edits with `engine/src/` and `engine/test/` changes per the §13 parity rule. Sections of the current engine not named here (§5 picker ranking, §6 requested dishes, §7 explore ranking, §8 skipped days, §11 nutrition and reports, §13 parity) are unchanged.
 
@@ -35,12 +35,12 @@ Fields the rules read: time, category, tags (HP, complete_meal, complete_carb, f
 
 ### 3.2 Day templates
 
-| Day     | Fruit | Breakfast                 | Lunch                          |
-| ------- | ----- | ------------------------- | ------------------------------ |
-| Mon, Tue| 1     | 1 main (+ attach rules)   | Standalone plate, 1 to 2 items |
-| Wed-Fri | 1     | 1 main (+ attach rules)   | Indian plate, 3 items (4 on a dal thali) |
-| Sat     | 1     | (none)                    | Complete meal + protein side + raita-or-dessert, 3 items |
-| Sun     | (none)| (none)                    | (none)                         |
+| Day      | Fruit  | Breakfast               | Lunch                                                    |
+| -------- | ------ | ----------------------- | -------------------------------------------------------- |
+| Mon, Tue | 1      | 1 main (+ attach rules) | Standalone plate, 1 to 2 items                           |
+| Wed-Fri  | 1      | 1 main (+ attach rules) | Indian plate, 3 items (4 on a dal thali)                 |
+| Sat      | 1      | (none)                  | Complete meal + protein side + raita-or-dessert, 3 items |
+| Sun      | (none) | (none)                  | (none)                                                   |
 
 - **Breakfast, uniform Mon-Fri.** One main from the breakfast pool (tags complete_meal or complete_carb). Attach rules: a Chilla or Paratha main carries one breakfast chutney; a main with no HP tag gains one HP Keto side (boiled-eggs class); a Category=Bread main serves alone. The Mon/Wed/Fri vs Tue/Thu asymmetry and the Option B/C forms are retired.
 - **Standalone plate (Mon, Tue).** One standalone lead: a dish with the complete_meal tag or Category=Complete meal, or a non-Indian anchor (Gravy, Dry, Keto). The two leads prefer distinct cuisines. A non-HP, non-Keto lead takes one cuisine-neutral protein side (plate rule 2 below); an HP or Keto anchor may take one same-cuisine-or-neutral non-HP veg side; otherwise the lead serves alone. A rice-affinity anchor takes the neutral steamed-rice carb under the rice-spacing rule. Fixed days are a deliberate simplification: the eaten record puts standalone lunches overwhelmingly on Mon/Tue/Wed, and a fixed slot is predictable; a third standalone day is one swap away. The substitution selection and coexistence machinery of the current §3.2 is retired.
@@ -102,12 +102,12 @@ For each slot position, rank the composition-eligible candidates:
 
 ## 7. Stream breakdown (proposed, to confirm at phase start)
 
-| Stream | Scope | Lanes | Depends on | Status |
-| ------ | ----- | ----- | ---------- | ------ |
-| A | Selection rewrite: frequency-first, guard, exploration slot, fruit ranking, favorites dial consumption | `engine/src/priority.ts`, `favorites.ts`, `generateWeek.ts`, `docs/engine.md` §4, tests | none | pending |
-| B | Templates and plate rules: uniform breakfast, fixed standalone days, Indian plate, Saturday form, pairsWith rule, cap-to-assert | `engine/src/composition.ts`, `schedule.ts`, `cap.ts`, `docs/engine.md` §2-3, §9, tests | A (ranking API) | pending |
-| C | Data and backend: pairsWith frontmatter + validator + initial pairs, favorites `timesPerWeek` (schema, mutation, Yours tab dial), weekArchive `source` passthrough | `data/dishes/*`, `engine/src/data/*`, `app/convex/*`, `app/web/*` | none (parallel with A) | pending |
-| D | Docs close-out: engine.md reconciliation, CHANGELOG, retired-section cleanup | `docs/engine.md`, `docs/CHANGELOG.md` | A, B, C | pending |
+| Stream | Scope                                                                                                                                                              | Lanes                                                                                   | Depends on             | Status  |
+| ------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------ | --------------------------------------------------------------------------------------- | ---------------------- | ------- |
+| A      | Selection rewrite: frequency-first, guard, exploration slot, fruit ranking, favorites dial consumption                                                             | `engine/src/priority.ts`, `favorites.ts`, `generateWeek.ts`, `docs/engine.md` §4, tests | none                   | pending |
+| B      | Templates and plate rules: uniform breakfast, fixed standalone days, Indian plate, Saturday form, pairsWith rule, cap-to-assert                                    | `engine/src/composition.ts`, `schedule.ts`, `cap.ts`, `docs/engine.md` §2-3, §9, tests  | A (ranking API)        | pending |
+| C      | Data and backend: pairsWith frontmatter + validator + initial pairs, favorites `timesPerWeek` (schema, mutation, Yours tab dial), weekArchive `source` passthrough | `data/dishes/*`, `engine/src/data/*`, `app/convex/*`, `app/web/*`                       | none (parallel with A) | pending |
+| D      | Docs close-out: engine.md reconciliation, CHANGELOG, retired-section cleanup                                                                                       | `docs/engine.md`, `docs/CHANGELOG.md`                                                   | A, B, C                | pending |
 
 Simulation harness note: `engine/test/simulation.test.ts` snapshots will move wholesale; both agents' converged spec is the reference for what the new snapshots should look like.
 
@@ -225,11 +225,11 @@ Measured, six finalized weeks (n=34 days):
 
 | Percentile | Whole day | Lunch | Breakfast |
 | ---------- | --------- | ----- | --------- |
-| p50 | 80 min | 60 | 28 |
-| p75 | 95 | 75 | 31 |
-| p90 | **105** | 84 | 35 |
-| p95 | 112 | 85 | 35 |
-| max | 120 | 95 | 35 |
+| p50        | 80 min    | 60    | 28        |
+| p75        | 95        | 75    | 31        |
+| p90        | **105**   | 84    | 35        |
+| p95        | 112       | 85    | 35        |
+| max        | 120       | 95    | 35        |
 
 Breakfast is self-limiting (every observed breakfast falls between 10 and 35 minutes), so it needs no cap of its own; lunch carries the variance. That argues for a single whole-day budget, which also matches the cook's single morning session.
 
@@ -317,7 +317,7 @@ The false-positive `unplaced-favorite` incident predicate is a code-level fix, n
 
 ### 10.8 Verification gate (mandatory before any merge)
 
-No stream in this phase merges until the re-run passes. The prototype and harness from the 2026-08-17 cycle are reusable.
+No behaviour-changing stream (A, B, C) merges until the re-run passes. The activation PR that lands this spec is documentation only and is outside the gate. The prototype and harness from the 2026-08-17 cycle are reusable.
 
 1. Re-run the identical 25-week simulation (2026-08-17 to 2027-02-01, self-feeding, real library, real favorites) against the amended engine.
 2. Re-run the three independent evaluations: spec conformance, household fit, adversarial failure hunt.
@@ -332,12 +332,12 @@ No stream in this phase merges until the re-run passes. The prototype and harnes
 
 ### 10.9 Streams
 
-| Stream | Scope | File lanes | Depends on | Status |
-| ------ | ----- | ---------- | ---------- | ------ |
-| Activation | Land this spec, the PLAN row, the CLAUDE.md line, and the EM decision entries | `features/engine-v4.md`, `docs/PLAN.md`, `CLAUDE.md`, `DECISIONS.md` | none | pending |
-| A | Selection: saturating count, fruit exemption withdrawal, protein diversity restore, exploration rotation and cold-start credit, favorites pin under no-repeat, dial removal | `engine/src/priority.ts`, `engine/src/favorites.ts`, `engine/src/explore.ts`, `docs/engine.md` §4, paired tests | Activation | pending |
-| B | Composition: 10.1 budget, breakfast widening, rule 9, rule 7 precedence, cap retirement | `engine/src/composition.ts`, `engine/src/schedule.ts`, `engine/src/cap.ts`, `engine/src/generateWeek.ts`, `docs/engine.md` §2, §3, §9, paired tests | A | pending |
-| C | Data and backend: widen the `cuisine_neutral` pool, rewrite `pairsWith` seed data plus its validator, add `weekArchive` row `source`, remove the dial from Convex and the Yours tab | `data/dishes/`, `engine/src/data/validators.ts`, `app/convex/schema.ts`, `app/convex/favorites.ts`, `app/web/src/**Favorite**` | Activation | pending |
-| D | Verification: re-run the simulation and the three evaluations against merged A+B+C, report against 10.8 | scratchpad only, no repo files | A, B, C | pending |
+| Stream     | Scope                                                                                                                                                                               | File lanes                                                                                                                                          | Depends on | Status  |
+| ---------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------- | ---------- | ------- |
+| Activation | Land this spec, the PLAN row, the CLAUDE.md line, and the EM decision entries                                                                                                       | `features/engine-v4.md`, `docs/PLAN.md`, `CLAUDE.md`, `DECISIONS.md`                                                                                | none       | pending |
+| A          | Selection: saturating count, fruit exemption withdrawal, protein diversity restore, exploration rotation and cold-start credit, favorites pin under no-repeat, dial removal         | `engine/src/priority.ts`, `engine/src/favorites.ts`, `engine/src/explore.ts`, `docs/engine.md` §4, paired tests                                     | Activation | pending |
+| B          | Composition: 10.1 budget, breakfast widening, rule 9, rule 7 precedence, cap retirement                                                                                             | `engine/src/composition.ts`, `engine/src/schedule.ts`, `engine/src/cap.ts`, `engine/src/generateWeek.ts`, `docs/engine.md` §2, §3, §9, paired tests | A          | pending |
+| C          | Data and backend: widen the `cuisine_neutral` pool, rewrite `pairsWith` seed data plus its validator, add `weekArchive` row `source`, remove the dial from Convex and the Yours tab | `data/dishes/`, `engine/src/data/validators.ts`, `app/convex/schema.ts`, `app/convex/favorites.ts`, `app/web/src/**Favorite**`                      | Activation | pending |
+| D          | Verification: re-run the simulation and the three evaluations against merged A+B+C, report against 10.8                                                                             | scratchpad only, no repo files                                                                                                                      | A, B, C    | pending |
 
 A and B are sequenced rather than parallel: both touch `generateWeek.ts` and `docs/engine.md`, and the selection API is B's input. C runs in parallel with A on disjoint lanes.
