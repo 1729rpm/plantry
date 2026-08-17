@@ -70,10 +70,14 @@ import { dishProtein, proteinBand } from "./nutrition.js";
  *     novelty slot on 6 of 25 Fridays, which is a quarter of the year's
  *     discovery budget spent on a pairing the household already knows.
  *
- * Retention is the other half and lives in `priority.ts`: a dish this slot
- * introduces and the household keeps earns `EXPLORE_RETENTION_CREDIT`, so it
- * re-enters ordinary ranking at frequency credit 2 instead of 1 and can actually
- * compete for a normal slot the following week.
+ * This slot is DISCOVERY ONLY. §10.5 paired it with a retention credit in §4
+ * step 1 (an explored dish the household kept would re-enter ranking at credit 2
+ * rather than 1); that half is deferred out of this phase (§11.3) because it
+ * needs the exploration role persisted through finalize, and because the
+ * mechanism has no evidence behind it yet. Until it returns, a dish this slot
+ * introduces re-enters at credit 1 like any other once-eaten dish, and its route
+ * back onto a plate is the §4.7 guard opening a slot for it, or a human signal
+ * (a favorite, the wishlist, a swap).
  */
 
 /** A companion position that is eligible to carry the week's exploration slot. */

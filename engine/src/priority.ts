@@ -33,32 +33,6 @@ export const FREQUENCY_CREDIT_CAP = 3;
  */
 export const REPEAT_GUARD_DAYS = 7;
 
-/**
- * §10.5 cold-start retention credit: the extra frequency credit a dish earns for
- * having been introduced by the weekly exploration slot and kept (it reached the
- * history at all, so the household did not swap it out). One credit, so an
- * explored dish re-enters at 2 rather than 1 and can compete against the proven
- * repertoire instead of decaying straight back out of the window.
- */
-export const EXPLORE_RETENTION_CREDIT = 1;
-
-/**
- * The `source` value a history row carries when the exploration slot placed the
- * dish. See `SourcedHistoryRow` for why this is read structurally.
- */
-export const EXPLORE_SOURCE = "explore";
-
-/**
- * A history row that MAY carry the optional per-row provenance field Stream C is
- * adding to `weekArchive` ("who put this dish on the plate"). It is declared
- * structurally here rather than added to `MenuHistoryRowSchema` because the
- * schema is not this stream's lane, and because the field has to be optional
- * anyway: every row written before the field existed simply lacks it. Absent
- * reads as "no provenance known", which earns no credit, so a history with no
- * `source` anywhere ranks byte-identically to one that never had the field.
- */
-type SourcedHistoryRow = MenuHistoryRow & { source?: string };
-
 /** Day-of-week offsets from a week's Monday, for day-granular history dates. */
 const DAY_OFFSET: Record<MenuHistoryRow["day"], number> = {
   Monday: 0,
@@ -102,21 +76,19 @@ function lastCookedDateMap(history: readonly MenuHistoryRow[]): Map<number, stri
  * largest distinct `weekStart` values actually present, so a gap in the record
  * (a skipped or unfinalized week) does not silently shrink the window.
  *
- * Two credits combine, then saturate together at `FREQUENCY_CREDIT_CAP`:
+ * The credit is the dish's raw eaten count inside the window, saturated at
+ * `FREQUENCY_CREDIT_CAP`. Never-cooked dishes are absent from the map and read
+ * as credit 0.
  *
- *   - the raw eaten count of the dish's rows inside the window, and
- *   - `EXPLORE_RETENTION_CREDIT` when any in-window row carries
- *     `source: "explore"` (§10.5 cold start). A dish the exploration slot
- *     introduced and the household kept is in the record exactly once, which
- *     would leave it at credit 1 against a repertoire sitting at the cap; the
- *     extra credit is what lets it compete for an ordinary slot next week
- *     instead of being served once and never returning.
- *
- * Saturating AFTER adding is deliberate: the cold-start credit lifts a newcomer
- * toward the cap but can never lift anything past it, so the tie-at-the-cap
- * property that makes rotation work is preserved.
- *
- * Never-cooked dishes are absent from the map and read as credit 0.
+ * Nothing else contributes. §10.5 proposed a cold-start retention credit here,
+ * an extra point for a dish the exploration slot introduced and the household
+ * kept, so it would re-enter at 2 rather than 1; it is deferred out of this
+ * phase (§11.3). Earning it requires the exploration role to survive finalize
+ * into the archive row, which is new schema surface, and the mechanism has no
+ * evidence behind it yet. Reading a provenance value nothing writes would ship
+ * the type without the behaviour, which is worse than shipping neither. Stream
+ * B's result (the widened breakfast pool is reachable but unserved) is the
+ * evidence to revisit it with (§12.3).
  */
 export function frequencyCreditMap(
   history: readonly MenuHistoryRow[],
@@ -129,17 +101,14 @@ export function frequencyCreditMap(
   const window = new Set(weekStarts.slice(Math.max(0, weekStarts.length - windowWeeks)));
 
   const counts = new Map<number, number>();
-  const explored = new Set<number>();
-  for (const row of history as readonly SourcedHistoryRow[]) {
+  for (const row of history) {
     if (!window.has(row.weekStart)) continue;
     counts.set(row.dishId, (counts.get(row.dishId) ?? 0) + 1);
-    if (row.source === EXPLORE_SOURCE) explored.add(row.dishId);
   }
 
   const credits = new Map<number, number>();
   for (const [dishId, count] of counts) {
-    const bonus = explored.has(dishId) ? EXPLORE_RETENTION_CREDIT : 0;
-    credits.set(dishId, Math.min(count + bonus, cap));
+    credits.set(dishId, Math.min(count, cap));
   }
   return credits;
 }

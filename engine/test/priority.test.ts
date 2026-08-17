@@ -710,33 +710,21 @@ describe("priority — docs/engine.md §4", () => {
       expect(out.map((d) => d.name)).toEqual(["Proven", "Unknown"]);
     });
 
-    it("gives an explored-and-kept dish the §10.5 cold-start credit", () => {
+    it("credits eaten count only: a row's provenance never changes the credit", () => {
+      // §10.5's cold-start retention credit is deferred out of this phase
+      // (§11.3), so a dish introduced by the exploration slot re-enters at 1
+      // like any other once-eaten dish. Nothing on the history row other than
+      // (dishId, weekStart) is a §4 input; the archive's `source` field is
+      // written but not read here. This assertion is what pins that.
       const explored = makeDish({ name: "Explored" });
       const plain = makeDish({ name: "Plain" });
       const history = [
-        { ...historyRow(explored.id, explored.name, "2026-05-04"), source: "explore" },
+        historyRow(explored.id, explored.name, "2026-05-04"),
         historyRow(plain.id, plain.name, "2026-05-04"),
       ];
       const credits = frequencyCreditMap(history);
-      // Both appeared once; the explored one re-enters at 2 so it can compete.
-      expect(credits.get(explored.id)).toBe(2);
+      expect(credits.get(explored.id)).toBe(1);
       expect(credits.get(plain.id)).toBe(1);
-    });
-
-    it("treats an absent source field as no credit, so pre-Stream-C history is unchanged", () => {
-      const dish = makeDish();
-      const history = [historyRow(dish.id, dish.name, "2026-05-04")];
-      expect(frequencyCreditMap(history).get(dish.id)).toBe(1);
-    });
-
-    it("never lets the cold-start credit push a dish past the cap", () => {
-      const dish = makeDish();
-      const history = [
-        { ...historyRow(dish.id, dish.name, "2026-05-04"), source: "explore" },
-        historyRow(dish.id, dish.name, "2026-05-11"),
-        historyRow(dish.id, dish.name, "2026-05-18"),
-      ];
-      expect(frequencyCreditMap(history).get(dish.id)).toBe(FREQUENCY_CREDIT_CAP);
     });
   });
 
