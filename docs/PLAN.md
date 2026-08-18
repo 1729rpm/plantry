@@ -22,10 +22,8 @@ surfaces the mismatch before any code is written.
 | 5     | Engine v3                             | Generated lunches compose one-wet, budget-fit, protein-floored plates with main-driven carbs                                                                                             | shipped  |
 | 6     | Wishlist page and favorites frequency | Favorites and the next-week queue are visible and editable in the app, and favorites surface about weekly in generation                                                                  | shipped  |
 | 7     | Yours tab (wishlist and favorites v2) | A Yours tab holds the household's wishlist and favorites, favorites are guaranteed into every generated week, the profile sheet carries the Changes log, and the next-week queue is gone | shipped  |
-| 8     | Engine v4.1                           | Generated weeks pass the §10.8 verification gate: a 25-week self-feeding simulation plus three independent evaluations meet all seven acceptance thresholds                              | building |
+| 8     | Engine v4.1                           | Generated weeks pass the verification gate in `features/engine-v4.md` §10.8, as amended by §11.4 and §13: a 25-week self-feeding simulation plus three independent evaluations, with every ranking failure cleared                | building |
 
-No phase is in flight. Future phases are
-added here when they are planned, not
-before. On phase close the row flips to shipped, the spec moves to
-`archive/features/`, and the close is tagged `phase-<n>-complete`
-(`docs/development.md` §3 step 8).
+The building row is the phase in flight; at most one is. Future phases are added here when they are
+planned, not before. On phase close the row flips to shipped, the spec moves to `archive/features/`,
+and the close is tagged `phase-<n>-complete` (`docs/development.md` §3 step 8).
