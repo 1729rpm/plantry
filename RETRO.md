@@ -33,13 +33,53 @@ run only reads entries appended since.
 
 ---
 
+## 2026-08-18  Agent worktrees living inside the repo break the local gate run
+- Area: tooling
+- What happened: Claude Code puts agent worktrees at `.claude/worktrees/<id>/`, inside the repo. They are git-excluded via `.git/info/exclude`, so git ignores them, but eslint and Prettier are not git-aware and walked straight into them. From the main directory `npm run lint` reported 119 errors and `npm run format:check` failed on 13 files, every one of them belonging to another branch's checkout. CI never sees these paths, so CI stayed green while the documented local self-test was unusable.
+- Recurrence: systemic (every EM session that spawns an agent worktree, for as long as that worktree exists)
+- Impact: `docs/development.md` 3 tells engineers and the EM to self-test against the CI gates locally before opening a PR. From the main directory that instruction produced a wall of failures unrelated to the change under test, which trains the reader to ignore two gates.
+- Proposed level: tooling (add `.claude/worktrees/` to `.prettierignore` and the eslint ignores, matching how `archive/` and `dist/` are already handled)
+- Status: fixed (PR #233) - both ignore lists now skip `.claude/worktrees/`; lint and format:check run clean from the main directory with the prototype worktree still in place.
+
+## 2026-08-18  CI did not run on a pull request that targeted another stream's branch
+- Area: ci
+- What happened: `.github/workflows/ci.yml` triggered on `pull_request: branches: [main]`. Engine v4.1 Stream B was deliberately stacked on Stream A (hotspot H9: A and B ship as one deploy, so B branched off A's head and its PR targeted `feat/A-v41-selection`). The branch filter matches the PR's base, so PR #230 ran no CI at all and merged into A ungated. The gap was recorded inside the feature spec as 12.5 but never reached RETRO or the workflow.
+- Recurrence: systemic (every stacked stream, and stacking is the documented pattern whenever two streams must ship as one deploy)
+- Impact: a whole stream's worth of engine and composition changes merged with no typecheck, lint, format, or test gate. Nothing was caught late this time, but the merge gate the EM relies on simply was not there.
+- Proposed level: ci (drop the branch filter from `pull_request` so every PR is gated whatever it targets)
+- Status: fixed (PR #233) - the filter is gone from `pull_request`; `push` still runs on `main` only.
+
+## 2026-08-18  Two docs claimed a CI gate that was never built
+- Area: verification
+- What happened: `CLAUDE.md`, `README.md`, and `docs/engine.md` 13 all stated that CI fails when `docs/engine.md` and the engine drift apart, 13 going as far as "CI enforces this with two checks" and describing them. There is no such check in `.github/workflows/`; a grep for any parity check returns nothing. The engine v4.1 verification pass found the practical consequence: a rule 7 that `docs/engine.md` still describes is dead in the code, and the drift survived because the convention was believed to be automated.
+- Recurrence: systemic (a documented-but-nonexistent gate is trusted indefinitely, since the only way to discover it is to go looking for the file)
+- Impact: spec-code drift shipped and was attributed to a gate that does not exist. Reviewers skip a check they believe CI already runs.
+- Proposed level: ci-test (build the check that 13 describes) plus process-doc (until it exists, no doc may claim it)
+- Status: fixed in part (PR #233) - `CLAUDE.md` and `README.md` now describe the pairing as the review discipline it is. `docs/engine.md` 13 still overstates it and is held for `/reconcile-docs`, since open PR #229 owns that file. Building the check is already required work in `features/engine-v4.md` 15.5; it was deliberately not added in a maintenance pass with three PRs open, because a new blocking gate could red them.
+
+## 2026-08-18  A day of spec amendments and two ledger entries lived only in an uncommittable working tree
+- Area: coordination
+- What happened: `features/engine-v4.md` sections 11 to 15 and two `DECISIONS.md` entries were authored in the main directory, which the pre-commit hook blocks from committing code paths and which nobody had branched from. The content included the 2026-08-18 DO-NOT-MERGE verification verdict, the single most consequential fact about the active phase. Worse, the working copy of `DECISIONS.md` had dropped an entry that was already merged on `main`, so the append-only ledger was silently one entry short and would have stayed that way had the file been committed as-is.
+- Recurrence: systemic (every EM-authored spec amendment and ledger append, since the EM works in the main directory by design and the hook makes committing there partial)
+- Impact: an unbacked-up working tree held the phase's blocking verdict and three worktrees held three divergent copies of the same spec. A ledger entry was already lost and only a diff against HEAD recovered it.
+- Proposed level: process-doc (the EM commits ledger and spec amendments the same day they are written, from a short-lived maintenance worktree, rather than accumulating them in the main directory) plus tooling (a session-close check that the main directory has no uncommitted tracked changes)
+- Status: open
+
+## 2026-08-18  A design handoff landed at the repo root and outlived its feature there
+- Area: coordination
+- What happened: `claude-design.md` says a handoff lands at `features/<feature name>/`. The wishlist and favorites handoff instead landed at the repo root as `design_handoff_wishlist_favorites/`. Phase 7 closed on 2026-07-15 and archived a byte-identical copy to `archive/features/wishlist-favorites-v2/handoff/`, but the root copy was never removed. It sat untracked at the root for five weeks, outside the CI root allowlist (which never saw it, being untracked) and inside Prettier's and eslint's scope, contributing 2 of the 119 lint errors and 9 of the 13 format failures above.
+- Recurrence: recurring (the previous handoff model drifted the same way; see the 2026-06-17 handoff re-commission)
+- Impact: low functional risk, but a stray untracked tree at the root defeats the repo-structure check by construction, since that check only runs in CI against a clean checkout.
+- Proposed level: process-doc (feature close-out explicitly removes the working handoff copy once the archived copy is verified identical) plus no-change on the allowlist itself
+- Status: open (the archived copy is verified byte-identical; removing the root copy needs Rajat's approval and is pending)
+
 ## 2026-07-15  Green engine tests missed a double-placement bug the guaranteed-favorites pass could produce
 - Area: verification
 - What happened: Stream A's guaranteed-favorites pass could place a favorite twice in one week (a favorite pinned on one day was also drawn by ordinary selection on an earlier day; the reconciliation only flagged under-placement, and `placedIds` being a Set hid the duplicate). All 619 engine tests were green because the favorites fixture used only exclusive-slot HP-gravy mains, which structurally cannot double-place; the companion-pool path that breaks was never exercised. Only an adversarial EM review caught it.
 - Recurrence: recurring (any locked-invariant engine change whose tests do not span the pool shapes that can violate it)
 - Impact: a core locked guarantee ("no favorite twice in a week") would have shipped broken; caught pre-merge by the review, fixed via pool-exclusion plus a companion-favorite fixture that goes 4x -> <=1.
 - Proposed level: ci-test / process-doc; favorites fixtures must include a multi-position companion pool, and locked-invariant engine changes get an adversarial review by default rather than trusting a green suite.
-- Status: open
+- Status: fixed (PR #233) - the ci-test half already shipped in-stream (#223 added the companion-favorite fixture, 4x -> <=1). The process half lands as a default brief line in `new-stream.md`: a stream touching a locked invariant constructs the fixture that would break it, shows it failing before and passing after, and names the invariant in the PR body for adversarial review. Confirmed twice over since: the engine v4.1 gate found a faithful implementation of a bad spec, the same shape one level up. The `development.md` half is held for `/reconcile-docs`.
 
 ## 2026-07-15  Rebasing onto a PR that changed .prettierignore silently broke format:check
 - Area: ci
@@ -47,7 +87,7 @@ run only reads entries appended since.
 - Recurrence: recurring (every stream that rebases onto a base PR touching lint/format config, and every hand-authored brief that omits the #221 gate line)
 - Impact: one red CI run and one fix round trip; no wrong code shipped (merge gate held).
 - Proposed level: brief-template; every engineer brief (hand-authored included, not only `/new-stream` output) must require the FULL gate set including format:check after every rebase, called out specifically when the base PR touched lint/format config.
-- Status: open
+- Status: fixed (PR #233) - `new-stream.md` gains a default brief line requiring the full gate set including `format:check` after every rebase, naming `.prettierignore`, `.stylelintrc.json`, and the eslint config as the scope-shifting triggers, and requiring the PR body to say so out loud when the base touched them. PR #233 is itself an instance: it changes `.prettierignore` and `eslint.config.js`, and its own PR body carries the rebase warning.
 
 ## 2026-07-15  A lane-scoped removal orphaned an out-of-lane caller
 - Area: coordination
@@ -55,7 +95,7 @@ run only reads entries appended since.
 - Recurrence: recurring (any stream that deletes an exported symbol other lanes may call)
 - Impact: low this time (the orphaned call is guarded and the queue is always empty, so nothing broke), but a differently-shaped removal could break the next `/slow-loop`; fixed in the close-out PR.
 - Proposed level: process-doc; a stream that removes an exported function/table must run a repo-wide caller grep across all lanes (not just its own) before merge, and the EM checks it during review.
-- Status: open
+- Status: fixed (PR #233) - `new-stream.md` gains a default brief line: removing an exported symbol requires a repo-wide caller grep across `app/`, `engine/`, `scripts/`, `.github/`, and the ops docs, with the grep and its hits listed in the PR body. The practice is already proven; the day-comment removal (#231) relocated `markIncidentsResolved` out of a deleted file for exactly this reason. The `development.md` half is held for `/reconcile-docs`.
 
 ## 2026-07-13  Engineer-brief gate list omitted the Prettier format check
 - Area: ci
