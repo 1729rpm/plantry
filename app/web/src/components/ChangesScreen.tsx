@@ -1,14 +1,12 @@
 // Changes screen. The newest-first record of everything done to this week's
-// menu, merged from two Convex subscriptions: the manualChanges activity feed
-// (queries/activity.listManualChangesForWeek) and the queued comments
-// (queries/comments.listQueuedComments, filtered client-side to this week).
-// Each entry shows who, when, what changed, and the freeform reason / comment.
-// Day-level and dish-level context is folded into the "what" line in plain
-// language; no internal enum value (changeKind, position) ever reaches the
-// screen (Principle 7). Ported from the ChangesScreen in
-// design_handoff/hifi-screens.jsx; the prototype's `activity` array is the two
-// live queries here. The Menu summary line (deriveSummaryLine) reads the same
-// manualChanges feed.
+// menu, read from one Convex subscription: the manualChanges activity feed
+// (queries/activity.listManualChangesForWeek). Each entry shows who, when,
+// what changed, and the freeform reason. Day-level and dish-level context is
+// folded into the "what" line in plain language; no internal enum value
+// (changeKind, position) ever reaches the screen (Principle 7). Ported from the
+// ChangesScreen in design_handoff/hifi-screens.jsx; the prototype's `activity`
+// array is the live query here. The Menu summary line (deriveSummaryLine) reads
+// the same manualChanges feed.
 
 import { useMemo } from "react";
 import { useQuery } from "convex/react";
@@ -33,22 +31,8 @@ interface ManualChangeRow {
   reason: string;
 }
 
-interface CommentRow {
-  _id: string;
-  createdAt: number;
-  author: Identity;
-  attachedTo: {
-    kind: "dish" | "day";
-    weekStart: string;
-    day: string | null;
-    dishId: number | null;
-  };
-  text: string;
-}
-
-// A normalised feed entry both sources fold into. `headline` is the plain "what
-// happened" line; `note` is the freeform reason (a manual change) or the comment
-// body, rendered in the quoted block when present.
+// A normalised feed entry. `headline` is the plain "what happened" line; `note`
+// is the freeform reason, rendered in the quoted block when present.
 interface FeedEntry {
   key: string;
   author: Identity;
@@ -108,16 +92,6 @@ function changeHeadline(row: ManualChangeRow): string {
   }
 }
 
-function commentHeadline(row: CommentRow): string {
-  const at = row.attachedTo;
-  if (at.kind === "dish" && at.dishId !== null) {
-    const name = dishById(at.dishId)?.name ?? "a dish";
-    return `Commented on ${name}${at.day ? ` (${at.day})` : ""}`;
-  }
-  if (at.day) return `Commented on ${at.day}`;
-  return "Left a comment";
-}
-
 function manualChangeToEntry(row: ManualChangeRow): FeedEntry {
   return {
     key: `change-${row._id}`,
@@ -128,38 +102,19 @@ function manualChangeToEntry(row: ManualChangeRow): FeedEntry {
   };
 }
 
-function commentToEntry(row: CommentRow): FeedEntry {
-  return {
-    key: `comment-${row._id}`,
-    author: row.author,
-    createdAt: row.createdAt,
-    headline: commentHeadline(row),
-    note: row.text.trim() ? row.text.trim() : null,
-  };
-}
-
-// Build the newest-first feed: manual changes for the week plus this week's
-// queued comments, sorted by createdAt descending.
-export function buildFeed(
-  changes: ManualChangeRow[],
-  comments: CommentRow[],
-  weekStart: string,
-): FeedEntry[] {
-  const entries: FeedEntry[] = [];
-  for (const c of changes) entries.push(manualChangeToEntry(c));
-  for (const c of comments) {
-    if (c.attachedTo.weekStart === weekStart) entries.push(commentToEntry(c));
-  }
+// Build the newest-first feed: this week's manual changes, sorted by createdAt
+// descending.
+export function buildFeed(changes: ManualChangeRow[]): FeedEntry[] {
+  const entries: FeedEntry[] = changes.map(manualChangeToEntry);
   entries.sort((a, b) => b.createdAt - a.createdAt);
   return entries;
 }
 
 // The count of menu edits this week. The manualChanges feed
-// (listManualChangesForWeek) holds only menu edits (swaps, adds, deletes, skips,
-// restores, saves); queued comments live in a separate feed and are feedback,
-// not edits. So the non-`comment` count the Changes tab surfaces is simply the
-// length of this feed. Kept as a named helper so the Changes subtitle and the
-// nav badge read the same number from one place.
+// (listManualChangesForWeek) holds every menu edit (swaps, adds, deletes, skips,
+// restores) and nothing else, so the count the Changes tab surfaces is simply
+// the length of this feed. Kept as a named helper so the Changes subtitle and
+// the nav badge read the same number from one place.
 export function changeCount(changes: ManualChangeRow[]): number {
   return changes.length;
 }
@@ -207,11 +162,10 @@ export function changesSubtitle(count: number): string {
 }
 
 // The Menu summary line. A short, plain count of the week's menu changes, e.g.
-// "3 swaps, 1 skip this week". Counts the manualChanges feed only (comments are
-// feedback, not edits to the menu). Adds and custom one-offs both read as
-// "added"; swaps as "swaps"; deletes as "removed"; skip/restore as "skips" /
-// "restores". Returns the empty-state string when there are no changes. No
-// internal label leaks (Principle 7).
+// "3 swaps, 1 skip this week". Adds and custom one-offs both read as "added";
+// swaps as "swaps"; deletes as "removed"; skip/restore as "skips" / "restores".
+// Returns the empty-state string when there are no changes. No internal label
+// leaks (Principle 7).
 export function deriveSummaryLine(changes: ManualChangeRow[]): string {
   if (changes.length === 0) return "No changes this week yet";
   const counts = { swap: 0, added: 0, removed: 0, skip: 0, restore: 0 };
@@ -261,11 +215,11 @@ export function FeedEntryCard({ entry }: { entry: FeedEntry }) {
   );
 }
 
-// The live changes feed for the current week: the two Convex subscriptions
-// (manualChanges + queued comments) folded into a newest-first feed, plus the
-// loading flag and the this-week menu-edit count. The Changes tab is gone; this
-// feed now renders inside the Profile's Changes-log sheet (ChangesLogSheet), so
-// the query wiring lives in a hook both the sheet and any future surface reuse.
+// The live changes feed for the current week: the manualChanges subscription
+// folded into a newest-first feed, plus the loading flag and the this-week
+// menu-edit count. The Changes tab is gone; this feed now renders inside the
+// Profile's Changes-log sheet (ChangesLogSheet), so the query wiring lives in a
+// hook both the sheet and any future surface reuse.
 export interface ChangesFeed {
   feed: FeedEntry[];
   loading: boolean;
@@ -282,14 +236,11 @@ export function useChangesFeed(): ChangesFeed {
     anyApi.queries.activity.listManualChangesForWeek,
     weekStart ? { weekStart } : "skip",
   ) as ManualChangeRow[] | undefined;
-  const comments = useQuery(anyApi.queries.comments.listQueuedComments, {}) as
-    | CommentRow[]
-    | undefined;
 
   const feed = useMemo(() => {
     if (!weekStart) return [];
-    return buildFeed(changes ?? [], comments ?? [], weekStart);
-  }, [changes, comments, weekStart]);
+    return buildFeed(changes ?? []);
+  }, [changes, weekStart]);
 
   const loading = week === undefined || (weekStart !== undefined && changes === undefined);
 
