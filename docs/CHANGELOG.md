@@ -15,6 +15,33 @@ work queue for /reconcile-docs and /reconcile-ops; or "none".
 
 ---
 
+## 2026-08-18  Maintenance pass: operational reconcile, two real gate gaps closed
+
+The operational layer is brought current and two gates that did not work as
+documented are fixed. CI now runs on every pull request rather than only those
+targeting `main`, so a stream stacked on another stream is gated; Stream B (#230)
+merged into Stream A with no CI run at all under the old filter. Prettier and
+eslint now skip `.claude/worktrees/`, the in-repo agent worktrees, so a local
+`format:check` in the main directory stops failing on another branch's files while
+CI stays green. README and CLAUDE.md drop the claim that CI fails when
+`docs/engine.md` and the engine drift; no such check exists. README picks up the
+Yours tab, the profile-sheet Changes log, the optional reason, and the removal of
+save-for-next-week. `docs/PLAN.md` no longer says no phase is in flight directly
+under a row marked building. `.claude/commands/new-stream.md` gains three default
+brief lines from the three RETRO entries triaged this pass. The uncommitted
+`features/engine-v4.md` sections 11 to 15, including the 2026-08-18 DO-NOT-MERGE
+verification verdict, are committed, and `DECISIONS.md` regains an entry a
+working-copy edit had dropped.
+Why: the drift was five weeks old, and the two gate gaps were each actively
+costing something: a whole stream shipped ungated, and the documented local
+self-test could not be run from the main directory.
+Updated: `docs/engine.md` §13 still says CI enforces spec-code parity with two
+checks and it does not; `docs/product.md` §3 and §6 and `docs/engineering.md` §3
+and §5 still carry the Phase 7 and next-week drift named by the 2026-07-15
+entries. All four are held for `/reconcile-docs`: `docs/product.md` and
+`docs/engineering.md` are owned by open PR #231 and `docs/engine.md` by open PR
+#229, so this pass stayed out of their lanes.
+
 ## 2026-08-17  The reason on a menu change is optional everywhere
 
 No edit to the week demands a written reason any more. The six mutations that still
