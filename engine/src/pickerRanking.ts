@@ -10,9 +10,9 @@ import type { CatalogIngredient, Ingredient } from "./data/schemas.js";
  * The swap and add pickers rank the broad pool with their own deterministic
  * rule, distinct from §4 selection priority (which ranks generation candidate
  * sets). The picker answers a different question: given the broad,
- * non-restrictive pool (every Active, in-season dish, per Principle 4 — the meal-
- * slot pool is generic across meal-time, the fruit-slot pool is Category=Fruit),
- * which alternatives should surface first when a user opens the "Replace with..."
+ * non-restrictive pool (every Active, in-season dish, per Principle 4; the pool
+ * is generic across meal-time), which alternatives should surface first when a
+ * user opens the "Replace with..."
  * or "Add a dish" sheet?
  *
  * This module does NOT read meal-time: it ignores its `meal` arg and orders the
@@ -35,7 +35,7 @@ import type { CatalogIngredient, Ingredient } from "./data/schemas.js";
  *     dishes last cooked the same week share a tier. Genuine ties therefore
  *     exist (all never-cooked dishes tie; same-week dishes tie). This is the
  *     DOMINANT term: a longer-unused dish in a better tier always outranks a
- *     closer-protein-band dish in a worse tier. The §4 fruit/lunch-carb recency
+ *     closer-protein-band dish in a worse tier. The §4 lunch-carb recency
  *     exemption does NOT apply here; the picker ranks every dish by recency
  *     uniformly, because a swap is a deliberate user choice, not an automated
  *     pick.
@@ -65,8 +65,7 @@ import type { CatalogIngredient, Ingredient } from "./data/schemas.js";
  *   3. dish id ascending (the final, total tie-break)
  *
  * This module ranks; it does NOT filter the pool. The broad-pool eligibility
- * filter (Active + season, plus the meal-slot's non-Fruit / the fruit-slot's
- * Category=Fruit invariant) stays in the caller (`app/convex/swap.ts`
+ * filter (Active + season) stays in the caller (`app/convex/swap.ts`
  * `getSlotAlternatives`), non-restrictive per Principle 4.
  */
 

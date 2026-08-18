@@ -7,25 +7,20 @@ export type Identity = "rajat" | "tuhina";
 
 export type ShortDay = "Mon" | "Tue" | "Wed" | "Thu" | "Fri" | "Sat";
 /**
- * A meal slot the editor can swap a dish in. Breakfast and lunch are the
- * full-editing meals (swap, add, delete, custom one-off). The Fruit of the day
- * is swap-only (one fruit per day; no add/delete/one-off), so it is in `Meal`
- * for the swap flow while the editor gates add/delete on `MealTime` below.
+ * A meal slot the editor can act on. Breakfast and lunch are the only meals: they
+ * support the full editing family (swap, add, delete, custom one-off).
  */
-export type Meal = "breakfast" | "lunch" | "fruit";
+export type Meal = "breakfast" | "lunch";
+/** Alias kept for the call sites that name the editable set explicitly. */
+export type MealTime = Meal;
 /**
- * The breakfast/lunch meals: the slots that support the full editing family
- * (swap, add, delete, custom one-off). The Fruit of the day is deliberately
- * excluded so add/delete/one-off stay off it (swap only, this PR's scope).
+ * The meal value a stored `currentWeek` slot can carry. Wider than `Meal` by one
+ * READ-ONLY LEGACY value: a week generated before the Fruit of the day was
+ * removed (`features/engine-v4.md` §14) still holds `meal:"fruit"` slots, and the
+ * Convex schema keeps the literal because dropping it would fail the deploy.
+ * Nothing writes one and no surface renders one; every reader filters it out.
  */
-export type MealTime = "breakfast" | "lunch";
-/**
- * The meal value a stored `currentWeek` slot can carry. Same set as `Meal`: the
- * standalone Fruit of the day (docs/engine.md §3.3) is one Category=Fruit dish
- * per day Mon-Sat, its own section outside breakfast/lunch and outside the §9
- * item cap. System-picked at generation, swappable (only) in the editor.
- */
-export type SlotMeal = Meal;
+export type SlotMeal = Meal | "fruit";
 export type SlotSource = "generated" | "swapped" | "custom";
 export type SlotAuthor = "rajat" | "tuhina" | "system";
 
@@ -59,6 +54,15 @@ export interface WeekSlot {
   day: ShortDay;
   meal: SlotMeal;
   dishes: DishPick[];
+}
+
+/**
+ * A slot the app renders. Same shape as `WeekSlot` with the legacy fruit meal
+ * narrowed away; produced by filtering on `isRenderableSlotMeal`, which is where
+ * a pre-§14 week's fruit slot drops out.
+ */
+export interface RenderableWeekSlot extends WeekSlot {
+  meal: Meal;
 }
 
 /**

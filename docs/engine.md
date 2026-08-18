@@ -16,17 +16,17 @@ Bangalore seasons: Summer (March to May), Monsoon (June to September), Winter (O
 
 ## 2. Weekly Schedule
 
-| Day        | Fruit   | Breakfast | Lunch            |
-| ---------- | ------- | --------- | ---------------- |
-| Mon to Fri | 1 fruit | breakfast | Menu 1 or Menu 2 |
-| Sat        | 1 fruit | (none)    | Menu 3 or Menu 4 |
-| Sun        | (none)  | (none)    | (none)           |
+| Day        | Breakfast | Lunch            |
+| ---------- | --------- | ---------------- |
+| Mon to Fri | breakfast | Menu 1 or Menu 2 |
+| Sat        | (none)    | Menu 3 or Menu 4 |
+| Sun        | (none)    | (none)           |
 
 Menu 1 runs on Mon, Wed and Fri, Menu 2 on Tue and Thu. The numbering is load-bearing: the Saturday alternation and the archive's history strings depend on it.
 
 **The schedule fixes which forms run on which day, not how many items they hold.** A slot plan carries no item count. Breakfast composes one main and attaches what that main calls for (§3), so it lands at one or two items depending on the dish. Lunch composes to the day's remaining budget (§3.1, §9). The size of a day is therefore a property of the dishes that landed, not a number written down in advance, which is the whole of §10.1: a menu is composed to a budget the household has, never composed large and trimmed back.
 
-Every day Mon to Sat also carries a Fruit of the day (one in-season fruit, §3.3), Saturday included even though it has no breakfast. The fruit sits outside the breakfast and lunch slots and outside the §9 day budget: it spends none of the day's minutes and none of its item slots.
+A scheduled day holds breakfast and lunch and nothing else. Every dish the engine places belongs to one of those two slots and spends the day's §9 budget; there is no third day-level section outside it.
 
 Saturday alternates between Menu 3 and Menu 4. Read `menu_history.md` for the most recent Saturday and pick the other menu. If history is empty, pick at random.
 
@@ -48,7 +48,7 @@ Up to two weekday lunches per week may run the international form and at most on
 
 ### Breakfast
 
-Breakfast is savoury only: the Fruit of the day (§3.3) is its own section, never a breakfast item.
+Breakfast is savoury only.
 
 **One form, every day.** Every breakfast slot Mon to Fri composes the same way: rank one main pool, place the winner, then attach what the WINNER calls for. There is no day-shaped option to choose between, and the item count (one or two) falls out of the dish rather than being fixed in advance.
 
@@ -64,7 +64,7 @@ The chutney is a property of the main dish, not of the slot, which is why it is 
 
 **Breakfast protein floor.** When the composed breakfast holds no `HP` dish AND its main carries no chutney, the slot adds one HP Category=Keto companion (boiled eggs), making a 2-item breakfast. It fires only at HP count zero, so it never conflicts with one-HP-per-meal, and an empty companion pool falls back to the 1-item breakfast. The chutney exception matters: a main with both a chutney and an HP Keto side is the 3-item breakfast that drove most of the retired cap's over-cap days.
 
-The fruit-bearing Option A is retired (fruit is now §3.3), so every breakfast form is savoury.
+The fruit-bearing Option A is retired, so every breakfast form is savoury.
 
 ### Lunch
 
@@ -102,7 +102,7 @@ The form takes no Indian Chapati/Rice carb, with one exception: an anchor with `
 - 1 Keto dish
 - 1 Accompaniment
 
-The lead is non-HP, so the meal's one HP source (if any) is whichever of the Keto dish or the Accompaniment lands one first; once it does, the later position excludes HP-tagged dishes (with the thin-pool fallback). Breakfast forms apply the same rule: an HP breakfast main excludes an HP partner (a fruit partner is never HP; an HP accompaniment partner is dropped under Option B).
+The lead is non-HP, so the meal's one HP source (if any) is whichever of the Keto dish or the Accompaniment lands one first; once it does, the later position excludes HP-tagged dishes (with the thin-pool fallback). Breakfast forms apply the same rule: an HP breakfast main excludes an HP partner (an HP accompaniment partner is dropped under Option B).
 
 ### 3.1 Lunch budget and carb rule
 
@@ -154,16 +154,16 @@ The supporting items (Accompaniment, Dessert) are then picked per §4 from their
 
 **Coexistence.** The international substitution claims its days and its anchor dishes first; the complete_meal substitution then runs on a remaining day and never re-pins an international anchor. So a day is never double-substituted, and the two-vs-one counts never collide. Saturday's own Menu 3/4 alternation (§2) is independent of all weekday substitution.
 
-### 3.3 Fruit of the day
+### 3.3 (no section)
 
-Every day Mon to Sat carries exactly one Fruit of the day, Saturday included even though it has no breakfast. The fruit is its own section, separate from breakfast and lunch: it is not a breakfast item, not a lunch item, and not subject to the breakfast/lunch composition forms above.
+There is no Fruit of the day. A day holds breakfast and lunch, nothing else, and every Category=Fruit dish in the library is inactive (§1), so no fruit is eligible for any pool. The household did not follow the fruit, so the section is gone rather than tuned.
 
-- **Eligibility.** The candidate pool is every dish that is Active, in-season (§1), and Category=Fruit.
-- **Selection.** Fruit is planned for the whole week at once, not picked per day and not dealt round robin. Each day in turn is narrowed to the fruits used fewest times so far in that week, that narrowed set is ranked by §4 (saturating frequency, then longest unused, with the §4.7 repeat guard applying), and its leader takes the day. Each pick is fed forward as a same-day history row, so the next day's guard measures a real gap rather than treating the whole week as one date. **Fruit holds no recency exemption** (§4): it ranks like any other role.
-  Two properties follow, and both were defects before. The narrowing caps any one fruit at `ceil(days / poolSize)` days of a week, which is the most a pool of that size allows and is what stops a thin in-season pool putting one fruit on four days. Ranking per day, rather than ranking once and dealing the result out by day index, is what stops the slot settling into a fixed weekday rotation: ordering the pool once and wrapping by index is a fixed cycle by construction, and it produced two distinct fruits across 150 days, one of them for 108 consecutive days, while eight of nine eligible in-season fruits were never served.
-- **Budget.** The Fruit of the day is outside the §9 day budget. It is a fruit, not a meal item, so it spends none of the day's minutes and none of its item slots.
-- **Grocery and history.** A fruit dish is a real library dish with ingredient rows, so its ingredients flow into the grocery list (§8 skip-aware aggregation) like any other day dish. The fruit pick appends its own skip-aware `Fruit` history row on finalize (§8), separate from the day's breakfast and lunch rows and carried even on Saturday (which has no breakfast or lunch). That row feeds §4 like any other, so a fruit served this week is subject to the repeat guard and the frequency credit next week.
-- **Pool depth is a content constraint, not a rule one.** With three eligible fruits and six days no rule can serve more than three distinct fruits in a week, and each will take two days. That is arithmetic; widening a thin season's fruit pool is a data change.
+The number is held rather than reused so the §3.x and §4.x cross-references in the rest of this document, in `engine/src/`, and in the other canonical docs keep pointing at what they always pointed at.
+
+Two legacy shapes remain in the stored data and every reader tolerates them without ever writing another:
+
+- **`meal:"Fruit"` history rows** in `weekArchive` and `menu_history.md`. They are read as ordinary recency rows (§4): each carries a real dish id and weekStart and contributes recency for a dish that is now inactive and so never eligible. The archive is the household's eaten record and the only training signal §4 has, so it is never rewritten to remove them.
+- **`meal:"fruit"` slot rows and `manualChanges` entries** in the live Convex data. Nothing generates them; readers skip them (they render no section and contribute no grocery rows), and the Convex schema keeps the literals because Convex validates every stored document against the schema on deploy.
 
 ## 4. Selection Priority
 
@@ -181,7 +181,7 @@ Read as precedence, strongest first, that is: step 6, then 5, then 2, then 1, wi
 
 Cuisine is no longer a §4 ranking step. It was a per-position within-week nudge (the former step 5); cuisine coherence is now a §3 meal-level composition concern (the Indian thali composes Indian dishes, and the international form, §3/§3.2, places coherent non-Indian lunches), so the per-position nudge is removed. §4 selection no longer reads `cuisine`.
 
-Recency exemptions (apply to §4.7, to step 1's longest-unused tiebreak, and to step 5): **lunch carbs only** (Category in {Chapati, Rice}). Roti repeating across every lunch is intended, not a defect. Fruit is **not** exempt. A role exempt from every recency mechanism has nothing at all opposing its frequency count, so its leader is mathematically unassailable: measured, fruit produced two distinct dishes across 150 days, one of them for 108 consecutive days, while eight of nine eligible in-season fruits were never served once. Fruit ranks by §4 like any other role. Step 6 (protein diversity) has its own fresh-alternative fallback instead of an exemption list: it acts only on HP mains, none of which are exempt categories, so the exemption list does not interact with it.
+Recency exemptions (apply to §4.7, to step 1's longest-unused tiebreak, and to step 5): **lunch carbs only** (Category in {Chapati, Rice}). Roti repeating across every lunch is intended, not a defect. Nothing else is exempt, and the list stays this narrow deliberately: a role exempt from every recency mechanism has nothing at all opposing its frequency count, so its leader is mathematically unassailable and the role becomes an absorbing state. A daily staple is the intended outcome for roti and for nothing else. Step 6 (protein diversity) has its own fresh-alternative fallback instead of an exemption list: it acts only on HP mains, none of which are exempt categories, so the exemption list does not interact with it.
 
 ### 4.6 Protein-family normalization
 
@@ -219,7 +219,7 @@ Discovery is budgeted at one position a week. Retention is not: an explored dish
 
 §4 ranks generation candidate sets. The picker is the separate ranking the swap and add affordances use when a user opens "Replace with..." or "Add a dish". It answers a different question: given the broad, non-restrictive pool (every Active, in-season dish; `docs/product.md` §6 "a generic ranked picker over the active library", and Principle 4), which alternatives surface first?
 
-For a breakfast/lunch slot the pool is generic across meal-time: every Active, in-season, non-Fruit dish, so a breakfast dish is reachable from a lunch slot and vice versa. The fruit slot keeps its Category=Fruit pool (§3.3). Meal-time is no longer a hard pool filter; it is a swap-time ordering signal (below).
+Every slot is a breakfast or lunch slot and its pool is generic across meal-time: every Active, in-season dish, so a breakfast dish is reachable from a lunch slot and vice versa. Meal-time is no longer a hard pool filter; it is a swap-time ordering signal (below).
 
 The picker does not narrow the pool (Principle 4: a swap may land on any Active, in-season dish, including a cross-meal one; the resulting §3 composition mismatch is signal for the slow loop, not an error the fast loop blocks). It only orders it. The order is a **head** followed by a **tail**, with slot-meal-matching dishes led to the front of the default view.
 
@@ -229,13 +229,13 @@ The picker does not narrow the pool (Principle 4: a swap may land on any Active,
 headOrder(dish) = (recencyTier, proteinBandDistanceForSwaps, id)
 ```
 
-- **recencyTier** is a coarse longest-unused bucket, not a unique index. All never-cooked dishes share the single best (first) tier; cooked dishes are tiered by last-cooked weekStart, oldest weekStart = better tier, so dishes last cooked the same week share a tier. A dish's last-cooked date is the most recent matching history row. This is the dominant term: a longer-unused dish in a better tier always outranks a closer-protein-band dish in a worse tier. Unlike §4, the picker does not exempt fruit or lunch carbs from recency: a swap is a deliberate user choice, so every dish is ranked by recency uniformly. Because the tier is coarse, genuine ties exist (all never-cooked dishes tie; same-week dishes tie), which is what the next term resolves.
+- **recencyTier** is a coarse longest-unused bucket, not a unique index. All never-cooked dishes share the single best (first) tier; cooked dishes are tiered by last-cooked weekStart, oldest weekStart = better tier, so dishes last cooked the same week share a tier. A dish's last-cooked date is the most recent matching history row. This is the dominant term: a longer-unused dish in a better tier always outranks a closer-protein-band dish in a worse tier. Unlike §4, the picker does not exempt lunch carbs from recency: a swap is a deliberate user choice, so every dish is ranked by recency uniformly. Because the tier is coarse, genuine ties exist (all never-cooked dishes tie; same-week dishes tie), which is what the next term resolves.
 - **proteinBandDistanceForSwaps** applies to swaps only (a dish is being replaced). It is the protein-band distance between the candidate and the outgoing dish, where a protein band is the per-person derived protein (§11) divided into fixed 5 g buckets. Same band is distance zero. Because it sits second in the tuple, it only ever orders candidates that share a recencyTier; it can never move a dish across tiers, so it can never push a more-recently-cooked dish above a longer-unused one. The effect: among equally fresh options, the one in the same protein band as the dish being replaced surfaces first, then nearer bands before farther. For adds (no outgoing dish) this term is absent and the head is pure recency tier then id.
 - **id** is dish id ascending, the final total tie-break.
 
 **Tail.** Every other pool dish (the same-day repeats the head excluded), ordered by the same tuple comparison. The tail keeps the pool complete (nothing is dropped) while pushing dishes the day already has below fresh options.
 
-**Slot-meal-first default ordering.** After the head/tail ranking, the swap picker stable-partitions the result so dishes whose own meal-time matches the slot lead and cross-meal dishes follow, each group keeping its ranked order. This is a swap-time ordering, not a pool filter: the full ranked pool is still offered (search and filter pills reach every dish), and only the default suggested order leads with slot-meal-matching dishes. The fruit slot's pool is single-purpose and needs no partition. The ranking engine itself is meal-time-blind; this partition is applied by the picker's caller.
+**Slot-meal-first default ordering.** After the head/tail ranking, the swap picker stable-partitions the result so dishes whose own meal-time matches the slot lead and cross-meal dishes follow, each group keeping its ranked order. This is a swap-time ordering, not a pool filter: the full ranked pool is still offered (search and filter pills reach every dish), and only the default suggested order leads with slot-meal-matching dishes. The ranking engine itself is meal-time-blind; this partition is applied by the picker's caller.
 
 **Determinism.** No RNG. Every tie resolves through the fixed tuple chain: recencyTier, then protein-band distance (swaps), then dish id ascending, and the slot-meal-first partition is stable. The same inputs always produce the same order, and input order does not affect output.
 
@@ -281,7 +281,7 @@ Every day is composed to a whole-day budget, and nothing is ever dropped.
 
 Both numbers sit at the envelope of what the household has actually eaten: their busiest observed day is exactly 120 minutes and their largest is 5 items, so the item rule keeps one item of headroom and is a backstop rather than the thing that sizes the plate. The prep budget is what binds: at observed prep times a day runs out of minutes before it runs out of item slots. Both are uniform across the week; there is no separate Saturday number, so a Saturday can carry a proper weekend lunch.
 
-The Fruit of the day (§3.3) is outside both limits. It is a fruit, not a meal item.
+Both limits count every dish on the day, because breakfast and lunch are the only places a dish can be. Nothing sits outside them.
 
 **Composed as a budget, never as a post-hoc trim.**
 
@@ -292,7 +292,7 @@ The Fruit of the day (§3.3) is outside both limits. It is a fruit, not a meal i
 
 The old rule was a post-hoc cap (5 items per weekday, 3 on Saturday) applied after composition, which dropped picks in a role-aware order. It is retired in full, along with the pick roles that existed only to order those drops. The premise was false: a menu that has already been composed is the wrong place to discover it is too much work, and the household's complaint was never about the number of items but about the time and the shape. A day is now correct by construction, so a `budget-short` incident is a genuine signal that a pool is too thin or too slow, not weekly steady-state noise.
 
-Two positions may spend past the minute budget, never past the item backstop, because a plate without them is a worse outcome than a long day: the §3.3 lunch protein floor (protein beats budget) is the only one today.
+Two positions may spend past the minute budget, never past the item backstop, because a plate without them is a worse outcome than a long day: the §3 lunch protein floor (protein beats budget) is the only one today.
 
 ## 10. Ingredient Consolidation
 
@@ -353,7 +353,7 @@ Alongside the blocking validators (§1, §12), a reporting layer in `engine/src/
   - `HP`: high-protein (paneer, chicken, egg, fish, prawn, soya).
   - `complete_meal`: standalone dish, no sides needed.
   - `complete_carb`: substantial carb needing only an accompaniment.
-  - `fruit`: marks a Fruit-of-the-day candidate (§3.3); recency-exempt.
+  - `fruit`: carried by the Category=Fruit dishes, all of which are inactive (§3.3). Parsed, never a rule input.
   - `cuisine_neutral`: marks a plain protein with no cuisine character (grilled chicken breast, boiled eggs) that pairs with any register. An eligible companion in the §3 international lunch form regardless of the anchor's cuisine.
 - `primaryIngredient`: dominant fresh or packaged ingredient. Drives §4.2 same-day deprioritisation and §10 consolidation. A free categorization label, not required to match a catalog ingredient name. Use `Mixed Veg` when no single vegetable dominates (it never triggers consolidation but does trigger same-day deduplication).
 - `preferred`: Yes/No. Parsed and retained, but not a selection input: §4 step 4 pins the household's live favorites list (the `favorites` table, curated in the app), not this field. It stays on the dish files for reference and possible future use.

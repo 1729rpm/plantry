@@ -15,7 +15,6 @@ import { deriveDishMacros } from "../nutrition.js";
 import { eligibleDishes } from "../eligibility.js";
 import {
   breakfastSlot,
-  fruitOfDayPool,
   menu1,
   menu2,
   menu3,
@@ -202,7 +201,7 @@ export function validateIngredientNamesResolve(
  * carrying one can never be placed: Chapati and Rice are the carb position (which
  * `carbAffinity` picks, not rule 7), Bread has no lunch position pool at all,
  * Complete meal and the breakfast categories lead their own slot rather than
- * companion one, and Fruit sits outside lunch composition entirely.
+ * companion one, and Fruit is an inactive category with no position at all.
  *
  * Held here rather than imported from `composition.ts` deliberately: this is the
  * validator's own statement of what the composition rules can place, so a
@@ -486,14 +485,12 @@ export function poolCoverageReport(library: Dish[]): PoolCount[] {
     });
 
     const breakfast = breakfastSlot(eligible);
-    const fruit = fruitOfDayPool(eligible);
     const m1 = menu1(eligible);
     const m2 = menu2(eligible);
     const m3 = menu3(eligible);
     const m4 = menu4(eligible);
 
     const rows: Array<[string, number]> = [
-      ["Fruit of the day (§3.3)", fruit.length],
       ["Breakfast: main", breakfast.main.length],
       ["Breakfast: plain carb", breakfast.plainCarb.length],
       ["Breakfast: chutney", breakfast.chutney.length],

@@ -11,28 +11,8 @@
 import type { Dish } from "@plantry/engine";
 import { dishIsHealthy } from "./healthy.js";
 
-// ── Picker-sheet quality chips (the fruit slot) ──────────────────────────────
-// The fruit slot's Replace picker keeps the simple quality-only chip row: its
-// pool is already category-locked to Fruit (the generic-search relaxation does
-// not apply there), so the meal dimension is meaningless and it offers only the
-// two dish-quality quick filters. (Explore uses the richer nested filter below;
-// the breakfast/lunch pickers use the dynamic picker vocabulary further down.)
-export const DISH_FILTERS = ["Easy to cook", "Healthy"] as const;
-export type DishFilter = (typeof DISH_FILTERS)[number];
-
-// The chips the fruit-slot picker renders (quality only; the pool is Fruit-only).
-export const PICKER_FILTERS: DishFilter[] = ["Easy to cook", "Healthy"];
-
-/** Does a dish satisfy every active picker chip? Multi-select is an AND across
- *  the selected chips. */
-export function dishMatchesFilters(dish: Dish, filters: DishFilter[]): boolean {
-  if (filters.includes("Easy to cook") && dish.complexity !== "Easy") return false;
-  if (filters.includes("Healthy") && !dishIsHealthy(dish)) return false;
-  return true;
-}
-
-// ── Dynamic picker filters (breakfast/lunch swap + add-a-dish) ────────────────
-// The breakfast/lunch pickers search a generic pool that mixes both meal-times
+// ── Dynamic picker filters (swap + add-a-dish) ───────────────────────────────
+// The pickers search a generic pool that mixes both meal-times
 // (a breakfast dish is reachable from a lunch slot's Replace and vice versa,
 // feature picker-generic-search), so their chip row needs the meal-time pills
 // alongside the two quality pills. Two things make this row "dynamic":
@@ -48,9 +28,8 @@ export function dishMatchesFilters(dish: Dish, filters: DishFilter[]): boolean {
 export const PICKER_PILLS = ["Breakfast", "Lunch", "Easy to cook", "Healthy"] as const;
 export type PickerPill = (typeof PICKER_PILLS)[number];
 
-// The full candidate set the breakfast/lunch pickers draw from. A surface passes
-// a subset to availablePickerFilters; the fruit slot does not use this vocabulary
-// (it keeps PICKER_FILTERS, quality only).
+// The full candidate set the pickers draw from. A surface passes a subset to
+// availablePickerFilters.
 export const PICKER_FILTER_PILLS: PickerPill[] = ["Breakfast", "Lunch", "Easy to cook", "Healthy"];
 
 // The picker pills that select on the meal-time dimension. Everything else is a
@@ -108,11 +87,10 @@ export function dishMatchesPickerFilters(dish: Dish, selected: PickerPill[]): bo
 // the dimensions, OR within each multi-select set. An empty set means "no
 // constraint on that dimension" (show everything).
 
-/** The three meal-time buckets Explore offers. Distinct and non-overlapping:
- *  Fruit of the day is the Fruit category (Stream D), Breakfast is the savoury
- *  breakfast pool (Fruit category excluded so the buckets do not double-count),
- *  Lunch is the lunch pool. */
-export const MEAL_TIMES = ["Breakfast", "Lunch", "Fruit of the day"] as const;
+/** The two meal-time buckets Explore offers, matching the two slots a day holds.
+ *  Distinct and non-overlapping: Breakfast is the breakfast pool, Lunch is the
+ *  lunch pool. */
+export const MEAL_TIMES = ["Breakfast", "Lunch"] as const;
 export type MealTimeFilter = (typeof MEAL_TIMES)[number];
 
 export interface ExploreFilterState {
@@ -137,13 +115,10 @@ export function cuisineOf(dish: Dish): string {
   return dish.cuisine;
 }
 
-/** Does a dish fall in a given meal-time bucket? Buckets are non-overlapping:
- *  Fruit of the day is the Fruit category, Breakfast is the non-fruit breakfast
- *  pool, Lunch is the lunch pool. */
+/** Does a dish fall in a given meal-time bucket? Buckets are non-overlapping and
+ *  read the dish's own meal-time. */
 export function dishInMealTime(dish: Dish, mealTime: MealTimeFilter): boolean {
-  if (mealTime === "Fruit of the day") return dish.category === "Fruit";
-  if (mealTime === "Breakfast") return dish.time === "Breakfast" && dish.category !== "Fruit";
-  return dish.time === "Lunch";
+  return mealTime === "Breakfast" ? dish.time === "Breakfast" : dish.time === "Lunch";
 }
 
 /** Does a dish satisfy the full Explore filter? AND across dimensions, OR within
@@ -181,7 +156,7 @@ export function cuisineCounts(pool: Dish[]): Array<{ cuisine: string; count: num
 }
 
 /** Count dishes per meal-time bucket across a pool, for the meal-time sub-panel's
- *  per-row counts. In MEAL_TIMES order (Breakfast, Lunch, Fruit of the day). */
+ *  per-row counts. In MEAL_TIMES order (Breakfast, Lunch). */
 export function mealTimeCounts(pool: Dish[]): Array<{ mealTime: MealTimeFilter; count: number }> {
   return MEAL_TIMES.map((mealTime) => ({
     mealTime,

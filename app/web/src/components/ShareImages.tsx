@@ -13,7 +13,7 @@
 import type { ReactNode } from "react";
 import type { Dish } from "@plantry/engine";
 import type { CurrentWeek, DishPick, ShortDay } from "../lib/types.js";
-import { dayOrderIndex, dayDate } from "../lib/days.js";
+import { dayOrderIndex, dayDate, isRenderableSlotMeal } from "../lib/days.js";
 import { dishById } from "../lib/library.js";
 
 function ShareFrame({ children }: { children: ReactNode }) {
@@ -44,8 +44,6 @@ export interface ShareDayModel {
   dateNum: number;
   breakfast: string[];
   lunch: string[];
-  /** §3.3 Fruit of the day: the picked Category=Fruit dish name(s) for the day. */
-  fruit: string[];
   skipped: boolean;
 }
 
@@ -66,12 +64,15 @@ function pickName(pick: DishPick): string {
 
 export function buildShareDayModels(week: CurrentWeek): ShareDayModel[] {
   const skipped = new Set<ShortDay>((week.skippedDays ?? []).map((s) => s.day));
-  const byDay = new Map<ShortDay, { breakfast: string[]; lunch: string[]; fruit: string[] }>();
+  const byDay = new Map<ShortDay, { breakfast: string[]; lunch: string[] }>();
   for (const slot of week.slots) {
-    const entry = byDay.get(slot.day) ?? { breakfast: [], lunch: [], fruit: [] };
+    // A legacy `meal:"fruit"` slot (a week generated before
+    // `features/engine-v4.md` §14) contributes nothing: the shared menu image has
+    // no fruit line.
+    if (!isRenderableSlotMeal(slot.meal)) continue;
+    const entry = byDay.get(slot.day) ?? { breakfast: [], lunch: [] };
     const names = slot.dishes.map(pickName);
     if (slot.meal === "breakfast") entry.breakfast.push(...names);
-    else if (slot.meal === "fruit") entry.fruit.push(...names);
     else entry.lunch.push(...names);
     byDay.set(slot.day, entry);
   }
@@ -79,14 +80,13 @@ export function buildShareDayModels(week: CurrentWeek): ShareDayModel[] {
   return [...days]
     .sort((a, b) => dayOrderIndex(a) - dayOrderIndex(b))
     .map((day) => {
-      const meals = byDay.get(day) ?? { breakfast: [], lunch: [], fruit: [] };
+      const meals = byDay.get(day) ?? { breakfast: [], lunch: [] };
       return {
         day,
         short: SHORT_DAY_LABEL[day],
         dateNum: dayDate(week.weekStart, day).num,
         breakfast: meals.breakfast,
         lunch: meals.lunch,
-        fruit: meals.fruit,
         skipped: skipped.has(day),
       };
     });

@@ -21,10 +21,15 @@ export type MealTime = z.infer<typeof MealTimeSchema>;
 
 /**
  * The meal a history row can carry. Distinct from `MealTimeSchema` (which is also
- * `Dish.time` and must never be "Fruit"): the §3.3 Fruit of the day is logged
- * into the recency record as its own `meal:"Fruit"` row so cross-week fruit
- * rotation (`orderFruitByLongestUnused`) sees fruit recency. A dish's `time` is
- * still only Breakfast|Lunch; this widening is the history row's meal only.
+ * `Dish.time` and is only ever Breakfast|Lunch).
+ *
+ * "Fruit" is a READ-ONLY LEGACY value. The retired Fruit of the day (§3.3) wrote
+ * its own `meal:"Fruit"` rows, and those rows are still in `data/menu_history.md`
+ * and in the `weekArchive` table. Nothing writes another one: `deriveHistoryRows`
+ * only emits Breakfast|Lunch. The literal stays because the parser and the
+ * archive reader must keep accepting the record as written; dropping it would
+ * make the historical record unparseable, and that record is the only training
+ * signal §4 selection has.
  */
 export const HistoryMealSchema = z.enum(["Breakfast", "Lunch", "Fruit"]);
 export type HistoryMeal = z.infer<typeof HistoryMealSchema>;
@@ -52,11 +57,15 @@ export type Complexity = z.infer<typeof ComplexitySchema>;
 
 /**
  * Dish tags, the closed set documented in docs/engine.md §12. These are rule
- * inputs (`HP`, `complete_meal`, `complete_carb` drive §3 composition; `fruit`
- * drives §3.3; `cuisine_neutral` marks a plain protein that pairs with any
- * register in the §3 international lunch form), so a mistyped tag would silently
- * change the menu. The enum makes §12 the enforced source of truth: an unknown
- * tag fails the build, not the menu.
+ * inputs (`HP`, `complete_meal`, `complete_carb` drive §3 composition;
+ * `cuisine_neutral` marks a plain protein that pairs with any register in the §3
+ * international lunch form), so a mistyped tag would silently change the menu.
+ * The enum makes §12 the enforced source of truth: an unknown tag fails the
+ * build, not the menu.
+ *
+ * `fruit` is inert: it is carried by the Category=Fruit dishes, which are all
+ * inactive (§3.3), and no rule reads it. It stays in the enum because those dish
+ * files still carry the tag and the parser must accept them.
  */
 export const DishTagSchema = z.enum([
   "HP",

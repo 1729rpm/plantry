@@ -24,9 +24,6 @@ interface DishDetailSheetProps {
   dishId: number;
   // Whether this dish entry currently rides along in the shared image family.
   includeRecipe: boolean;
-  // Whether this slot offers Delete. False for the Fruit of the day (swap-only,
-  // docs/engine.md §3.3), true for breakfast/lunch.
-  canDelete: boolean;
   // Whether this dish is currently on the household wishlist, and the toggle.
   wishlisted: boolean;
   onToggleWishlist: () => void;
@@ -44,7 +41,6 @@ export function DishDetailSheet({
   version,
   dishId,
   includeRecipe,
-  canDelete,
   wishlisted,
   onToggleWishlist,
   identity,
@@ -129,11 +125,9 @@ export function DishDetailSheet({
         <PrimaryButton className="detail__action-replace" onClick={onReplace}>
           Replace this dish
         </PrimaryButton>
-        {canDelete && (
-          <QuietButton danger className="detail__action-remove" onClick={onDelete}>
-            Delete
-          </QuietButton>
-        )}
+        <QuietButton danger className="detail__action-remove" onClick={onDelete}>
+          Delete
+        </QuietButton>
       </div>
 
       {/* Centered dashed-underline text button: mark this menu dish onto the

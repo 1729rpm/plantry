@@ -1,7 +1,6 @@
 import { describe, it, expect } from "vitest";
 import {
   composeSlot,
-  fruitOfDayPool,
   breakfastSlot,
   isBreakfastMain,
   breakfastMainNeedsPlainCarb,
@@ -65,22 +64,27 @@ function lunch(day: SlotPlan["day"], lunchMenu: 1 | 2 | 3 | 4): SlotPlan {
 }
 
 describe("composition — docs/engine.md §3", () => {
-  describe("§3.3 Fruit of the day pool", () => {
-    it("includes every Category=Fruit dish, regardless of time or tags", () => {
-      const breakfastFruit = makeDish({
-        time: "Breakfast",
-        category: "Fruit",
-        tags: ["fruit"],
-      });
-      const lunchFruit = makeDish({ time: "Lunch", category: "Fruit", tags: [] });
-      const notFruit = makeDish({ time: "Breakfast", category: "Bread" });
-      const out = fruitOfDayPool([breakfastFruit, lunchFruit, notFruit]);
-      expect(out).toEqual([breakfastFruit, lunchFruit]);
+  describe("§3.3 is retired: no composition pool holds a Category=Fruit dish", () => {
+    // Fruit is removed as a feature (features/engine-v4.md §14). The category
+    // still exists on ten inactive dish files, so the guard here is that no pool
+    // would place one even if it reached the eligible set.
+    it("no breakfast pool admits a Category=Fruit dish", () => {
+      const fruit = makeDish({ time: "Breakfast", category: "Fruit", tags: ["fruit"] });
+      const b = breakfastSlot([fruit]);
+      expect(b.main).toEqual([]);
+      expect(b.plainCarb).toEqual([]);
+      expect(b.chutney).toEqual([]);
+      expect(b.ketoCompanion).toEqual([]);
     });
 
-    it("returns an empty pool when no Fruit-category dish is eligible", () => {
-      const notFruit = makeDish({ category: "Gravy dish" });
-      expect(fruitOfDayPool([notFruit])).toEqual([]);
+    it("no Menu 1 lunch pool admits a Category=Fruit dish", () => {
+      const fruit = makeDish({ time: "Lunch", category: "Fruit", tags: ["fruit"] });
+      const m1 = menu1([fruit]);
+      expect(m1.hp).toEqual([]);
+      expect(m1.companions).toEqual([]);
+      expect(m1.proteinFloor).toEqual([]);
+      expect(m1.riceCarb).toEqual([]);
+      expect(m1.chapatiCarb).toEqual([]);
     });
   });
 

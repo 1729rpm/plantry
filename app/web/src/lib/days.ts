@@ -1,4 +1,4 @@
-import type { ShortDay, SlotMeal } from "./types.js";
+import type { Meal, ShortDay, SlotMeal } from "./types.js";
 
 // The Convex schema stores currentWeek.slots[].day in short form ("Mon"..."Sat")
 // because that's the live-plan format; weekArchive uses the full-word form to
@@ -22,19 +22,25 @@ export function dayOrderIndex(day: ShortDay): number {
   return DAY_ORDER.indexOf(day);
 }
 
-export function mealLabel(meal: SlotMeal): string {
-  if (meal === "breakfast") return "Breakfast";
-  if (meal === "lunch") return "Lunch";
-  return "Fruit of the day";
+export function mealLabel(meal: Meal): string {
+  return meal === "breakfast" ? "Breakfast" : "Lunch";
 }
 
-// Order within a day card: breakfast, lunch, then the Fruit of the day as a
-// light closing section (docs/engine.md §3.3). On Saturday (no breakfast) it
-// reads lunch then fruit.
-export function mealOrderIndex(meal: SlotMeal): number {
-  if (meal === "breakfast") return 0;
-  if (meal === "lunch") return 1;
-  return 2;
+// Order within a day card: breakfast then lunch. On Saturday (no breakfast) it
+// reads lunch alone.
+export function mealOrderIndex(meal: Meal): number {
+  return meal === "breakfast" ? 0 : 1;
+}
+
+/**
+ * Is this stored slot one the app renders? A `currentWeek` generated before the
+ * Fruit of the day was removed (`features/engine-v4.md` §14) still holds
+ * `meal:"fruit"` slots and the Convex schema still admits them, so every surface
+ * that iterates `week.slots` filters through this rather than assuming the meal
+ * is breakfast or lunch.
+ */
+export function isRenderableSlotMeal(meal: SlotMeal): meal is Meal {
+  return meal === "breakfast" || meal === "lunch";
 }
 
 const SHORT_MONTHS = [

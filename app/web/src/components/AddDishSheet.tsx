@@ -45,8 +45,7 @@ interface AddDishSheetProps {
   weekStart: string;
   day: ShortDay;
   version: number;
-  // The day's addable meal-times (breakfast/lunch only; the Fruit of the day is
-  // swap-only per docs/engine.md §3.3, so it is never an add target). Passed to
+  // The day's addable meal-times. Passed to
   // addablePool as the structural floor: a breakfast dish is only addable on a
   // day that actually has a breakfast slot (e.g. excluded on Saturday), since it
   // routes to that slot.
@@ -90,8 +89,8 @@ export function AddDishSheet({
     setFilters([]);
   }, [trimmedQuery]);
 
-  // The whole addable pool for this day (Active + in-season + non-Fruit + a slot
-  // on the day for its meal-time). Generic across meal-time.
+  // The whole addable pool for this day (Active + in-season + a slot on the day
+  // for its meal-time). Generic across meal-time.
   const pool = useMemo(() => addablePool(weekStart, availableMeals), [weekStart, availableMeals]);
 
   // The corpus narrowed by the SEARCH TEXT ONLY (ignoring selected pills). This

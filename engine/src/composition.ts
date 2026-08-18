@@ -357,9 +357,7 @@ export function breakfastMainNeedsPlainCarb(dish: Dish): boolean {
 /**
  * §3 breakfast, the single form (`features/engine-v4.md` §10.4). One main pool
  * plus the three attachment pools; which attachments actually land is decided by
- * the main that wins, not by the day. Breakfast is savoury only (the
- * fruit-bearing Option A is retired; fruit is the standalone Fruit of the day,
- * §3.3).
+ * the main that wins, not by the day. Breakfast is savoury only.
  */
 export function breakfastSlot(eligible: Dish[]): BreakfastCandidateSet {
   const breakfast = eligible.filter((d) => d.time === "Breakfast");
@@ -372,18 +370,6 @@ export function breakfastSlot(eligible: Dish[]): BreakfastCandidateSet {
     chutney: breakfast.filter((d) => d.category === "Accompaniment"),
     ketoCompanion: breakfast.filter((d) => isHp(d) && d.category === "Keto"),
   };
-}
-
-/**
- * §3.3 Fruit of the day candidate pool. Every eligible (Active, in-season)
- * Category=Fruit dish. Selection (longest-unused) is §4's job, applied by
- * generateWeek; this function only defines the composition-eligible set. Fruit
- * is its own day-level section, outside breakfast and lunch and outside the §9
- * cap, so it has no CandidateSet kind: it is picked directly, not through the
- * slot pipeline.
- */
-export function fruitOfDayPool(eligible: Dish[]): Dish[] {
-  return eligible.filter((d) => d.category === "Fruit");
 }
 
 /** §3.2 companion categories: the non-HP Indian sides that fill the plate budget. */
