@@ -268,7 +268,7 @@ if (reviewedNoChangeManualChangeIds.length > 0) {
   });
 }
 if (incidentIds.length > 0) {
-  runConvex("comments:markIncidentsResolved", {
+  runConvex("incidentsMutations:markIncidentsResolved", {
     incidentIds,
     resolvedPr: prUrl,
   });
