@@ -1,8 +1,10 @@
 name: CI
 
 on:
+  # Every pull request, whatever it targets. A stream that stacks on another
+  # stream opens its PR against that stream's branch, not main, so a main-only
+  # filter leaves stacked work with no gate until the combined branch merges.
   pull_request:
-    branches: [main]
   push:
     branches: [main]
 
