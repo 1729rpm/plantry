@@ -11,7 +11,7 @@ export type Author = "rajat" | "tuhina";
 /**
  * Throws a `ConvexError` if `author` is not exactly `"rajat"` or `"tuhina"`.
  * Narrows the parameter type to `Author` on the success path so callers can use it
- * directly. Used by every author-stamped mutation (`addComment`, `addCustomOneOff`,
+ * directly. Used by every author-stamped mutation (`swapDish`, `addCustomOneOff`,
  * and any future fast-loop write).
  */
 export function assertAuthor(author: string): asserts author is Author {

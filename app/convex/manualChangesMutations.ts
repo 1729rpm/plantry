@@ -4,9 +4,9 @@ import type { Id } from "./_generated/dataModel.js";
 
 /**
  * Marks each `manualChanges` row in `manualChangeIds` as `applied` with
- * `resolvedAt = now` and `resolvedPr = arg`. Mirrors `markCommentsApplied` in
- * shape and never-throw discipline: a missing id, or a row already past the
- * `queued` / `in_review` lifecycle, logs an incident and is skipped. The
+ * `resolvedAt = now` and `resolvedPr = arg`. Never-throw discipline: a missing
+ * id, or a row already past the `queued` / `in_review` lifecycle, logs an
+ * incident and is skipped. The
  * slow-loop GitHub action depends on never-throwing so a stale or fabricated
  * id in a merged PR body cannot block the consume cycle for sibling clusters.
  */
@@ -70,8 +70,7 @@ export const markManualChangesApplied = internalMutation({
 
 /**
  * Marks each `manualChanges` row in `manualChangeIds` as `reviewed_no_change`
- * with `resolvedAt = now` and `resolvedPr = arg`. Mirrors
- * `markCommentsReviewedNoChange`. Same never-throw discipline as
+ * with `resolvedAt = now` and `resolvedPr = arg`. Same never-throw discipline as
  * `markManualChangesApplied`.
  */
 export const markManualChangesReviewedNoChange = internalMutation({

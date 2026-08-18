@@ -104,7 +104,11 @@ export default defineSchema({
     ),
   }).index("by_weekStart", ["weekStart"]),
 
-  // Comments left on a dish or a day. Fuel for the slow loop.
+  // PENDING DROP. The retired day-level comment channel. Nothing reads or writes
+  // it: the composer, its mutation, and its query are gone. The table stays in
+  // the schema only until `migrations.wipeComments` has cleared prod, because
+  // Convex refuses to drop a table that still holds rows. The follow-up PR
+  // removes this block and `app/convex/migrations.ts` together.
   comments: defineTable({
     createdAt: v.number(),
     author: v.union(v.literal("rajat"), v.literal("tuhina")),
@@ -132,10 +136,9 @@ export default defineSchema({
   // `swapDish` and `addCustomOneOff` mutation inserts a row here in the same
   // transaction, recording the slot's state immediately before the change
   // (`before`) and the state landed (`after`), the freeform `reason` the user
-  // typed, and the standard slow-loop status lifecycle. Distinct from
-  // `comments` because the signal is different: comments are explicit feedback,
-  // manual changes are observed behavior. The slow loop reads both as fuel for
-  // rule redesign (`features/manual-changes.md`).
+  // typed, and the standard slow-loop status lifecycle. The signal is observed
+  // behavior: what the household actually did to the week. The slow loop reads
+  // it as fuel for rule redesign (`features/manual-changes.md`).
   manualChanges: defineTable({
     createdAt: v.number(),
     author: v.union(v.literal("rajat"), v.literal("tuhina")),
