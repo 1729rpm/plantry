@@ -27,7 +27,7 @@ Plantry has two stores by design. The split is the load-bearing engineering deci
 | ---------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------- |
 | `data/dishes/<slug>.md`, one file per dish (frontmatter + ingredient rows)                     | `currentWeek`, the live Mon-Sat plan with overrides                           |
 | `data/ingredients.md`, the ingredient catalog (one row per ingredient: group, unit, pack size) | `weekArchive`, finalized past weeks (queryable for the engine's recency rule) |
-| `data/menu_history.md`, seed for first deploy (later, a periodic snapshot)                     | `comments`, queued slow-loop input                                            |
+| `data/menu_history.md`, seed for first deploy (later, a periodic snapshot)                     | `manualChanges`, the append-only log of user edits to the week                |
 | `data/changelog.md`, structural changes audit                                                  | `incidents`, runtime errors written by the auto-recovery middleware           |
 | `docs/engine.md`, the rules spec                                                               | `userProfiles`, device identity ("I am Rajat" or "I am Tuhina")               |
 | `engine/` source code                                                                          | `swiggyCarts`, future Swiggy MCP integration state                            |
@@ -76,16 +76,6 @@ weekArchive
     dishId: number
   }                                    # mirrors menu_history.md row format exactly
 
-comments
-  id: string
-  createdAt: number
-  author: "rajat" | "tuhina"
-  attachedTo: { kind: "dish" | "day", weekStart: string, day?: string, dishId?: number }
-  text: string
-  status: "queued" | "in_review" | "applied" | "dismissed" | "reviewed_no_change"
-  resolvedAt: number | null
-  resolvedPr: string | null            # PR URL when applied
-
 manualChanges                          # append-only log of user edits
   createdAt: number
   author: "rajat" | "tuhina"
@@ -108,8 +98,7 @@ manualChanges                          # append-only log of user edits
 # takes no add, delete, or custom dish. Day-level kinds (skip_day, restore_day) carry
 # the day and null before/after. `save_next_week` records the saved dish in
 # `after.dishId` and omits `day` entirely (it targets next week, not a day of
-# this one). This table plus
-# `comments` is the data behind the Changes tab.
+# this one). This table is the data behind the Changes tab.
 
 nextWeekQueue                          # dishes saved for next week from Explore
   createdAt: number
@@ -150,7 +139,7 @@ userProfiles
   installedAt: number
 ```
 
-`comments`, `manualChanges`, `incidents`, `nextWeekQueue`, and `dishDislikes` are the signal channels the slow loop consumes. Comments are explicit user feedback. Manual changes are observed behavior, one row per swap, custom dish, delete, add, day skip, day restore, or save-for-next-week with the user's stated reason. Incidents are runtime violations from the engine or backend. The next-week queue records dishes the user wants the engine to favor. Dislikes record dishes the user does not want, surfaced from Explore. The `status` lifecycle on `comments`, `manualChanges`, and `incidents` is identical so the slow-loop mark-applied action can mark every consumed row uniformly (see `MAINTENANCE.md` §3); `nextWeekQueue` has its own `queued`/`placed`/`dropped` lifecycle driven by generation and the slow loop.
+`manualChanges`, `incidents`, `nextWeekQueue`, and `dishDislikes` are the signal channels the slow loop consumes. Manual changes are observed behavior, one row per swap, custom dish, delete, add, day skip, day restore, or save-for-next-week with the user's stated reason. Incidents are runtime violations from the engine or backend. The next-week queue records dishes the user wants the engine to favor. Dislikes record dishes the user does not want, surfaced from Explore. The `status` lifecycle on `manualChanges` and `incidents` is identical so the slow-loop mark-applied action can mark every consumed row uniformly (see `MAINTENANCE.md` §3); `nextWeekQueue` has its own `queued`/`placed`/`dropped` lifecycle driven by generation and the slow loop.
 
 The library + rules are not in Convex. Convex functions load them by importing typed JSON or TS modules emitted at build time from the markdown files (see §4).
 
@@ -175,7 +164,7 @@ Coverage is complete: every active dish carries a photo (a coverage report asser
 1. PWA loads from Vercel cache; service worker may serve from cache offline.
 2. App connects to Convex over WebSocket.
 3. Library and rules are already bundled into the JS, so the engine can simulate immediately.
-4. `currentWeek` and `comments` come from Convex subscriptions and stream live updates as either user edits.
+4. `currentWeek` and `manualChanges` come from Convex subscriptions and stream live updates as either user edits.
 
 **Read (swap picker alternatives):**
 
@@ -192,7 +181,7 @@ Coverage is complete: every active dish carries a photo (a coverage report asser
 **Read (activity feed):**
 
 1. Frontend calls `listManualChangesForWeek({ weekStart })`.
-2. The query returns every `manualChanges` row for the week, newest first (all statuses, since the Changes tab is a history, not a work queue). The client merges in the week's `comments` separately; the two queries together are the Changes tab's data. Comments are not joined server-side so each signal keeps its own subscription.
+2. The query returns every `manualChanges` row for the week, newest first (all statuses, since the Changes tab is a history, not a work queue). It is the Changes tab's only data source; each signal channel keeps its own query and its own subscription rather than being joined server-side.
 
 **Read (explore feed):**
 
@@ -236,11 +225,6 @@ Coverage is complete: every active dish carries a photo (a coverage report asser
 
 1. Frontend calls `setIncludeRecipe({ author, weekStart, day, meal, position, include, version })`.
 2. Sets `includeRecipe` on `slot.dishes[position]` and increments `version`. This is a share preference, not a menu change, so it does NOT write a `manualChanges` row. Recoverable reasons: `version-mismatch`, `no-current-week`, `no-such-slot`, `no-such-position`.
-
-**Write (comment):**
-
-1. Frontend posts to `addComment({ author, attachedTo, text })`.
-2. Convex inserts a `queued` row in `comments`. The slow loop consumes it later (see `MAINTENANCE.md` §1).
 
 **Write (finalize the week):**
 
@@ -298,7 +282,7 @@ Convex prod and preview each have their own `<deployment>.convex.cloud` URLs; th
 
 **Convex deployment (set via `npx convex env set`):**
 
-- `SLOW_LOOP_TOKEN` — token the slow-loop session uses to read queued comments without exposing the dashboard.
+- `SLOW_LOOP_TOKEN` — token the slow-loop session uses to read its queued signals without exposing the dashboard.
 - `SWIGGY_MCP_URL` (future) — endpoint of the Swiggy MCP server.
 
 **Offline tooling (local environment):**
@@ -407,7 +391,7 @@ Every PR runs these checks; any failure blocks merge.
 
 The CI gates above catch data, engine, type, and CSS-syntax errors, but not how the app renders or behaves. Rendering and interaction are verified by an in-depth crawl the EM spins off for every frontend-touching slice (see `docs/development.md` §3 and §4), run against the PR preview before merge and against production after.
 
-The crawl is Playwright-driven and walks every customer flow, not only the slice's feature: the passcode gate and identity picker, the Menu week, the Day editor and every sheet (dish actions, details and recipe, replace and swap, add a dish, comment, skip, restore), Grocery, Explore (grid, filters, dish sheet, dislike), Changes, the Share preview, and the identity switch. It enters the app by injecting the auth and identity records into `localStorage` (`plantry:auth`, `plantry:identity`), so it needs no passcode and writes no user profile; read-only passes take no other writes, and mutating flows are exercised on the preview's isolated database, or mutate-then-revert against production with explicit approval.
+The crawl is Playwright-driven and walks every customer flow, not only the slice's feature: the passcode gate and identity picker, the Menu week, the Day editor and every sheet (dish actions, details and recipe, replace and swap, add a dish, reason, skip, restore), Grocery, Explore (grid, filters, dish sheet, dislike), Changes, the Share preview, and the identity switch. It enters the app by injecting the auth and identity records into `localStorage` (`plantry:auth`, `plantry:identity`), so it needs no passcode and writes no user profile; read-only passes take no other writes, and mutating flows are exercised on the preview's isolated database, or mutate-then-revert against production with explicit approval.
 
 Reaching the preview takes one more step: Vercel preview deployments sit behind deployment protection, so a bare request returns HTTP 401 and the SPA never boots. The crawl passes the project's Protection Bypass for Automation token (`VERCEL_AUTOMATION_BYPASS_SECRET`, §11) as the `x-vercel-protection-bypass` header and opens the first page with `?x-vercel-set-bypass-cookie=true`, which sets the bypass cookie so subsequent asset requests are let through. The localStorage gate-bypass above clears only Plantry's own passcode, not Vercel's edge protection, so both are needed together. Production (`plantry.mudgal.xyz`, a custom domain) is not protected and needs no token. The token lives only in the crawler's environment; it is never committed and never reaches the app bundle. When a token is unavailable or a preview is down, the fallback is to build the PR branch and crawl the static `dist/` locally (`CRAWL_URL` unset), which renders the same build-baked output and is faithful for CSS and shared-primitive slices; the two iOS-only checks (env(safe-area-inset) side padding and the software-keyboard seam) are unverifiable in headless desktop engines either way and go to a real device.
 

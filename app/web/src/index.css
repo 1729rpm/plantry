@@ -1583,7 +1583,7 @@ input {
 }
 
 /* ------------------------------------------------------------------ */
-/* Changes screen (slice 6.1): newest-first feed of edits + comments   */
+/* Changes screen (slice 6.1): newest-first feed of the week's edits   */
 /* ------------------------------------------------------------------ */
 .change-entry {
   display: flex;
