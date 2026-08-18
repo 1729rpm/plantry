@@ -1,11 +1,10 @@
 import type { Dish, Ingredient, MenuHistoryRow, PackSizeHeader, Season } from "./data/schemas.js";
 import type { Day, Meal } from "./eligibility.js";
 import { weekSchedule, type SlotPlan } from "./schedule.js";
-import { eligibleDishes, ALL_DAYS } from "./eligibility.js";
+import { ALL_DAYS } from "./eligibility.js";
 import {
   composeSlot,
   candidateSetPools,
-  fruitOfDayPool,
   planWeekdaySubstitutions,
   excludeHpIfMealHasHp,
   isHp,
@@ -30,7 +29,6 @@ import {
   rankCandidates,
   withinWeekRecencySet,
   proteinFamiliesUsedAsHpMain,
-  planFruitOfWeek,
   type ConsolidationContext,
 } from "./priority.js";
 import { applyPick, emptyLedger, type IngredientLedger } from "./consolidation.js";
@@ -98,15 +96,6 @@ export interface GeneratedWeekSlot {
 export interface GeneratedWeekDay {
   day: Day;
   slots: GeneratedWeekSlot[];
-  /**
-   * §3.3 Fruit of the day: exactly one in-season Category=Fruit dish, present
-   * on every day the engine schedules (Mon-Sat, Saturday included). It is its
-   * own section, outside the breakfast/lunch `slots` and outside the §9 day
-   * budget, so it never appears in `slots` and never spends a minute or an item
-   * of the day's budget. Absent only if the eligible fruit pool is empty for the
-   * season.
-   */
-  fruit?: Dish;
 }
 
 export interface GeneratedWeek {
@@ -359,7 +348,7 @@ export function generateWeek(args: GenerateWeekArgs): GeneratedWeek {
   // §9 running whole-day budget (minutes + items). Breakfast composes first and
   // the same day's lunch composes to what is left, so this map is read and
   // written in schedule order and is the single carrier of "how much of this day
-  // is already spent". Fruit never touches it (§3.3 is outside the budget).
+  // is already spent".
   const budgetByDay = new Map<Day, DayBudget>();
   for (const day of ALL_DAYS) budgetByDay.set(day, emptyDayBudget());
   // §9 `budget-short` positions: a plate position whose pool held candidates but
@@ -500,34 +489,6 @@ export function generateWeek(args: GenerateWeekArgs): GeneratedWeek {
   // Nothing is ever dropped (`features/engine-v4.md` §10.1): every plate composed
   // to the day budget as it went, so the week is exactly what the loop picked.
   const days = groupSlotsByDay(slotResults);
-
-  // §3.3 Fruit of the day: one in-season Category=Fruit dish per scheduled day
-  // (Mon-Sat, Saturday included). Fruit lost its recency exemptions in §10.2, so
-  // it is planned for the WHOLE week by `planFruitOfWeek`: each day is narrowed to
-  // the fruits used fewest times so far this week and then ranked by §4, with each
-  // pick fed forward as a same-day history row so the next day's repeat guard
-  // measures a real gap. The old "order once by longest-unused, then wrap by day
-  // index" was a fixed rotation by construction and produced two distinct fruits
-  // in 150 days.
-  const fruitEligible = fruitOfDayPool(
-    eligibleDishes({
-      library,
-      history,
-      season,
-      // Fruit is filtered by Category, not by slot day/meal; any scheduled slot
-      // works for the season/active filter eligibleDishes applies.
-      slot: { day: "Mon", meal: "Breakfast" },
-    }),
-  );
-  const fruitOfWeek = planFruitOfWeek({
-    pool: fruitEligible,
-    history,
-    weekStart,
-    dayOffsets: days.map((d) => dayOffset(d.day)),
-  });
-  days.forEach((day, index) => {
-    if (fruitOfWeek[index]) day.fruit = fruitOfWeek[index];
-  });
 
   // §6 reconciliation: a planned request placement is only honoured if its
   // dish actually survives into the final week. A composition slot can expose a

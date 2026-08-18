@@ -72,7 +72,8 @@ function makeMinimalLibrary(): Dish[] {
       category: "Accompaniment",
       primaryIngredient: "Mango",
     }),
-    // Fruit of the day pool (§3.3): Category=Fruit, outside breakfast/lunch.
+    // Category=Fruit dishes. §3.3 is retired, so these are deliberately left in
+    // the fixture library as dishes no pool may ever place.
     makeDish({
       name: "Apple",
       time: "Breakfast",
@@ -249,7 +250,7 @@ describe("generateWeek — top-level engine", () => {
       expect(dishesPerDay).toEqual([6, 6, 6, 5, 6, 3]);
     });
 
-    it("§3.3 puts a Fruit of the day on every day Mon-Sat, Saturday included", () => {
+    it("§3.3 is retired: a day carries breakfast and lunch slots and nothing else", () => {
       const week = generateWeek({
         weekStart: "2026-06-08",
         library,
@@ -262,12 +263,14 @@ describe("generateWeek — top-level engine", () => {
       });
       expect(week.days.map((d) => d.day)).toEqual(["Mon", "Tue", "Wed", "Thu", "Fri", "Sat"]);
       for (const day of week.days) {
-        expect(day.fruit, `${day.day} fruit`).toBeDefined();
-        expect(day.fruit!.category).toBe("Fruit");
+        expect(Object.keys(day).sort(), `${day.day} keys`).toEqual(["day", "slots"]);
+        for (const slot of day.slots) {
+          expect(slot.meal === "Breakfast" || slot.meal === "Lunch").toBe(true);
+        }
       }
     });
 
-    it("§9 fruit is outside the cap: a Fruit dish never appears in a meal slot", () => {
+    it("§3.3 a Category=Fruit dish never appears in any slot, even when eligible", () => {
       const week = generateWeek({
         weekStart: "2026-06-08",
         library,
@@ -287,26 +290,41 @@ describe("generateWeek — top-level engine", () => {
       }
     });
 
-    it("§3.3 picks the longest-unused fruit first when history favours one", () => {
-      // Apple cooked recently, Banana never: the longest-unused pick leads Banana.
-      const recentHistory: MenuHistoryRow[] = [
-        { weekStart: "2026-06-01", day: "Monday", meal: "Breakfast", dishName: "Apple", dishId: 2 },
-      ];
+    it('§3.3 a legacy meal:"Fruit" history row is read without placing a fruit', () => {
+      // features/engine-v4.md §14.3: weekArchive and menu_history.md still hold
+      // the retired Fruit of the day's rows and are never rewritten, so the
+      // generator must ingest one and produce a week with no fruit in it.
       const lib = makeMinimalLibrary();
       const apple = lib.find((d) => d.name === "Apple")!;
-      const history: MenuHistoryRow[] = [{ ...recentHistory[0], dishId: apple.id }];
+      const legacyHistory: MenuHistoryRow[] = [
+        {
+          weekStart: "2026-06-01",
+          day: "Monday",
+          meal: "Fruit",
+          dishName: "Apple",
+          dishId: apple.id,
+        },
+        {
+          weekStart: "2026-06-01",
+          day: "Tuesday",
+          meal: "Fruit",
+          dishName: "Apple",
+          dishId: apple.id,
+        },
+      ];
       const week = generateWeek({
         weekStart: "2026-06-08",
         library: lib,
-        history,
+        history: legacyHistory,
         season: "Summer",
         ingredients: emptyIngredients,
         packSizes: emptyPackSizes,
         rng: () => 0.1,
         lastSaturdayMenu: null,
       });
-      // Monday gets the longest-unused fruit, which is not the recently-cooked Apple.
-      expect(week.days[0].fruit!.name).not.toBe("Apple");
+      const placed = week.days.flatMap((d) => d.slots.flatMap((s) => s.dishes));
+      expect(placed.length).toBeGreaterThan(0);
+      expect(placed.some((d) => d.category === "Fruit")).toBe(false);
     });
 
     it("§3.1/§9 budget-aware composition fits the day, so nothing is ever dropped", () => {
@@ -653,8 +671,7 @@ describe("generateWeek — top-level engine", () => {
           }
         }
       }
-      const exempt = (d: Dish) =>
-        d.tags.includes("fruit") || d.category === "Chapati" || d.category === "Rice";
+      const exempt = (d: Dish) => d.category === "Chapati" || d.category === "Rice";
       for (const { count, dish } of counts.values()) {
         if (exempt(dish)) continue;
         expect(count, `${dish.name} appears ${count}x`).toBeLessThan(3);
@@ -759,8 +776,7 @@ describe("generateWeek — top-level engine", () => {
       nextId = 1;
       // Option B (complete_carb + accompaniment): the partner could be HP, so an
       // HP complete_carb lead must exclude an HP accompaniment partner (the §3
-      // one-HP-per-meal rule). Breakfast is savoury only; fruit is the standalone
-      // Fruit of the day (§3.3), never a breakfast partner.
+      // one-HP-per-meal rule). Breakfast is savoury only.
       const library: Dish[] = [
         makeDish({
           name: "Besan Paneer Chilla",
@@ -1438,7 +1454,7 @@ describe("generateWeek — top-level engine", () => {
       });
     }
 
-    it("never composes a day over 120 minutes or 6 items, fruit excluded", () => {
+    it("never composes a day over 120 minutes or 6 items", () => {
       for (const weekStart of ["2026-08-17", "2026-09-14", "2026-11-16"]) {
         const week = liveWeek(weekStart, weekStart < "2026-10-01" ? "Monsoon" : "Winter");
         for (const day of week.days) {
@@ -1449,9 +1465,9 @@ describe("generateWeek — top-level engine", () => {
             dishes.length,
             `${weekStart} ${day.day}: ${dishes.length} items`,
           ).toBeLessThanOrEqual(6);
-          // The Fruit of the day is outside the budget, so it may push the day's
-          // real dish count to seven without breaching anything.
-          expect(day.fruit).toBeDefined();
+          // Every dish on the day is in a slot and counted, so the day's real
+          // size is exactly what the budget measured.
+          expect(dishes.length).toBe(day.slots.reduce((n, s) => n + s.dishes.length, 0));
         }
       }
     });
@@ -1852,7 +1868,7 @@ describe("generateWeek — top-level engine", () => {
    * needs. Without them A's branch measures 0.566 week-over-week overlap against
    * the 0.194 it replaces, so these are the tests that pin the wiring itself.
    */
-  describe("§4 wiring: the guard, the fruit plan and the exploration slot", () => {
+  describe("§4 wiring: the guard and the exploration slot", () => {
     const { library, packSizes, ingredients, history } = loadLiveData();
 
     function liveWeek(weekStart: string, hist = history, season: Season = "Monsoon") {
@@ -1999,55 +2015,6 @@ describe("generateWeek — top-level engine", () => {
       );
       expect(placed).toBe(true);
       expect(week.unplacedFavorites).toEqual([]);
-    });
-
-    it("§3.3 fruit no longer settles the same fruit onto the same weekday", () => {
-      // The retired implementation ordered the eligible pool once by longest-unused
-      // and wrapped it by day index. That is a fixed rotation by construction: the
-      // pool order barely moves week to week, so Monday keeps getting the same
-      // fruit. Measured, it produced two distinct fruits in 150 days, one of them
-      // for 108 consecutive days. planFruitOfWeek ranks per day under §4 with the
-      // repeat guard, so the same weekday sees different fruit across weeks.
-      let hist = history;
-      const mondayFruits: number[] = [];
-      for (const weekStart of ["2026-08-17", "2026-08-24", "2026-08-31", "2026-09-07"]) {
-        const week = liveWeek(weekStart, hist);
-        mondayFruits.push(week.days.find((d) => d.day === "Mon")!.fruit!.id);
-        hist = [
-          ...hist,
-          ...week.days.flatMap((d) =>
-            d.fruit
-              ? [
-                  {
-                    weekStart,
-                    day: "Monday" as const,
-                    meal: "Fruit" as const,
-                    dishName: d.fruit.name,
-                    dishId: d.fruit.id,
-                  },
-                ]
-              : [],
-          ),
-        ];
-      }
-      expect(new Set(mondayFruits).size).toBeGreaterThan(1);
-    });
-
-    it("§3.3 no fruit takes more days of a week than the pool allows", () => {
-      // The retired implementation ordered the pool once by longest-unused and
-      // wrapped by day index, which is a fixed rotation by construction: it put
-      // the same fruit on the same weekday every week and produced two distinct
-      // fruits in 150 days. planFruitOfWeek narrows each day to the fruits used
-      // fewest times so far this week and then ranks, so no fruit can take more
-      // than ceil(days / poolSize) days of a week.
-      const week = liveWeek("2026-08-17");
-      const fruits = week.days.map((d) => d.fruit!.id);
-      expect(fruits.every((f) => f !== undefined)).toBe(true);
-      const counts = new Map<number, number>();
-      for (const id of fruits) counts.set(id, (counts.get(id) ?? 0) + 1);
-      const poolSize = new Set(fruits).size;
-      const most = Math.max(...counts.values());
-      expect(most).toBeLessThanOrEqual(Math.ceil(fruits.length / poolSize));
     });
 
     it("§4.8 the novelty position rotates across the week's companion positions", () => {

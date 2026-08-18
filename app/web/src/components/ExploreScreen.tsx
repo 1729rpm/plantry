@@ -215,19 +215,12 @@ export function ExploreScreen({ identity }: ExploreScreenProps) {
       {overlay.kind === "use-day" &&
         week &&
         (() => {
-          // Map the dish to the slot it belongs in. Guard the Fruit category
-          // explicitly: a fruit dish belongs in the "fruit" slot, not "lunch".
-          // A bare `time === "Breakfast" ? ... : "lunch"` binary would mislabel
-          // any non-breakfast dish as lunch (the same latent assumption that
-          // crashed finalizeWeek). `Dish.time` is only Breakfast|Lunch, so the
-          // remaining branch is a true binary.
+          // Map the dish to the slot it belongs in. `Dish.time` is only
+          // Breakfast|Lunch and those are now the only two slots a day holds
+          // (`features/engine-v4.md` §14 removed the fruit slot), so this is a
+          // true binary.
           const dish = dishById(overlay.dish.dishId);
-          const dishMeal: Meal =
-            dish?.category === "Fruit"
-              ? "fruit"
-              : dish?.time === "Breakfast"
-                ? "breakfast"
-                : "lunch";
+          const dishMeal: Meal = dish?.time === "Breakfast" ? "breakfast" : "lunch";
           return (
             <ExploreDayPicker
               dishName={overlay.dish.name}

@@ -10,7 +10,6 @@ import {
   bySaturatingFrequency,
   byRepeatGuard,
   frequencyCreditMap,
-  planFruitOfWeek,
   FREQUENCY_CREDIT_CAP,
   proteinFamily,
   proteinFamiliesUsedAsHpMain,
@@ -87,7 +86,7 @@ describe("priority — docs/engine.md §4", () => {
       expect(out.map((d) => d.name)).toEqual(["B", "A"]);
     });
 
-    it("no longer exempts fruit-tagged dishes: fruit reorders by date (§10.2)", () => {
+    it("does not exempt a `fruit`-tagged dish: it reorders by date like anything else", () => {
       const recentFruit = makeDish({ name: "RecentFruit", tags: ["fruit"] });
       const oldFruit = makeDish({ name: "OldFruit", tags: ["fruit"] });
       const history = [
@@ -95,9 +94,9 @@ describe("priority — docs/engine.md §4", () => {
         historyRow(oldFruit.id, oldFruit.name, "2026-01-05"),
       ];
       const out = byLongestUnused([recentFruit, oldFruit], history);
-      // §10.2 withdrew the fruit exemption: it made fruit an absorbing state
-      // (two distinct fruits in 150 simulated days). Fruit now sorts by date
-      // like any other role, so the older one leads.
+      // The `fruit` tag is inert (features/engine-v4.md §14): the exemption it
+      // once carried made the role an absorbing state (two distinct fruits in
+      // 150 simulated days), and lunch carbs are now the only exempt category.
       expect(out.map((d) => d.name)).toEqual(["OldFruit", "RecentFruit"]);
     });
 
@@ -248,7 +247,7 @@ describe("priority — docs/engine.md §4", () => {
       expect(out.map((d) => d.name)).toEqual(["FreshA", "FreshB", "PlacedA", "PlacedB"]);
     });
 
-    it("demotes a fruit already placed this week (§10.2 withdrew the exemption)", () => {
+    it("demotes a `fruit`-tagged dish already placed this week (the tag is inert)", () => {
       const fruit = makeDish({ name: "Fruit", tags: ["fruit"], category: "Fruit" });
       const fresh = makeDish({ name: "Fresh" });
       const out = byWithinWeekRecency([fruit, fresh], new Set([fruit.id]));
@@ -302,7 +301,7 @@ describe("priority — docs/engine.md §4", () => {
       const rice = makeDish({ name: "Rice", category: "Rice" });
       const set = withinWeekRecencySet([gravy, fruit, roti, rice]);
       expect(set.has(gravy.id)).toBe(true);
-      // §10.2: fruit is no longer exempt, so a placed fruit joins the set.
+      // The `fruit` tag buys no exemption, so a placed fruit joins the set.
       expect(set.has(fruit.id)).toBe(true);
       // Lunch carbs keep their exemption (roti every day is intended).
       expect(set.has(roti.id)).toBe(false);
@@ -365,7 +364,7 @@ describe("priority — docs/engine.md §4", () => {
       ]);
     });
 
-    it("ranks a fruit pool by §4 like any other role (no exemption)", () => {
+    it("ranks a `fruit`-tagged pool by §4 like any other pool (no exemption)", () => {
       const recentFruit = makeDish({
         name: "RecentMango",
         tags: ["fruit"],
@@ -386,10 +385,10 @@ describe("priority — docs/engine.md §4", () => {
         pool: [recentFruit, oldFruit],
         history,
       });
-      // §10.2: both fruits have frequency credit 1, so the longest-unused
-      // tiebreak decides and the older one leads. Under the retired exemption
-      // the pool order was preserved and the recent one stayed on top, which is
-      // exactly how one fruit came to hold the slot for 108 consecutive days.
+      // Both have frequency credit 1, so the longest-unused tiebreak decides and
+      // the older one leads. Under the retired fruit exemption the pool order was
+      // preserved and the recent one stayed on top, which is exactly how one
+      // fruit came to hold its slot for 108 consecutive days.
       expect(out.map((d) => d.name)).toEqual(["OldBanana", "RecentMango"]);
     });
 
@@ -770,7 +769,7 @@ describe("priority — docs/engine.md §4", () => {
       expect(byRepeatGuard([roti, rice], history, slot)).toHaveLength(2);
     });
 
-    it("guards fruit, which §10.2 stripped of its exemption", () => {
+    it("guards a `fruit`-tagged dish: only lunch carbs are exempt", () => {
       const fruit = makeDish({ name: "Mango", tags: ["fruit"], category: "Fruit" });
       const other = makeDish({ name: "Other" });
       const history = [historyRow(fruit.id, fruit.name, "2026-05-11")];
@@ -792,57 +791,6 @@ describe("priority — docs/engine.md §4", () => {
       const history = [historyRow(dish.id, dish.name, "2026-05-11")];
       expect(byRepeatGuard([dish], history, undefined)).toHaveLength(1);
       expect(rankCandidates({ pool: [dish], history })).toHaveLength(1);
-    });
-  });
-
-  describe("§3.3 planFruitOfWeek (features/engine-v4.md §10.2)", () => {
-    const WEEK = "2026-05-18";
-    const DAYS = [0, 1, 2, 3, 4, 5];
-
-    function fruit(name: string): Dish {
-      return makeDish({ name, tags: ["fruit"], category: "Fruit" });
-    }
-
-    it("spreads a rich pool across the week with no repeats", () => {
-      const pool = ["A", "B", "C", "D", "E", "F", "G"].map(fruit);
-      const picks = planFruitOfWeek({ pool, history: [], weekStart: WEEK, dayOffsets: DAYS });
-      expect(picks).toHaveLength(6);
-      expect(new Set(picks.map((d) => d.id)).size).toBe(6);
-    });
-
-    it("caps any one fruit at ceil(days / poolSize) when the pool is thin", () => {
-      // The live Winter pool is exactly three fruits against six days, so two
-      // days each is the best arrangement that exists. The retired behaviour put
-      // one fruit on four of the six days.
-      const pool = [fruit("A"), fruit("B"), fruit("C")];
-      const picks = planFruitOfWeek({ pool, history: [], weekStart: WEEK, dayOffsets: DAYS });
-      const counts = new Map<number, number>();
-      for (const p of picks) counts.set(p.id, (counts.get(p.id) ?? 0) + 1);
-      expect(Math.max(...counts.values())).toBe(2);
-      expect(counts.size).toBe(3);
-    });
-
-    it("leads with the most-eaten fruit, so hand edits toward a favourite stick", () => {
-      const loved = fruit("Loved");
-      const tolerated = fruit("Tolerated");
-      const history = [
-        historyRow(loved.id, loved.name, "2026-01-05"),
-        historyRow(loved.id, loved.name, "2026-01-12"),
-        historyRow(tolerated.id, tolerated.name, "2026-01-05"),
-      ];
-      const picks = planFruitOfWeek({
-        pool: [tolerated, loved],
-        history,
-        weekStart: WEEK,
-        dayOffsets: DAYS,
-      });
-      expect(picks[0].name).toBe("Loved");
-    });
-
-    it("returns nothing for an empty pool rather than throwing", () => {
-      expect(planFruitOfWeek({ pool: [], history: [], weekStart: WEEK, dayOffsets: DAYS })).toEqual(
-        [],
-      );
     });
   });
 

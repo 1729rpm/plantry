@@ -16,8 +16,8 @@ import type { Dish } from "./data/schemas.js";
 
 /**
  * §9 whole-day prep budget: the summed `prepMinutes` of a day's breakfast and
- * lunch items. The Fruit of the day (§3.3) is outside it, exactly as it was
- * outside the retired item cap.
+ * lunch items, which is every item on the day: breakfast and lunch are the only
+ * slots, so nothing sits outside the budget.
  *
  * 120 minutes is the household's busiest observed day, so the budget sits AT the
  * envelope of what they have actually cooked rather than above it. This is the
@@ -27,8 +27,8 @@ import type { Dish } from "./data/schemas.js";
 export const DAY_PREP_BUDGET_MINUTES = 120;
 
 /**
- * §9 item backstop: the most breakfast + lunch items a day may carry, fruit
- * excluded. Six, against a largest observed day of five, so it keeps one item of
+ * §9 item backstop: the most breakfast + lunch items a day may carry, which is
+ * every item on it. Six, against a largest observed day of five, so it keeps one item of
  * headroom and is a backstop rather than the thing that sizes the plate. Uniform
  * across the week: the old 3-item Saturday cap is retired, so Saturday can carry
  * a proper weekend lunch.
@@ -39,7 +39,7 @@ export const DAY_MAX_ITEMS = 6;
 export interface DayBudget {
   /** Summed `prepMinutes` of the day's breakfast and lunch items placed so far. */
   minutesUsed: number;
-  /** Count of breakfast and lunch items placed so far. Fruit is not counted. */
+  /** Count of breakfast and lunch items placed so far. */
   itemsUsed: number;
 }
 

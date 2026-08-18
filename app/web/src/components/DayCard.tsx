@@ -7,7 +7,7 @@
 // opens the same editor as Edit. A skipped day shows its reason (full) or
 // reads "Skipped" (collapsed).
 
-import type { DishPick, ShortDay, WeekSlot } from "../lib/types.js";
+import type { DishPick, RenderableWeekSlot, ShortDay } from "../lib/types.js";
 import { dayDate, dayLabel, type DayStatus, mealLabel, mealOrderIndex } from "../lib/days.js";
 import { dishById } from "../lib/library.js";
 import { Card } from "./primitives.js";
@@ -15,7 +15,7 @@ import { DishRow } from "./DishRow.js";
 
 export interface DayCardModel {
   day: ShortDay;
-  slots: WeekSlot[];
+  slots: RenderableWeekSlot[];
   skipReason: string | null;
 }
 
@@ -38,11 +38,11 @@ function pickName(pick: DishPick): string {
   return "Custom dish";
 }
 
-// First two dish names across the day, in meal order (breakfast, lunch, fruit),
-// joined by ", " with a " +N more" tail when the day holds more than two. A day
-// with one dish (or Saturday's lunch-plus-fruit shape, or any sparse day) shows
-// only what exists, with no trailing "+0 more".
-function dishGlance(meals: WeekSlot[]): string {
+// First two dish names across the day, in meal order (breakfast, lunch), joined
+// by ", " with a " +N more" tail when the day holds more than two. A day with one
+// dish (or Saturday's lunch-only shape, or any sparse day) shows only what
+// exists, with no trailing "+0 more".
+function dishGlance(meals: RenderableWeekSlot[]): string {
   const names: string[] = [];
   for (const slot of meals) {
     for (const pick of slot.dishes) {

@@ -145,7 +145,7 @@ describe("complexityShortLabel", () => {
   });
 });
 
-describe("addablePool — generic across meal-time, non-fruit, addableMeals-gated", () => {
+describe("addablePool — generic across meal-time, addableMeals-gated", () => {
   // addablePool reads the live baked library (not an injected fixture), so these
   // tests assert structural invariants over the real pool rather than exact
   // counts (counts move as the library grows; the invariants do not). A fixed
@@ -159,7 +159,10 @@ describe("addablePool — generic across meal-time, non-fruit, addableMeals-gate
     expect(pool.some((d) => d.time === "Lunch")).toBe(true);
   });
 
-  it("excludes the Fruit category from a meal pool", () => {
+  it("surfaces no Category=Fruit dish: they are all inactive (§14)", () => {
+    // There is no explicit Fruit exclusion any more. The Active filter does the
+    // work, because the Fruit of the day is removed and the ten fruit dish files
+    // all carry `active: No`.
     const pool = addablePool(WEEK, ["breakfast", "lunch"]);
     expect(pool.some((d) => d.category === "Fruit")).toBe(false);
   });

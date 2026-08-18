@@ -6,7 +6,7 @@ time: Breakfast
 tags: [fruit]
 primaryIngredient: Pineapple
 preferred: Yes
-active: Yes
+active: No
 satiety: Low
 prepMinutes: 5
 seasons: [Monsoon]

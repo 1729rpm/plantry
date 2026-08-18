@@ -77,19 +77,6 @@ export function deriveHistoryRows(args: DeriveHistoryRowsArgs): MenuHistoryRow[]
         });
       }
     }
-    // §3.3 Fruit of the day lives outside `slots` on `day.fruit`. Log it as its
-    // own `meal:"Fruit"` row (after the day's slot rows) so cross-week fruit
-    // rotation (`orderFruitByLongestUnused` via `lastCookedMap`) sees fruit
-    // recency. Skip-aware: a skipped day already `continue`d above.
-    if (day.fruit !== undefined) {
-      rows.push({
-        weekStart: week.weekStart,
-        day: LONG_DAY[day.day],
-        meal: "Fruit",
-        dishName: day.fruit.name,
-        dishId: day.fruit.id,
-      });
-    }
   }
   return rows;
 }
@@ -98,9 +85,14 @@ export function deriveHistoryRows(args: DeriveHistoryRowsArgs): MenuHistoryRow[]
  * Last-cooked weekStart per dish id, taken from the most recent matching history
  * row (the largest `weekStart` seen for that id). This is the recency primitive
  * the §4 selection ranker (`priority.byLongestUnused`), the §5 picker recency
- * tier (`pickerRanking`), the composition substitution scan, and the §3.3 fruit
- * rotation all build on, so it lives in one place. A dish absent from the map has
- * never been cooked; callers treat "no entry" as longest unused.
+ * tier (`pickerRanking`), and the composition substitution scan all build on, so
+ * it lives in one place. A dish absent from the map has never been cooked;
+ * callers treat "no entry" as longest unused.
+ *
+ * Legacy `meal:"Fruit"` rows in the historical record (the retired Fruit of the
+ * day) are read here like any other row: they carry a real dish id and a real
+ * weekStart, so they contribute recency for a dish that is now inactive and
+ * therefore never eligible. Nothing filters them out and nothing needs to.
  */
 export function lastCookedMap(history: MenuHistoryRow[]): Map<number, string> {
   const map = new Map<number, string>();

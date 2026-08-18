@@ -5,12 +5,13 @@ import { history } from "@plantry/engine/history";
 import { rankPickerAlternatives } from "@plantry/engine";
 import type { Dish, Season, MenuHistoryRow } from "@plantry/engine";
 import { assertAuthor } from "./lib/author.js";
-import type { SlotMeal } from "./lib/meals.js";
+import { mealTimeValidator, type SlotMeal } from "./lib/meals.js";
 
 type ShortDay = "Mon" | "Tue" | "Wed" | "Thu" | "Fri" | "Sat";
-// `SlotMeal` is the full set a stored slot can carry: the breakfast/lunch
-// meal-time pools plus the standalone "fruit" slot (docs/engine.md §3.3).
-// Breakfast/lunch are pooled by meal-time; fruit is pooled by Category=Fruit.
+// `SlotMeal` is the full set a stored slot can carry: breakfast, lunch, and the
+// read-only legacy "fruit" (see `lib/meals.ts`). Only breakfast and lunch are
+// ever targets of a swap; a stored fruit slot is never rendered, so no picker
+// opens on one.
 
 type SlotAuthor = "rajat" | "tuhina" | "system";
 type DishPickShape = {
@@ -81,9 +82,8 @@ function collectCurrentWeekPicks(
 }
 
 /**
- * Builds the non-restrictive candidate pool for the swap picker. For a
- * breakfast/lunch slot the pool is every dish that is Active, in season, and
- * not Category=Fruit: it is generic across meal-time, so a breakfast dish is
+ * Builds the non-restrictive candidate pool for the swap picker: every dish that
+ * is Active and in season, generic across meal-time, so a breakfast dish is
  * reachable from a lunch slot and vice versa (`features/picker-generic-search.md`).
  * This is deliberately broader than the engine's composition-based pools (Menu 1
  * HP + partner + carb, etc.); the user is offered every Active, in-season dish
@@ -92,26 +92,14 @@ function collectCurrentWeekPicks(
  * resulting incidents. The default head order still leads with slot-meal-matching
  * dishes (see `getSlotAlternatives`); meal-time is a swap-time ordering signal,
  * not a hard pool filter.
+ *
+ * There is no fruit branch: the Fruit of the day is removed
+ * (`features/engine-v4.md` §14) and the ten Category=Fruit dishes are all
+ * inactive, so the Active filter already excludes them from every pool.
  */
-function broadPool(meal: SlotMeal, season: Season): Dish[] {
-  // The Fruit of the day's pool is category-based (docs/engine.md §3.3): every
-  // Active, in-season, Category=Fruit dish. This is the swap-time analogue of the
-  // generation-time fruit pool (engine `fruitOfDayPool`). The fruit slot stays
-  // category-locked; the generic-search relaxation applies to breakfast/lunch
-  // only (Decision 2).
-  if (meal === "fruit") {
-    return dishes.filter((d) => {
-      if (d.active !== "Yes") return false;
-      if (d.category !== "Fruit") return false;
-      if (d.seasons === "All") return true;
-      return d.seasons.includes(season);
-    });
-  }
-  // Breakfast/lunch pool: generic across meal-time. Fruit is excluded because it
-  // belongs to its own slot and must not surface in a meal swap (Decision 3).
+function broadPool(season: Season): Dish[] {
   return dishes.filter((d) => {
     if (d.active !== "Yes") return false;
-    if (d.category === "Fruit") return false;
     if (d.seasons === "All") return true;
     return d.seasons.includes(season);
   });
@@ -132,9 +120,7 @@ function buildSyntheticHistory(
   currentWeekPicks: Dish[],
 ): MenuHistoryRow[] {
   // The history row's `meal` field is cosmetic for the recency term (the ranking
-  // keys on dishId + weekStart, not meal), and MenuHistoryRow.meal only admits
-  // Breakfast | Lunch. The fruit slot has no meal-time, so its synthetic rows are
-  // tagged "Breakfast" uniformly; this never affects ordering.
+  // keys on dishId + weekStart, not meal); this never affects ordering.
   const historyMeal = meal === "lunch" ? "Lunch" : "Breakfast";
   return currentWeekPicks.map((d) => ({
     weekStart,
@@ -176,11 +162,10 @@ function dishesOnDay(slots: ReadonlyArray<SlotShape>, day: ShortDay): Dish[] {
  *
  * Behavior (non-restrictive, generic-search picker):
  *   - Looks up the `currentWeek` row. Missing -> ConvexError.
- *   - Builds the broad pool: for a breakfast/lunch slot, every Active, in-season,
- *     non-Fruit dish regardless of its own meal-time (so a breakfast dish is
- *     reachable from a lunch slot and vice versa, per
- *     `features/picker-generic-search.md`); for the fruit slot, the Category=Fruit
- *     pool. NO per-position eligibility filter (no HP/partner/carb/Option A-B-C
+ *   - Builds the broad pool: every Active, in-season dish regardless of its own
+ *     meal-time (so a breakfast dish is reachable from a lunch slot and vice
+ *     versa, per `features/picker-generic-search.md`).
+ *     NO per-position eligibility filter (no HP/partner/carb/Option A-B-C
  *     narrowing). This is the deliberate fast-loop affordance: the user can
  *     land on any dish; §3 violations (including the meal-time mismatch a
  *     cross-meal pick creates) are signal for the slow loop, not errors the
@@ -194,7 +179,6 @@ function dishesOnDay(slots: ReadonlyArray<SlotShape>, day: ShortDay): Dish[] {
  *     order. This is caller-side, after the engine ranking (the engine ignores
  *     its `meal` arg). The full partitioned array is returned (search and pills
  *     still reach every dish); only the default suggested head order changes.
- *     The fruit slot needs no partition (its pool is single-purpose).
  *   - Synthetic within-week history from the live week's other picks (the
  *     slot/position being ranked is excluded so its current pick does not count
  *     against itself) feeds the recency term.
@@ -213,7 +197,11 @@ export const getSlotAlternatives = query({
       v.literal("Fri"),
       v.literal("Sat"),
     ),
-    meal: v.union(v.literal("breakfast"), v.literal("lunch"), v.literal("fruit")),
+    // breakfast|lunch only: the Fruit of the day is removed
+    // (`features/engine-v4.md` §14), so there is no fruit slot to open a picker
+    // on. This is an ARG validator, not a document validator, so narrowing it is
+    // safe for the deploy; stored fruit rows are untouched.
+    meal: mealTimeValidator,
     position: v.number(),
     limit: v.optional(v.number()),
   },
@@ -254,14 +242,12 @@ export const getSlotAlternatives = query({
       currentWeekPicks,
     );
 
-    const pool = broadPool(args.meal, season);
+    const pool = broadPool(season);
 
     const ranked = rankPickerAlternatives({
       pool,
-      // The engine Meal type is Breakfast | Lunch and the ranking ignores it
-      // (it only orders the pre-filtered pool by recency + protein band; the
-      // pool is already category-filtered for fruit). "Breakfast" is a harmless
-      // placeholder for the fruit slot.
+      // The engine ranking ignores `meal` (it only orders the pre-filtered pool
+      // by recency + protein band), so this is passed for shape only.
       meal: args.meal === "lunch" ? "Lunch" : "Breakfast",
       dishesOnDay: dishesOnDay(slots, args.day),
       history: [...history, ...syntheticHistory],
@@ -276,10 +262,6 @@ export const getSlotAlternatives = query({
     // follow, each group preserving its ranked order (the engine ranking does not
     // read meal-time). This only reorders the default suggested head; the full
     // pool is still returned so the frontend's search and pills reach every dish.
-    // The fruit slot's pool is single-purpose, so it is returned as-is.
-    if (args.meal === "fruit") {
-      return filtered.slice(0, limit);
-    }
     const engineMeal = args.meal === "breakfast" ? "Breakfast" : "Lunch";
     const slotMeal: Dish[] = [];
     const crossMeal: Dish[] = [];
@@ -309,8 +291,6 @@ export const getSlotAlternatives = query({
  *      | { ok: false; reason: "version-mismatch" | "no-current-week"
  *                           | "no-such-slot" | "no-such-position"
  *                           | "dish-not-in-library"
- *                           | "dish-is-fruit"
- *                           | "dish-not-fruit"
  *                           | "dish-not-active-or-in-season" }
  *
  * Behavior (non-restrictive, generic-search):
@@ -327,11 +307,10 @@ export const getSlotAlternatives = query({
  *     `dish-not-in-library`. For a breakfast/lunch slot, meal-time is NOT a hard
  *     filter: a cross-meal dish (a breakfast dish into a lunch slot or vice
  *     versa) is accepted, mirroring the generic pool, so the resulting §3
- *     mismatch becomes slow-loop signal. The only category invariant on a meal
- *     slot is the inverse of the fruit slot's: a Category=Fruit dish is rejected
- *     with `dish-is-fruit` (fruit belongs to its own slot). The fruit slot keeps
- *     its `dish-not-fruit` guard. Active+season stays a hard filter in both:
- *     a non-Active or out-of-season dish rejects with
+ *     mismatch becomes slow-loop signal. There is no category invariant left:
+ *     the Fruit of the day is removed (`features/engine-v4.md` §14) and the
+ *     Category=Fruit dishes are all inactive, so the Active+season hard filter
+ *     already excludes them. A non-Active or out-of-season dish rejects with
  *     `dish-not-active-or-in-season`. Beyond these the swap is accepted: §3
  *     composition eligibility (HP/Option A/B/C/carb-position) is NOT
  *     enforced. See the deliberate design note on `getSlotAlternatives`.
@@ -356,7 +335,9 @@ export const swapDish = mutation({
       v.literal("Fri"),
       v.literal("Sat"),
     ),
-    meal: v.union(v.literal("breakfast"), v.literal("lunch"), v.literal("fruit")),
+    // breakfast|lunch only; see `getSlotAlternatives` above. An ARG validator,
+    // not a document validator, so narrowing it does not touch the deploy.
+    meal: mealTimeValidator,
     position: v.number(),
     newDishId: v.number(),
     version: v.number(),
@@ -375,8 +356,6 @@ export const swapDish = mutation({
           | "no-such-slot"
           | "no-such-position"
           | "dish-not-in-library"
-          | "dish-is-fruit"
-          | "dish-not-fruit"
           | "dish-not-active-or-in-season";
       }
   > => {
@@ -412,20 +391,10 @@ export const swapDish = mutation({
       return { ok: false, reason: "dish-not-in-library" };
     }
 
-    // Category invariants. The fruit slot validates by Category=Fruit; a meal
-    // slot validates by the inverse (no fruit), mirroring the generic pool. Meal-
-    // time is NOT enforced for a meal slot: a cross-meal dish is a deliberate,
-    // accepted pick (generic-search). Both keep the Active + in-season hard
-    // filter below.
-    if (args.meal === "fruit") {
-      if (newDish.category !== "Fruit") {
-        return { ok: false, reason: "dish-not-fruit" };
-      }
-    } else {
-      if (newDish.category === "Fruit") {
-        return { ok: false, reason: "dish-is-fruit" };
-      }
-    }
+    // No category invariant: meal-time is NOT enforced (a cross-meal dish is a
+    // deliberate, accepted pick under generic-search), and Category=Fruit needs
+    // no special case now that every fruit dish is inactive and the Active +
+    // in-season hard filter below excludes it.
     if (newDish.active !== "Yes") {
       return { ok: false, reason: "dish-not-active-or-in-season" };
     }

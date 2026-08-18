@@ -44,13 +44,10 @@ export function favoriteName(row: FavoriteRow): string {
   return row.customLabel ?? "A favorite";
 }
 
-// The meal-time slot an explored/wishlisted dish belongs in. Fruit belongs to
-// its own slot; every other dish is Breakfast or Lunch. Mirrors the Explore
+// The meal-time slot an explored/wishlisted dish belongs in. Mirrors the Explore
 // "Use this week" mapping so a wishlist "Use" lands in the right meal.
 function mealForDish(dishId: number): Meal {
-  const dish = dishById(dishId);
-  if (dish?.category === "Fruit") return "fruit";
-  return dish?.time === "Breakfast" ? "breakfast" : "lunch";
+  return dishById(dishId)?.time === "Breakfast" ? "breakfast" : "lunch";
 }
 
 type Overlay =

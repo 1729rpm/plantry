@@ -150,7 +150,7 @@ export interface RankCandidatesArgs {
    * this set is demoted below the fresh (not-yet-placed) candidates, dominating
    * steps 1 to 5 so a broad pool's favourite cannot win every slot identically.
    * Build it with `withinWeekRecencySet` so the demotion honours the §4
-   * exemptions (fruit, lunch carbs). Undefined or empty leaves the step a no-op,
+   * exemption (lunch carbs). Undefined or empty leaves the step a no-op,
    * so every existing caller is unchanged.
    */
   withinWeekDishIds?: ReadonlySet<number>;
@@ -218,16 +218,11 @@ export function proteinFamily(dish: Dish): string {
  * reorders them relative to each other or to non-exempt dishes; this is what
  * lets Roti recur across every lunch, which is intended.
  *
- * Fruit is NOT exempt (`features/engine-v4.md` §10.2). It used to be, on the
- * reasoning that a fruit repeating across days of one week is intended. The
- * simulation showed why that was the wrong instrument: a role exempt from BOTH
- * recency mechanisms has nothing at all opposing its frequency count, so the
- * leader is mathematically unassailable and the role becomes an absorbing state.
- * Fruit produced two distinct dishes in 150 days. Fruit now ranks by saturating
- * frequency with the guard and within-week no-repeat applying normally, which
- * still lets the household's favourite fruits lead without letting one of them
- * monopolise the slot. Lunch carbs keep the exemption because roti every day is
- * a deliberate staple, not an absorbing state.
+ * Lunch carbs are the ONLY exempt role. The exemption is narrow on purpose: a
+ * role exempt from both recency mechanisms has nothing at all opposing its
+ * frequency count, so its leader is mathematically unassailable and the role
+ * becomes an absorbing state. Roti earns the exemption because a deliberate
+ * daily staple is exactly the intended outcome there; nothing else does.
  */
 function isRecencyExempt(dish: Dish): boolean {
   return LUNCH_CARB_CATEGORIES.has(dish.category);
@@ -235,8 +230,8 @@ function isRecencyExempt(dish: Dish): boolean {
 
 /**
  * Build the §4 step 5 within-week demotion set from the dishes already placed
- * earlier in the week being generated. Exempt dishes (fruit, lunch carbs) are
- * left out so they stay free to repeat. Shared by the generateWeek loop and the
+ * earlier in the week being generated. Exempt dishes (lunch carbs) are left out
+ * so they stay free to repeat. Shared by the generateWeek loop and the
  * single-slot picker (rankCandidatesForSlot), so the within-week recency rule
  * has one definition, not two. Pass the running list of this-week picks; the
  * returned set feeds `RankCandidatesArgs.withinWeekDishIds`.
@@ -288,9 +283,9 @@ export function bySaturatingFrequency(pool: Dish[], history: readonly MenuHistor
  * reordering, because a demotion is not enough: under frequency ranking the
  * leader would otherwise simply win again the next day.
  *
- * Exempt: lunch carbs only. Fruit and the plate rule 2 protein side both LOST
- * their exemption in §10.2, because between them the two exempt-from-everything
- * roles served 43 percent of all placements from six dishes in the simulation.
+ * Exempt: lunch carbs only. The plate rule 2 protein side LOST its exemption in
+ * §10.2, because the exempt-from-everything roles between them served 43 percent
+ * of all placements from six dishes in the simulation.
  *
  * Relaxation: if the guard would leave the pool empty, the pool is returned
  * unchanged so the slot still fills. A thin pool is a composition problem, not a
@@ -416,8 +411,8 @@ export function byIngredientConsolidation(
  * to 3: a dish that consolidation (step 3) re-promoted is still pushed below the
  * fresh alternatives, so a broad pool's top candidate cannot win every Mon/Wed/
  * Fri slot identically.
- * Exempt dishes (fruit, lunch carbs) are never in the demotion set, so they keep
- * their place. Fallback: if every candidate has already been placed this week,
+ * Exempt dishes (lunch carbs) are never in the demotion set, so they keep their
+ * place. Fallback: if every candidate has already been placed this week,
  * demoting them all equals demoting none, so the pool is returned unchanged and
  * the repeat is allowed (mirrors the step 2 fresh-alternative fallback).
  */
@@ -494,92 +489,6 @@ export function proteinFamiliesUsedAsHpMain(picks: Dish[]): Set<string> {
   }
   return set;
 }
-
-/**
- * §3.3 Fruit of the day, ranked under §4 (`features/engine-v4.md` §10.2).
- *
- * Fruit used to be picked by a separate longest-unused ordering wrapped by day
- * index, which is a fixed rotation by construction: it settles into the same
- * fruit on the same weekday every week. §10.2 puts fruit on the ordinary §4 path
- * instead, so it ranks by saturating frequency (the household's favourite fruits
- * lead, which is what every hand edit in the record moved toward) with the repeat
- * guard and within-week no-repeat applying normally (so no one fruit monopolises
- * the slot, which is what the exemption used to allow).
- *
- * Returns one fruit per requested day, in the order the days were given. Each
- * day is filled in two stages:
- *
- *   1. NARROW to the fruits used fewest times so far this week. This is the
- *      within-week no-repeat rule for a role that has to fill six days out of a
- *      pool that is sometimes only three dishes deep (the live Winter pool). A
- *      plain "exclude what is already placed" rule cannot serve day four in that
- *      case, and the guard cannot either: by midweek every candidate is inside
- *      the guard window, the guard relaxes to keep the day filled, and the
- *      relaxed pool hands the slot straight back to the frequency leader.
- *      Measured, that put one fruit on four days of one week. Narrowing to the
- *      least-used instead caps any one fruit at `ceil(days / poolSize)` days per
- *      week, which is the most an in-season pool of that size allows.
- *   2. §4-RANK the narrowed set and take the leader, so the household's most-eaten
- *      fruits still go first and the longest-unused tiebreak rotates which of the
- *      equally-eaten ones leads, week over week.
- *
- * Each pick is fed forward as a synthetic same-day history row, so a later day's
- * guard measures the real gap rather than treating the whole week as one date.
- *
- * Ranking per day rather than once per week matters. Ranking once and dealing the
- * result round robin looks equivalent and is not: the guard then excludes every
- * fruit eaten last week in one go, which splits the pool into two disjoint halves
- * that alternate week on week. Measured, that is a period-2 carousel, the same
- * shape of defect §10.2 exists to remove.
- *
- * `dayOffsets` carries each day's offset from `weekStart` (Mon 0 ... Sat 5), so
- * this function needs no dependency on the schedule module's day type.
- */
-export function planFruitOfWeek(args: {
-  pool: Dish[];
-  history: readonly MenuHistoryRow[];
-  weekStart: string;
-  dayOffsets: readonly number[];
-}): Dish[] {
-  const { pool, history, weekStart, dayOffsets } = args;
-  if (pool.length === 0) return [];
-
-  const usedThisWeek = new Map<number, number>(pool.map((d) => [d.id, 0]));
-  const rows: MenuHistoryRow[] = [];
-  const picks: Dish[] = [];
-
-  for (const offset of dayOffsets) {
-    const fewest = Math.min(...usedThisWeek.values());
-    const candidates = pool.filter((d) => usedThisWeek.get(d.id) === fewest);
-    const pick = rankCandidates({
-      pool: candidates,
-      history: [...history, ...rows],
-      slotDate: addDays(weekStart, offset),
-    })[0];
-    if (!pick) continue;
-    picks.push(pick);
-    usedThisWeek.set(pick.id, (usedThisWeek.get(pick.id) ?? 0) + 1);
-    rows.push({
-      weekStart,
-      day: LONG_DAY_BY_OFFSET[offset] ?? "Monday",
-      meal: "Fruit",
-      dishName: pick.name,
-      dishId: pick.id,
-    });
-  }
-  return picks;
-}
-
-/** Inverse of `DAY_OFFSET`, for dating `planFruitOfWeek`'s synthetic rows. */
-const LONG_DAY_BY_OFFSET: Record<number, MenuHistoryRow["day"]> = {
-  0: "Monday",
-  1: "Tuesday",
-  2: "Wednesday",
-  3: "Thursday",
-  4: "Friday",
-  5: "Saturday",
-  6: "Sunday",
-};
 
 /**
  * An HP main is an `HP`-tagged dish that occupies a meal's protein-main slot:

@@ -94,8 +94,8 @@ describe("forward simulation harness", () => {
       }
 
       // §4 step 5 within-week recency (Cluster A): no non-exempt dish appears
-      // 3+ times in any generated week. Only fruit-tagged dishes and lunch carbs
-      // (Chapati, Rice) are exempt and may recur (fruit-tagged dishes, Roti).
+      // 3+ times in any generated week. Lunch carbs (Chapati, Rice) are the only
+      // exempt category and may recur (Roti).
       const dishCounts = new Map<number, { count: number; dish: Dish }>();
       for (const day of week.days) {
         for (const slot of day.slots) {
@@ -107,8 +107,7 @@ describe("forward simulation harness", () => {
         }
       }
       for (const { count, dish } of dishCounts.values()) {
-        const exempt =
-          dish.tags.includes("fruit") || dish.category === "Chapati" || dish.category === "Rice";
+        const exempt = dish.category === "Chapati" || dish.category === "Rice";
         if (exempt) continue;
         expect(count, `week ${weekStart}: ${dish.name} appears ${count}x`).toBeLessThan(3);
       }
@@ -265,16 +264,13 @@ describe("forward simulation harness", () => {
     const skippedRows = deriveHistoryRows({ week, skippedDays: [SKIPPED_DAY] });
     expect(skippedRows.some((r) => r.day === "Friday")).toBe(false);
 
-    // The dropped rows are exactly the skipped day's rows: its slot dishes plus
-    // its §3.3 Fruit of the day (logged as a `meal:"Fruit"` row), which a skipped
-    // day also drops.
+    // The dropped rows are exactly the skipped day's slot dishes.
     const fullRows = deriveHistoryRows({ week });
     const skippedSlotDishes = (skippedDay?.slots ?? []).reduce(
       (sum, s) => sum + s.dishes.length,
       0,
     );
-    const skippedFruitRows = skippedDay?.fruit ? 1 : 0;
-    expect(fullRows.length - skippedRows.length).toBe(skippedSlotDishes + skippedFruitRows);
+    expect(fullRows.length - skippedRows.length).toBe(skippedSlotDishes);
 
     // Grocery list: ingredients unique to the skipped day disappear.
     const days = weekDayPicks(week);
