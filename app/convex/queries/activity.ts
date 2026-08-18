@@ -7,10 +7,9 @@ import type { Doc } from "../_generated/dataModel.js";
  *
  * Returns every `manualChanges` row for one `weekStart`, newest first, so the
  * Changes log can render the week's edits (swap, custom, delete, add, skip_day,
- * restore_day) with author, time, and reason. The client merges in the queued
- * `comments` for the same week separately (the comments query
- * already exists); this query deliberately does NOT join comments server-side,
- * keeping each signal channel its own query and its own subscription.
+ * restore_day) with author, time, and reason. It is the single subscription the
+ * Changes log renders; every signal channel keeps its own query and its own
+ * subscription rather than being joined server-side.
  *
  * Display order is `createdAt` descending (newest first): the Changes tab shows
  * the most recent edit at the top. All statuses are returned, not just

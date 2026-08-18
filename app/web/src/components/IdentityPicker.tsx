@@ -19,7 +19,7 @@ export function IdentityPicker({ onPick }: IdentityPickerProps) {
       <div className="identity">
         <div className="identity__head">
           <div className="identity__title">Please select the user</div>
-          <div className="identity__hint">Edits and comments carry your name</div>
+          <div className="identity__hint">Edits carry your name</div>
         </div>
         {PEOPLE.map((person) => (
           <button

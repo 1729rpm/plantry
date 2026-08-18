@@ -1,8 +1,8 @@
 # Fires when a slow-loop/* pull request merges into main. The job parses the
-# merged PR body for the per-cluster "Consumed comments by cluster" section
+# merged PR body for the per-cluster "Consumed signals by cluster" section
 # produced by .claude/commands/slow-loop.md, then calls the internal Convex
-# mutations in app/convex/comments.ts and app/convex/manualChangesMutations.ts
-# to mark each consumed comment and each consumed manual-change row either
+# mutations in app/convex/manualChangesMutations.ts and
+# app/convex/incidentsMutations.ts to mark each consumed manual-change row either
 # `applied` or `reviewed_no_change` (and each consumed incident resolved). This
 # closes the slow-loop feedback cycle so the next /slow-loop run does not
 # reprocess already-handled signals. The action exits clean when the PR body

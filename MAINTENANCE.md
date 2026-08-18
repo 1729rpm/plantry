@@ -8,17 +8,16 @@ Both jobs run from Claude Code sessions invoked by Rajat. Neither is on a cron. 
 
 ### 1.1 Why
 
-User feedback accumulates in Convex during the week as several signal channels: queued `comments` rows (explicit feedback the user typed), queued `manualChanges` rows (observed behavior, one row per swap, custom dish, delete, add, day skip, or day restore, each with the user's stated reason), queued `dishDislikes` rows (a records-only tap on a dish in Explore), and runtime `incidents` from the auto-recovery middleware. The loop also reads two non-blocking reports (the coverage report and the pool-coverage report, both from `npm run reports`) so it can act proactively, not only reactively. None of these can be applied directly: each cluster needs right-size diagnosis before becoming a structural change. The slow loop is the only path by which the dish library (`data/dishes/<slug>.md`), the ingredient catalog (`data/ingredients.md`), `docs/engine.md`, `engine/`, or `data/changelog.md` change.
+User feedback accumulates in Convex during the week as several signal channels: queued `manualChanges` rows (observed behavior, one row per swap, custom dish, delete, add, day skip, or day restore, each with the user's stated reason), queued `dishDislikes` rows (a records-only tap on a dish in Explore), and runtime `incidents` from the auto-recovery middleware. The loop also reads two non-blocking reports (the coverage report and the pool-coverage report, both from `npm run reports`) so it can act proactively, not only reactively. None of these can be applied directly: each cluster needs right-size diagnosis before becoming a structural change. The slow loop is the only path by which the dish library (`data/dishes/<slug>.md`), the ingredient catalog (`data/ingredients.md`), `docs/engine.md`, `engine/`, or `data/changelog.md` change.
 
 ### 1.2 Trigger
 
-Rajat opens a Claude Code session in the main repo directory and types `/slow-loop`. Convention is Sunday morning around 11am IST, but the cadence is not enforced. The session can also be passed a specific date range (`/slow-loop since:2026-05-01`), a focus theme (`/slow-loop focus:spice`), or a fixture path (`/slow-loop --fixture data/test-fixtures/slow-loop`). The fixture path is for EM dry-runs against the synthetic signals at `data/test-fixtures/slow-loop/`: `queued-comments.example.json`, `manual-changes.example.json`, `incidents.example.json`, and `dish-dislikes.example.json`; when passed, the session reads from those files instead of Convex. Any fixture file that is absent reads as zero queued rows of that signal, so older fixtures (which predate a given channel) still dry-run cleanly.
+Rajat opens a Claude Code session in the main repo directory and types `/slow-loop`. Convention is Sunday morning around 11am IST, but the cadence is not enforced. The session can also be passed a specific date range (`/slow-loop since:2026-05-01`), a focus theme (`/slow-loop focus:spice`), or a fixture path (`/slow-loop --fixture data/test-fixtures/slow-loop`). The fixture path is for EM dry-runs against the synthetic signals at `data/test-fixtures/slow-loop/`: `manual-changes.example.json`, `incidents.example.json`, and `dish-dislikes.example.json`; when passed, the session reads from those files instead of Convex. Any fixture file that is absent reads as zero queued rows of that signal, so older fixtures (which predate a given channel) still dry-run cleanly.
 
 ### 1.3 Inputs the session reads
 
 Reactive signals (what the user did or said this week):
 
-- All `queued` rows in Convex `comments` (via `npx convex run queries/comments:listQueuedComments`).
 - All `queued` rows in Convex `manualChanges` (via `npx convex run queries/manualChanges:listQueuedManualChanges`). These now span swap, custom, delete, add, skip_day, and restore_day kinds; the kind plus `reason` is the signal. A `custom` row may be either a replacement of a position or an append of an extra dish; an appended custom dish carries the null `before` (`{ dishId: null, customLabel: null }`), so do not infer "replaced X" from a `custom` row's `before`. The promote-a-repeated-custom-dish-into-a-library-dish path (§1.7) is unchanged.
 - All `queued` rows in Convex `dishDislikes` (records-only Explore taps). The table is a live signal channel that collects real Explore-tap rows.
 - All open `incidents` from Convex (via `npx convex run queries/incidents:listIncidents`).
@@ -35,7 +34,7 @@ Context (read, not clustered on directly):
 
 ### 1.4 What the session does
 
-1. Cluster comments + manual changes + queue rows + dislikes + incidents by theme (e.g. "spice tolerance varies day to day", "we never cook lauki anymore", "fish pack size feels off", "Tuhina ordered in Thursdays in May", "rajma keeps getting swapped to chole with reason 'bored of rajma'"). A cluster can mix rows from any of the signal tables when they touch the same underlying property. Manual changes, queue rows, and dislikes are observed behavior, not rule violations; the slow loop reads them as signal for what the engine got wrong, then asks whether the rule should change.
+1. Cluster manual changes + dislikes + incidents by theme (e.g. "spice tolerance varies day to day", "we never cook lauki anymore", "fish pack size feels off", "Tuhina ordered in Thursdays in May", "rajma keeps getting swapped to chole with reason 'bored of rajma'"). A cluster can mix rows from any of the signal tables when they touch the same underlying property. Manual changes and dislikes are observed behavior, not rule violations; the slow loop reads them as signal for what the engine got wrong, then asks whether the rule should change.
 
    Signal patterns to look for, each subject to right-size discipline (a single instance is almost always no change; the threshold is a pattern across weeks or across both household members):
    - **Skips** (`manualChanges` kind `skip_day`). Recurring skips of the same day read as a calendar pattern. Three Friday skips in a month is a structural look (a standing day-override); one Friday skip is one eat-out night, no change.
@@ -66,8 +65,7 @@ A single PR titled `slow-loop/<date>: <one-line summary of themes>`. PR descript
 
 A GitHub Action posts back to Convex:
 
-- Marks the consumed `comments` rows as `applied` with the merged PR URL, or `reviewed_no_change` for clusters with "no change warranted" as the chosen level.
-- Marks the consumed `manualChanges` rows with the same outcome per cluster, using the same per-cluster fence section.
+- Marks the consumed `manualChanges` rows as `applied` with the merged PR URL, or `reviewed_no_change` for clusters with "no change warranted" as the chosen level, one outcome per cluster from the per-cluster fence section.
 - Marks the corresponding `incidents` as resolved.
 - Lists the consumed `dishDislikes` rows in the PR but leaves them `queued`: the dislike write-back mutation is not yet wired (see §3).
 
@@ -88,9 +86,9 @@ The fixes name the per-dish-file structure: one dish is one file at `data/dishes
 | One member dislikes a dish once (one `dishDislikes` row)                                | No change. Record reason: "single dislike, not a pattern; the fast loop never acts on a dislike (Principle 5)." Mark the dislike consumed.               | Set `active: No` on the strength of one tap.                                                          |
 | Same dish disliked repeatedly, or disliked by both members                              | Set `active: No` in that dish's `data/dishes/<slug>.md` (deactivation), or lower its explore ranking if it should stay browsable but de-emphasized.      | Leave it active because "it is only a couple of dislikes" (a both-member dislike is a clear pattern). |
 
-### 1.8 Proactive runs (the reports, not just the comments)
+### 1.8 Proactive runs (the reports, not just the queued signals)
 
-The slow loop reads the coverage report and the pool-coverage report from `npm run reports` every run, and a week with zero comments, zero manual changes, zero queue rows, and zero dislikes can still produce a useful PR. Validators keep facts true; the slow loop keeps the library good. The two are different jobs: a thin Dessert pool is not a broken fact, so no validator flags it, but it is a real quality risk worth a proactive proposal.
+The slow loop reads the coverage report and the pool-coverage report from `npm run reports` every run, and a week with zero manual changes, zero dislikes, and zero incidents can still produce a useful PR. Validators keep facts true; the slow loop keeps the library good. The two are different jobs: a thin Dessert pool is not a broken fact, so no validator flags it, but it is a real quality risk worth a proactive proposal.
 
 What to look for in the reports:
 
@@ -101,11 +99,11 @@ A proactive PR follows the same shape as a reactive one: a diagnosis card per pr
 
 ### 1.9 Anti-patterns the slow loop must not produce
 
-- Sycophantic agreement: "the comment said X so I added a flag for X" without checking pattern size.
+- Sycophantic agreement: "the swap reason said X so I added a flag for X" without checking pattern size.
 - Generalizing from one or two cases.
 - Adding a column when a row fix or a tag would do.
 - Modifying `docs/engine.md` without paired engine code and test edits.
-- Silent dismissal of a comment without writing a diagnosis card.
+- Silent dismissal of a signal without writing a diagnosis card.
 
 ## 2. Canonical-doc reconciliation
 
@@ -184,22 +182,20 @@ Mismatches flag in the PR description. The job does not move or rename files aut
 
 ## 3. Slow-loop mark-applied action
 
-A GitHub Action at `.github/workflows/slow-loop-applied.yml` closes the slow-loop feedback cycle: when a `slow-loop/*` PR merges into `main`, the action calls internal Convex mutations to mark the consumed `comments` and `manualChanges` rows `applied` or `reviewed_no_change` and the consumed `incidents` rows resolved. Without it, the next `/slow-loop` run would reread the same queued signal and reprocess it.
+A GitHub Action at `.github/workflows/slow-loop-applied.yml` closes the slow-loop feedback cycle: when a `slow-loop/*` PR merges into `main`, the action calls internal Convex mutations to mark the consumed `manualChanges` rows `applied` or `reviewed_no_change` and the consumed `incidents` rows resolved. Without it, the next `/slow-loop` run would reread the same queued signal and reprocess it.
 
 ### 3.1 PR body contract
 
 `/slow-loop` produces a PR body with two sources of truth for the action:
 
-1. A `## Consumed comments by cluster` section with one fenced ` ```cluster ` block per cluster. Each block has these keys: `outcome:` (either `applied` or `reviewed_no_change`, derived from that cluster's diagnosis card "Chosen level"), `comment_ids:` (comma-separated comment ids consumed by this cluster, or `-` if none), `manual_change_ids:` (comma-separated `manualChanges` row ids, or `-`), `incident_ids:` (comma-separated, or `-`), and `dislike_ids:` (comma-separated `dishDislikes` row ids, or `-`). The action parses this section to map each id to the correct outcome. The `manual_change_ids` and `dislike_ids` keys are optional in a block; an older PR body that omits them still parses. Dislike ids are outcome-independent: a consumed dislike is resolved regardless of the cluster's comment/manual-change outcome, so the action collects them from every block without outcome gating.
-2. Flat `Consumed comment IDs:`, `Consumed manual-change IDs:`, `Consumed incident IDs:`, and `Consumed dislike IDs:` lines for human readability and as a fallback. If the per-cluster section is absent, the action treats every listed comment and manual-change id as `applied` (conservative default for a PR that touched files).
+1. A `## Consumed signals by cluster` section with one fenced ` ```cluster ` block per cluster. Each block has these keys: `outcome:` (either `applied` or `reviewed_no_change`, derived from that cluster's diagnosis card "Chosen level"), `manual_change_ids:` (comma-separated `manualChanges` row ids consumed by this cluster, or `-` if none), `incident_ids:` (comma-separated, or `-`), and `dislike_ids:` (comma-separated `dishDislikes` row ids, or `-`). The action parses this section to map each id to the correct outcome. The `manual_change_ids` and `dislike_ids` keys are optional in a block; an older PR body that omits them still parses. Dislike ids are outcome-independent: a consumed dislike is resolved regardless of the cluster's manual-change outcome, so the action collects them from every block without outcome gating.
+2. Flat `Consumed manual-change IDs:`, `Consumed incident IDs:`, and `Consumed dislike IDs:` lines for human readability and as a fallback. If the per-cluster section is absent, the action treats every listed manual-change id as `applied` (conservative default for a PR that touched files).
 
 ### 3.2 Convex mutations called
 
-Five `internalMutation` functions (not exposed to the browser), split across `app/convex/comments.ts` and `app/convex/manualChangesMutations.ts`:
+Three `internalMutation` functions (not exposed to the browser), split across `app/convex/manualChangesMutations.ts` and `app/convex/incidentsMutations.ts`:
 
-- `comments:markCommentsApplied({ commentIds, resolvedPr })` sets each row `status: "applied"`, `resolvedAt: now`, `resolvedPr: <PR URL>`.
-- `comments:markCommentsReviewedNoChange({ commentIds, resolvedPr })` same shape, status `reviewed_no_change`.
-- `comments:markIncidentsResolved({ incidentIds, resolvedPr })` sets `resolvedAt: now` on each incident row.
+- `incidentsMutations:markIncidentsResolved({ incidentIds, resolvedPr })` sets `resolvedAt: now` on each incident row.
 - `manualChangesMutations:markManualChangesApplied({ manualChangeIds, resolvedPr })` sets each `manualChanges` row `status: "applied"`, `resolvedAt: now`, `resolvedPr: <PR URL>`.
 - `manualChangesMutations:markManualChangesReviewedNoChange({ manualChangeIds, resolvedPr })` same shape, status `reviewed_no_change`.
 
@@ -209,10 +205,10 @@ Each mutation handles missing or already-resolved ids by inserting a `warn`-seve
 
 ### 3.3 Debugging a failed run
 
-If the action runs but the next `/slow-loop` invocation still sees stale `queued` comments, follow these steps in order:
+If the action runs but the next `/slow-loop` invocation still sees stale `queued` rows, follow these steps in order:
 
 1. Open the Actions tab on GitHub, find the `Slow-loop mark applied` run for the merged slow-loop PR, and read the log lines prefixed `[slow-loop-mark-applied]`. They report how many cluster blocks parsed, the applied/reviewed_no_change/incidents/dislike counts, and any Convex CLI exit codes. The dislike count is logged but no mutation runs for it (the dislike write-back is not yet built).
-2. If the parse counts read zero clusters and zero flat ids, the slow-loop PR body did not include either section; edit `.claude/commands/slow-loop.md` if `/slow-loop`'s output drifted, or hand-correct the comments via `npx convex run --prod comments:markCommentsApplied '{ "commentIds": ["..."], "resolvedPr": "..." }'`.
+2. If the parse counts read zero clusters and zero flat ids, the slow-loop PR body did not include either section; edit `.claude/commands/slow-loop.md` if `/slow-loop`'s output drifted, or hand-correct the rows via `npx convex run --prod manualChangesMutations:markManualChangesApplied '{ "manualChangeIds": ["..."], "resolvedPr": "..." }'`.
 3. If the Convex CLI returned non-zero, check the production deployment (`disciplined-chameleon-263`) for incident rows written by the mutations themselves; they record which ids were skipped and why.
 4. The action skips entirely when `pull_request.merged` is false or the head ref is not `slow-loop/*`; that is by design and not a failure.
 
@@ -231,7 +227,7 @@ last_slow_loop: 2026-07-13
 ## 5. First run notes
 
 - The first `/reconcile-docs` run is a no-op: the canonical docs were written fresh as part of the restructure.
-- The first `/slow-loop` run after the app is live will have zero queued comments (none have been logged yet). The session writes a one-line PR or simply exits with a status report; an empty slow loop is a healthy outcome, not a failure.
+- The first `/slow-loop` run after the app is live will have zero queued signals (none have been logged yet). The session writes a one-line PR or simply exits with a status report; an empty slow loop is a healthy outcome, not a failure.
 
 ## 6. Process retro intake
 
