@@ -58,54 +58,29 @@ describe("weekSchedule — docs/engine.md §2", () => {
     });
   });
 
-  describe("Item counts per §2 table", () => {
-    it("Mon, Wed, Fri breakfast has 2 items", () => {
+  describe("Menu numbering per §2", () => {
+    it("Mon, Wed, Fri lunch is Menu 1", () => {
       const slots = weekSchedule({ weekStart: MONDAY, lastSaturdayMenu: 3 });
       for (const day of ["Mon", "Wed", "Fri"] as Day[]) {
-        const b = slots.find((s) => s.day === day && s.meal === "Breakfast")!;
-        expect(b.itemCount).toBe(2);
+        expect(slots.find((s) => s.day === day && s.meal === "Lunch")!.lunchMenu).toBe(1);
       }
     });
 
-    it("Tue, Thu breakfast has 1 item", () => {
+    it("Tue, Thu lunch is Menu 2", () => {
       const slots = weekSchedule({ weekStart: MONDAY, lastSaturdayMenu: 3 });
       for (const day of ["Tue", "Thu"] as Day[]) {
-        const b = slots.find((s) => s.day === day && s.meal === "Breakfast")!;
-        expect(b.itemCount).toBe(1);
+        expect(slots.find((s) => s.day === day && s.meal === "Lunch")!.lunchMenu).toBe(2);
       }
     });
 
-    it("Mon, Wed, Fri lunch is Menu 1 with 3 items", () => {
+    it("carries no per-slot item count: the day budget sizes the plate (§9)", () => {
+      // §2 used to fix an item count per slot (2-item Mon breakfast, 3-item
+      // Menu 1 lunch). Breakfast is now dish-driven (§3, §10.4) and lunch composes
+      // to the day's remaining minutes and items (§3.1, §9), so a nominal count on
+      // the SlotPlan would be a number nothing reads and nothing honours.
       const slots = weekSchedule({ weekStart: MONDAY, lastSaturdayMenu: 3 });
-      for (const day of ["Mon", "Wed", "Fri"] as Day[]) {
-        const l = slots.find((s) => s.day === day && s.meal === "Lunch")!;
-        expect(l.lunchMenu).toBe(1);
-        expect(l.itemCount).toBe(3);
-      }
-    });
-
-    it("Tue, Thu lunch is Menu 2 with 4 items", () => {
-      const slots = weekSchedule({ weekStart: MONDAY, lastSaturdayMenu: 3 });
-      for (const day of ["Tue", "Thu"] as Day[]) {
-        const l = slots.find((s) => s.day === day && s.meal === "Lunch")!;
-        expect(l.lunchMenu).toBe(2);
-        expect(l.itemCount).toBe(4);
-      }
-    });
-
-    it("Saturday lunch has 3 items", () => {
-      const slots = weekSchedule({ weekStart: MONDAY, lastSaturdayMenu: 3 });
-      const sat = slots.find((s) => s.day === "Sat")!;
-      expect(sat.itemCount).toBe(3);
-    });
-
-    it("weekday totals match §2 (Mon/Wed/Fri = 5, Tue/Thu = 5)", () => {
-      const slots = weekSchedule({ weekStart: MONDAY, lastSaturdayMenu: 3 });
-      for (const day of ["Mon", "Tue", "Wed", "Thu", "Fri"] as Day[]) {
-        const dayTotal = slots
-          .filter((s) => s.day === day)
-          .reduce((acc, s) => acc + s.itemCount, 0);
-        expect(dayTotal).toBe(5);
+      for (const slot of slots) {
+        expect(slot).not.toHaveProperty("itemCount");
       }
     });
   });
@@ -167,7 +142,7 @@ describe("weekSchedule — docs/engine.md §2", () => {
   });
 
   describe("Property: schedule shape is consistent across many weekStart dates", () => {
-    it("over six months of Mondays, every week has 11 unique slots and totals 28 items", () => {
+    it("over six months of Mondays, every week has 11 unique slots", () => {
       let current = MONDAY;
       let lastSat: 3 | 4 = 3;
       for (let i = 0; i < 26; i += 1) {
@@ -185,9 +160,6 @@ describe("weekSchedule — docs/engine.md §2", () => {
           expect(slots.filter((s) => s.day === day && s.meal === "Lunch")).toHaveLength(1);
         }
         expect(slots.filter((s) => s.day === "Sat")).toHaveLength(1);
-
-        const totalItems = slots.reduce((acc, s) => acc + s.itemCount, 0);
-        expect(totalItems).toBe(28);
 
         const sat = slots.find((s) => s.day === "Sat")!;
         expect(sat.lunchMenu === 3 || sat.lunchMenu === 4).toBe(true);

@@ -23,7 +23,10 @@ function makeDish(overrides: Partial<Dish> = {}): Dish {
     preferred: "No",
     active: "Yes",
     satiety: "Medium",
-    prepMinutes: 30,
+    // 15 minutes, so a full six-item day costs 90 of the §9 120-minute budget and
+    // the STRUCTURE under test is what sizes the plate. The budget itself has its
+    // own tests below, which use expensive dishes on purpose.
+    prepMinutes: 15,
     seasons: "All",
     cuisine: "Indian",
     ...overrides,
@@ -69,7 +72,8 @@ function makeMinimalLibrary(): Dish[] {
       category: "Accompaniment",
       primaryIngredient: "Mango",
     }),
-    // Fruit of the day pool (§3.3): Category=Fruit, outside breakfast/lunch.
+    // Category=Fruit dishes. §3.3 is retired, so these are deliberately left in
+    // the fixture library as dishes no pool may ever place.
     makeDish({
       name: "Apple",
       time: "Breakfast",
@@ -221,7 +225,7 @@ describe("generateWeek — top-level engine", () => {
       expect(dayNames).toEqual(["Mon", "Tue", "Wed", "Thu", "Fri", "Sat"]);
     });
 
-    it("returns 5 items on each weekday (2 breakfast + 3/4 lunch) and 3 on Saturday", () => {
+    it("composes each weekday to the §9 item budget and Saturday to its Menu 3/4 form", () => {
       const week = generateWeek({
         weekStart: "2026-06-08",
         library,
@@ -235,13 +239,18 @@ describe("generateWeek — top-level engine", () => {
       const dishesPerDay = week.days.map((d) =>
         d.slots.reduce((sum, s) => sum + s.dishes.length, 0),
       );
-      // Mon/Wed/Fri: 2 breakfast + 3 lunch = 5
-      // Tue/Thu: 1 breakfast + 4 lunch = 5
-      // Sat: 3
-      expect(dishesPerDay).toEqual([5, 5, 5, 5, 5, 3]);
+      // Breakfast is dish-driven (§10.4): a Chilla/Paratha main draws its chutney
+      // (2 items), a complete_meal main is served alone and then takes the protein
+      // floor (2 items). Lunch composes to the rest of the day's item budget
+      // (§3.1: clamp(6 - breakfastItems, 2, 4)), so a weekday lands at the 6-item
+      // backstop wherever the thin fixture pools can fill it, and Saturday, which
+      // has no breakfast, at its 3-item Menu 3/4 form. A position whose pool this
+      // small library has already spent lands short rather than repeating a dish,
+      // which is why one weekday sits at 5.
+      expect(dishesPerDay).toEqual([6, 6, 6, 5, 6, 3]);
     });
 
-    it("§3.3 puts a Fruit of the day on every day Mon-Sat, Saturday included", () => {
+    it("§3.3 is retired: a day carries breakfast and lunch slots and nothing else", () => {
       const week = generateWeek({
         weekStart: "2026-06-08",
         library,
@@ -254,12 +263,14 @@ describe("generateWeek — top-level engine", () => {
       });
       expect(week.days.map((d) => d.day)).toEqual(["Mon", "Tue", "Wed", "Thu", "Fri", "Sat"]);
       for (const day of week.days) {
-        expect(day.fruit, `${day.day} fruit`).toBeDefined();
-        expect(day.fruit!.category).toBe("Fruit");
+        expect(Object.keys(day).sort(), `${day.day} keys`).toEqual(["day", "slots"]);
+        for (const slot of day.slots) {
+          expect(slot.meal === "Breakfast" || slot.meal === "Lunch").toBe(true);
+        }
       }
     });
 
-    it("§9 fruit is outside the cap: a Fruit dish never appears in a meal slot", () => {
+    it("§3.3 a Category=Fruit dish never appears in any slot, even when eligible", () => {
       const week = generateWeek({
         weekStart: "2026-06-08",
         library,
@@ -279,32 +290,46 @@ describe("generateWeek — top-level engine", () => {
       }
     });
 
-    it("§3.3 picks the longest-unused fruit first when history favours one", () => {
-      // Apple cooked recently, Banana never: the longest-unused pick leads Banana.
-      const recentHistory: MenuHistoryRow[] = [
-        { weekStart: "2026-06-01", day: "Monday", meal: "Breakfast", dishName: "Apple", dishId: 2 },
-      ];
+    it('§3.3 a legacy meal:"Fruit" history row is read without placing a fruit', () => {
+      // features/engine-v4.md §14.3: weekArchive and menu_history.md still hold
+      // the retired Fruit of the day's rows and are never rewritten, so the
+      // generator must ingest one and produce a week with no fruit in it.
       const lib = makeMinimalLibrary();
       const apple = lib.find((d) => d.name === "Apple")!;
-      const history: MenuHistoryRow[] = [{ ...recentHistory[0], dishId: apple.id }];
+      const legacyHistory: MenuHistoryRow[] = [
+        {
+          weekStart: "2026-06-01",
+          day: "Monday",
+          meal: "Fruit",
+          dishName: "Apple",
+          dishId: apple.id,
+        },
+        {
+          weekStart: "2026-06-01",
+          day: "Tuesday",
+          meal: "Fruit",
+          dishName: "Apple",
+          dishId: apple.id,
+        },
+      ];
       const week = generateWeek({
         weekStart: "2026-06-08",
         library: lib,
-        history,
+        history: legacyHistory,
         season: "Summer",
         ingredients: emptyIngredients,
         packSizes: emptyPackSizes,
         rng: () => 0.1,
         lastSaturdayMenu: null,
       });
-      // Monday gets the longest-unused fruit, which is not the recently-cooked Apple.
-      expect(week.days[0].fruit!.name).not.toBe("Apple");
+      const placed = week.days.flatMap((d) => d.slots.flatMap((s) => s.dishes));
+      expect(placed.length).toBeGreaterThan(0);
+      expect(placed.some((d) => d.category === "Fruit")).toBe(false);
     });
 
-    it("§3.1 budget-aware composition fits the day, so the §9 cap never fires", () => {
-      // Mon/Wed/Fri compose a 3-item lunch (2-item breakfast, budget 3) and Tue/Thu
-      // a 4-item lunch (1-item breakfast, budget 4), so no day exceeds the 5-item
-      // cap and nothing is dropped.
+    it("§3.1/§9 budget-aware composition fits the day, so nothing is ever dropped", () => {
+      // Every plate composes to the day budget as it goes, so no day can exceed
+      // either §9 limit and nothing is ever dropped.
       const week = generateWeek({
         weekStart: "2026-06-08",
         library,
@@ -315,9 +340,16 @@ describe("generateWeek — top-level engine", () => {
         rng: () => 0.1,
         lastSaturdayMenu: null,
       });
-      // Budget composition means the cap is a safety net that does not fire here.
-      expect(week.droppedDishIds).toEqual([]);
-      // Every Menu-1 weekday lunch carries its carb and its HP main, at 3 items.
+      // §9: nothing is dropped and no day breaches either limit.
+      for (const day of week.days) {
+        const dishes = day.slots.flatMap((s) => s.dishes);
+        expect(dishes.length, `${day.day} items`).toBeLessThanOrEqual(6);
+        expect(
+          dishes.reduce((sum, d) => sum + d.prepMinutes, 0),
+          `${day.day} minutes`,
+        ).toBeLessThanOrEqual(120);
+      }
+      // Every Menu-1 weekday lunch carries its carb and its HP main, at 4 items.
       for (const dayName of ["Mon", "Wed", "Fri"] as const) {
         const lunch = week.days
           .find((d) => d.day === dayName)!
@@ -326,7 +358,7 @@ describe("generateWeek — top-level engine", () => {
           true,
         );
         expect(lunch.dishes.some((d) => d.tags.includes("HP"))).toBe(true);
-        expect(lunch.dishes.length).toBe(3);
+        expect(lunch.dishes.length).toBe(4);
       }
     });
 
@@ -548,8 +580,8 @@ describe("generateWeek — top-level engine", () => {
           ),
         );
       expect(weekdaysWithPinned.length).toBe(1);
-      // The substituted day's lunch should have 3 items (Menu 3 or 4 form),
-      // not 3 (Menu 1) or 4 (Menu 2). For an HP-tagged lead it's Menu 3 form.
+      // The substituted day's lunch runs the Menu 3 form (3 items: complete_meal
+      // + HP lead, Accompaniment, Dessert) rather than the day's Menu 1/2 plate.
       const substitutedDay = weekdaysWithPinned[0];
       const lunchSlot = substitutedDay.slots.find((s) => s.meal === "Lunch")!;
       expect(lunchSlot.dishes.length).toBe(3);
@@ -639,8 +671,7 @@ describe("generateWeek — top-level engine", () => {
           }
         }
       }
-      const exempt = (d: Dish) =>
-        d.tags.includes("fruit") || d.category === "Chapati" || d.category === "Rice";
+      const exempt = (d: Dish) => d.category === "Chapati" || d.category === "Rice";
       for (const { count, dish } of counts.values()) {
         if (exempt(dish)) continue;
         expect(count, `${dish.name} appears ${count}x`).toBeLessThan(3);
@@ -745,8 +776,7 @@ describe("generateWeek — top-level engine", () => {
       nextId = 1;
       // Option B (complete_carb + accompaniment): the partner could be HP, so an
       // HP complete_carb lead must exclude an HP accompaniment partner (the §3
-      // one-HP-per-meal rule). Breakfast is savoury only; fruit is the standalone
-      // Fruit of the day (§3.3), never a breakfast partner.
+      // one-HP-per-meal rule). Breakfast is savoury only.
       const library: Dish[] = [
         makeDish({
           name: "Besan Paneer Chilla",
@@ -1263,7 +1293,7 @@ describe("generateWeek — top-level engine", () => {
       expect(lunch.dishes.some((d) => d.category === "Chapati")).toBe(true); // lunch carb
     });
 
-    it("a 2-item breakfast day composes a 3-item lunch by budget, not by cap trimming", () => {
+    it("a 2-item breakfast day composes its lunch by budget, not by cap trimming", () => {
       const week = generateWeek({
         weekStart: "2026-06-15",
         library: libraryForThali("Paratha"),
@@ -1278,9 +1308,10 @@ describe("generateWeek — top-level engine", () => {
         .slots.find((s) => s.meal === "Breakfast")!;
       expect(monBf.dishes.length).toBe(2); // Paratha lead + accompaniment
       const lunch = monLunch(week);
-      // Budget 3 (2 breakfast items): lead + carb + one companion. The Gravy lead
-      // excludes the Dal, so the companion is the Dry sabzi. Nothing is dropped.
-      expect(week.droppedDishIds).toEqual([]);
+      // Budget 4 (6 items less a 2-item breakfast): lead + carb + two companions,
+      // but the Gravy lead excludes the Dal under the one-wet rule and the only
+      // other companion is the Dry sabzi, so the plate lands at 3. Nothing is
+      // dropped; the plate is simply one companion short (§10.1).
       expect(lunch.dishes.length).toBe(3);
       expect(lunch.dishes.some((d) => d.name === "Bhindi Sabzi")).toBe(true);
       expect(lunch.dishes[0].name).toBe("Paneer Gravy");
@@ -1288,7 +1319,7 @@ describe("generateWeek — top-level engine", () => {
       expect(lunch.dishes.some((d) => d.category === "Chapati")).toBe(true);
     });
 
-    it("keeps every weekday at the §9 5-item cap", () => {
+    it("keeps every weekday inside the §9 day budget", () => {
       const week = generateWeek({
         weekStart: "2026-06-15",
         library: libraryForThali("Paratha"),
@@ -1300,8 +1331,10 @@ describe("generateWeek — top-level engine", () => {
       });
       for (const dayName of ["Mon", "Tue", "Wed", "Thu", "Fri"] as const) {
         const day = week.days.find((d) => d.day === dayName)!;
-        const items = day.slots.reduce((sum, s) => sum + s.dishes.length, 0);
-        expect(items, `${dayName} has ${items} items`).toBeLessThanOrEqual(5);
+        const dishes = day.slots.flatMap((s) => s.dishes);
+        expect(dishes.length, `${dayName} has ${dishes.length} items`).toBeLessThanOrEqual(6);
+        const minutes = dishes.reduce((sum, d) => sum + d.prepMinutes, 0);
+        expect(minutes, `${dayName} costs ${minutes} minutes`).toBeLessThanOrEqual(120);
       }
     });
   });
@@ -1397,6 +1430,643 @@ describe("generateWeek — top-level engine", () => {
       expect(tueBf.dishes.map((d) => d.name)).toEqual(["Besan Paneer Chilla", "Green Chutney"]);
       // One HP source per meal: the chutney is non-HP.
       expect(tueBf.dishes.filter((d) => d.tags.includes("HP")).length).toBe(1);
+    });
+  });
+  /**
+   * `features/engine-v4.md` §10.1 / §11.5. These run against the LIVE library,
+   * because the properties under test are properties of a real week: the whole
+   * point of §10.1 is that a menu is composed to a budget the household actually
+   * has, and a synthetic fixture with uniform prep times cannot show that.
+   */
+  describe("§9 whole-day budget (§10.1)", () => {
+    const { library, packSizes, ingredients, history } = loadLiveData();
+
+    function liveWeek(weekStart: string, season: Season = "Monsoon") {
+      return generateWeek({
+        weekStart,
+        library,
+        history,
+        season,
+        ingredients,
+        packSizes,
+        rng: () => 0.1,
+        lastSaturdayMenu: null,
+      });
+    }
+
+    it("never composes a day over 120 minutes or 6 items", () => {
+      for (const weekStart of ["2026-08-17", "2026-09-14", "2026-11-16"]) {
+        const week = liveWeek(weekStart, weekStart < "2026-10-01" ? "Monsoon" : "Winter");
+        for (const day of week.days) {
+          const dishes = day.slots.flatMap((s) => s.dishes);
+          const minutes = dishes.reduce((sum, d) => sum + d.prepMinutes, 0);
+          expect(minutes, `${weekStart} ${day.day}: ${minutes} min`).toBeLessThanOrEqual(120);
+          expect(
+            dishes.length,
+            `${weekStart} ${day.day}: ${dishes.length} items`,
+          ).toBeLessThanOrEqual(6);
+          // Every dish on the day is in a slot and counted, so the day's real
+          // size is exactly what the budget measured.
+          expect(dishes.length).toBe(day.slots.reduce((n, s) => n + s.dishes.length, 0));
+        }
+      }
+    });
+
+    it("Saturday is no longer capped at 3: the day budget is uniform across the week", () => {
+      // The retired §9 cap trimmed Saturday to three items, which is what stopped
+      // the weekend lunch carrying a protein floor on top of its Menu 3/4 form.
+      const week = liveWeek("2026-08-17");
+      const sat = week.days.find((d) => d.day === "Sat")!;
+      const items = sat.slots.flatMap((s) => s.dishes).length;
+      expect(items).toBeGreaterThanOrEqual(3);
+      expect(items).toBeLessThanOrEqual(6);
+    });
+
+    it("composes to the budget rather than trimming: a placed dish is never removed", () => {
+      // The old contract was "compose four, then drop the worst". There is no drop
+      // path left, so the finished week is exactly the set of picks the loop made
+      // and `GeneratedWeek` no longer carries a dropped-ids field at all.
+      const week = liveWeek("2026-08-17");
+      expect(week).not.toHaveProperty("droppedDishIds");
+      expect(week.incidents.filter((i) => i.includes("over cap"))).toEqual([]);
+    });
+
+    it("lands a plate one companion short and says so when nothing fits", () => {
+      // A one-item breakfast plus a deliberately expensive Indian plate: the lead
+      // and carb fit, the companion cannot, so the plate is short and the week
+      // reports it rather than silently shipping a two-item lunch.
+      nextId = 1;
+      const lib: Dish[] = [
+        makeDish({
+          name: "Quick Poha",
+          time: "Breakfast",
+          category: "Complete meal",
+          tags: ["complete_meal", "HP"],
+          prepMinutes: 20,
+        }),
+        makeDish({
+          name: "Slow Curry",
+          time: "Lunch",
+          category: "Gravy dish",
+          tags: ["HP"],
+          prepMinutes: 55,
+        }),
+        makeDish({ name: "Roti", time: "Lunch", category: "Chapati", prepMinutes: 45 }),
+        makeDish({
+          name: "Slow Sabzi",
+          time: "Lunch",
+          category: "Dry dish",
+          primaryIngredient: "Bhindi",
+          prepMinutes: 45,
+        }),
+        makeDish({
+          name: "Sat Biryani",
+          time: "Lunch",
+          category: "Complete meal",
+          tags: ["complete_meal", "HP"],
+          prepMinutes: 30,
+        }),
+        makeDish({ name: "Sat Salad", time: "Lunch", category: "Accompaniment", prepMinutes: 10 }),
+        makeDish({ name: "Sat Kheer", time: "Lunch", category: "Dessert", prepMinutes: 10 }),
+        makeDish({ name: "Apple", time: "Breakfast", category: "Fruit", tags: ["fruit"] }),
+      ];
+      const week = generateWeek({
+        weekStart: "2026-06-15",
+        library: lib,
+        history: emptyHistory,
+        season: "Monsoon",
+        ingredients: emptyIngredients,
+        packSizes: emptyPackSizes,
+        rng: () => 0.1,
+      });
+      const mon = week.days.find((d) => d.day === "Mon")!;
+      const monLunchDishes = mon.slots.find((s) => s.meal === "Lunch")!.dishes;
+      // 20 + 55 + 45 = 120 exactly; a 45-minute sabzi cannot join it.
+      expect(monLunchDishes.map((d) => d.name)).toEqual(["Slow Curry", "Roti"]);
+      expect(week.incidents.some((i) => i.includes("budget-short"))).toBe(true);
+      const minutes = mon.slots.flatMap((s) => s.dishes).reduce((sum, d) => sum + d.prepMinutes, 0);
+      expect(minutes).toBe(120);
+    });
+
+    it("skips a candidate that does not fit for the next one that does", () => {
+      // §10.1 step 3: the position is not abandoned at the first over-budget
+      // candidate, it takes the next candidate that fits.
+      nextId = 1;
+      const lib: Dish[] = [
+        makeDish({
+          name: "Poha",
+          time: "Breakfast",
+          category: "Complete meal",
+          tags: ["complete_meal", "HP"],
+          prepMinutes: 20,
+        }),
+        makeDish({
+          name: "Curry",
+          time: "Lunch",
+          category: "Gravy dish",
+          tags: ["HP"],
+          prepMinutes: 50,
+        }),
+        makeDish({ name: "Roti", time: "Lunch", category: "Chapati", prepMinutes: 40 }),
+        // The expensive sabzi ranks first (never cooked, cheaper id) but does not
+        // fit; the cheap one does.
+        makeDish({
+          name: "Expensive Sabzi",
+          time: "Lunch",
+          category: "Dry dish",
+          primaryIngredient: "Bhindi",
+          prepMinutes: 45,
+        }),
+        makeDish({
+          name: "Cheap Sabzi",
+          time: "Lunch",
+          category: "Dry dish",
+          primaryIngredient: "Cabbage",
+          prepMinutes: 10,
+        }),
+        makeDish({
+          name: "Sat Biryani",
+          time: "Lunch",
+          category: "Complete meal",
+          tags: ["complete_meal", "HP"],
+          prepMinutes: 30,
+        }),
+        makeDish({ name: "Sat Salad", time: "Lunch", category: "Accompaniment", prepMinutes: 10 }),
+        makeDish({ name: "Sat Kheer", time: "Lunch", category: "Dessert", prepMinutes: 10 }),
+        makeDish({ name: "Apple", time: "Breakfast", category: "Fruit", tags: ["fruit"] }),
+      ];
+      const week = generateWeek({
+        weekStart: "2026-06-15",
+        library: lib,
+        history: emptyHistory,
+        season: "Monsoon",
+        ingredients: emptyIngredients,
+        packSizes: emptyPackSizes,
+        rng: () => 0.1,
+      });
+      const monLunchDishes = week.days
+        .find((d) => d.day === "Mon")!
+        .slots.find((s) => s.meal === "Lunch")!.dishes;
+      expect(monLunchDishes.map((d) => d.name)).toContain("Cheap Sabzi");
+      expect(monLunchDishes.map((d) => d.name)).not.toContain("Expensive Sabzi");
+    });
+  });
+
+  /**
+   * `features/engine-v4.md` §10.3 plate rule 9. Measured against the live library:
+   * the pre-rule engine produced 27 carb lunches out of 81 with nothing but a
+   * salad beside the roti, all of them the same Keto-lead shape.
+   */
+  describe("§3 plate rule 9: a carb plate always carries a gravy or a sabzi (§10.3)", () => {
+    const { library, packSizes, ingredients, history } = loadLiveData();
+
+    it("every carb lunch of a live week carries a Gravy or Dry companion", () => {
+      let carbPlates = 0;
+      for (const weekStart of ["2026-08-17", "2026-09-14", "2026-11-16"]) {
+        const week = generateWeek({
+          weekStart,
+          library,
+          history,
+          season: weekStart < "2026-10-01" ? "Monsoon" : "Winter",
+          ingredients,
+          packSizes,
+          rng: () => 0.1,
+          lastSaturdayMenu: null,
+        });
+        for (const day of week.days) {
+          for (const slot of day.slots) {
+            if (slot.meal !== "Lunch") continue;
+            const carb = slot.dishes.find((d) => d.category === "Chapati" || d.category === "Rice");
+            if (!carb) continue;
+            carbPlates += 1;
+            const substantial = slot.dishes.filter(
+              (d) => d !== carb && (d.category === "Gravy dish" || d.category === "Dry dish"),
+            );
+            expect(
+              substantial.length,
+              `${weekStart} ${day.day}: ${slot.dishes.map((d) => `${d.name}[${d.category}]`).join(" + ")}`,
+            ).toBeGreaterThanOrEqual(1);
+          }
+        }
+      }
+      expect(carbPlates).toBeGreaterThan(0);
+    });
+
+    it("excludes the Accompaniment pool when the budget allows one companion only", () => {
+      // A Keto lead (so the one-wet rule leaves the gravy pool open) with a carb
+      // and room for exactly one companion. The salad ranks first on recency but
+      // rule 9 keeps it off the plate; the sabzi takes the position.
+      nextId = 1;
+      const lib: Dish[] = [
+        makeDish({
+          name: "Chilla",
+          time: "Breakfast",
+          category: "Chilla",
+          tags: ["complete_carb", "HP"],
+          prepMinutes: 20,
+        }),
+        makeDish({ name: "Chutney", time: "Breakfast", category: "Accompaniment", prepMinutes: 5 }),
+        makeDish({
+          name: "Paneer Tikka",
+          time: "Lunch",
+          category: "Keto",
+          tags: ["HP"],
+          prepMinutes: 30,
+        }),
+        makeDish({ name: "Roti", time: "Lunch", category: "Chapati", prepMinutes: 25 }),
+        makeDish({
+          name: "Cucumber Salad",
+          time: "Lunch",
+          category: "Accompaniment",
+          primaryIngredient: "Cucumber",
+          prepMinutes: 5,
+        }),
+        makeDish({
+          name: "Bhindi Sabzi",
+          time: "Lunch",
+          category: "Dry dish",
+          primaryIngredient: "Bhindi",
+          prepMinutes: 20,
+        }),
+        makeDish({
+          name: "Sat Biryani",
+          time: "Lunch",
+          category: "Complete meal",
+          tags: ["complete_meal", "HP"],
+          prepMinutes: 30,
+        }),
+        makeDish({ name: "Sat Salad", time: "Lunch", category: "Accompaniment", prepMinutes: 10 }),
+        makeDish({ name: "Sat Kheer", time: "Lunch", category: "Dessert", prepMinutes: 10 }),
+        makeDish({ name: "Apple", time: "Breakfast", category: "Fruit", tags: ["fruit"] }),
+      ];
+      const week = generateWeek({
+        weekStart: "2026-06-15",
+        library: lib,
+        history: emptyHistory,
+        season: "Monsoon",
+        ingredients: emptyIngredients,
+        packSizes: emptyPackSizes,
+        rng: () => 0.1,
+      });
+      const tueLunch = week.days
+        .find((d) => d.day === "Tue")!
+        .slots.find((s) => s.meal === "Lunch")!;
+      const names = tueLunch.dishes.map((d) => d.name);
+      // Lead, carb, then companions. The FIRST companion position on a carb plate
+      // draws from the substantial companions only, so the sabzi takes it and the
+      // salad can only follow as an additional item.
+      expect(names[0]).toBe("Paneer Tikka");
+      expect(names[1]).toBe("Roti");
+      expect(names[2]).toBe("Bhindi Sabzi");
+      expect(names.indexOf("Cucumber Salad")).toBeGreaterThan(2);
+    });
+  });
+
+  /**
+   * `features/engine-v4.md` §10.4. The old engine had two breakfast forms and
+   * between them they stranded every Category=Dry dish breakfast main.
+   */
+  describe("§3 breakfast, one widened form (§10.4)", () => {
+    it("serves a Dry-dish breakfast main with a plain breakfast carb, on any day", () => {
+      nextId = 1;
+      const lib: Dish[] = [
+        makeDish({
+          name: "Anda Bhurji",
+          time: "Breakfast",
+          category: "Dry dish",
+          tags: ["HP"],
+          primaryIngredient: "Egg",
+          prepMinutes: 15,
+        }),
+        makeDish({
+          name: "Toast",
+          time: "Breakfast",
+          category: "Bread",
+          primaryIngredient: "Bread",
+          prepMinutes: 5,
+        }),
+        makeDish({
+          name: "Curry",
+          time: "Lunch",
+          category: "Gravy dish",
+          tags: ["HP"],
+          prepMinutes: 30,
+        }),
+        makeDish({ name: "Roti", time: "Lunch", category: "Chapati", prepMinutes: 25 }),
+        makeDish({
+          name: "Sabzi",
+          time: "Lunch",
+          category: "Dry dish",
+          primaryIngredient: "Bhindi",
+          prepMinutes: 20,
+        }),
+        makeDish({
+          name: "Sat Biryani",
+          time: "Lunch",
+          category: "Complete meal",
+          tags: ["complete_meal", "HP"],
+          prepMinutes: 30,
+        }),
+        makeDish({ name: "Sat Salad", time: "Lunch", category: "Accompaniment", prepMinutes: 10 }),
+        makeDish({ name: "Sat Kheer", time: "Lunch", category: "Dessert", prepMinutes: 10 }),
+        makeDish({ name: "Apple", time: "Breakfast", category: "Fruit", tags: ["fruit"] }),
+      ];
+      const week = generateWeek({
+        weekStart: "2026-06-15",
+        library: lib,
+        history: emptyHistory,
+        season: "Monsoon",
+        ingredients: emptyIngredients,
+        packSizes: emptyPackSizes,
+        rng: () => 0.1,
+      });
+      // Under the old forms this library produced NO breakfast at all on Tue/Thu
+      // (the single-pick pool was complete_meal/complete_carb only) and only fell
+      // through to the dry-main form on Mon/Wed/Fri because Option B was empty.
+      for (const dayName of ["Mon", "Tue", "Wed", "Thu", "Fri"] as const) {
+        const bf = week.days
+          .find((d) => d.day === dayName)!
+          .slots.find((s) => s.meal === "Breakfast")!;
+        expect(
+          bf.dishes.map((d) => d.name),
+          `${dayName} breakfast`,
+        ).toEqual(["Anda Bhurji", "Toast"]);
+      }
+    });
+
+    it("a main that carries a chutney does not also gain the HP Keto side", () => {
+      nextId = 1;
+      const lib: Dish[] = [
+        makeDish({
+          name: "Oats Chilla",
+          time: "Breakfast",
+          category: "Chilla",
+          tags: ["complete_carb"],
+          primaryIngredient: "Oats",
+          prepMinutes: 15,
+        }),
+        makeDish({
+          name: "Green Chutney",
+          time: "Breakfast",
+          category: "Accompaniment",
+          primaryIngredient: "Coriander",
+          prepMinutes: 5,
+        }),
+        makeDish({
+          name: "Boiled Eggs",
+          time: "Breakfast",
+          category: "Keto",
+          tags: ["HP"],
+          primaryIngredient: "Egg",
+          prepMinutes: 10,
+        }),
+        makeDish({
+          name: "Curry",
+          time: "Lunch",
+          category: "Gravy dish",
+          tags: ["HP"],
+          prepMinutes: 30,
+        }),
+        makeDish({ name: "Roti", time: "Lunch", category: "Chapati", prepMinutes: 25 }),
+        makeDish({
+          name: "Sabzi",
+          time: "Lunch",
+          category: "Dry dish",
+          primaryIngredient: "Bhindi",
+          prepMinutes: 20,
+        }),
+        makeDish({
+          name: "Sat Biryani",
+          time: "Lunch",
+          category: "Complete meal",
+          tags: ["complete_meal", "HP"],
+          prepMinutes: 30,
+        }),
+        makeDish({ name: "Sat Salad", time: "Lunch", category: "Accompaniment", prepMinutes: 10 }),
+        makeDish({ name: "Sat Kheer", time: "Lunch", category: "Dessert", prepMinutes: 10 }),
+        makeDish({ name: "Apple", time: "Breakfast", category: "Fruit", tags: ["fruit"] }),
+      ];
+      const week = generateWeek({
+        weekStart: "2026-06-15",
+        library: lib,
+        history: emptyHistory,
+        season: "Monsoon",
+        ingredients: emptyIngredients,
+        packSizes: emptyPackSizes,
+        rng: () => 0.1,
+      });
+      // The chilla is non-HP, so the pre-§10.4 rule would have added Boiled Eggs
+      // on top of the chutney: a 3-item breakfast, and the shape behind most of
+      // the old over-cap days.
+      const bf = week.days.find((d) => d.day === "Mon")!.slots.find((s) => s.meal === "Breakfast")!;
+      expect(bf.dishes.map((d) => d.name)).toEqual(["Oats Chilla", "Green Chutney"]);
+    });
+  });
+
+  /**
+   * `features/engine-v4.md` §11.5: the two call sites Stream A's selection engine
+   * needs. Without them A's branch measures 0.566 week-over-week overlap against
+   * the 0.194 it replaces, so these are the tests that pin the wiring itself.
+   */
+  describe("§4 wiring: the guard and the exploration slot", () => {
+    const { library, packSizes, ingredients, history } = loadLiveData();
+
+    function liveWeek(weekStart: string, hist = history, season: Season = "Monsoon") {
+      return generateWeek({
+        weekStart,
+        library,
+        history: hist,
+        season,
+        ingredients,
+        packSizes,
+        rng: () => 0.1,
+        lastSaturdayMenu: null,
+      });
+    }
+
+    it("§4.7 the guard is live in generation and beats the frequency credit", () => {
+      // The sharp version of this test: "Proven Curry" carries the maximum
+      // frequency credit and would lead its pool on every §4 ranking. The ONLY
+      // thing that can keep it off Monday is the §4.7 guard keying on Monday's own
+      // calendar date, so if `slotDate` is not threaded through, this fails.
+      nextId = 1;
+      const proven = makeDish({
+        name: "Proven Curry",
+        time: "Lunch",
+        category: "Gravy dish",
+        tags: ["HP"],
+        primaryIngredient: "Paneer",
+      });
+      const challenger = makeDish({
+        name: "Challenger Curry",
+        time: "Lunch",
+        category: "Gravy dish",
+        tags: ["HP"],
+        primaryIngredient: "Fish",
+      });
+      const lib: Dish[] = [
+        proven,
+        challenger,
+        // A distinct primary ingredient: the breakfast main is an HP main too, so
+        // sharing "Paneer" with the lunch lead would let §4.6 protein diversity,
+        // not the guard, decide Monday's lunch.
+        makeDish({
+          name: "Poha",
+          time: "Breakfast",
+          category: "Complete meal",
+          tags: ["complete_meal", "HP"],
+          primaryIngredient: "Rice Flakes",
+        }),
+        makeDish({ name: "Roti", time: "Lunch", category: "Chapati" }),
+        makeDish({
+          name: "Sabzi",
+          time: "Lunch",
+          category: "Dry dish",
+          primaryIngredient: "Bhindi",
+        }),
+        makeDish({
+          name: "Sat Biryani",
+          time: "Lunch",
+          category: "Complete meal",
+          tags: ["complete_meal", "HP"],
+          primaryIngredient: "Chicken",
+        }),
+        makeDish({ name: "Sat Salad", time: "Lunch", category: "Accompaniment" }),
+        makeDish({ name: "Sat Kheer", time: "Lunch", category: "Dessert" }),
+        makeDish({ name: "Apple", time: "Breakfast", category: "Fruit", tags: ["fruit"] }),
+      ];
+      // Three older weeks put Proven Curry at the saturating credit cap; the
+      // challenger has never been cooked and sits at credit 0.
+      const older: MenuHistoryRow[] = ["2026-05-04", "2026-05-11", "2026-05-18"].map(
+        (weekStart) => ({
+          weekStart,
+          day: "Monday" as const,
+          meal: "Lunch" as const,
+          dishName: proven.name,
+          dishId: proven.id,
+        }),
+      );
+      const base = {
+        weekStart: "2026-06-15",
+        library: lib,
+        season: "Monsoon" as Season,
+        ingredients: emptyIngredients,
+        packSizes: emptyPackSizes,
+        rng: () => 0.1,
+      };
+      const withoutRecentRow = generateWeek({ ...base, history: older });
+      expect(
+        withoutRecentRow.days.find((d) => d.day === "Mon")!.slots.find((s) => s.meal === "Lunch")!
+          .dishes[0].name,
+      ).toBe("Proven Curry");
+
+      // Now cook it on the Saturday two days before the generated Monday. Nothing
+      // about its frequency credit changes (it only goes further above the cap);
+      // the guard is the sole reason it can no longer lead Monday.
+      const withRecentRow = generateWeek({
+        ...base,
+        history: [
+          ...older,
+          {
+            weekStart: "2026-06-08",
+            day: "Saturday",
+            meal: "Lunch",
+            dishName: proven.name,
+            dishId: proven.id,
+          },
+        ],
+      });
+      expect(
+        withRecentRow.days.find((d) => d.day === "Mon")!.slots.find((s) => s.meal === "Lunch")!
+          .dishes[0].name,
+      ).toBe("Challenger Curry");
+    });
+
+    it("§4 a pinned favorite still leads even when the guard would exclude it", () => {
+      // The guard is a FILTER, so without an explicit override the §4 step 4
+      // guarantee would silently fail on exactly the dishes the household eats
+      // most often. Plant the favorite two days before the week starts.
+      const favorite = library.find(
+        (d) => d.time === "Lunch" && d.category === "Gravy dish" && d.tags.includes("HP"),
+      )!;
+      const planted = [
+        ...history,
+        {
+          weekStart: "2026-08-10",
+          day: "Saturday" as const,
+          meal: "Lunch" as const,
+          dishName: favorite.name,
+          dishId: favorite.id,
+        },
+      ];
+      const week = generateWeek({
+        weekStart: "2026-08-17",
+        library,
+        history: planted,
+        season: "Monsoon",
+        ingredients,
+        packSizes,
+        rng: () => 0.1,
+        lastSaturdayMenu: null,
+        favoriteDishIds: [favorite.id],
+      });
+      const placed = week.days.some((d) =>
+        d.slots.some((s) => s.dishes.some((dish) => dish.id === favorite.id)),
+      );
+      expect(placed).toBe(true);
+      expect(week.unplacedFavorites).toEqual([]);
+    });
+
+    it("§4.8 the novelty position rotates across the week's companion positions", () => {
+      // A fixed novelty position is still a fixed position: measured over 25
+      // weeks, only that weekday's companion ever saw a new dish and 19 of the 20
+      // dishes it introduced were served exactly once. The rotation is keyed on
+      // the week's absolute index, so consecutive weeks spend it on different
+      // lunches. Asserted through the observable consequence: the (day, index) of
+      // the never-cooked companion is not one fixed position across six weeks.
+      const cooked = new Set(history.map((r) => r.dishId));
+      const novelPositions = new Set<string>();
+      for (const weekStart of [
+        "2026-08-17",
+        "2026-08-24",
+        "2026-08-31",
+        "2026-09-07",
+        "2026-09-14",
+        "2026-09-21",
+      ]) {
+        const week = liveWeek(weekStart);
+        for (const day of week.days) {
+          const lunch = day.slots.find((s) => s.meal === "Lunch");
+          if (!lunch) continue;
+          lunch.dishes.forEach((dish, index) => {
+            // Companion positions only (index 0 is the lead, 1 is the carb/first
+            // companion depending on the form).
+            if (index >= 1 && !cooked.has(dish.id)) novelPositions.add(`${day.day}#${index}`);
+          });
+        }
+      }
+      expect(novelPositions.size).toBeGreaterThan(1);
+    });
+
+    it("§4.8 the novelty position never places a dish already on the week", () => {
+      // The exploration ranking ignores frequency and the guard, so within-week
+      // no-repeat is enforced at the call site instead.
+      for (const weekStart of ["2026-08-17", "2026-08-24", "2026-08-31"]) {
+        const week = liveWeek(weekStart);
+        const counts = new Map<number, number>();
+        for (const day of week.days) {
+          for (const slot of day.slots) {
+            for (const dish of slot.dishes) {
+              if (dish.category === "Chapati" || dish.category === "Rice") continue;
+              counts.set(dish.id, (counts.get(dish.id) ?? 0) + 1);
+            }
+          }
+        }
+        for (const [id, count] of counts) {
+          const dish = library.find((d) => d.id === id)!;
+          expect(count, `${weekStart}: ${dish.name} x${count}`).toBeLessThan(3);
+        }
+      }
     });
   });
 });

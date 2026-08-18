@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { planFavorites } from "../src/favorites.js";
+import { planFavorites, unplacedFavorites } from "../src/favorites.js";
 import { slotAcceptsDish } from "../src/requests.js";
 import { generateWeek } from "../src/generateWeek.js";
 import { weekSchedule } from "../src/schedule.js";
@@ -265,7 +265,6 @@ describe("generateWeek guaranteed-favorites end-to-end (features/wishlist-favori
     const withEmpty = generate([]);
     expect(withEmpty.days).toEqual(baseline.days);
     expect(withEmpty.incidents).toEqual(baseline.incidents);
-    expect(withEmpty.droppedDishIds).toEqual(baseline.droppedDishIds);
     expect(withEmpty.unplacedFavorites).toEqual([]);
     expect(baseline.unplacedFavorites).toEqual([]);
   });
@@ -492,5 +491,49 @@ describe("generateWeek favorites are placed exactly once (multi-position de-dup)
       const unplaced = week.unplacedFavorites.includes(fav);
       expect(placed !== unplaced, `favorite ${fav} must be placed-once XOR unplaced`).toBe(true);
     }
+  });
+
+  describe("features/engine-v4.md §10.6: the unplaced-favorite predicate", () => {
+    it("reports a favorite only when it is absent from the finished week", () => {
+      expect(unplacedFavorites([1, 2, 3], new Set([1, 3]))).toEqual([2]);
+    });
+
+    it("does NOT report a favorite that composition placed without the pin", () => {
+      // The false positive the simulation found: boiled eggs is a favorite AND
+      // what the breakfast protein-floor attach rule reaches for, so the pinning
+      // pass can skip it while the dish still lands. It was logged unplaced on 15
+      // of 25 weeks while appearing in all 25. The predicate reads the week, not
+      // the plan, so a dish that landed is never reported.
+      const planSkipped = 7;
+      expect(unplacedFavorites([planSkipped], new Set([planSkipped]))).toEqual([]);
+    });
+
+    it("keeps oldest-first order and dedupes", () => {
+      expect(unplacedFavorites([5, 4, 5, 6], new Set([4]))).toEqual([5, 6]);
+    });
+
+    it("is empty for a household with no favorites", () => {
+      expect(unplacedFavorites([], new Set([1, 2]))).toEqual([]);
+    });
+
+    it("agrees with what generateWeek reports for a real week", () => {
+      // The engine's own reconciliation and this predicate must not drift: both
+      // answer "which favorites are missing from the finished week".
+      const favorite = library.find((d) => d.time === "Lunch" && d.active === "Yes")!;
+      const week = generateWeek({
+        weekStart,
+        library,
+        history: seedHistory,
+        season: seasonOf(weekStart),
+        ingredients,
+        packSizes,
+        favoriteDishIds: [favorite.id],
+      });
+      const placed = new Set<number>();
+      for (const day of week.days) {
+        for (const slot of day.slots) for (const dish of slot.dishes) placed.add(dish.id);
+      }
+      expect(unplacedFavorites([favorite.id], placed)).toEqual(week.unplacedFavorites);
+    });
   });
 });

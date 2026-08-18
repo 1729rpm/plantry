@@ -21,10 +21,15 @@ export type MealTime = z.infer<typeof MealTimeSchema>;
 
 /**
  * The meal a history row can carry. Distinct from `MealTimeSchema` (which is also
- * `Dish.time` and must never be "Fruit"): the §3.3 Fruit of the day is logged
- * into the recency record as its own `meal:"Fruit"` row so cross-week fruit
- * rotation (`orderFruitByLongestUnused`) sees fruit recency. A dish's `time` is
- * still only Breakfast|Lunch; this widening is the history row's meal only.
+ * `Dish.time` and is only ever Breakfast|Lunch).
+ *
+ * "Fruit" is a READ-ONLY LEGACY value. The retired Fruit of the day (§3.3) wrote
+ * its own `meal:"Fruit"` rows, and those rows are still in `data/menu_history.md`
+ * and in the `weekArchive` table. Nothing writes another one: `deriveHistoryRows`
+ * only emits Breakfast|Lunch. The literal stays because the parser and the
+ * archive reader must keep accepting the record as written; dropping it would
+ * make the historical record unparseable, and that record is the only training
+ * signal §4 selection has.
  */
 export const HistoryMealSchema = z.enum(["Breakfast", "Lunch", "Fruit"]);
 export type HistoryMeal = z.infer<typeof HistoryMealSchema>;
@@ -52,11 +57,15 @@ export type Complexity = z.infer<typeof ComplexitySchema>;
 
 /**
  * Dish tags, the closed set documented in docs/engine.md §12. These are rule
- * inputs (`HP`, `complete_meal`, `complete_carb` drive §3 composition; `fruit`
- * drives §3.3; `cuisine_neutral` marks a plain protein that pairs with any
- * register in the §3 international lunch form), so a mistyped tag would silently
- * change the menu. The enum makes §12 the enforced source of truth: an unknown
- * tag fails the build, not the menu.
+ * inputs (`HP`, `complete_meal`, `complete_carb` drive §3 composition;
+ * `cuisine_neutral` marks a plain protein that pairs with any register in the §3
+ * international lunch form), so a mistyped tag would silently change the menu.
+ * The enum makes §12 the enforced source of truth: an unknown tag fails the
+ * build, not the menu.
+ *
+ * `fruit` is inert: it is carried by the Category=Fruit dishes, which are all
+ * inactive (§3.3), and no rule reads it. It stays in the enum because those dish
+ * files still carry the tag and the parser must accept them.
  */
 export const DishTagSchema = z.enum([
   "HP",
@@ -125,6 +134,23 @@ export const DishSchema = z.object({
    * §1 eligibility and §4 selection never read it.
    */
   carbAffinity: CarbAffinitySchema.optional(),
+  /**
+   * Optional stable pairing (`features/engine-v4.md` §10.3 rule 7): the exact
+   * library names of dishes this one is habitually eaten with. When this dish is
+   * placed as a lead, a named partner leads its slot's companion pool, subject to
+   * plate rules 1 and 2 and never overriding the one-gravy rule, the exploration
+   * slot, or within-week no-repeat.
+   *
+   * `validatePairsWithResolve` is the blocking gate. It rejects a name that does
+   * not resolve to a library dish AND a partner the composition rules can never
+   * place: a category no companion position pool holds (Bread, Chapati, Rice,
+   * Complete meal), a second Gravy dish against a Gravy lead (plate rule 1 is
+   * hard, no fallback), an inactive partner, a non-Lunch partner, and a partner
+   * whose seasons never overlap the lead's. Absent on almost every dish: a pair
+   * earns its place from the eaten record AND from that composition check, never
+   * from the record alone.
+   */
+  pairsWith: z.array(z.string().min(1)).min(1).optional(),
   // Enrichment fields (docs/engine.md §12). All optional: a dish file may omit
   // them and parses unchanged; the UI degrades gracefully when they are absent
   // (§11.1 coverage ratchet).
@@ -248,11 +274,31 @@ export type DayName = z.infer<typeof DayNameSchema>;
 
 export const IsoDateSchema = z.string().regex(/^\d{4}-\d{2}-\d{2}$/);
 
+/**
+ * How a dish came to be on the plate of a finalized week (`features/engine-v4.md`
+ * §10.5 and §10.7). `generated` is an engine placement the household left alone;
+ * `hand` is a placement the household chose (a swap or a custom one-off), which
+ * is the stronger preference signal. The live `currentWeek` pick carries the
+ * finer `generated | swapped | custom`; finalize collapses swapped and custom to
+ * `hand` when it writes the archive row, because every consumer of this signal
+ * asks only "did a human put this here".
+ */
+export const HistorySourceSchema = z.enum(["generated", "hand"]);
+export type HistorySource = z.infer<typeof HistorySourceSchema>;
+
 export const MenuHistoryRowSchema = z.object({
   weekStart: IsoDateSchema,
   day: DayNameSchema,
   meal: HistoryMealSchema,
   dishName: z.string().min(1),
   dishId: z.number().int().positive(),
+  /**
+   * Optional placement source. Absent on every row from the seed file
+   * (data/menu_history.md carries no such column) and on every `weekArchive` row
+   * finalized before the field shipped, so every consumer must treat absent as
+   * "unknown" and fall back to the plain, unweighted behaviour. It is carried
+   * only by rows derived from a `weekArchive` document that has it.
+   */
+  source: HistorySourceSchema.optional(),
 });
 export type MenuHistoryRow = z.infer<typeof MenuHistoryRowSchema>;

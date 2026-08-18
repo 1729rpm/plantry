@@ -37,18 +37,16 @@ function filter(overrides: Partial<ExploreFilterState> = {}): ExploreFilterState
 }
 
 describe("dishInMealTime — non-overlapping buckets", () => {
-  it("Fruit of the day is the Fruit category", () => {
-    const fruit = dish({ category: "Fruit", time: "Breakfast" });
-    expect(dishInMealTime(fruit, "Fruit of the day")).toBe(true);
-    // A fruit bowl is NOT counted under Breakfast (buckets do not double-count).
-    expect(dishInMealTime(fruit, "Breakfast")).toBe(false);
-  });
-
-  it("Breakfast is the non-fruit breakfast pool", () => {
+  it("Breakfast is the breakfast pool, whatever the dish category", () => {
     const savoury = dish({ category: "Chilla", time: "Breakfast" });
     expect(dishInMealTime(savoury, "Breakfast")).toBe(true);
-    expect(dishInMealTime(savoury, "Fruit of the day")).toBe(false);
     expect(dishInMealTime(savoury, "Lunch")).toBe(false);
+    // There is no Fruit bucket (features/engine-v4.md §14). A Category=Fruit
+    // dish is bucketed by its `time` like anything else; it can never appear in
+    // Explore anyway, since every fruit dish is inactive.
+    const fruit = dish({ category: "Fruit", time: "Breakfast" });
+    expect(dishInMealTime(fruit, "Breakfast")).toBe(true);
+    expect(dishInMealTime(fruit, "Lunch")).toBe(false);
   });
 
   it("Lunch is the lunch pool", () => {
@@ -80,12 +78,13 @@ describe("dishMatchesExploreFilter — AND across dimensions, OR within sets", (
   });
 
   it("meal-time set is an OR within the dimension", () => {
-    const f = filter({ mealTimes: ["Lunch", "Fruit of the day"] });
+    const f = filter({ mealTimes: ["Lunch", "Breakfast"] });
     expect(dishMatchesExploreFilter(dish({ time: "Lunch" }), f)).toBe(true);
-    expect(dishMatchesExploreFilter(dish({ category: "Fruit", time: "Breakfast" }), f)).toBe(true);
-    expect(dishMatchesExploreFilter(dish({ category: "Chilla", time: "Breakfast" }), f)).toBe(
-      false,
-    );
+    expect(dishMatchesExploreFilter(dish({ time: "Breakfast" }), f)).toBe(true);
+    const lunchOnly = filter({ mealTimes: ["Lunch"] });
+    expect(
+      dishMatchesExploreFilter(dish({ category: "Chilla", time: "Breakfast" }), lunchOnly),
+    ).toBe(false);
   });
 
   it("dimensions AND-combine", () => {
@@ -208,9 +207,8 @@ describe("mealTimeCounts", () => {
       dish({ time: "Breakfast", category: "Fruit" }),
     ];
     expect(mealTimeCounts(pool)).toEqual([
-      { mealTime: "Breakfast", count: 1 },
+      { mealTime: "Breakfast", count: 2 },
       { mealTime: "Lunch", count: 2 },
-      { mealTime: "Fruit of the day", count: 1 },
     ]);
   });
 });

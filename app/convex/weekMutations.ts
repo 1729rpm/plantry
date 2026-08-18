@@ -5,11 +5,12 @@ import { assertAuthor } from "./lib/author.js";
 import { mealTimeValidator, type SlotMeal } from "./lib/meals.js";
 
 type ShortDay = "Mon" | "Tue" | "Wed" | "Thu" | "Fri" | "Sat";
-// `SlotMeal` includes "fruit": the live `currentWeek` flattens the §3.3 Fruit of
-// the day into `slots` as a third `meal:"fruit"` slot (generateWeek.ts), so
-// finalize must recognise it. The custom-dish mutations below only ever receive
-// breakfast|lunch (their args use `mealTimeValidator`, which excludes fruit), so
-// reading the stored slot with the wider `SlotMeal` is safe.
+// `SlotMeal` includes the read-only legacy "fruit" (see `lib/meals.ts`): a
+// `currentWeek` generated before the Fruit of the day was removed can still hold
+// a `meal:"fruit"` slot, and finalize must archive it rather than choke on it.
+// Nothing writes one. The custom-dish mutations below only ever receive
+// breakfast|lunch (their args use `mealTimeValidator`), so reading the stored
+// slot with the wider `SlotMeal` is safe.
 type LongDay = "Monday" | "Tuesday" | "Wednesday" | "Thursday" | "Friday" | "Saturday" | "Sunday";
 type CapMeal = "Breakfast" | "Lunch" | "Fruit";
 
@@ -47,10 +48,25 @@ const LONG_DAY: Record<ShortDay, LongDay> = {
 // in `finalizeWeek`) at compile time, instead of silently archiving the slot
 // under a missing key at runtime — the gap that shipped the original finalizeWeek
 // bug (a too-narrow local meal type let the missing "fruit" compile clean).
+// `fruit` is only reachable from a legacy week; keeping the mapping is what lets
+// such a week finalize into the archive unchanged.
 const CAP_MEAL: Record<SlotMeal, CapMeal> = {
   breakfast: "Breakfast",
   lunch: "Lunch",
   fruit: "Fruit",
+};
+
+// The archive's coarser placement source (`features/engine-v4.md` §10.5, §10.7).
+// The live pick distinguishes a swap from a custom one-off because the slow loop
+// attributes them differently; the archive does not, because both answer the one
+// question its readers ask ("did a human put this here"). Keyed by the exhaustive
+// live source union, so adding a live source forces an entry here at compile time
+// rather than archiving under a missing key at runtime.
+type ArchiveSource = "generated" | "hand";
+const ARCHIVE_SOURCE: Record<DishPickShape["source"], ArchiveSource> = {
+  generated: "generated",
+  swapped: "hand",
+  custom: "hand",
 };
 
 /**
@@ -214,7 +230,7 @@ export const addCustomOneOff = mutation({
  *     author: "rajat" | "tuhina",
  *     weekStart: string,                     // ISO date of the Monday
  *     day: "Mon" | "Tue" | "Wed" | "Thu" | "Fri" | "Sat",
- *     meal: "breakfast" | "lunch",           // fruit is category-locked, no custom dish
+ *     meal: "breakfast" | "lunch",
  *     customLabel: string,
  *     version: number,                       // optimistic concurrency from caller
  *     reason: string,                        // optional, trimmed; may be empty
@@ -364,11 +380,12 @@ export const appendCustomDish = mutation({
  * one-off has neither. This matches the grocery list, which likewise skips
  * one-offs (they are not library dishes).
  *
- * The §3.3 Fruit of the day IS archived. It is flattened into the live slots as a
- * `meal:"fruit"` slot (generateWeek.ts), so it flows through the same loop and is
- * recorded with `meal:"Fruit"` (`MenuHistoryRow.meal` widened via
- * `HistoryMealSchema`). This feeds the cross-week fruit rotation selector, which
- * reads fruit recency from the history record.
+ * A legacy `meal:"fruit"` slot (a week generated before the Fruit of the day was
+ * removed, `features/engine-v4.md` §14) still archives, recorded with
+ * `meal:"Fruit"`. Finalize tolerates it rather than dropping it: the archive is
+ * the eaten record, so a week that was actually cooked with a fruit on it is
+ * recorded as cooked. Nothing generates a fruit slot any more, so this path
+ * drains on its own.
  *
  * The engine's skip-aware `deriveHistoryRows({ skippedDays })` operates on a
  * `GeneratedWeek` of library `Dish` objects; the live `currentWeek` carries
@@ -415,9 +432,8 @@ export const finalizeWeek = mutation({
     );
 
     // Build archive rows from the live slots, skipping skipped days and custom
-    // one-offs. The §3.3 Fruit of the day is a `meal:"fruit"` slot here (flattened
-    // by generateWeek.ts) and IS archived: `CAP_MEAL["fruit"]` maps it to "Fruit"
-    // so cross-week fruit rotation sees fruit recency. Order follows the
+    // one-offs. A legacy `meal:"fruit"` slot archives as "Fruit" via
+    // `CAP_MEAL["fruit"]`, unchanged. Order follows the
     // slot/position order so the archive reads the way the week was cooked. Dish
     // names come from the baked library (the live pick stores only the id for a
     // library dish); a pick whose id is not in the library is skipped defensively
@@ -429,6 +445,7 @@ export const finalizeWeek = mutation({
       meal: CapMeal;
       dishName: string;
       dishId: number;
+      source: ArchiveSource;
     }[] = [];
     for (const slot of week.slots as SlotShape[]) {
       if (skipped.has(slot.day)) continue;
@@ -441,6 +458,7 @@ export const finalizeWeek = mutation({
           meal: CAP_MEAL[slot.meal],
           dishName,
           dishId: pick.dishId,
+          source: ARCHIVE_SOURCE[pick.source],
         });
       }
     }

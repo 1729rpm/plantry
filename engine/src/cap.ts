@@ -1,171 +1,74 @@
-import type { Dish, Satiety } from "./data/schemas.js";
-import type { Day } from "./eligibility.js";
+import type { Dish } from "./data/schemas.js";
 
 /**
- * Structural role of a pick within its meal form (§3), threaded from the
- * composition/pick functions (generateWeek) so the §9 cap can be role-aware:
- * it drops companion sides before the protected carb and protein main. Keyed
- * on structure, never on dish names.
+ * docs/engine.md §9, the whole-day budget.
+ *
+ * This module used to hold a post-hoc item cap (5 items per weekday, 3 on
+ * Saturday) that trimmed a composed day back into range, dropping picks in a
+ * role-aware order. That is retired (`features/engine-v4.md` §10.1): the cap
+ * premise was false, because a menu that has already been composed is the wrong
+ * place to discover it is too much work. The day is now composed TO a budget and
+ * nothing is ever dropped, so this module supplies the budget primitives the
+ * composition path spends rather than a trimmer the composition path feeds.
+ *
+ * The file keeps its name because docs/engine.md §13 pairs §9 with `cap.ts`.
  */
-export type PickRole =
-  | "protein-main"
-  | "dal"
-  | "sabzi"
-  | "carb"
-  | "accompaniment"
-  | "dessert"
-  | "breakfast-main"
-  | "breakfast-accompaniment"
-  | "protein-floor";
 
 /**
- * The §9 droppable roles: the companion sides the cap removes first. Everything
- * else (carb, protein-main, dal, breakfast-main, breakfast-accompaniment,
- * protein-floor) is protected and is never dropped while any droppable side
- * remains on the day.
+ * §9 whole-day prep budget: the summed `prepMinutes` of a day's breakfast and
+ * lunch items, which is every item on the day: breakfast and lunch are the only
+ * slots, so nothing sits outside the budget.
+ *
+ * 120 minutes is the household's busiest observed day, so the budget sits AT the
+ * envelope of what they have actually cooked rather than above it. This is the
+ * binding constraint: at observed prep times a five- or six-item day runs out of
+ * minutes before it runs out of item slots.
  */
-const DROPPABLE_ROLES: ReadonlySet<PickRole> = new Set<PickRole>([
-  "sabzi",
-  "accompaniment",
-  "dessert",
-]);
+export const DAY_PREP_BUDGET_MINUTES = 120;
 
 /**
- * A single picked item in the week-in-progress. §9 reads a dish's Satiety and
- * Prep Min, plus its structural `role` (when known) to drop companion sides
- * before the protected carb/protein-main. `role` is optional so a plain Dish is
- * still a valid SlotPick: a role-free pick is never a preferred drop, so a
- * role-free day falls back to the satiety-only ordering (the original §9
- * behavior), which is what the cap unit tests exercise.
+ * §9 item backstop: the most breakfast + lunch items a day may carry, which is
+ * every item on it. Six, against a largest observed day of five, so it keeps one item of
+ * headroom and is a backstop rather than the thing that sizes the plate. Uniform
+ * across the week: the old 3-item Saturday cap is retired, so Saturday can carry
+ * a proper weekend lunch.
  */
-export interface SlotPick extends Dish {
-  role?: PickRole;
+export const DAY_MAX_ITEMS = 6;
+
+/** A day's spend so far. Breakfast composes first, then the same day's lunch. */
+export interface DayBudget {
+  /** Summed `prepMinutes` of the day's breakfast and lunch items placed so far. */
+  minutesUsed: number;
+  /** Count of breakfast and lunch items placed so far. */
+  itemsUsed: number;
 }
 
-/** docs/engine.md §9 ("5 items per weekday"). */
-export const WEEKDAY_CAP = 5;
-/** docs/engine.md §9 ("3 on Saturday"). */
-export const SATURDAY_CAP = 3;
-
-const WEEKDAYS: ReadonlySet<Day> = new Set<Day>(["Mon", "Tue", "Wed", "Thu", "Fri"]);
-
-const SATIETY_RANK: Record<Satiety, number> = {
-  Low: 0,
-  Medium: 1,
-  High: 2,
-};
-
-export interface ApplyCapArgs {
-  slotsByDay: Map<Day, SlotPick[]>;
-}
-
-export interface ApplyCapResult {
-  slotsByDay: Map<Day, SlotPick[]>;
-  droppedDishIds: number[];
+/** A day with nothing placed yet. */
+export function emptyDayBudget(): DayBudget {
+  return { minutesUsed: 0, itemsUsed: 0 };
 }
 
 /**
- * Per-day item cap from docs/engine.md §9. When a day exceeds its cap, drop
- * dishes one at a time, role-aware:
- *   1. Drop only droppable companion sides (sabzi / accompaniment / dessert)
- *      while any remain; the carb, protein-main, breakfast-main, dal, the
- *      breakfast chutney, and the protein floor are protected.
- *   2. Among the droppable sides, drop the lowest Satiety, then the longest
- *      Prep Min.
- *   3. Fallback (rare): if the day is still over cap with no droppable side
- *      left, drop the §9-worst pick overall (lowest Satiety, longest Prep Min)
- *      so the day still resolves.
- * Tie-break beyond §9: when two candidates share both Satiety and Prep Min, the
- * one later in the day's array is dropped (earlier slots' picks win). This is
- * stable: a day at or below its cap is returned unchanged. A day whose picks
- * carry no role (the cap unit tests) has no droppable set, so it goes straight
- * to the fallback, reproducing the original satiety-only behavior. Sunday, if
- * present, is passed through; §2 schedule emits no Sunday slots so this is
- * defensive.
+ * Would placing `dish` keep the day inside both limits? The two limits are
+ * checked together because §10.1 states them together: a candidate that would
+ * breach EITHER is skipped for the next candidate that fits.
  */
-export function applyCap(args: ApplyCapArgs): ApplyCapResult {
-  const out = new Map<Day, SlotPick[]>();
-  const droppedDishIds: number[] = [];
-
-  for (const [day, picks] of args.slotsByDay) {
-    const cap = capForDay(day);
-    if (cap === null || picks.length <= cap) {
-      out.set(day, [...picks]);
-      continue;
-    }
-    const { kept, dropped } = trimToCap(picks, cap);
-    out.set(day, kept);
-    for (const dish of dropped) {
-      droppedDishIds.push(dish.id);
-    }
-  }
-
-  return { slotsByDay: out, droppedDishIds };
+export function fitsDayBudget(budget: DayBudget, dish: Dish): boolean {
+  return (
+    budget.itemsUsed + 1 <= DAY_MAX_ITEMS &&
+    budget.minutesUsed + dish.prepMinutes <= DAY_PREP_BUDGET_MINUTES
+  );
 }
 
-/** Returns the per-day cap, or null for days without an enforced cap (Sun). */
-function capForDay(day: Day | string): number | null {
-  if (WEEKDAYS.has(day as Day)) return WEEKDAY_CAP;
-  if (day === "Sat") return SATURDAY_CAP;
-  return null;
+/** The budget after placing `dish`. Pure: returns a new value. */
+export function spendDayBudget(budget: DayBudget, dish: Dish): DayBudget {
+  return {
+    minutesUsed: budget.minutesUsed + dish.prepMinutes,
+    itemsUsed: budget.itemsUsed + 1,
+  };
 }
 
-/**
- * Repeatedly drop the worst pick until length is at the cap. "Worst" per §9 is
- * role-aware: a droppable companion side (sabzi/accompaniment/dessert) is always
- * preferred over a protected pick (carb/protein-main/...); within whichever set
- * we are dropping from, lowest Satiety, then longest Prep Min, then the latest
- * position in the current array (stable for earlier picks).
- */
-function trimToCap(
-  picks: readonly SlotPick[],
-  cap: number,
-): { kept: SlotPick[]; dropped: SlotPick[] } {
-  const working: SlotPick[] = [...picks];
-  const dropped: SlotPick[] = [];
-  while (working.length > cap) {
-    const dropIndex = pickDropIndex(working);
-    dropped.push(working[dropIndex]);
-    working.splice(dropIndex, 1);
-  }
-  return { kept: working, dropped };
-}
-
-function isDroppable(pick: SlotPick): boolean {
-  return pick.role !== undefined && DROPPABLE_ROLES.has(pick.role);
-}
-
-/**
- * Index of the pick to drop next per §9. Considers the droppable companion
- * sides first (sabzi/accompaniment/dessert); only when none remain does it fall
- * back to scanning every pick, so the carb and protein-main are protected while
- * any side is still on the day. Within the candidate set it keeps the worst-so-
- * far: lower satiety, or equal satiety with longer prepMinutes, or both equal
- * with a later array position (the original §9 ordering is silent on the final
- * tie so we lock it here and document it inline).
- */
-function pickDropIndex(picks: readonly SlotPick[]): number {
-  const droppable: number[] = [];
-  for (let i = 0; i < picks.length; i += 1) {
-    if (isDroppable(picks[i])) droppable.push(i);
-  }
-  const candidates = droppable.length > 0 ? droppable : picks.map((_, i) => i);
-  let worstIndex = candidates[0];
-  for (const i of candidates) {
-    if (isWorse(picks[i], picks[worstIndex])) {
-      worstIndex = i;
-    }
-  }
-  return worstIndex;
-}
-
-function isWorse(a: SlotPick, b: SlotPick): boolean {
-  const sa = SATIETY_RANK[a.satiety];
-  const sb = SATIETY_RANK[b.satiety];
-  if (sa !== sb) return sa < sb;
-  if (a.prepMinutes !== b.prepMinutes) return a.prepMinutes > b.prepMinutes;
-  // Equal on both §9 criteria: prefer to drop the later one (keep earlier slots).
-  // Returning true here means "a is worse than b" so the scan replaces b with a
-  // whenever we see an equal candidate later in the array.
-  return true;
+/** Item slots still available on the day, never negative. */
+export function dayBudgetItemsLeft(budget: DayBudget): number {
+  return Math.max(DAY_MAX_ITEMS - budget.itemsUsed, 0);
 }

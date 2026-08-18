@@ -7,6 +7,10 @@ import {
   byWithinWeekRecency,
   withinWeekRecencySet,
   byProteinDiversity,
+  bySaturatingFrequency,
+  byRepeatGuard,
+  frequencyCreditMap,
+  FREQUENCY_CREDIT_CAP,
   proteinFamily,
   proteinFamiliesUsedAsHpMain,
   isHpMain,
@@ -82,7 +86,7 @@ describe("priority — docs/engine.md §4", () => {
       expect(out.map((d) => d.name)).toEqual(["B", "A"]);
     });
 
-    it("exempts fruit-tagged dishes from reordering", () => {
+    it("does not exempt a `fruit`-tagged dish: it reorders by date like anything else", () => {
       const recentFruit = makeDish({ name: "RecentFruit", tags: ["fruit"] });
       const oldFruit = makeDish({ name: "OldFruit", tags: ["fruit"] });
       const history = [
@@ -90,8 +94,10 @@ describe("priority — docs/engine.md §4", () => {
         historyRow(oldFruit.id, oldFruit.name, "2026-01-05"),
       ];
       const out = byLongestUnused([recentFruit, oldFruit], history);
-      // Pool order preserved despite oldFruit being older.
-      expect(out.map((d) => d.name)).toEqual(["RecentFruit", "OldFruit"]);
+      // The `fruit` tag is inert (features/engine-v4.md §14): the exemption it
+      // once carried made the role an absorbing state (two distinct fruits in
+      // 150 simulated days), and lunch carbs are now the only exempt category.
+      expect(out.map((d) => d.name)).toEqual(["OldFruit", "RecentFruit"]);
     });
 
     it("exempts lunch carbs (Chapati, Rice) from reordering", () => {
@@ -241,12 +247,11 @@ describe("priority — docs/engine.md §4", () => {
       expect(out.map((d) => d.name)).toEqual(["FreshA", "FreshB", "PlacedA", "PlacedB"]);
     });
 
-    it("never demotes fruit-tagged dishes even if in the set (exempt)", () => {
+    it("demotes a `fruit`-tagged dish already placed this week (the tag is inert)", () => {
       const fruit = makeDish({ name: "Fruit", tags: ["fruit"], category: "Fruit" });
       const fresh = makeDish({ name: "Fresh" });
-      // fruit.id is in the within-week set but the exemption keeps it in place.
       const out = byWithinWeekRecency([fruit, fresh], new Set([fruit.id]));
-      expect(out.map((d) => d.name)).toEqual(["Fruit", "Fresh"]);
+      expect(out.map((d) => d.name)).toEqual(["Fresh", "Fruit"]);
     });
 
     it("never demotes lunch carbs even if in the set (exempt)", () => {
@@ -296,10 +301,12 @@ describe("priority — docs/engine.md §4", () => {
       const rice = makeDish({ name: "Rice", category: "Rice" });
       const set = withinWeekRecencySet([gravy, fruit, roti, rice]);
       expect(set.has(gravy.id)).toBe(true);
-      expect(set.has(fruit.id)).toBe(false);
+      // The `fruit` tag buys no exemption, so a placed fruit joins the set.
+      expect(set.has(fruit.id)).toBe(true);
+      // Lunch carbs keep their exemption (roti every day is intended).
       expect(set.has(roti.id)).toBe(false);
       expect(set.has(rice.id)).toBe(false);
-      expect(set.size).toBe(1);
+      expect(set.size).toBe(2);
     });
 
     it("is empty for no picks", () => {
@@ -357,7 +364,7 @@ describe("priority — docs/engine.md §4", () => {
       ]);
     });
 
-    it("respects recency exemption end-to-end (a fruit pool never reorders by date)", () => {
+    it("ranks a `fruit`-tagged pool by §4 like any other pool (no exemption)", () => {
       const recentFruit = makeDish({
         name: "RecentMango",
         tags: ["fruit"],
@@ -378,7 +385,11 @@ describe("priority — docs/engine.md §4", () => {
         pool: [recentFruit, oldFruit],
         history,
       });
-      expect(out.map((d) => d.name)).toEqual(["RecentMango", "OldBanana"]);
+      // Both have frequency credit 1, so the longest-unused tiebreak decides and
+      // the older one leads. Under the retired fruit exemption the pool order was
+      // preserved and the recent one stayed on top, which is exactly how one
+      // fruit came to hold its slot for 108 consecutive days.
+      expect(out.map((d) => d.name)).toEqual(["OldBanana", "RecentMango"]);
     });
 
     it("respects recency exemption for lunch carbs (never reorders by date)", () => {
@@ -633,6 +644,153 @@ describe("priority — docs/engine.md §4", () => {
       const hpFish = makeDish({ tags: ["HP"], category: "Gravy dish", primaryIngredient: "Fish" });
       const out = byProteinDiversity([nonHpPaneer, hpFish], new Set(["Paneer"]));
       expect(out).toEqual([nonHpPaneer, hpFish]);
+    });
+  });
+
+  describe("§4 step 1: saturating frequency (features/engine-v4.md §10.2)", () => {
+    it("credits a dish its eaten count over the 10 most recent week-records", () => {
+      const a = makeDish({ name: "Twice" });
+      const b = makeDish({ name: "Once" });
+      const history = [
+        historyRow(a.id, a.name, "2026-05-04"),
+        historyRow(a.id, a.name, "2026-05-11"),
+        historyRow(b.id, b.name, "2026-05-11"),
+      ];
+      const credits = frequencyCreditMap(history);
+      expect(credits.get(a.id)).toBe(2);
+      expect(credits.get(b.id)).toBe(1);
+      // Never cooked is absent, which callers read as 0.
+      expect(credits.get(makeDish().id)).toBeUndefined();
+    });
+
+    it("saturates the credit at the cap, which is the whole anti-carousel fix", () => {
+      const hoarder = makeDish({ name: "Hoarder" });
+      const steady = makeDish({ name: "Steady" });
+      const history = [
+        // Ten appearances against three: an uncapped count would put Hoarder
+        // permanently and unassailably ahead, which is defect D1.
+        ...Array.from({ length: 10 }, (_, i) =>
+          historyRow(hoarder.id, hoarder.name, `2026-05-${String(i + 1).padStart(2, "0")}`),
+        ),
+        ...Array.from({ length: 3 }, (_, i) =>
+          historyRow(steady.id, steady.name, `2026-05-${String(i + 1).padStart(2, "0")}`),
+        ),
+      ];
+      const credits = frequencyCreditMap(history);
+      expect(credits.get(hoarder.id)).toBe(FREQUENCY_CREDIT_CAP);
+      expect(credits.get(steady.id)).toBe(FREQUENCY_CREDIT_CAP);
+      // Tied at the cap, so the longest-unused tiebreak underneath decides and
+      // leads with Steady (last eaten 2026-05-03) over Hoarder (2026-05-10).
+      // This single assertion is the fix: on an uncapped count Hoarder wins 10
+      // to 3 every week forever and the position becomes a fixed cycle.
+      const ranked = bySaturatingFrequency(byLongestUnused([hoarder, steady], history), history);
+      expect(ranked.map((d) => d.name)).toEqual(["Steady", "Hoarder"]);
+    });
+
+    it("counts only the window's most recent week-records", () => {
+      const old = makeDish({ name: "Old" });
+      const history = [
+        historyRow(old.id, old.name, "2020-01-06"),
+        ...Array.from({ length: 10 }, (_, i) =>
+          historyRow(makeDish().id, "filler", `2026-05-${String(i + 1).padStart(2, "0")}`),
+        ),
+      ];
+      // Eleven distinct week-records, so the oldest falls out of the 10-week window.
+      expect(frequencyCreditMap(history).get(old.id)).toBeUndefined();
+    });
+
+    it("proven dishes lead a pool, never-cooked ones trail", () => {
+      const proven = makeDish({ name: "Proven" });
+      const unknown = makeDish({ name: "Unknown" });
+      const history = [historyRow(proven.id, proven.name, "2026-05-04")];
+      // Input order deliberately puts the never-cooked dish first: longest-unused
+      // alone would keep it there, which is the anti-preference chooser v4 removes.
+      const out = rankCandidates({ pool: [unknown, proven], history });
+      expect(out.map((d) => d.name)).toEqual(["Proven", "Unknown"]);
+    });
+
+    it("credits eaten count only: a row's provenance never changes the credit", () => {
+      // §10.5's cold-start retention credit is deferred out of this phase
+      // (§11.3), so a dish introduced by the exploration slot re-enters at 1
+      // like any other once-eaten dish. Nothing on the history row other than
+      // (dishId, weekStart) is a §4 input; the archive's `source` field is
+      // written but not read here. This assertion is what pins that.
+      const explored = makeDish({ name: "Explored" });
+      const plain = makeDish({ name: "Plain" });
+      const history = [
+        historyRow(explored.id, explored.name, "2026-05-04"),
+        historyRow(plain.id, plain.name, "2026-05-04"),
+      ];
+      const credits = frequencyCreditMap(history);
+      expect(credits.get(explored.id)).toBe(1);
+      expect(credits.get(plain.id)).toBe(1);
+    });
+  });
+
+  describe("§4 step 2: the 7-day repeat guard (features/engine-v4.md §3.4, §10.2)", () => {
+    const slot = "2026-05-18"; // a Monday
+
+    it("excludes a dish cooked inside the window and keeps one outside it", () => {
+      const recent = makeDish({ name: "Recent" });
+      const older = makeDish({ name: "Older" });
+      const history = [
+        // Monday of the previous week: exactly 7 days back, still blocked, so a
+        // weekly slot cannot re-serve last week's winner on the same weekday.
+        historyRow(recent.id, recent.name, "2026-05-11"),
+        historyRow(older.id, older.name, "2026-05-04"),
+      ];
+      const out = byRepeatGuard([recent, older], history, slot);
+      expect(out.map((d) => d.name)).toEqual(["Older"]);
+    });
+
+    it("clears the guard one day later (the 'returns 8 days later' boundary)", () => {
+      const dish = makeDish({ name: "Dish" });
+      const history = [historyRow(dish.id, dish.name, "2026-05-11")];
+      expect(byRepeatGuard([dish], history, "2026-05-18")).toHaveLength(1); // relaxed, pool empty
+      const other = makeDish({ name: "Other" });
+      // With an alternative present the guard really does exclude it on day 7...
+      expect(byRepeatGuard([dish, other], history, "2026-05-18").map((d) => d.name)).toEqual([
+        "Other",
+      ]);
+      // ...and admits it again on day 8.
+      expect(byRepeatGuard([dish, other], history, "2026-05-19").map((d) => d.name)).toEqual([
+        "Dish",
+        "Other",
+      ]);
+    });
+
+    it("never guards a lunch carb, so roti recurs every day", () => {
+      const roti = makeDish({ name: "Roti", category: "Chapati" });
+      const rice = makeDish({ name: "Rice", category: "Rice" });
+      const history = [
+        historyRow(roti.id, roti.name, "2026-05-11"),
+        historyRow(rice.id, rice.name, "2026-05-11"),
+      ];
+      expect(byRepeatGuard([roti, rice], history, slot)).toHaveLength(2);
+    });
+
+    it("guards a `fruit`-tagged dish: only lunch carbs are exempt", () => {
+      const fruit = makeDish({ name: "Mango", tags: ["fruit"], category: "Fruit" });
+      const other = makeDish({ name: "Other" });
+      const history = [historyRow(fruit.id, fruit.name, "2026-05-11")];
+      expect(byRepeatGuard([fruit, other], history, slot).map((d) => d.name)).toEqual(["Other"]);
+    });
+
+    it("relaxes rather than leaving the slot empty", () => {
+      const a = makeDish({ name: "A" });
+      const b = makeDish({ name: "B" });
+      const history = [
+        historyRow(a.id, a.name, "2026-05-11"),
+        historyRow(b.id, b.name, "2026-05-11"),
+      ];
+      expect(byRepeatGuard([a, b], history, slot)).toHaveLength(2);
+    });
+
+    it("is a no-op without a slot date, so the swap picker is unchanged", () => {
+      const dish = makeDish();
+      const history = [historyRow(dish.id, dish.name, "2026-05-11")];
+      expect(byRepeatGuard([dish], history, undefined)).toHaveLength(1);
+      expect(rankCandidates({ pool: [dish], history })).toHaveLength(1);
     });
   });
 

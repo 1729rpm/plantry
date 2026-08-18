@@ -25,10 +25,6 @@ interface DishActionSheetProps {
   // toggle. A favorite is auto-pinned into every generated week.
   isFavorite: boolean;
   onToggleFavorite: () => void;
-  // Whether this slot offers Delete. The Fruit of the day is one-per-day and
-  // swap-only (docs/engine.md §3.3), so the day editor passes false for it and
-  // the Delete row is hidden; breakfast/lunch pass true.
-  canDelete: boolean;
   identity: Identity;
   onDetails: () => void;
   onReplace: () => void;
@@ -46,7 +42,6 @@ export function DishActionSheet({
   isLibraryDish,
   isFavorite,
   onToggleFavorite,
-  canDelete,
   identity,
   onDetails,
   onReplace,
@@ -127,16 +122,14 @@ export function DishActionSheet({
           <span className="action-sheet__label">Replace</span>
           <span className="action-sheet__hint">Pick another dish</span>
         </button>
-        {canDelete && (
-          <button
-            type="button"
-            className="action-sheet__row"
-            onClick={() => setConfirmingDelete(true)}
-          >
-            <span className="action-sheet__label action-sheet__label--danger">Delete</span>
-            <span className="action-sheet__hint">Delete from this day</span>
-          </button>
-        )}
+        <button
+          type="button"
+          className="action-sheet__row"
+          onClick={() => setConfirmingDelete(true)}
+        >
+          <span className="action-sheet__label action-sheet__label--danger">Delete</span>
+          <span className="action-sheet__hint">Delete from this day</span>
+        </button>
       </div>
     </Sheet>
   );

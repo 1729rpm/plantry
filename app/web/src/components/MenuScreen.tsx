@@ -10,8 +10,8 @@
 import { useEffect, useMemo, useState } from "react";
 import { useQuery } from "convex/react";
 import { anyApi } from "convex/server";
-import type { CurrentWeek, Identity, ShortDay } from "../lib/types.js";
-import { dayOrderIndex, dayStatus, weekRangeLabelLong } from "../lib/days.js";
+import type { CurrentWeek, Identity, RenderableWeekSlot, ShortDay } from "../lib/types.js";
+import { dayOrderIndex, dayStatus, isRenderableSlotMeal, weekRangeLabelLong } from "../lib/days.js";
 import { getCachedWeek, setCachedWeek } from "../lib/storage.js";
 import { Avatar, PrimaryButton } from "./primitives.js";
 import { DayCard, type DayCardModel } from "./DayCard.js";
@@ -68,10 +68,15 @@ function buildDayModels(week: CurrentWeek): DayCardModel[] {
   for (const skip of week.skippedDays ?? []) {
     skipReasonByDay.set(skip.day, skip.reason);
   }
-  const slotsByDay = new Map<ShortDay, CurrentWeek["slots"]>();
+  const slotsByDay = new Map<ShortDay, RenderableWeekSlot[]>();
+  // A week generated before the Fruit of the day was removed still holds
+  // `meal:"fruit"` slots (`features/engine-v4.md` §14). This is the one place the
+  // Menu tab drops them, so no day card and no day editor ever renders a fruit
+  // section again.
   for (const slot of week.slots) {
+    if (!isRenderableSlotMeal(slot.meal)) continue;
     const list = slotsByDay.get(slot.day) ?? [];
-    list.push(slot);
+    list.push({ ...slot, meal: slot.meal });
     slotsByDay.set(slot.day, list);
   }
   const days = new Set<ShortDay>([...slotsByDay.keys(), ...skipReasonByDay.keys()]);

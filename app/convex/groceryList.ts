@@ -49,10 +49,10 @@ import type { SlotMeal } from "./lib/meals.js";
  */
 
 type ShortDay = "Mon" | "Tue" | "Wed" | "Thu" | "Fri" | "Sat";
-// `SlotMeal` includes "fruit", the standalone Fruit of the day (docs/engine.md
-// §3.3). The grocery aggregation groups every slot's dishes by day regardless of
-// meal, so a fruit slot's ingredients flow into the list (skip-aware) like any
-// other day dish.
+// `SlotMeal` still includes the read-only legacy "fruit" (see `lib/meals.ts`).
+// The aggregation below skips those slots: the Fruit of the day is removed
+// (`features/engine-v4.md` §14), so fruit is no longer a grocery contributor,
+// and a `currentWeek` written before the removal must not put fruit on the list.
 type DishPickShape = {
   dishId: number | null;
 };
@@ -91,6 +91,8 @@ export const getGroceryList = query({
     const libraryById = new Map<number, Dish>(dishes.map((d) => [d.id, d]));
     const dishesByDay = new Map<ShortDay, Dish[]>();
     for (const slot of week.slots as SlotShape[]) {
+      // Legacy fruit slot in a week generated before §14: not a contributor.
+      if (slot.meal === "fruit") continue;
       for (const pick of slot.dishes) {
         if (pick.dishId === null) continue;
         const dish = libraryById.get(pick.dishId);

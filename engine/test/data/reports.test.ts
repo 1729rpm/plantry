@@ -117,28 +117,26 @@ describe("poolCoverageReport", () => {
     const pools = poolCoverageReport(library);
     const seasons = new Set(pools.map((p) => p.season));
     expect(seasons).toEqual(new Set(["Summer", "Monsoon", "Winter"]));
-    // 18 slot rows per season (see the report's slot table). Engine v3 folded the
-    // Menu 1/2 dal + dry-sabzi rows into one weekday-companion row and added a
-    // protein-floor row, and split the single lunch-carb row into Rice + Chapati
-    // (§3.4). Net: 19 -> 18.
-    expect(pools.filter((p) => p.season === "Summer").length).toBe(18);
+    // 16 slot rows per season (see the report's slot table). Engine v4.1 replaced
+    // the five breakfast rows (two Option B pools, two Option C pools, the Tue/Thu
+    // single pool) with the four pools of the one breakfast form (§10.4): main,
+    // plain carb, chutney, protein floor (18 -> 17), then §14 removed the Fruit
+    // of the day row with the feature (17 -> 16).
+    expect(pools.filter((p) => p.season === "Summer").length).toBe(16);
     // Counts are non-negative integers.
     for (const p of pools) expect(p.count).toBeGreaterThanOrEqual(0);
   });
 
-  it("surfaces the Fruit pool from live data", () => {
-    // The expansion-0 batch deepened this slot from 1 to 3 candidates
-    // (Seasonal fruit, Banana bowl, Papaya bowl). The seasonal-fruits-7 batch
-    // then added 7 dishes; for Summer it adds Mango bowl and Litchi bowl (both
-    // [Summer, Monsoon]). The generic Seasonal fruit dish (id 123, seasons All)
-    // was later deactivated (active: No), so it leaves every in-season pool: the
-    // Summer Fruit pool is now 4. The report tracks live (active-filtered) data;
-    // the assertion is the current floor, not the old thin baseline.
+  it("reports no Fruit pool: §3.3 is retired and every fruit dish is inactive", () => {
+    // features/engine-v4.md §14. The ten Category=Fruit dish files stay in
+    // data/dishes/ so historical rows keep resolving by id, but they are all
+    // active: No, and no composition pool would hold one in any case.
     const { library } = loadLiveData();
     const pools = poolCoverageReport(library);
-    const fruit = pools.find((p) => p.season === "Summer" && p.slot.includes("Fruit"));
-    expect(fruit).toBeDefined();
-    expect(fruit!.count).toBe(4);
+    expect(pools.find((p) => p.slot.includes("Fruit"))).toBeUndefined();
+    const fruitDishes = library.filter((d) => d.category === "Fruit");
+    expect(fruitDishes.length).toBe(10);
+    expect(fruitDishes.every((d) => d.active === "No")).toBe(true);
   });
 });
 

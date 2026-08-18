@@ -19,6 +19,7 @@ export {
   validateDishFiles,
   validateCatalogGroups,
   validateIngredientNamesResolve,
+  validatePairsWithResolve,
   validateDishFileRoundTrip,
   coverageReport,
   poolCoverageReport,
@@ -34,11 +35,9 @@ export type { SlotPlan, WeekScheduleArgs, LunchMenu } from "./schedule.js";
 export {
   composeSlot,
   candidateSetPools,
-  fruitOfDayPool,
-  breakfastOptionB,
-  breakfastOptionC,
-  breakfastWeekdayPair,
-  breakfastSinglePick,
+  breakfastSlot,
+  isBreakfastMain,
+  isSubstantialCompanion,
   menu1,
   menu2,
   menu3,
@@ -49,8 +48,7 @@ export {
 } from "./composition.js";
 export type {
   CandidateSet,
-  BreakfastWeekdayPairCandidateSet,
-  BreakfastSinglePickCandidateSet,
+  BreakfastCandidateSet,
   Menu1CandidateSet,
   Menu2CandidateSet,
   Menu3CandidateSet,
@@ -76,8 +74,15 @@ export {
   FRESH_PRODUCE_ITEMS,
 } from "./consolidation.js";
 export type { IngredientLedger, IngredientLedgerEntry } from "./consolidation.js";
-export { applyCap, WEEKDAY_CAP, SATURDAY_CAP } from "./cap.js";
-export type { SlotPick, ApplyCapArgs, ApplyCapResult } from "./cap.js";
+export {
+  DAY_PREP_BUDGET_MINUTES,
+  DAY_MAX_ITEMS,
+  emptyDayBudget,
+  fitsDayBudget,
+  spendDayBudget,
+  dayBudgetItemsLeft,
+} from "./cap.js";
+export type { DayBudget } from "./cap.js";
 export { generateWeek, rankCandidatesForSlot } from "./generateWeek.js";
 export type {
   GenerateWeekArgs,

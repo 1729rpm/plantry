@@ -225,7 +225,7 @@ function measureTracked(
 
 // One meal's laid-out lines plus its measured block height.
 interface MealLayout {
-  label: string; // "Breakfast" | "Lunch" | "Fruit" (drawn uppercase)
+  label: string; // "Breakfast" | "Lunch" (drawn uppercase)
   lines: string[];
   height: number; // max(13, lineCount * 20)
 }
@@ -269,7 +269,6 @@ function layoutMenu(
     };
     addMeal("Breakfast", model.breakfast);
     addMeal("Lunch", model.lunch);
-    addMeal("Fruit", model.fruit);
     const mealsHeight =
       meals.reduce((sum, m) => sum + m.height, 0) + Math.max(0, meals.length - 1) * MEALS_GAP;
     return {

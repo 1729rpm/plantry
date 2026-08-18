@@ -16,9 +16,9 @@ type DishPickShape = {
   updatedAt: number;
   includeRecipe?: boolean;
 };
-// A slot read here may be a fruit slot even though the add/delete/recipe args
-// can only target breakfast|lunch (`mealTimeValidator`), so the stored slot meal
-// is the wider `SlotMeal`.
+// A slot read here may be a legacy fruit slot (see `lib/meals.ts`) even though
+// the add/delete/recipe args can only target breakfast|lunch
+// (`mealTimeValidator`), so the stored slot meal is the wider `SlotMeal`.
 type SlotShape = {
   day: ShortDay;
   meal: SlotMeal;
@@ -39,8 +39,8 @@ const DAY_VALIDATOR = v.union(
   v.literal("Fri"),
   v.literal("Sat"),
 );
-// Add/delete/recipe target a meal-time only (fruit is not a manual day op), so
-// the arg meal draws from the shared `mealTimeValidator` (breakfast|lunch).
+// Add/delete/recipe target a meal-time only, so the arg meal draws from the
+// shared `mealTimeValidator` (breakfast|lunch), the only meals that exist.
 const MEAL_VALIDATOR = mealTimeValidator;
 
 /**

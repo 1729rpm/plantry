@@ -13,6 +13,13 @@ import type { MenuHistoryRow } from "@plantry/engine";
  * construction (finalize appends to the archive; a bake absorbs the archive
  * into the seed), so the two records never overlap. Callers merge as
  * `[...history, ...archiveToHistoryRows(archives)]`.
+ *
+ * The optional `source` (`features/engine-v4.md` §10.5, §10.7) rides along
+ * unchanged, including its absence: a row archived before the field shipped, and
+ * every row of the baked seed, carries no source, and the spread below leaves the
+ * key off rather than inventing a value. This is the whole path by which the
+ * hand-placement signal reaches the engine, so dropping it here would make the
+ * stored field dead data.
  */
 export function archiveToHistoryRows(archives: Doc<"weekArchive">[]): MenuHistoryRow[] {
   const rows: MenuHistoryRow[] = [];
@@ -24,6 +31,7 @@ export function archiveToHistoryRows(archives: Doc<"weekArchive">[]): MenuHistor
         meal: row.meal,
         dishName: row.dishName,
         dishId: row.dishId,
+        ...(row.source !== undefined ? { source: row.source } : {}),
       });
     }
   }

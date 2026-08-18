@@ -29,14 +29,16 @@ export default defineSchema({
           v.literal("Fri"),
           v.literal("Sat"),
         ),
-        // "fruit" is the standalone Fruit of the day (docs/engine.md §3.3): one
-        // Category=Fruit dish per day Mon-Sat, stored as its own slot row with a
-        // single-element `dishes` list. It sits outside the breakfast/lunch
-        // composition and outside the §9 item cap. Adding the literal is additive
-        // to the union (existing breakfast/lunch rows still validate); a regenerate
-        // is what actually writes the fruit rows (no fruit slots exist pre-deploy).
         // The validator (and its derived `SlotMeal` type) is the single source of
         // truth shared with every slot-meal consumer (`lib/meals.ts`).
+        //
+        // It carries a READ-ONLY LEGACY "fruit" literal. The Fruit of the day is
+        // removed (`features/engine-v4.md` §14) and nothing writes a fruit slot
+        // any more, but production `currentWeek` documents written before the
+        // removal still hold `meal:"fruit"` rows. Convex validates every existing
+        // document against the new schema on deploy, so REMOVING THE LITERAL
+        // FAILS THE DEPLOY. It stays until no stored week carries one, which is
+        // never guaranteed. Readers skip fruit rows rather than rejecting them.
         meal: slotMealValidator,
         dishes: v.array(
           v.object({
@@ -94,12 +96,32 @@ export default defineSchema({
           v.literal("Saturday"),
           v.literal("Sunday"),
         ),
-        // "Fruit" is the §3.3 Fruit of the day, logged into the recency record so
-        // cross-week fruit rotation works. Additive: every pre-existing row is
-        // Breakfast|Lunch and still validates against this wider union.
+        // "Fruit" is a READ-ONLY LEGACY value. The Fruit of the day is removed
+        // (`features/engine-v4.md` §14) and finalize only ever writes
+        // Breakfast|Lunch now, but `weekArchive` holds real `meal:"Fruit"` rows
+        // from before the removal. Convex validates every existing document on
+        // deploy, so REMOVING THE LITERAL FAILS THE DEPLOY. And the archive is
+        // never wiped to tidy them up: it is the household's eaten record and the
+        // only training signal the §4 selection engine has.
         meal: v.union(v.literal("Breakfast"), v.literal("Lunch"), v.literal("Fruit")),
         dishName: v.string(),
         dishId: v.number(),
+        // How the dish came to be on the plate (`features/engine-v4.md` §10.5,
+        // §10.7): "generated" is an engine placement the household left alone,
+        // "hand" is one the household chose. `finalizeWeek` derives it from the
+        // live `currentWeek` pick's finer `generated | swapped | custom`, folding
+        // swapped and custom into "hand", because every consumer asks only "did a
+        // human put this here".
+        //
+        // OPTIONAL, and it has to be: Convex validates every existing row against
+        // the new schema on deploy, so a required field would reject every
+        // `weekArchive` document finalized before this shipped and fail the
+        // deploy. Absent therefore reads as "finalized before the field existed",
+        // and every reader treats it as unknown and falls back to unweighted
+        // behaviour. There is no backfill: the source of a week already archived
+        // is not recoverable, and stamping "generated" on it would be a fabricated
+        // signal. The field fills in from the next finalize onward.
+        source: v.optional(v.union(v.literal("generated"), v.literal("hand"))),
       }),
     ),
   }).index("by_weekStart", ["weekStart"]),
@@ -157,8 +179,11 @@ export default defineSchema({
     // Optional because day-level kinds (skip_day, restore_day) are not scoped to
     // a single (meal, position). Loosening required->optional is additive:
     // existing swap/custom rows still carry both and validate.
-    // "fruit" is the swap target for the Fruit of the day (docs/engine.md §3.3);
-    // widening the union is additive (existing rows carry breakfast/lunch).
+    // "fruit" is a READ-ONLY LEGACY value. The Fruit of the day is removed
+    // (`features/engine-v4.md` §14), so no new change row carries it, but
+    // production holds real fruit swaps logged before the removal. Convex
+    // validates every existing document on deploy, so REMOVING THE LITERAL FAILS
+    // THE DEPLOY. The Changes log renders such a row unchanged.
     meal: v.optional(v.union(v.literal("breakfast"), v.literal("lunch"), v.literal("fruit"))),
     position: v.optional(v.number()),
     changeKind: v.union(

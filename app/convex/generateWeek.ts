@@ -64,10 +64,11 @@ export function seasonOf(isoDate: string): Season {
  * the baked seed history (`@plantry/engine/history`, a periodic snapshot) plus
  * one `MenuHistoryRow` per `weekArchive` row (weeks finalized since the last
  * bake), merged via `archiveToHistoryRows`. The merged record drives the §4
- * longest-unused priority, the §2 Saturday Menu 3/4 alternation, and the §3.3
- * fruit rotation, so a freshly finalized week immediately sinks its dishes in
- * the next generation. With an empty `weekArchive` the merged history equals
- * the baked history.
+ * longest-unused priority and the §2 Saturday Menu 3/4 alternation, so a freshly
+ * finalized week immediately sinks its dishes in the next generation. With an
+ * empty `weekArchive` the merged history equals the baked history. Legacy
+ * `meal:"Fruit"` archive rows merge in like any other row; the dishes they name
+ * are inactive, so they are never eligible again.
  *
  * Incidents: any human-readable warnings the engine reports (`GeneratedWeek
  * .incidents`, e.g. "Friday over cap (5), dropped: Rajma", or an unplaceable
@@ -140,16 +141,9 @@ export const generateCurrentWeek = internalMutation({
           meal: slot.meal.toLowerCase() as SlotMeal,
           dishes: slot.dishes.map((dish) => toDishEntry(dish.id)),
         }));
-      // §3.3 Fruit of the day: one Category=Fruit dish per day Mon-Sat, stored as
-      // its own `meal: "fruit"` slot with a single dish, alongside breakfast and
-      // lunch. Outside the §9 cap, so it is appended after the capped meal slots.
-      if (d.fruit) {
-        mealSlots.push({
-          day: d.day as ShortDay,
-          meal: "fruit" as SlotMeal,
-          dishes: [toDishEntry(d.fruit.id)],
-        });
-      }
+      // Breakfast and lunch are the only slots a generated day carries: the Fruit
+      // of the day is removed (`features/engine-v4.md` §14), so nothing writes a
+      // `meal:"fruit"` slot any more.
       return mealSlots;
     });
 

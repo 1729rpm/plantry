@@ -56,8 +56,7 @@ function seasonOf(isoDate: string): Season {
  * to the slot its own `d.time` names. `addableMeals` is the structural floor: a
  * dish is only addable when its meal-time has a slot on the day, so a breakfast
  * dish is excluded on a lunch-only day (e.g. Saturday) where it would have no
- * slot to route to. `Category: Fruit` is excluded: fruit belongs to its own slot
- * and must not surface in a meal add. The same hard filters the `addDish`
+ * slot to route to. The same hard filters the `addDish`
  * mutation applies (Active, season, addable meal-time), so every dish shown can
  * actually be added.
  */
@@ -67,7 +66,6 @@ export function addablePool(weekStart: string, addableMeals: ("breakfast" | "lun
   return dishes
     .filter((d) => {
       if (d.active !== "Yes") return false;
-      if (d.category === "Fruit") return false;
       if (!addableTimes.includes(d.time)) return false;
       return d.seasons === "All" || d.seasons.includes(season);
     })

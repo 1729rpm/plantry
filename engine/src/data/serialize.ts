@@ -114,6 +114,7 @@ export const SERIALIZED_DISH_FIELDS = [
   "seasons",
   "cuisine",
   "carbAffinity",
+  "pairsWith",
   "complexity",
   "skill",
   "equipment",
@@ -155,6 +156,14 @@ export function serializeDishFile(file: DishFile): string {
   // Emitted right after cuisine, before the optional enrichment block, only when
   // present; an absent field serializes byte-identically to today.
   if (dish.carbAffinity !== undefined) fm.push(`carbAffinity: ${dish.carbAffinity}`);
+  // Stable pairings (`features/engine-v4.md` §10.3 rule 7), a rule input like
+  // tags and carbAffinity, so it sits with them ahead of the optional enrichment
+  // block. A flow sequence of exact library dish names; emitted only when
+  // present, so a dish without it serializes byte-identically to today. Dish
+  // names are YAML-plain-safe today (no colons, no leading indicators); a future
+  // name that needs quoting fails the round-trip validator loudly, which is the
+  // same contract every other bare scalar here carries.
+  if (dish.pairsWith !== undefined) fm.push(`pairsWith: ${flowList(dish.pairsWith)}`);
   // Enrichment frontmatter (docs/engine.md §12). Emitted in a fixed
   // order, each line only when the field is present, so a dish with none of them
   // serializes byte-identically to one without.

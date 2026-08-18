@@ -3,7 +3,7 @@ id: 127
 name: Egg salad
 category: Accompaniment
 time: Lunch
-tags: [HP]
+tags: [HP, cuisine_neutral]
 primaryIngredient: Egg
 preferred: Yes
 active: Yes

@@ -20,7 +20,6 @@ import type { Dish } from "@plantry/engine";
 import type { Identity, Meal, ShortDay } from "../lib/types.js";
 import { swapPickerVisible } from "../lib/library.js";
 import {
-  PICKER_FILTERS,
   PICKER_FILTER_PILLS,
   availablePickerFilters,
   type PickerPill,
@@ -69,10 +68,6 @@ export function SwapPickerSheet({
   onDone,
   onClose,
 }: SwapPickerSheetProps) {
-  // The Fruit of the day is swap-only (docs/engine.md §3.3): the picker offers
-  // the in-season Category=Fruit pool but no custom one-off (no add/one-off for
-  // fruit this PR). Breakfast/lunch keep the one-off path.
-  const isFruit = meal === "fruit";
   const alternatives = useQuery(anyApi.swap.getSlotAlternatives, {
     weekStart,
     day,
@@ -84,11 +79,10 @@ export function SwapPickerSheet({
   const addCustomOneOff = useMutation(anyApi.weekMutations.addCustomOneOff);
 
   const [q, setQ] = useState<string>("");
-  // The dynamic picker filter row. The breakfast/lunch pool is generic across
-  // meal-time (feature picker-generic-search), so those slots offer the
-  // Breakfast/Lunch pills alongside the quality pills; the fruit slot is
-  // category-locked and offers quality pills only (see `candidatePills`). Which
-  // pills actually render is driven by what the current results contain.
+  // The dynamic picker filter row. The pool is generic across meal-time (feature
+  // picker-generic-search), so every slot offers the Breakfast/Lunch pills
+  // alongside the quality pills. Which pills actually render is driven by what
+  // the current results contain.
   const [filters, setFilters] = useState<PickerPill[]>([]);
   const [choice, setChoice] = useState<Choice | null>(null);
   const [inFlight, setInFlight] = useState<boolean>(false);
@@ -140,10 +134,8 @@ export function SwapPickerSheet({
     return pool.filter((d) => d.name.toLowerCase().includes(needle));
   }, [pool, trimmedQuery]);
 
-  // The candidate vocabulary: the fruit slot is category-locked, so it offers
-  // quality pills only (no meal-time dimension); breakfast/lunch offer the full
-  // picker vocabulary (meal-time + quality).
-  const candidatePills: PickerPill[] = isFruit ? PICKER_FILTERS : PICKER_FILTER_PILLS;
+  // The candidate vocabulary: the full picker vocabulary (meal-time + quality).
+  const candidatePills: PickerPill[] = PICKER_FILTER_PILLS;
 
   // Pills offered: only those with >= 1 match. Pristine (no query, no selection)
   // basis is the displayed suggested head (`visible`), so the row reflects what
@@ -189,13 +181,6 @@ export function SwapPickerSheet({
       }
       if (result.reason === "version-mismatch") {
         setError("Someone just changed this week. Close and try again.");
-      } else if (result.reason === "dish-is-fruit") {
-        // A Fruit-category dish dropped into a breakfast/lunch slot. Fruit
-        // belongs to its own slot (the pool excludes it), so this only happens
-        // on a stale concurrent edit; guide the user to a meal dish.
-        setError("That dish belongs to the Fruit slot. Pick another.");
-      } else if (result.reason === "dish-not-fruit") {
-        setError("Pick a fruit for the Fruit of the day.");
       } else if (result.reason === "dish-not-active-or-in-season") {
         setError("That dish is not in season right now. Pick another.");
       } else {
@@ -279,15 +264,12 @@ export function SwapPickerSheet({
     <Sheet onClose={onClose} tall picker>
       <div className="reason__title">Replace {outgoingLabel}</div>
       <div className="reason__hint">
-        {dayLabel(day)} {mealLabel(meal).toLowerCase()};{" "}
-        {isFruit
-          ? "pick a seasonal fruit from the library"
-          : "pick from the library or use a custom dish"}
+        {dayLabel(day)} {mealLabel(meal).toLowerCase()}; pick from the library or use a custom dish
       </div>
       <SearchField
         value={q}
         onChange={setQ}
-        placeholder={isFruit ? "Search fruit" : "Search, or type a custom dish"}
+        placeholder="Search, or type a custom dish"
         autoFocus
       />
       {pills.length > 0 && (
@@ -299,7 +281,7 @@ export function SwapPickerSheet({
           ))}
         </div>
       )}
-      {!isFruit && trimmedQuery.length > 0 && (
+      {trimmedQuery.length > 0 && (
         <button
           type="button"
           className="picker__custom"
