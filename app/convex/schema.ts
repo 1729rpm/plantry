@@ -104,34 +104,6 @@ export default defineSchema({
     ),
   }).index("by_weekStart", ["weekStart"]),
 
-  // PENDING DROP. The retired day-level comment channel. Nothing reads or writes
-  // it: the composer, its mutation, and its query are gone. The table stays in
-  // the schema only until `migrations.wipeComments` has cleared prod, because
-  // Convex refuses to drop a table that still holds rows. The follow-up PR
-  // removes this block and `app/convex/migrations.ts` together.
-  comments: defineTable({
-    createdAt: v.number(),
-    author: v.union(v.literal("rajat"), v.literal("tuhina")),
-    attachedTo: v.object({
-      kind: v.union(v.literal("dish"), v.literal("day")),
-      weekStart: v.string(),
-      day: v.union(v.string(), v.null()),
-      dishId: v.union(v.number(), v.null()),
-    }),
-    text: v.string(),
-    status: v.union(
-      v.literal("queued"),
-      v.literal("in_review"),
-      v.literal("applied"),
-      v.literal("dismissed"),
-      v.literal("reviewed_no_change"),
-    ),
-    resolvedAt: v.union(v.number(), v.null()),
-    resolvedPr: v.union(v.string(), v.null()),
-  })
-    .index("by_status", ["status"])
-    .index("by_weekStart", ["attachedTo.weekStart"]),
-
   // Append-only log of manual edits the user makes to the live week. Every
   // `swapDish` and `addCustomOneOff` mutation inserts a row here in the same
   // transaction, recording the slot's state immediately before the change
