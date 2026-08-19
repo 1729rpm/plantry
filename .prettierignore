@@ -1,5 +1,9 @@
 dist/
 node_modules/
+# Claude Code agent worktrees. Checked-out copies of the repo that live inside it,
+# git-excluded but still walked by the formatter, so a local `format:check` fails on
+# files CI never sees. Not source; owned by whichever branch is checked out there.
+.claude/worktrees/
 .convex/
 coverage/
 # Canonical human-edited data: per-dish files, the ingredient catalog, the

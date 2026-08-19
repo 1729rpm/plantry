@@ -1,4 +1,4 @@
-# Plantry — Repo orientation
+# Plantry: repo orientation
 
 Read this first.
 
@@ -12,12 +12,12 @@ Full product spec: `docs/product.md`.
 
 Four canonical specs plus a changelog in `docs/`, three operational docs at root.
 
-- `docs/product.md` — what we are building, persona, scope, principles, tone, future scope. Owns scope decisions.
-- `docs/engine.md` — the meal-planning rules spec. The TS engine mirrors this; CI fails if they drift. Owns rule decisions.
-- `docs/engineering.md` — stack, Convex schema, data layer split, deploy model, hosting, Swiggy MCP shape, env vars. Owns stack and integration decisions.
-- `docs/development.md` — session isolation, worktree workflow, ship workflow, definition of done, diagnosis card, slow-loop trigger, escalation rules, commit conventions. Owns "how to make changes" decisions. Implements the cross-project standard at `~/Downloads/AI Products/DEVELOPMENT-PLAYBOOK.md` and records this repo's deliberate deltas.
-- `docs/PLAN.md` — the phase plan for the build, one row per phase with a verifiable outcome. Owns sequencing.
-- `docs/CHANGELOG.md` — append-only chronological index of shipped changes. One entry per change, each ending with the `Updated:` line the reconciliation passes consume.
+- `docs/product.md`: what we are building, persona, scope, principles, tone, future scope. Owns scope decisions.
+- `docs/engine.md`: the meal-planning rules spec. The TS engine mirrors it section by section, each section paired to a module under `engine/src/` and a test file; the pairing is held by review, not by a CI check. Owns rule decisions.
+- `docs/engineering.md`: stack, Convex schema, data layer split, deploy model, hosting, Swiggy MCP shape, env vars. Owns stack and integration decisions.
+- `docs/development.md`: session isolation, worktree workflow, ship workflow, definition of done, diagnosis card, slow-loop trigger, escalation rules, commit conventions. Owns "how to make changes" decisions. Implements the cross-project standard at `~/Downloads/AI Products/DEVELOPMENT-PLAYBOOK.md` and records this repo's deliberate deltas.
+- `docs/PLAN.md`: the phase plan for the build, one row per phase with a verifiable outcome. Owns sequencing.
+- `docs/CHANGELOG.md`: append-only chronological index of shipped changes. One entry per change, each ending with the `Updated:` line the reconciliation passes consume.
 
 Read order by task:
 
@@ -30,19 +30,19 @@ Read order by task:
 
 ## Currently building
 
-> `features/engine-v4.md` — Engine v4.1: frequency-first selection with a saturating count, simplified templates, and a whole-day prep-time budget. Build against §10; no stream merges until the §10.8 verification gate passes.
+> `features/engine-v4.md`: Engine v4.1, frequency-first selection with a saturating count, simplified templates, and a whole-day prep-time budget. Build against §10 as amended by §11 to §14. The §10.8 verification gate has been run once and returned a DO-NOT-MERGE verdict (§15); no stream merges until §15.5's required work lands and the gate is re-run clean.
 
 When no feature is active, this line reads "_none_". It resets to `_none_` on feature close-out, when the last stream of a feature merges (`docs/development.md` §3 step 8).
 
 ## Working folders
 
-- `data/` — human-edited library, ingredient quantities, history seed, structural changelog, generated menu images. The slow loop's target.
-- `engine/` — TypeScript engine module. Pure functions; imported by Convex functions and tests.
-- `app/convex/` — Convex schema and server functions. The backend lives here.
-- `app/web/` — Vite + React + TS PWA. Frontend.
-- `features/` — active feature spec. Empty (.gitkeep) between features.
-- `archive/` — history. **Do not read for current truth.** Old plans, handoffs, retired docs.
-- `.claude/commands/` — repo-scoped Claude Code slash commands (`/slow-loop`, `/new-stream`).
+- `data/`: human-edited library, ingredient quantities, history seed, structural changelog, generated menu images. The slow loop's target.
+- `engine/`: TypeScript engine module. Pure functions; imported by Convex functions and tests.
+- `app/convex/`: Convex schema and server functions. The backend lives here.
+- `app/web/`: Vite + React + TS PWA. Frontend.
+- `features/`: active feature spec. Empty (.gitkeep) between features.
+- `archive/`: history. **Do not read for current truth.** Old plans, handoffs, retired docs.
+- `.claude/commands/`: repo-scoped Claude Code slash commands (`/slow-loop`, `/new-stream`).
 
 ## Working in this repo
 
@@ -56,10 +56,10 @@ Full ground rules (session model, branch naming, commit style, definition of don
 
 ## Operational docs
 
-- `MAINTENANCE.md` — spec for the slow loop and for canonical-doc reconciliation. Read before running `/slow-loop`.
-- `ADDING-DISHES.md` — content-batch playbook for adding a new dish (schema, ingredients, photo prompt-refining, cuisine, the active/inactive review gate, the test snapshots that move). Read before authoring any new dish.
-- `DECISIONS.md` — append-only log of decisions the EM has taken on Rajat's behalf, with reasoning. Scannable.
-- `docs/development.md` — ground rules for making changes in this repo.
+- `MAINTENANCE.md`: spec for the slow loop and for canonical-doc reconciliation. Read before running `/slow-loop`.
+- `ADDING-DISHES.md`: content-batch playbook for adding a new dish (schema, ingredients, photo prompt-refining, cuisine, the active/inactive review gate, the test snapshots that move). Read before authoring any new dish.
+- `DECISIONS.md`: append-only log of decisions the EM has taken on Rajat's behalf, with reasoning. Scannable.
+- `docs/development.md`: ground rules for making changes in this repo.
 
 ## Project-specific style
 
