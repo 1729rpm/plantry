@@ -15,6 +15,32 @@ work queue for /reconcile-docs and /reconcile-ops; or "none".
 
 ---
 
+## 2026-08-24  Canonical reconcile: the Yours tab reaches product.md and engineering.md
+
+`docs/product.md` and `docs/engineering.md` catch up to Phase 7, which shipped on
+2026-07-15 and had never reached either spec. Both still described a Changes tab as
+the fourth tab and a `nextWeekQueue` table behind a save-for-next-week write, and
+neither mentioned the Yours tab, the favorites table, or the wishlist table at all.
+
+product.md: the fourth tab is Yours, holding the two shared lists, with the Changes
+log moved to the profile sheet the header avatar opens; the Explore dish sheet
+offers use-this-week, add-to-wishlist, and dislike; the edit list and the scope
+section drop save-for-next-week and gain the two lists.
+
+engineering.md: the schema sketch drops `nextWeekQueue` and the `save_next_week`
+change kind and gains `favorites` and `wishlist` with their indexes and their
+constraints, including that a custom favorite is display-only and that the wishlist
+never feeds generation. The read and write path sections replace the
+save-for-next-week write with the list reads and writes, noting that neither writes
+a `manualChanges` row, and the generation section describes placing favorites
+rather than consuming a queue. The crawl flow list picks up Yours and the profile
+sheet.
+Why: five weeks of drift on the two specs that own product scope and the backend
+contract, held back while PR #231 owned both files.
+Updated: `docs/engine.md` §13 still claims CI enforces spec-code parity with two
+checks and does not; it is held for the next pass because open PR #229 owns the
+file. `ADDING-DISHES.md` and `README.md` describe the Fruit of the day correctly
+for `main` today and go stale when PR #229 lands.
 ## 2026-08-18  Drop the comments table and its wipe migration
 
 The `comments` table leaves `app/convex/schema.ts` and the one-shot
