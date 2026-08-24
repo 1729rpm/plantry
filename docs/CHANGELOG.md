@@ -15,6 +15,55 @@ work queue for /reconcile-docs and /reconcile-ops; or "none".
 
 ---
 
+## 2026-08-18  Drop the comments table and its wipe migration
+
+The `comments` table leaves `app/convex/schema.ts` and the one-shot
+`app/convex/migrations.ts` is deleted (#234). This is the second half of the removal in
+#231, which had to leave the table defined because Convex validates existing rows against
+the new schema on deploy and refuses to drop a table that still holds data. The prod wipe
+ran first (`migrations:wipeComments` returned `{ commentsDeleted: 2 }`, both rows
+automated-test artifacts), and the table now reports no documents. `Deploy Convex` is
+green on the squash commit, so the schema change is live. The day-level comment channel no
+longer exists at any layer.
+Why: a table nothing reads or writes is the dead-code residue the removal set out to
+clear, and an idle internal mutation that deletes every row of a table is not worth
+leaving in the tree once its one job is done.
+Updated: none. `docs/engineering.md` §3 and `MAINTENANCE.md` were already rewritten in
+#231 to describe three signal channels; this PR removes the schema block those docs had
+stopped referring to.
+
+---
+
+## 2026-08-18  Remove the day-level comment feature end to end
+
+The "Note for the weekly review" composer is gone from the day editor, and with it the
+whole `comments` signal channel (#231). The card was the only writer of the `comments`
+table anywhere in the app, so the mutation (`commentsMutations.addComment`), the query
+(`queries/comments.listQueuedComments`), the Changes-log comment rows, the `.day-comment*`
+styles, the slow-loop fixture, and the comment handling in
+`scripts/slow-loop-mark-applied.mjs` all go with it. `markIncidentsResolved` moves to
+`app/convex/incidentsMutations.ts` first, since it serves the incidents channel and is
+still live. The slow loop now reads three signal channels: `manualChanges`, `dishDislikes`,
+and `incidents`. The `comments` table stays in `schema.ts` marked PENDING DROP alongside a
+throwaway `migrations.wipeComments`; a follow-up PR drops both once prod is wiped. The
+three surviving free-text inputs (the swap reason, the shared `ReasonDialog`, and the
+Explore dislike reason) are untouched.
+Why: Rajat reported the card as unused, and a prod read confirmed it: the table held two
+rows in its entire life, both automated-test artifacts. A feedback channel nobody writes to
+is dead weight on every day screen and in every slow-loop run.
+Updated: `docs/product.md` §2, §3 item 5, §6 (comment bullet removed, Changes feed is edits
+only); `docs/engineering.md` §3 (table map and schema listing), §5 (Write (comment) flow
+removed, Changes tab is one query), §16 (crawl flow list named a "comment" sheet that was
+always `ReasonDialog`); `MAINTENANCE.md` §1, §3.1 (five mark-applied mutations become
+three); `.claude/commands/slow-loop.md` (signal enumeration and right-size guidance
+restated against `manualChanges` and `dishDislikes`). Still stale and NOT touched by this
+PR, for the next reconciliation: `CLAUDE.md` line 7 ("queued comments", twice),
+`docs/development.md` §5, §6 steps 3-4-6, §9, and `docs/PLAN.md` line 20; plus the
+pre-existing `nextWeekQueue` and `save_next_week` references in `docs/engineering.md` that
+predate this change.
+
+---
+
 ## 2026-08-18  Maintenance pass: operational reconcile, two real gate gaps closed
 
 The operational layer is brought current and two gates that did not work as
