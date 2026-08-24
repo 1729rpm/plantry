@@ -36,11 +36,11 @@ Why: the drift was five weeks old, and the two gate gaps were each actively
 costing something: a whole stream shipped ungated, and the documented local
 self-test could not be run from the main directory.
 Updated: `docs/engine.md` §13 still says CI enforces spec-code parity with two
-checks and it does not; `docs/product.md` §3 and §6 and `docs/engineering.md` §3
-and §5 still carry the Phase 7 and next-week drift named by the 2026-07-15
-entries. All four are held for `/reconcile-docs`: `docs/product.md` and
-`docs/engineering.md` are owned by open PR #231 and `docs/engine.md` by open PR
-#229, so this pass stayed out of their lanes.
+checks and it does not; it is held for `/reconcile-docs` because open PR #229 owns
+the file. `docs/product.md` §3 and §6 and `docs/engineering.md` §3 and §5 carry the
+Phase 7 and next-week drift named by the 2026-07-15 entries; they were held out of
+this pass while PR #231 owned them and are picked up by the canonical
+reconciliation that follows it.
 
 ## 2026-08-17  The reason on a menu change is optional everywhere
 
