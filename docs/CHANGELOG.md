@@ -15,7 +15,7 @@ work queue for /reconcile-docs and /reconcile-ops; or "none".
 
 ---
 
-## 2026-08-24  Canonical reconcile: the Yours tab reaches product.md and engineering.md
+## 2026-08-24  Canonical reconcile: the Yours tab, and the last of the comment channel
 
 `docs/product.md` and `docs/engineering.md` catch up to Phase 7, which shipped on
 2026-07-15 and had never reached either spec. Both still described a Changes tab as
@@ -35,8 +35,15 @@ save-for-next-week write with the list reads and writes, noting that neither wri
 a `manualChanges` row, and the generation section describes placing favorites
 rather than consuming a queue. The crawl flow list picks up Yours and the profile
 sheet.
+`docs/development.md` §5, §6, and §9 lose the last references to the retired
+comments channel, named by #231's own Updated: line: the diagnosis card's Trigger
+field lists manual-change and dislike ids, the slow-loop run steps read the three
+surviving signal channels plus the reports, the merge step marks `manualChanges`
+rather than comments, and the sycophancy anti-pattern is restated against a single
+signal instead of a channel that no longer exists.
 Why: five weeks of drift on the two specs that own product scope and the backend
-contract, held back while PR #231 owned both files.
+contract, held back while PR #231 owned both files, plus the development.md items
+#231 explicitly deferred.
 Updated: `docs/engine.md` §13 still claims CI enforces spec-code parity with two
 checks and does not; it is held for the next pass because open PR #229 owns the
 file. `ADDING-DISHES.md` and `README.md` describe the Fruit of the day correctly

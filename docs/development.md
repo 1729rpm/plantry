@@ -89,7 +89,7 @@ Every PR description starts with a diagnosis card. Engineer PRs, slow-loop PRs, 
 ## Diagnosis
 
 **Problem size:** one-off | small pattern | structural
-**Trigger:** (PR brief link, comment ID, incident ID, or rule citation)
+**Trigger:** (PR brief link, manual-change ID, dislike ID, incident ID, or rule citation)
 **Candidate fix levels considered:**
   - data row: <what would change>
   - new tag: <what would change>
@@ -116,10 +116,10 @@ The slow loop runs only when Rajat invokes it. Convention is Sunday around 11am 
 
 1. Rajat opens a Claude Code session in the main repo directory.
 2. Types `/slow-loop`. (Definition lives at `.claude/commands/slow-loop.md`.)
-3. The session reads queued comments from Convex (via `npx convex run`), reads the dish library under `data/dishes/`, the `data/ingredients.md` catalog, `data/menu_history.md`, `docs/engine.md`, and recent `incidents` from Convex.
-4. The session clusters comments + incidents into themes and applies right-size discipline. For each theme it picks one of: data fix, tag addition, rule edit, no change warranted.
+3. The session reads the queued signal channels from Convex (via `npx convex run`): `manualChanges`, `dishDislikes`, and open `incidents`. It also reads the dish library under `data/dishes/`, the `data/ingredients.md` catalog, `data/menu_history.md`, `docs/engine.md`, and the coverage and pool-coverage reports from `npm run reports`.
+4. The session clusters manual changes, dislikes, and incidents into themes and applies right-size discipline. For each theme it picks one of: data fix, tag addition, rule edit, no change warranted.
 5. The session opens a PR with a diagnosis card per theme, file diffs across `data/dishes/`, `data/ingredients.md`, `docs/engine.md`, `engine/src/`, and an appended `data/changelog.md` entry.
-6. Rajat reviews on GitHub. Merge applies. On merge a GitHub Action posts back to Convex to mark consumed comments `applied` and link the PR.
+6. Rajat reviews on GitHub. Merge applies. On merge a GitHub Action posts back to Convex to mark the consumed `manualChanges` rows `applied` or `reviewed_no_change`, resolve the consumed incidents, and link the PR.
 
 Full slow-loop spec: `MAINTENANCE.md`.
 
@@ -157,7 +157,7 @@ EM-without-Rajat decisions go into `DECISIONS.md`. Rajat scans periodically; can
 
 The EM rejects PRs that exhibit any of:
 
-- Sycophantic agreement to a comment without applying right-size discipline ("the comment said too spicy, so I added a low_spice tag" without considering whether one comment justifies a tag).
+- Sycophantic agreement to a single signal without applying right-size discipline (one swap with the reason "too spicy" becomes a `low_spice` tag, without asking whether one row justifies a rule).
 - Generalizing from one or two cases ("we could add a column to handle this and three other hypothetical cases").
 - Adding a Pydantic-style abstraction or helper before two existing call sites need it.
 - Touching `docs/engine.md` without a matching engine code change.
