@@ -15,6 +15,82 @@ work queue for /reconcile-docs and /reconcile-ops; or "none".
 
 ---
 
+## 2026-08-18  Drop the comments table and its wipe migration
+
+The `comments` table leaves `app/convex/schema.ts` and the one-shot
+`app/convex/migrations.ts` is deleted (#234). This is the second half of the removal in
+#231, which had to leave the table defined because Convex validates existing rows against
+the new schema on deploy and refuses to drop a table that still holds data. The prod wipe
+ran first (`migrations:wipeComments` returned `{ commentsDeleted: 2 }`, both rows
+automated-test artifacts), and the table now reports no documents. `Deploy Convex` is
+green on the squash commit, so the schema change is live. The day-level comment channel no
+longer exists at any layer.
+Why: a table nothing reads or writes is the dead-code residue the removal set out to
+clear, and an idle internal mutation that deletes every row of a table is not worth
+leaving in the tree once its one job is done.
+Updated: none. `docs/engineering.md` §3 and `MAINTENANCE.md` were already rewritten in
+#231 to describe three signal channels; this PR removes the schema block those docs had
+stopped referring to.
+
+---
+
+## 2026-08-18  Remove the day-level comment feature end to end
+
+The "Note for the weekly review" composer is gone from the day editor, and with it the
+whole `comments` signal channel (#231). The card was the only writer of the `comments`
+table anywhere in the app, so the mutation (`commentsMutations.addComment`), the query
+(`queries/comments.listQueuedComments`), the Changes-log comment rows, the `.day-comment*`
+styles, the slow-loop fixture, and the comment handling in
+`scripts/slow-loop-mark-applied.mjs` all go with it. `markIncidentsResolved` moves to
+`app/convex/incidentsMutations.ts` first, since it serves the incidents channel and is
+still live. The slow loop now reads three signal channels: `manualChanges`, `dishDislikes`,
+and `incidents`. The `comments` table stays in `schema.ts` marked PENDING DROP alongside a
+throwaway `migrations.wipeComments`; a follow-up PR drops both once prod is wiped. The
+three surviving free-text inputs (the swap reason, the shared `ReasonDialog`, and the
+Explore dislike reason) are untouched.
+Why: Rajat reported the card as unused, and a prod read confirmed it: the table held two
+rows in its entire life, both automated-test artifacts. A feedback channel nobody writes to
+is dead weight on every day screen and in every slow-loop run.
+Updated: `docs/product.md` §2, §3 item 5, §6 (comment bullet removed, Changes feed is edits
+only); `docs/engineering.md` §3 (table map and schema listing), §5 (Write (comment) flow
+removed, Changes tab is one query), §16 (crawl flow list named a "comment" sheet that was
+always `ReasonDialog`); `MAINTENANCE.md` §1, §3.1 (five mark-applied mutations become
+three); `.claude/commands/slow-loop.md` (signal enumeration and right-size guidance
+restated against `manualChanges` and `dishDislikes`). Still stale and NOT touched by this
+PR, for the next reconciliation: `CLAUDE.md` line 7 ("queued comments", twice),
+`docs/development.md` §5, §6 steps 3-4-6, §9, and `docs/PLAN.md` line 20; plus the
+pre-existing `nextWeekQueue` and `save_next_week` references in `docs/engineering.md` that
+predate this change.
+
+---
+
+## 2026-08-18  Maintenance pass: operational reconcile, two real gate gaps closed
+
+The operational layer is brought current and two gates that did not work as
+documented are fixed. CI now runs on every pull request rather than only those
+targeting `main`, so a stream stacked on another stream is gated; Stream B (#230)
+merged into Stream A with no CI run at all under the old filter. Prettier and
+eslint now skip `.claude/worktrees/`, the in-repo agent worktrees, so a local
+`format:check` in the main directory stops failing on another branch's files while
+CI stays green. README and CLAUDE.md drop the claim that CI fails when
+`docs/engine.md` and the engine drift; no such check exists. README picks up the
+Yours tab, the profile-sheet Changes log, the optional reason, and the removal of
+save-for-next-week. `docs/PLAN.md` no longer says no phase is in flight directly
+under a row marked building. `.claude/commands/new-stream.md` gains three default
+brief lines from the three RETRO entries triaged this pass. The uncommitted
+`features/engine-v4.md` sections 11 to 15, including the 2026-08-18 DO-NOT-MERGE
+verification verdict, are committed, and `DECISIONS.md` regains an entry a
+working-copy edit had dropped.
+Why: the drift was five weeks old, and the two gate gaps were each actively
+costing something: a whole stream shipped ungated, and the documented local
+self-test could not be run from the main directory.
+Updated: `docs/engine.md` §13 still says CI enforces spec-code parity with two
+checks and it does not; it is held for `/reconcile-docs` because open PR #229 owns
+the file. `docs/product.md` §3 and §6 and `docs/engineering.md` §3 and §5 carry the
+Phase 7 and next-week drift named by the 2026-07-15 entries; they were held out of
+this pass while PR #231 owned them and are picked up by the canonical
+reconciliation that follows it.
+
 ## 2026-08-17  The reason on a menu change is optional everywhere
 
 No edit to the week demands a written reason any more. The six mutations that still

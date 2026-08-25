@@ -27,6 +27,23 @@ You are spawning a new engineer for a Plantry stream. Read `CLAUDE.md`, `docs/de
    - **Run installs and long commands early, and stream their output.** Run `npm install` / `npm test` up front, not buried mid-task, and avoid a single long silent command: the subagent watchdog kills a stream after about 600s with no output, so a silent `npm install` or full test run can lose in-flight work. Break long runs up or emit progress as they go.
    - **Run `npm install && npm run bake` before any typecheck / build / test.** A fresh worktree has no `engine/src/data/library.ts` or `engine/src/data/history.ts`; the bake generates them from the markdown library (they are gitignored), so a typecheck or test run before the bake fails with a confusing "missing module" error that looks like a broken checkout, not a real defect.
    - **Run `npm run format:check` before pushing.** CI runs Prettier as its own step, separate from lint / typecheck / tests, so a branch that passes the other gates can still fail CI on formatting alone. Run it (or `npm run format` to fix) as part of the local gate pass, not just lint and tests.
+   - **Re-run the FULL gate set after every rebase, `format:check` included.** A rebase can turn a
+     clean branch red without touching one of your own lines: if the base changed `.prettierignore`,
+     `.stylelintrc.json`, or the eslint config, Prettier's or eslint's scope shifts onto files you
+     authored that were previously out of scope. Running only typecheck / eslint / tests after a
+     rebase reads green locally and fails in CI. When the base PR touched lint or format config, say
+     so out loud in your PR body.
+   - **Removing an exported symbol means a repo-wide caller grep, not a lane-wide one.** Deleting a
+     function, mutation, query, or table that other lanes may call is not complete until you have
+     grepped the whole repo (`app/`, `engine/`, `scripts/`, `.github/`, and the ops docs) for callers
+     and either updated or relocated each one. Your lane's gates cannot see an out-of-lane caller, so
+     a green branch can still orphan a live call site. List the grep and its hits in the PR body.
+   - **A change to a locked invariant gets an adversarial review, not a green suite.** If your stream
+     touches a guarantee the engine is supposed to hold always (a favorite never placed twice, one
+     gravy per plate, the protein floor), a passing test run is not evidence: the existing fixtures
+     may not span the pool shapes that can violate it. Construct the fixture that would break the
+     invariant, show it failing before your fix and passing after, and name the invariant in the PR
+     body so the EM reviews it adversarially.
    - **Commit and push early on a long-running or rebase-owning stream.** Keep an intact remote branch to resume from: a usage limit or the watchdog can terminate a session mid-task, and a rebase is the worst moment to lose one. Never carry a large uncommitted working tree across a rebase; commit first, then rebase.
    - **If your stream runs a Convex dev smoke, know two traps.** A stale gitignored `app/convex/dist/` (emitted by the root build) breaks `npx convex dev --once` bundling because `convex.json` declares `functions: "./"`; clean it first. And the auto-created `app/convex/.env.local` may point at `anonymous:anonymous-convex` (a local backend) rather than `dev:lovely-curlew-631`, so a smoke "pass" can silently target the wrong deployment; confirm the deployment before trusting the result.
    - The definition of done (`docs/development.md` §4).

@@ -341,3 +341,259 @@ No behaviour-changing stream (A, B, C) merges until the re-run passes. The activ
 | D          | Verification: re-run the simulation and the three evaluations against merged A+B+C, report against 10.8                                                                             | scratchpad only, no repo files                                                                                                                      | A, B, C    | pending |
 
 A and B are sequenced rather than parallel: both touch `generateWeek.ts` and `docs/engine.md`, and the selection API is B's input. C runs in parallel with A on disjoint lanes.
+
+## 11. Amendments from Stream A evidence (2026-08-17)
+
+Stream A measured the amended engine over the same 25-week simulation and produced four corrections. Each supersedes the §10 sub-section named. All are evidence from a run, not argument.
+
+### 11.1 The guard is load-bearing, not the saturating cap (supersedes §10.2)
+
+§10.2 put the weight on the saturating count and filed the 7-day guard under "otherwise unchanged". **That emphasis is backwards.** Measured over 25 weeks:
+
+| Configuration                       | Week-over-week overlap | Positions on a fixed cycle |
+| ----------------------------------- | ---------------------- | -------------------------- |
+| Saturating count alone              | 0.566                  | 20 of 36                   |
+| Saturating count + date-keyed guard | 0.293                  | 10 of 39                   |
+
+The cap ties _proven_ dishes with each other, but a challenger sits at credit 0 and has no way to climb, because it is never placed. In a narrow pool there is exactly one proven dish and it wins forever. The guard is what evicts the incumbent for long enough that a challenger gets a slot and starts accruing a count; the cap is what stops the winner running away again. Both are needed and the guard is the mobility mechanism.
+
+Consequence for anyone tuning this later: if repetition returns, reach for the guard window before the cap value.
+
+### 11.2 The baseline was misstated (corrects §10.2's target and the Stream A brief)
+
+The §10.2 target and the Stream A brief both cited "0.50 today". That figure is the **throwaway prototype's**, not `main`'s. The v4 §3 engine was never merged; `main` is still v3, whose overlap measures **0.194**, meaning it is _less_ repetitive than the household's own 0.28. This is consistent with the original diagnosis: longest-unused is an anti-preference chooser that produces more variety than the household wants.
+
+So the correct framing is that this phase moves overlap **up** into the 0.28 to 0.35 band, not down. Stream A plus Stream B's wiring measures 0.293.
+
+### 11.3 The cold-start credit is deferred (supersedes §10.5)
+
+§10.5 said the credit reuses the `source` field. It cannot: the values are `generated | hand`, so an explored-and-kept dish is written `generated` and is indistinguishable from any other pick. Making it work needs the exploration role persisted on the `currentWeek` dish and carried through finalize, which is new schema surface for a mechanism that was an EM invention with no evidence behind it.
+
+**Deferred out of this phase.** The exploration slot still rotates (§10.5 first bullet stands). Stream D measures whether novelty retention is still one-shot once A and B land; if it is, the persistence earns its way in then, with evidence. Stream A's code path for a third `source` value stays as an inert branch and is tracked here rather than as an untracked TODO.
+
+### 11.4 One §10.8 threshold was arithmetically unreachable (supersedes §10.8)
+
+The acceptance threshold "no single dish above about 25 placements in 150 days" cannot be met by any ranking rule during Winter. The active library holds exactly **three** Winter-eligible fruits (Banana bowl, Papaya bowl, Pomegranate bowl) against 6 days x 18 Winter weeks, so 36 placements each is the arithmetic floor.
+
+The threshold is restated as: **no single dish above about 25 placements in 150 days, excluding fruit and lunch carbs.** Fruit is content-constrained and lunch carbs are recency-exempt by design. Measured: 24.
+
+This surfaces a content gap rather than a rule gap: **a Winter fruit batch is needed** (`data/expansion-*`, reviewed by Rajat per `docs/development.md` §9). Logged here as the phase's one content follow-up.
+
+### 11.5 Merge order changed: A and B ship as one deploy (supersedes §10.9 and hotspot H9)
+
+Stream A's changes need the slot's calendar date threaded through and the fruit plan called per week; both call sites live in `generateWeek.ts`, which is Stream B's lane. Until B lands, Stream A's branch measures **0.566 overlap, worse than the 0.194 it replaces**. Merging A alone would deploy a regression to production, because Vercel and Convex promote on merge to `main`.
+
+Therefore: **Stream B branches off `feat/A-v41-selection`, not `origin/main`, and B's PR targets A's branch.** B merges into A, then the combined branch merges to `main` as a single deploy. Hotspot H9 is restated accordingly.
+
+## 12. Amendments from Stream B evidence (2026-08-17)
+
+### 12.1 §10.4 was self-contradictory (supersedes §10.4)
+
+§10.4 says both "the uniform breakfast form stands" and "the attach rules are unchanged". These cannot both be literal: the old attach rules were Tue/Thu-scoped and a uniform form has no Tue/Thu. **Intended reading: the attach rules are trigger-scoped, not day-scoped.** A chutney attaches when the winning main is a Chilla or Paratha; the HP Keto side attaches when the winning main carries no HP tag; a chutney suppresses the keto side. No day enters the condition. Stream B implemented this reading and it is now the spec.
+
+### 12.2 The breakfast keto side is a one-dish pool (new defect, D12)
+
+The HP + Keto + Breakfast pool contains **exactly one** library dish, Boiled eggs. Under the old two-form breakfast the pool was only reached on Tue/Thu; the uniform form reaches it whenever a non-HP main is served, so Boiled eggs lands 36 times in 150 days and is the one §10.8 threshold still failing.
+
+This is the same class of defect as D3's two-dish protein pool: **a rule whose pool is one dish is a hard-coded dish.**
+
+Stream B measured the obvious code fix (suppress the keto side on a `complete_meal` main): max placements falls to 21 and every other threshold still passes, but protein-less breakfasts rise from 21 of 125 to **63 of 125**, gutting the breakfast protein floor. **That fix is rejected.** The right lever is content: a breakfast-protein batch (`data/expansion-*`, reviewed by Rajat per `docs/development.md` §9), queued alongside §11.4's Winter fruit batch.
+
+Until that batch lands, the §10.8 max-placements threshold is expected to fail on Boiled eggs alone, and that single exception is accepted for this phase.
+
+### 12.3 Widening breakfast was necessary but not sufficient (D7 remains open)
+
+§10.4's premise was slightly wrong. The Option C form was not "retired": it was **unreachable**, because Option B was attempted first and only fell through when its pools were empty, which never happened. Widening the pool does make the eleven stranded dishes reachable.
+
+**None of them is actually served.** A never-cooked main sits at frequency credit 0, and the exploration slot covers companion positions, not mains. Breakfast still shows only 9 distinct combinations across 125 days. So D7 (one-shot novelty) is not fixed by the widening, and §11.3 deferred the cold-start credit that would have addressed it.
+
+This is an honest consequence of that deferral, recorded rather than hidden. Stream D measures it; if breakfast novelty is still dead after the full run, the cold-start credit earns its way back in with this as its evidence.
+
+### 12.4 A latent defect the wiring exposed (fixed in Stream B)
+
+The §4.7 repeat guard is a filter. Threading `slotDate` through made it remove **pinned** dishes from the pool before the pin-promotion step ran, silently breaking both the §6 request override and the §4 step 4 favorites _guarantee_, on precisely the dishes the household eats most often. An existing test caught it; a new test pins the invariant.
+
+Worth noting as a pattern: this defect existed latently in the v4 design and only became reachable once the guard had a real date to key on. Wiring a rule up is itself a test of it.
+
+### 12.5 CI does not run on feature-branch pull requests (process finding)
+
+`.github/workflows/ci.yml` triggers on `pull_request: branches: [main]` only. A PR targeting a feature branch, which §11.5's merge plan now requires, gets **no CI at all**. Stream B ran every gate locally instead.
+
+Consequence for this phase: the combined branch is what CI actually attests, when the integration PR targets `main`. Do not read a green tick on a feature-to-feature PR as verification, because there is no tick to read.
+
+### 12.6 Days got bigger, and the 6-item backstop is the reason (for Rajat)
+
+Both stated limits hold everywhere: zero days over 120 minutes, zero over 6 items. But:
+
+- Mean daily prep time rose from **74.5 to 86.1 minutes**.
+- **61 of 150 days sit at 6 items**, against a largest _observed_ day of 5.
+
+This follows directly from §10.1's framing that 6 is a backstop with headroom and the time budget binds. It is exactly what was specified. But 41 percent of days now land at a size the household has never actually eaten, so the framing deserves a second look before this ships. The number to change is the item backstop, not the mechanism.
+
+## 13. Amendment: two §10.8 thresholds were unreachable as written
+
+Both remaining §10.8 failures on the integrated A+B+C branch are **pool-size problems, not ranking defects**. No selection rule can reach either threshold. Restating them here so Stream D measures against something achievable and the real gaps stay visible rather than being absorbed into a vague "gate failed".
+
+### 13.1 "No position on a fixed cycle" is impossible under §3.4's own determinism rule
+
+§3.4 mandates deterministic selection with no RNG. A deterministic ranker drawing from a pool of N dishes, whose state is a bounded window of recent history, **must** eventually repeat a state and therefore cycle with period at most N. That is a pigeonhole argument, not a tuning problem. The only exits are randomness, which §3.4 forbids, or larger pools, which is content.
+
+So "no position shows a fixed cycle across 25 weeks" can never pass. The threshold is restated as two measurable things that do distinguish a healthy menu from the D1 carousel:
+
+- **No position at period 1** (the same dish every single week), except the intended exemptions: the roti carb and any pool the season leaves below four dishes.
+- **Whole-menu period at least 25 weeks**, i.e. no week in the horizon is slot-identical to an earlier week. The original defect was a period of 20; the integrated branch shows no whole-menu repeat.
+
+Even rotation over a small pool is the correct behaviour for this household, which eats a concentrated repertoire. It is only a defect when the rotation is degenerate (period 1) or when the whole menu repeats.
+
+### 13.2 The max-placements threshold needs a pool-size floor
+
+"No single dish above about 25 placements in 150 days, excluding fruit and lunch carbs" (§11.4) still fails on Boiled eggs at 36. The cause is D12: the breakfast HP+Keto attach pool holds **exactly one** dish, so the §4.7 guard has nothing to fall back to and correctly relaxes every time.
+
+Restated: **no single dish above about 25 placements in 150 days, excluding fruit, lunch carbs, and any position whose eligible pool holds fewer than four dishes.** A position with a one-dish pool is a hard-coded dish, and the honest report is the pool size, not a ranking number.
+
+This makes the two content batches the gating work rather than hiding them:
+
+| Pool                                 | Size today          | Consequence                                | Fix                             |
+| ------------------------------------ | ------------------- | ------------------------------------------ | ------------------------------- |
+| Breakfast HP + Keto (protein attach) | **1** (Boiled eggs) | 36 placements in 150 days                  | breakfast-protein content batch |
+| Winter-eligible fruit                | **3**               | 36 placements each is the arithmetic floor | Winter fruit content batch      |
+
+Note this phase made the first one worse, not better: §10.3 widened the _lunch_ neutral-protein pool and nobody widened the _breakfast_ Keto pool, while §10.4's breakfast widening makes more non-HP mains reachable, so the attach fires more often. That is a real cost of the change and it is recorded rather than netted out.
+
+### 13.3 What the gate now asks
+
+Streams A, B and C are complete and integrated. Stream D measures the integrated branch against §10.8 as amended by §11.4 and this section, and reports each threshold pass or fail with its cause classified as **ranking** or **content**. A content failure does not block the phase; it opens a reviewed content batch. A ranking failure does block.
+
+## 14. Fruit of the day is removed (Rajat, 2026-08-18)
+
+Rajat: the household has not been following the Fruit of the day, so it comes out of the system entirely, fruits leave the dish list, and the existing fruit dishes are deactivated.
+
+This lands inside this phase rather than after it, because fruit is the cause of two of the three outstanding §10.8 failures. Removing it deletes those problems rather than fixing them.
+
+### 14.1 What is removed
+
+- **§3.3 Fruit of the day** in `docs/engine.md`, in full, plus the fruit column in the §2 weekly-schedule table, the fruit clauses in §4's recency exemptions, and the fruit carve-out in §9.
+- **§10.2's fruit ranking** and the withdrawal of fruit's recency exemptions (both moot).
+- Fruit composition and ranking in the engine: the fruit pool, the per-week fruit plan, the fruit slot in the schedule, and the fruit row emitted on finalize.
+- The fruit section in the app: the Menu tab, the day editor, the share image, and the picker's fruit slot.
+- Fruit as a grocery-list contributor.
+
+### 14.2 The nine active fruit dishes are deactivated
+
+Set `active: No` on Banana bowl (154), Jamun bowl (276), Litchi bowl (275), Mango bowl (274), Papaya bowl (155), Peach bowl (278), Pineapple bowl (279), Plum bowl (277), Pomegranate bowl (280). Seasonal fruit (123) is already inactive.
+
+The files stay in `data/dishes/`. Deactivating is the reversible form of removal and keeps every historical row resolvable by id; deleting the files would orphan the fruit rows in `weekArchive` and `menu_history.md` and break the history reader.
+
+### 14.3 The Convex schema literals must stay (do not "finish the job")
+
+`slotMeal` carries a `"fruit"` literal, `weekArchive.rows.meal` carries `"Fruit"`, and `manualChanges.meal` carries `"fruit"`. **Removing these literals is a breaking schema change that will fail the deploy**, because Convex validates every existing document against the new schema and production holds real fruit rows in both `currentWeek` and `weekArchive`, plus fruit swaps in `manualChanges`.
+
+So the literals remain, as read-only legacy values that nothing new writes. This is the whole reason "remove it completely" cannot mean "delete every mention". Wiping the archive to clean them up is not an option under any circumstances: `weekArchive` is the eaten record, which is the only training signal the selection engine has.
+
+Every reader that can encounter a historical fruit row (the Changes log, any archive view, the history parser, the grocery aggregator) must continue to tolerate it without rendering a fruit section for new weeks.
+
+### 14.4 Consequences for the acceptance gate
+
+- The Winter fruit content batch (§11.4, §13.2) is **cancelled**. There is no fruit slot to starve.
+- The fruit thresholds in §10.8 are struck.
+- §13.2's max-placements exclusion list drops "fruit" and keeps lunch carbs and small-pool positions.
+- The breakfast-protein content batch (§12.2, D12) **stands**; it is unrelated to fruit.
+- Day size falls by one item across the board, though fruit never counted toward the §10.1 caps, so the 120-minute and 6-item limits are unaffected.
+
+### 14.5 Verification
+
+The §10.8 gate has not yet passed: the Stream D run and its adversarial evaluation both terminated on a session limit before reporting. Nothing has been verified end to end. The gate re-runs after this removal lands, against the whole integrated branch, and it is the same gate: no behaviour-changing stream merges to `main` until it passes.
+
+## 15. Verification verdict, 2026-08-18: DO NOT MERGE
+
+The §10.8 gate ran against the fully integrated branch (`1678d36`, Streams A+B+C+E) and **failed**. Four blocking findings, all **ranking** defects, none of them content. The phase does not merge to production.
+
+Independently confirmed by the EM before accepting the verdict: international weekday lunches run exactly 2.00 per week for 19 weeks and then exactly 0.00 for the following 33; 52 weeks of breakfast contain 5 distinct week patterns and 6 distinct mains.
+
+### 15.1 The root cause, which is a defect in decision D3
+
+Frequency-first was adopted so the engine would propose what the household actually eats. **It does the opposite in steady state, because the frequency window is self-referential.**
+
+The seed record is 11 weeks (5 seed + 6 archived app weeks). The window is the 10 most recent week-records. So from simulated week 11 onward the window contains **only the engine's own output**, and the household's real eaten record has been flushed out of the signal entirely. What the engine then reinforces is whatever it happened to place in its own weeks 1 to 10.
+
+Consequences measured over 150 days: **32 of the 65 dishes the household actually ate are never served**, against 10 under v3. Every dal is missing (Toor dal, Moong dal, Dal tadka, Chole), as are Butter chicken, Chicken tikka, Palak chicken gravy, Curd rice and Bread omelette. Dal runs 0.64 per week against 2.00 observed.
+
+This is a defect in D3 (rolling 10 most recent week-records, chosen for simplicity over season scoping). The next cycle must keep the household's real record permanently in the signal rather than letting it roll out: anchor the seed and archive weeks, or separate a fixed household-record term from a rolling-recency term.
+
+### 15.2 The four blocking findings
+
+1. **Breakfast is the D1 carousel, unfixed and worse than v3.** 125 breakfasts yield 6 distinct mains and 6 distinct combinations, in a strict period-5 rotation; v3 gives 19 mains and 38 combinations, and the household's own record has 11 mains in 28 breakfasts. The §10.4 widening is inert: all eleven restored dishes are served **zero** times. Mechanism: by week 11 exactly 6 mains sit at credit 3 and the other 17 at credit 0 forever, and the 7-day guard blocks only the last 5 breakfasts, so a credit-0 dish never gets a turn. `explorationPositions` is lunch-only, so breakfast has no novelty channel at all.
+2. **The international lunch dies permanently at week 20** and never returns. This is the integration defect no single stream could see: Stream A changed placement to frequency-first while the v3 longest-unused substitution trigger was left standing in nobody's lane, so the trigger compares an anchor against a pool the placer will never touch.
+3. **The favorites guarantee breaks**, caused by finding 2. Invisible with the one real favorite; add two ordinary ones and `unplacedFavorite` fires for six consecutive weeks with the dish genuinely absent. That is the Phase 7 user-facing promise failing silently.
+4. **Household staples are starved** (finding in 15.1).
+
+### 15.3 Thresholds
+
+Passing: carb plates with a gravy or sabzi (0 of 88 violations), zero days over 120 minutes or 6 items, prawn and mutton in every 4-week block, overlap 0.295 at 25 weeks, fruit fully removed with legacy rows tolerated and schema literals intact, max placements as amended.
+
+Failing: no position at period 1 (Avocado toast on 25 of 25 Mondays from a 21-dish pool, not an exempt position), explored dishes recur (67 percent served exactly once), and the prep-time curve sits **above** the household's at every percentile (p50 90 against 80, mean 86.4 against 77.6) rather than under it.
+
+### 15.4 The gate horizon was wrong
+
+The 25-week window stops one week before the engine changes shape permanently. **Future gate runs measure weeks 20 to 60, not 1 to 25.** The steady state is where this engine actually lives, and it is a different engine from the one the first 19 weeks show.
+
+### 15.5 Also required before the next attempt
+
+- Lower the item backstop from 6, or size lunch by shape rather than by leftover day capacity. §12.6 raised this and it was never actioned; 4-item lunches run 76 of 150 against 2 of 34 observed, and 6-item days 60 of 150 against a household maximum of 5.
+- Either wire rule 7 into generation or delete `pairsWith` from the data and the validator. It is parsed, validated and baked, and read nowhere.
+- Fix §10.3 rule 9's text, which contradicts its own evidence: the "0 of 16" statistic only holds if the lead may supply the gravy or sabzi. The code implements the correct weaker reading; the prose is wrong.
+- Add pinned favorites to §13.1's exemption list.
+- Resolve §10 versus §3. §3 says "do not implement" while §10.3 and §10.4 keep parts of §3 alive by reference, which is exactly what left the substitution trigger orphaned.
+- Re-take every §12 gate number against the production favorites list; two were measured without it.
+- Pre-existing, not introduced here: production generation is **not deterministic**. `app/convex/generateWeek.ts` passes neither `rng` nor `lastSaturdayMenu`, so the Saturday menu coin-flips on `Math.random`, contradicting §3.4's no-RNG claim. `main` does the same, so it is not a regression.
+
+### 15.6 Status
+
+Streams A, B, C and E stay open and unmerged on `feat/A-v41-selection`. Their work is not wasted: the time budget, rule 9, protein spread, the neutral-protein widening, the favorites-pin fix and the fruit removal all verify clean. The blocking defects sit in the selection mechanism, which is one more iteration, not a restart.
+
+### 15.7 Addendum: `docs/engine.md` fails the §13 parity rule on rule 7
+
+EM-verified. `pairsWith` is read **nowhere in generation**: outside the data layer (schema, parser, serializer, validator, baked library) the only references are two prose comments in `explore.ts` and `favorites.ts`. Yet `docs/engine.md` describes it as a live plate rule in two places, §3 line 43 and §12 line 365, complete with a precedence order for a rule that never fires.
+
+The canonical rules spec therefore documents a plate rule the engine does not have. The 665-test suite cannot catch it: `pairsWith` appears in exactly one test file, which covers name resolution at bake time and nothing about placement.
+
+This changes how two earlier conclusions read:
+
+- §10.3's rule 7 rewrite ("`fish tikka + kadhi` is the only survivor") looked like a completed data fix. With the rule unimplemented, the data change was a no-op, and the zero pairing incidents in the gate run are not evidence the rewrite worked. They are evidence nothing ran.
+- §10.5's "rule 7 can no longer consume the exploration slot" was already true for free.
+
+Two further `docs/engine.md` assertions are falsified by measurement:
+
+- Line 206 claims the guard's delay "lets a starved dish take a slot, accumulate a count of its own, and climb toward the cap". For breakfast this is false: the rotation drifts a dish exactly one weekday per week, which is 8 days between appearances and permanently clears a 7-day guard, so 17 of 23 mains sit at credit 0 forever. The doc states the mechanism §11.1 called load-bearing, in the position where it most needs to hold, and it does not hold there.
+- Line 282 claims the 6-item rule "is a backstop rather than the thing that sizes the plate". Measured, it is the thing that sizes the plate: 60 of 150 days land exactly at 6, rising to 197 of 360 over 60 weeks.
+
+Add to 15.5: fix the parity between `docs/engine.md` §12 and the engine, either by wiring rule 7 in with a generation test or by deleting it from the doc, the frontmatter and the validator. **And add a parity test that fails when a documented plate rule has no generation coverage**, since the suite currently passes with a fully documented, fully validated, entirely absent rule.
+
+### 15.8 A limitation in the gate itself
+
+Of the three independent evaluations, household fit and the adversarial hunt returned in full. The spec-conformance evaluator went unresponsive after producing intermediate output. Stream D did not leave a hole: it read the intermediate artefacts and independently re-derived every conformance claim, and found the parity violation itself. So the conformance dimension is covered, but by the same agent that ran the simulation rather than by a genuinely independent second pass. If a third opinion on conformance is wanted before the next attempt, that is the piece to re-commission. The verdict does not turn on it: all four blocking findings come from the simulation and the adversarial run.
+
+### 15.9 Reconciling the two evaluations, and the scoping error underneath them
+
+The spec-conformance evaluator was orphaned mid-run and delivered late. Its roll-up **disagrees with §15's verdict**: "no blocking ranking failure attributable to the ranker". Both are right, and the disagreement is the most useful thing in the gate.
+
+Conformance asked _does the code do what the spec says_, and the answer is largely yes. Stream D asked _do the menus work_, and the answer is no. **The engine faithfully implements a specification whose rules produce bad menus.** That is the identical pattern as the first cycle in §8, one level up: last time a faithful implementation of a bad spec; this time a faithful implementation of a bad spec whose faults only appear in steady state. **The verdict stands, because the blocking failures are behavioural, not conformance.**
+
+**The scoping error.** Conformance found that **§10's day templates were never implemented at all.** The engine still runs v3's Menu 1/2/3/4 forms and the entire §3.2 substitution machinery; EM-verified (12 menu-form references and both substitution functions live in `composition.ts`). §10.2's "Mon/Tue standalone, Wed to Fri Indian plate" is formally dead text: §3 says "do not implement", §10.3 revives §3.3's plate rules and §10.4 revives the breakfast form, but **nothing revives §3.2's templates**, and no stream's brief carried them. Stream B's scope was the budget, rule 9, breakfast widening and rule 7 precedence.
+
+That is an EM scoping error, and it is the direct cause of §15.2 finding 2: the international substitution trigger was left as v3's longest-unused comparison because the whole template layer it belongs to was never rewritten. Nobody owned it, so nobody changed it.
+
+**Further conformance findings folded in:**
+
+- **The household's own six weeks measure 0.263 overlap**, below the 0.28 to 0.35 band that §10.2 and §11.2 attribute to them. The band was misquoted; v4.1 at 0.295 is marginally _more_ repetitive than the record it was fit to. Every overlap target in this spec needs restating against a measured baseline and a named metric: the threshold never says whether it means week-level dish-set Jaccard (0.295) or position-keyed (0.106).
+- **Rule 9's code is right and both spec texts are wrong**, independently confirming §15.5. The strong reading fails the household's own record 6 of 16; the weak reading, which the code implements, fails 0 of 16.
+- **The tiebreak is input array index, not dish id**, in both `byLongestUnused` and `bySaturatingFrequency`, while `rankExploration` does use id. Reversing the library array changes 7 of 11 slots. A second determinism hole beneath the `Math.random` one, latent only because the baked library order happens to be stable.
+- **Saturday alternation is not implemented**: 13 of 24 transitions repeat, including five consecutive Menu 3.
+- **§13 claims "CI enforces this with two checks". There is no spec-parity check in CI at all** (EM-verified: zero references). The parity rule that is supposed to stop `docs/engine.md` drifting from the engine has been enforced by convention alone, which is why §15.7's dead rule 7 survived.
+- **D12 is worse than recorded**: Boiled eggs at 45 placements, not 36, causing all 40 non-carb guard relaxations.
+- The rotating exploration position does not exist in 2 of 25 weeks and nothing is logged.
+- Ingredient consolidation is implemented and live, while §3.4 retires it; the code comment says so explicitly. `docs/engine.md` and the code agree; `features/engine-v4.md` disagrees with both.
+
+**Banked passes, from an independent second measurement:** budget 0 of 150 over either limit, one-gravy 0 of 150, protein floor 0 of 150, one-HP-per-meal clean, cuisine register clean on 87 Indian and 38 international plates, fruit fully removed with 34 legacy rows parsing, favorite placed 25 of 25 weeks and never twice, chicken down to 1.04 per week from 4.32.
+
+**Added to 15.5:** rewrite §10's day templates into a stream that actually owns them, or delete them from the spec and state that v3's forms stand. Restate every overlap threshold against a measured baseline with a named metric. Fix the array-index tiebreak. Add the spec-parity check §13 claims CI already has.

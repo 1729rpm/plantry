@@ -7,7 +7,7 @@
 ![Vite](https://img.shields.io/badge/Vite-5-646CFF?logo=vite&logoColor=white)
 ![Convex](https://img.shields.io/badge/backend-Convex-EE342F)
 
-A weekly meal planner for a small household, built as an installable Progressive Web App (PWA). Every week Plantry reads a fixed dish library and a set of composition rules, generates a Monday-to-Saturday menu of breakfasts and lunches, and produces a shareable menu image and an aggregated grocery list. Sunday is a rest day. In-week edits (swap, add, custom dish, skip) are immediate and reversible; deeper changes to the library and rules flow through a separate, human-approved review loop.
+A weekly meal planner for a small household, built as an installable Progressive Web App (PWA). Every week Plantry reads a fixed dish library and a set of composition rules, generates a Monday-to-Saturday menu of breakfasts and lunches, and produces a shareable menu image and an aggregated grocery list. Sunday is a rest day. In-week edits (swap, add, custom dish, delete, skip) are immediate and reversible; deeper changes to the library and rules flow through a separate, human-approved review loop.
 
 ## Screenshots
 
@@ -26,17 +26,18 @@ A weekly meal planner for a small household, built as an installable Progressive
 - **Generates a full week.** A deterministic TypeScript engine reads the dish library, the rules, the current season, and recent history, then produces a valid Mon-to-Sat menu plus a grocery list. Each day also carries an in-season "fruit of the day".
 - **Stays shareable.** The week renders to a family of images (a menu image and per-dish recipe sheets) that go out through the phone's native share sheet, so the plan lands in a chat at the start of the week.
 - **Builds the grocery list automatically.** Ingredients are aggregated across the week, grouped in a fixed shopping order, and rounded up to whole pack sizes. Common pantry staples are omitted unless a dish explicitly needs them. The list is skip-aware: a skipped day contributes nothing.
-- **Supports in-week edits.** Either user can swap a dish (via a ranked picker over the matching library), add a dish, drop in a custom dish, delete a dish, skip a whole day and restore it later, or save a dish for next week. Every edit records an author, a timestamp, and a reason.
-- **Surfaces new dishes.** An Explore feed ranks dishes the household has not cooked yet, "familiar but new": novelty that still resembles what the household actually cooks. Multi-select filters narrow the grid, and anything already planned or saved is hidden.
-- **Keeps a running record.** A Changes feed lists every edit and comment for the week, newest first, in plain language.
+- **Supports in-week edits.** Either user can swap a dish (via a ranked picker over the matching library), add a dish, drop in a custom dish, delete a dish, and skip a whole day and restore it later. Every edit records an author and a timestamp; a written reason is offered on each one and is optional.
+- **Surfaces new dishes.** An Explore feed ranks dishes the household has not cooked yet, "familiar but new": novelty that still resembles what the household actually cooks. Multi-select filters narrow the grid, and anything already planned or already on a shared list is hidden.
+- **Keeps the household's shared lists.** A Yours tab holds two lists both users write to: favorites, which generation places into every week, and a wishlist of dishes to try, each row placeable into the week in a tap.
+- **Keeps a running record.** A Changes log lists every edit and comment for the week, newest first, in plain language, reached from the profile sheet.
 
-The app is organised as four tabs: **Menu**, **Grocery**, **Explore**, and **Changes**.
+The app is organised as four tabs: **Menu**, **Grocery**, **Explore**, and **Yours**.
 
 ## How it is built
 
 Plantry is structured around a clean split between a pure rules engine, a backend, and a frontend.
 
-- **Engine** (`engine/`): a pure-function TypeScript module that holds all meal-planning logic (selection, composition, no-repeat recency, grocery aggregation). It is imported by both the backend and the tests, and it mirrors a human-readable rules spec. Continuous integration fails if the spec and the code drift apart.
+- **Engine** (`engine/`): a pure-function TypeScript module that holds all meal-planning logic (selection, composition, no-repeat recency, grocery aggregation). It is imported by both the backend and the tests, and it mirrors a human-readable rules spec (`docs/engine.md`), section by section, with each section paired to a module and a test file.
 - **Backend** (`app/convex/`): [Convex](https://www.convex.dev/) schema and server functions hold the live week, the edit log, and the queued feedback.
 - **Frontend** (`app/web/`): a [Vite](https://vitejs.dev/) + React + TypeScript PWA, with a service worker for offline-tolerant, installable use.
 - **Data** (`data/`): a human-edited, version-controlled dish library, ingredient catalog, and history seed. This is the target of the slow review loop.
@@ -72,4 +73,4 @@ docs/          Canonical specs: product, engine, engineering, development
 
 ## Status
 
-Plantry runs as a live PWA for a single household. The dish library spans roughly 260 dishes across about ten cuisines, each with a description, recipe, complexity marker, derived macros, and sourcing metadata. Future directions include day-level overrides for travel and eating out, calendar-aware generation, and grocery-ordering automation.
+Plantry runs as a live PWA for a single household. The dish library spans several hundred dishes across about ten cuisines, each with a description, recipe, complexity marker, derived macros, and sourcing metadata; the library itself is the count, one file per dish under `data/dishes/`. Future directions include day-level overrides for travel and eating out, calendar-aware generation, and grocery-ordering automation.

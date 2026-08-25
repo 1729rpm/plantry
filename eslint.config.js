@@ -12,6 +12,10 @@ export default [
       "**/.convex/**",
       "**/_generated/**",
       "**/coverage/**",
+      // Claude Code agent worktrees: checked-out copies of the repo that live inside
+      // it. Git-excluded but still walked by eslint, so a local lint run reports
+      // errors from another branch's files. Not build code of this checkout.
+      "**/.claude/worktrees/**",
       "**/*.config.js",
       "**/*.config.ts",
       // Retired history (the old design_handoff/ handoff and its reference JSX
