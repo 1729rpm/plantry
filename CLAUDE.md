@@ -31,6 +31,9 @@ Read order by task:
 
 ## Currently building
 
+> **Start here if you are resuming this phase cold: `features/engine-v4-restart-brief.md`.** It records what the
+> two failed cycles cost, which spec sections are dead, and the work list to restart from.
+>
 > `features/engine-v4.md`: Engine v4.1, frequency-first selection with a saturating count, simplified templates, and a whole-day prep-time budget. Build against §10 as amended by §11 to §14. The §10.8 verification gate has been run once and returned a DO-NOT-MERGE verdict (§15); no stream merges until §15.5's required work lands and the gate is re-run clean.
 
 When no feature is active, this line reads "_none_". It resets to `_none_` on feature close-out, when the last stream of a feature merges (`docs/development.md` §3 step 8).
