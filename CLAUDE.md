@@ -18,6 +18,7 @@ Four canonical specs plus a changelog in `docs/`, three operational docs at root
 - `docs/development.md`: session isolation, worktree workflow, ship workflow, definition of done, diagnosis card, slow-loop trigger, escalation rules, commit conventions. Owns "how to make changes" decisions. Implements the cross-project standard at `~/Downloads/AI Products/DEVELOPMENT-PLAYBOOK.md` and records this repo's deliberate deltas.
 - `docs/PLAN.md`: the phase plan for the build, one row per phase with a verifiable outcome. Owns sequencing.
 - `docs/CHANGELOG.md`: append-only chronological index of shipped changes. One entry per change, each ending with the `Updated:` line the reconciliation passes consume.
+- `docs/engine-as-built.md`: a read-through of the rule engine as it actually runs in production, in execution order, plus a section listing every place the code and `docs/engine.md` disagree. Not a canonical spec and it owns no decisions; `docs/engine.md` stays normative. Read it when verifying the spec against the code.
 
 Read order by task:
 
