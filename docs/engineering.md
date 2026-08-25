@@ -80,10 +80,10 @@ manualChanges                          # append-only log of user edits
   createdAt: number
   author: "rajat" | "tuhina"
   weekStart: string                    # ISO Monday, mirrors currentWeek
-  day?: "Mon" | "Tue" | "Wed" | "Thu" | "Fri" | "Sat"  # absent for day-less kinds (save_next_week)
+  day?: "Mon" | "Tue" | "Wed" | "Thu" | "Fri" | "Sat"  # set by every kind; loose so a future day-less kind fits
   meal?: "breakfast" | "lunch" | "fruit"  # "fruit" for a Fruit-of-the-day swap; absent for day-level kinds
   position?: number                    # index into slots[].dishes; absent for day-level kinds
-  changeKind: "swap" | "custom" | "delete" | "add" | "skip_day" | "restore_day" | "save_next_week"
+  changeKind: "swap" | "custom" | "delete" | "add" | "skip_day" | "restore_day"
   before: { dishId: number | null, customLabel: string | null }
   after:  { dishId: number | null, customLabel: string | null }
   reason: string                       # user-provided, optional; "" when none given
@@ -96,21 +96,29 @@ manualChanges                          # append-only log of user edits
 # `before`, `delete` a null `after`. A Fruit-of-the-day swap is a `swap` row with
 # `meal: "fruit"` and position 0 (the fruit slot holds one dish); the fruit slot
 # takes no add, delete, or custom dish. Day-level kinds (skip_day, restore_day) carry
-# the day and null before/after. `save_next_week` records the saved dish in
-# `after.dishId` and omits `day` entirely (it targets next week, not a day of
-# this one). This table is the data behind the Changes tab.
+# the day and null before/after. This table is the data behind the Changes log.
 
-nextWeekQueue                          # dishes saved for next week from Explore
+favorites                              # the household's rotation list
   createdAt: number
   author: "rajat" | "tuhina"
-  dishId: number                       # library dish id
-  reason: string                       # user-provided, non-empty after trim
-  status: "queued" | "placed" | "dropped"
-  consumedWeekStart: string | null     # ISO Monday once placed; null while queued
+  dishId?: number                      # library favorite; absent for a custom favorite
+  customLabel?: string                 # free-text favorite; absent for a library favorite
+  # index: by_dishId
 
-# The next generation run reads `queued` rows as engine `requests`, marks placed
-# ones `placed` with the consuming week, and leaves unplaceable ones `queued` (an
-# incident is logged). The slow loop may mark stale queued rows `dropped`.
+# Exactly one of dishId / customLabel is set. Generation guarantees every library
+# favorite a place in the week (`docs/engine.md` §4 step 4); a custom favorite has no
+# library id, so it is display-only and generation cannot place it.
+
+wishlist                               # the household's shared "save it to try" list
+  createdAt: number
+  author: "rajat" | "tuhina"
+  dishId: number                       # library dish id; no custom entries
+  # index: by_dishId
+
+# A list the household reads, not a queue the engine consumes: nothing in generation
+# reads this table. A row is placed into the week through the ordinary day picker and
+# stays on the list afterwards. Either user removes either person's row, so removal
+# keys on `dishId` rather than on the row's author.
 
 dishDislikes                           # dishes disliked from Explore ("Not for me")
   createdAt: number
@@ -139,7 +147,7 @@ userProfiles
   installedAt: number
 ```
 
-`manualChanges`, `incidents`, `nextWeekQueue`, and `dishDislikes` are the signal channels the slow loop consumes. Manual changes are observed behavior, one row per swap, custom dish, delete, add, day skip, day restore, or save-for-next-week with the user's stated reason. Incidents are runtime violations from the engine or backend. The next-week queue records dishes the user wants the engine to favor. Dislikes record dishes the user does not want, surfaced from Explore. The `status` lifecycle on `manualChanges` and `incidents` is identical so the slow-loop mark-applied action can mark every consumed row uniformly (see `MAINTENANCE.md` §3); `nextWeekQueue` has its own `queued`/`placed`/`dropped` lifecycle driven by generation and the slow loop.
+`manualChanges`, `incidents`, and `dishDislikes` are the signal channels the slow loop consumes. Manual changes are observed behavior, one row per swap, custom dish, delete, add, day skip, or day restore, carrying the user's reason when one was given. Incidents are runtime violations from the engine or backend. Dislikes record dishes the user does not want, surfaced from Explore. The `status` lifecycle on `manualChanges` and `incidents` is identical so the slow-loop mark-applied action can mark every consumed row uniformly (see `MAINTENANCE.md` §3). `favorites` and `wishlist` are not signal channels: they are live household state the app reads and writes directly.
 
 The library + rules are not in Convex. Convex functions load them by importing typed JSON or TS modules emitted at build time from the markdown files (see §4).
 
@@ -181,7 +189,7 @@ Coverage is complete: every active dish carries a photo (a coverage report asser
 **Read (activity feed):**
 
 1. Frontend calls `listManualChangesForWeek({ weekStart })`.
-2. The query returns every `manualChanges` row for the week, newest first (all statuses, since the Changes tab is a history, not a work queue). It is the Changes tab's only data source; each signal channel keeps its own query and its own subscription rather than being joined server-side.
+2. The query returns every `manualChanges` row for the week, newest first (all statuses, since the Changes log is a history, not a work queue). It is the Changes log's only data source; each signal channel keeps its own query and its own subscription rather than being joined server-side.
 
 **Read (explore feed):**
 
@@ -216,10 +224,15 @@ Coverage is complete: every active dish carries a photo (a coverage report asser
 1. Frontend calls `skipDay({ author, weekStart, day, reason, version })` or `restoreDay({ author, weekStart, day, reason, version })`.
 2. `skipDay` appends `{ day, reason, author, skippedAt: now }` to `currentWeek.skippedDays` (rejecting `already-skipped`); `restoreDay` removes the day's entry (rejecting `not-skipped`). The day's `slots` are never touched, so restore is lossless. Each increments `version` and inserts a `manualChanges` row (`changeKind: "skip_day"` / `"restore_day"`, day-level: no meal/position, null before/after). Recoverable reasons: `version-mismatch`, `no-current-week`, and the kind-specific `already-skipped` / `not-skipped`.
 
-**Write (save a dish for next week):**
+**Read (the household's shared lists):**
 
-1. Frontend calls `saveForNextWeek({ author, weekStart, dishId, reason })`.
-2. Validates author, non-empty trimmed `reason`, and that the dish is in the library and not already queued. Inserts a `nextWeekQueue` row (`status: "queued"`, `consumedWeekStart: null`) and a `manualChanges` row with `changeKind: "save_next_week"` (the saved dish lives in `after.dishId`) in the same transaction. The next generation run consumes queued rows as engine `requests`. Recoverable reasons: `dish-not-in-library`, `already-queued`.
+1. Frontend calls `queries/favorites:listFavorites({})` and `queries/wishlist:listWishlist({})`, one subscription each, both backing the Yours tab.
+2. Each returns the whole shared list, newest first, with the author on every row. Neither is week-scoped: the lists outlive any one week.
+
+**Write (favorites and wishlist):**
+
+1. Frontend calls `favorites:addFavorite({ author, dishId })` for a library favorite, `favorites:addCustomFavorite({ author, customLabel })` for a free-text one, and `favorites:removeFavorite({ dishId })` or `favorites:removeFavoriteById({ id })` to remove either person's row. The wishlist mirrors this with `wishlist:addToWishlist({ author, dishId })` and `wishlist:removeFromWishlist({ dishId })`.
+2. None of these writes a `manualChanges` row: they change a standing list, not this week's menu, so the Changes log does not record them. Removal keys on `dishId` (or the row id for a custom favorite) rather than on the author, because either user may remove either person's row. Adds are idempotent against the `by_dishId` index, so a double tap cannot duplicate a row.
 
 **Write (include a recipe in the share):**
 
@@ -231,11 +244,11 @@ Coverage is complete: every active dish carries a photo (a coverage report asser
 1. A user finalizes via `finalizeWeek({ author, weekStart, version })` (or a future scheduled action).
 2. Validates `author`, version (optimistic concurrency), that the week exists, and that it is not already `final`. Appends a `weekArchive` row whose `rows` mirror the `menu_history.md` format (long-form day, capitalised meal, dish name from the baked library, dish id), then flips `currentWeek.status` to `"final"` and increments `version`. Skipped days (`currentWeek.skippedDays`) and custom dishes are excluded from the archive: a skipped day was not cooked, so recency (`docs/engine.md` §4) must not see it, and a custom dish has no library id or canonical name. The day's `slots` are untouched (restore stays lossless). With no skipped days every library pick archives, exactly as a week with no skips always has. Recoverable reasons: `version-mismatch`, `no-current-week`, `already-final`.
 
-**Generation (consume the next-week queue):**
+**Generation (place the household's favorites):**
 
-1. `generateCurrentWeek({ weekStart, rng?, userRequestedDishId? })`, an `internalMutation` triggered by the EM or a future scheduled action, reads every `queued` `nextWeekQueue` row (createdAt ascending) and passes their `dishId`s to the engine as `requests` (`docs/engine.md` §6).
+1. `generateCurrentWeek({ weekStart, rng?, userRequestedDishId? })`, an `internalMutation` triggered by the EM or a future scheduled action, reads every `favorites` row (createdAt ascending) and passes the library ones to the engine as the guaranteed-placement set (`docs/engine.md` §4 step 4). Custom favorites carry no `dishId`, so they are skipped here. An empty favorites set leaves generation identical to a run with no favorites.
 2. The cooking history it passes the engine is the baked `menu_history` merged with a synthetic row per `weekArchive` row finalized since the last bake, built by the shared `app/convex/lib/archiveHistory.ts` helper (`explore.ts` derives its history from the same helper). Generation recency (`docs/engine.md` §4), the §2 Saturday Menu 3/4 alternation, and the §3.3 fruit rotation therefore rank against the weeks actually finalized since the bake rather than the frozen seed alone; with an empty `weekArchive` the history is exactly the seed.
-3. The engine places each requested dish into a slot whose §3 composition accepts it, overriding §4 recency, or emits an incident when no slot accepts it (out of season, inactive, unknown, or no fitting slot). After generation, queue rows whose dish landed in the week are marked `placed` with `consumedWeekStart = weekStart`; rows whose dish could not be placed stay `queued` (the engine's incident is persisted to `incidents`) so a later run retries them. An empty queue (production today) yields no requests and leaves generation identical to before.
+3. The engine places each favorite into a slot whose §3 composition accepts it, overriding §4 recency, and never places one twice in a week. A favorite that no slot accepts (out of season, inactive, unknown, or no fitting slot) is left unplaced and named in one `warn` incident for the week, so the run still produces a complete menu rather than failing. The favorites list is standing state, so nothing is consumed or marked: the next run reads it again unchanged.
 
 ## 6. Auto-recovery middleware
 
@@ -391,7 +404,7 @@ Every PR runs these checks; any failure blocks merge.
 
 The CI gates above catch data, engine, type, and CSS-syntax errors, but not how the app renders or behaves. Rendering and interaction are verified by an in-depth crawl the EM spins off for every frontend-touching slice (see `docs/development.md` §3 and §4), run against the PR preview before merge and against production after.
 
-The crawl is Playwright-driven and walks every customer flow, not only the slice's feature: the passcode gate and identity picker, the Menu week, the Day editor and every sheet (dish actions, details and recipe, replace and swap, add a dish, reason, skip, restore), Grocery, Explore (grid, filters, dish sheet, dislike), Changes, the Share preview, and the identity switch. It enters the app by injecting the auth and identity records into `localStorage` (`plantry:auth`, `plantry:identity`), so it needs no passcode and writes no user profile; read-only passes take no other writes, and mutating flows are exercised on the preview's isolated database, or mutate-then-revert against production with explicit approval.
+The crawl is Playwright-driven and walks every customer flow, not only the slice's feature: the passcode gate and identity picker, the Menu week, the Day editor and every sheet (dish actions, details and recipe, replace and swap, add a dish, reason, skip, restore), Grocery, Explore (grid, filters, dish sheet, wishlist toggle, dislike), Yours (both lists, the favorite add sheet, a place-into-the-week from the wishlist), the profile sheet and the Changes log it opens, the Share preview, and the identity switch. It enters the app by injecting the auth and identity records into `localStorage` (`plantry:auth`, `plantry:identity`), so it needs no passcode and writes no user profile; read-only passes take no other writes, and mutating flows are exercised on the preview's isolated database, or mutate-then-revert against production with explicit approval.
 
 Reaching the preview takes one more step: Vercel preview deployments sit behind deployment protection, so a bare request returns HTTP 401 and the SPA never boots. The crawl passes the project's Protection Bypass for Automation token (`VERCEL_AUTOMATION_BYPASS_SECRET`, §11) as the `x-vercel-protection-bypass` header and opens the first page with `?x-vercel-set-bypass-cookie=true`, which sets the bypass cookie so subsequent asset requests are let through. The localStorage gate-bypass above clears only Plantry's own passcode, not Vercel's edge protection, so both are needed together. Production (`plantry.mudgal.xyz`, a custom domain) is not protected and needs no token. The token lives only in the crawler's environment; it is never committed and never reaches the app bundle. When a token is unavailable or a preview is down, the fallback is to build the PR branch and crawl the static `dist/` locally (`CRAWL_URL` unset), which renders the same build-baked output and is faithful for CSS and shared-primitive slices; the two iOS-only checks (env(safe-area-inset) side padding and the software-keyboard seam) are unverifiable in headless desktop engines either way and go to a real device.
 
