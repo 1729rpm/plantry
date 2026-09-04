@@ -362,8 +362,21 @@ export function constraintPass(plates: Plate[], args: ConstraintPassArgs): Const
   ): Repair | null => {
     const replaced = plate.picks[index];
     const exclude = placedIds();
-    const alternative = provider(replaced.role, replaced.scope, exclude).find((entry) =>
-      accept(entry.dish),
+    // A replacement must not re-break a rule an earlier section of this pass
+    // already cleared. §5.1's one-gravy-per-lunch is hard and has no fallback,
+    // and the cross-meal, item-ceiling and prep-ceiling repairs all run after
+    // section 2, so a replacement drawn from the companion pool could otherwise
+    // put a second Category Gravy dish back on a lunch that section 2 had just
+    // cleared. Re-checking the plate here is cheaper and more exact than a second
+    // sweep, because only this function ever adds a dish to an existing plate.
+    const plateHoldsGravy =
+      plate.meal === "lunch" &&
+      plate.picks.some(
+        (pick, position) =>
+          position !== index && dishById.get(pick.dishId)?.category === "Gravy dish",
+      );
+    const alternative = provider(replaced.role, replaced.scope, exclude).find(
+      (entry) => accept(entry.dish) && !(plateHoldsGravy && entry.dish.category === "Gravy dish"),
     );
     if (alternative) {
       const replacement: Omit<PlanPick, "day"> = {
