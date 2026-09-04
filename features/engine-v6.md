@@ -103,8 +103,9 @@ From the record the engine derives, per dish and per scope it can occupy:
 - `eatenCount[scope]`: as-eaten rows of the dish in that scope's slots.
 - `occasions[scope]`: the number of record occasions of that scope.
 - `rate[scope] = eatenCount[scope] / occasions[scope]`: servings per occasion. A weekday lunch
-  dish eaten 7 times over 36 weekday-lunch occasions has rate 0.194; over a five-occasion week it
-  accrues 0.97.
+  dish eaten 6 times over 36 weekday-lunch occasions has weekday rate 0.167 and, if it was also
+  eaten on 1 of 8 Saturdays, a separate Saturday rate of 0.125; over a five-occasion week the
+  weekday ledger accrues 0.83.
 
 Scopes are symmetric and disjoint: a dish's Saturday ledger accrues only its Saturday rows and is
 charged only by Saturday placements; its weekday ledger only its weekday rows and placements. A
@@ -176,7 +177,10 @@ generation: seed at the cutover week from the record before it, then for each we
 cutover week to the week being generated, accrue against the record as it stood, charge the
 placements the engine made that week (persisted on the week's `currentWeek` row as its
 `generatedPlan`, §12), and charge every as-eaten row of that week the plan did not contain. A week
-with no `currentWeek` row accrues only. Replay is linear in weeks times dishes and keeps §10's
+with no `currentWeek` row accrues only. Each replayed week is replayed in its own season (the
+season its `weekStart` falls in): its eligibility set, its fruit season scope, and its charges are
+evaluated for that season, so an out-of-season dish's deficit stays frozen across the weeks it is
+absent, exactly as §3 requires, whatever season the generating week is in. Replay is linear in weeks times dishes and keeps §10's
 promise that all state derives from persisted data; it also makes the gate's "corrected" run (§11)
 the same code path as production.
 
