@@ -1,0 +1,36 @@
+[
+  {
+    "weekStart": "2026-06-22",
+    "picks": [
+      { "day": "Mon", "meal": "breakfast", "dishId": 271 },
+      { "day": "Mon", "meal": "lunch", "dishId": 6 },
+      { "day": "Mon", "meal": "lunch", "dishId": 103 },
+      { "day": "Mon", "meal": "fruit", "dishId": 276 },
+      { "day": "Sat", "meal": "lunch", "dishId": 36 }
+    ],
+    "skippedDays": [],
+    "generatedPlan": [
+      { "day": "Mon", "meal": "breakfast", "dishId": 29 },
+      { "day": "Mon", "meal": "lunch", "dishId": 6 },
+      { "day": "Mon", "meal": "lunch", "dishId": 103 },
+      { "day": "Mon", "meal": "fruit", "dishId": 276 },
+      { "day": "Sat", "meal": "lunch", "dishId": 36 }
+    ]
+  },
+  {
+    "weekStart": "2026-06-15",
+    "picks": [
+      { "day": "Mon", "meal": "breakfast", "dishId": 29 },
+      { "day": "Mon", "meal": "lunch", "dishId": 63 },
+      { "day": "Mon", "meal": "lunch", "dishId": 103 },
+      { "day": "Mon", "meal": "fruit", "dishId": 154 },
+      { "day": "Tue", "meal": "breakfast", "dishId": 39 },
+      { "day": "Tue", "meal": "lunch", "dishId": 59 },
+      { "day": "Tue", "meal": "lunch", "dishId": 79 },
+      { "day": "Wed", "meal": "lunch", "dishId": 16 }
+    ],
+    "skippedDays": ["Wed"],
+    "generatedPlan": null,
+    "customPicks": [{ "day": "Tue", "meal": "breakfast", "customLabel": "Red sauce pasta" }]
+  }
+]
