@@ -11,7 +11,7 @@
  * round 3). The shapes themselves are fixed by `features/engine-v6-plan.md` §5.
  */
 
-import type { Dish, Season } from "../data/schemas.js";
+import type { CatalogIngredient, Dish, Ingredient, Season } from "../data/schemas.js";
 import type { GeneratedWeek } from "../generateWeek.js";
 
 /**
@@ -82,10 +82,18 @@ export interface RecordWeek {
  * (§9).
  */
 export interface DishStats {
-  /** As-eaten rows of the dish in each scope's slots (§2.2). */
-  eatenCount: Record<Scope, number>;
-  /** `eatenCount[scope] / occasions[scope]`: servings per occasion (§2.2). */
-  rate: Record<Scope, number>;
+  /**
+   * As-eaten rows of the dish in each scope's slots (§2.2).
+   *
+   * Partial by design: §2.2 makes a dish with no as-eaten row in a scope
+   * **absent** from that scope's pools, not present at rate zero, and absence is
+   * represented as a missing key. Read a missing key as absence; `?? 0` is only
+   * correct where the caller has already decided that absence and zero mean the
+   * same thing.
+   */
+  eatenCount: Partial<Record<Scope, number>>;
+  /** `eatenCount[scope] / occasions[scope]`: servings per occasion (§2.2). Partial, like `eatenCount`. */
+  rate: Partial<Record<Scope, number>>;
   /** ISO Monday of the dish's most recent as-eaten week, read by the §3 cold start. */
   lastEatenWeek: string | null;
   /**
@@ -227,6 +235,22 @@ export interface GenerateWeekV6Args {
   cutoverWeek?: string;
   /** Gate variants (§11). Production passes nothing. */
   variant?: GenerateWeekV6Variant;
+  /**
+   * The macro inputs the §7 exploration score's protein-band signal reads: the
+   * per-dish ingredient rows and the ingredient catalog (`docs/engine.md` §11).
+   *
+   * Optional, and without it that one signal reads zero for every candidate while
+   * the other two (shared primary ingredient, familiar category) still rank the
+   * pool. Production and the §11 gate both pass the baked library's `ingredients`
+   * and `catalog`; the engine cannot import them itself, because
+   * `engine/src/data/library.ts` is baked from `data/` and does not exist on a
+   * fresh worktree, so an import of it from `engine/src` would make `npm run bake`
+   * unable to run the very build that writes it.
+   */
+  nutrition?: {
+    ingredients: Ingredient[];
+    catalog: CatalogIngredient[];
+  };
 }
 
 /**
@@ -292,6 +316,26 @@ export interface V6Diagnostics {
   repairs: ConstraintRepair[];
   /** Days over the §5.1 120-minute prep ceiling after repairs (§11 threshold 10). */
   prepCeilingBreaches: PrepCeilingBreach[];
+  /**
+   * Violations the §6 step 6 constraint pass could not clear deterministically,
+   * as `reason:day` or `reason:day:meal` keys (for example `prep-ceiling:Thu`,
+   * `item-ceiling:Wed:lunch`). Reported, never gated: §5.1 makes the
+   * consecutive-rice rule soft and allows a cross-meal repeat when no
+   * alternative exists, so an entry here is information for §11, not a failure.
+   */
+  unrepairable: string[];
+  /**
+   * The §5.3 count this week's plan carried into the ceiling: weekday lunch
+   * stars whose cuisine is not Indian, the exploration pick included. Reported
+   * by §11 threshold 8.
+   */
+  weekdayInternationalStars: number;
+  /**
+   * The §12 cutover week this generation replayed from, derived unless the
+   * caller overrode it. Reported so the §11 harness can show that a self-feeding
+   * run settles on one cutover instead of moving it every week.
+   */
+  cutoverWeek: string;
 }
 
 /**

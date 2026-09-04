@@ -35,6 +35,7 @@ import {
   isHp,
   isSelfSufficientMain,
 } from "../composition.js";
+import type { PoolEntry, PoolProvider } from "./place.js";
 import type { Ledger, PickRole, RecordStats, Scope } from "./types.js";
 
 /**
@@ -51,27 +52,13 @@ export interface PoolContext {
 }
 
 /**
- * One eligible dish in a role pool with its current ledger state.
- *
- * `deficit` is the dish's §3 deficit in the pool's scope and may be negative;
- * `rate` is its §2.2 servings-per-occasion in that scope and is never negative.
+ * `PoolEntry` (one eligible dish with its ledger state) and `PoolProvider` (how
+ * the placement and repair passes ask for ranked alternatives in a role) are
+ * declared once, in `place.ts`, and re-exported here so that a caller composing
+ * plates still needs only this module. They lived in both files while streams B
+ * and C were built in parallel; `place.ts` is the single home now.
  */
-export interface PoolEntry {
-  dish: Dish;
-  deficit: number;
-  rate: number;
-}
-
-/**
- * How the placement and repair passes ask for ranked alternatives in a role
- * without importing this module's individual pool functions: the orchestrator
- * wires one of these from `poolProvider`.
- */
-export type PoolProvider = (
-  role: PickRole,
-  scope: Scope,
-  exclude: ReadonlySet<number>,
-) => PoolEntry[];
+export type { PoolEntry, PoolProvider };
 
 // ---------------------------------------------------------------------------
 // Field predicates
@@ -311,7 +298,7 @@ export function deficitOf(ledger: Ledger, dishId: number, scope: Scope): number 
   return ledger.deficits.get(`${dishId}:${scope}`) ?? 0;
 }
 
-/** The §2.2 rate of a dish in a scope. A dish with no record entry reads as zero. */
+/** The §2.2 rate of a dish in a scope. A dish absent from the scope reads as zero. */
 export function rateOf(stats: RecordStats, dishId: number, scope: Scope): number {
   return stats.perDish.get(dishId)?.rate[scope] ?? 0;
 }
@@ -319,7 +306,7 @@ export function rateOf(stats: RecordStats, dishId: number, scope: Scope): number
 /** §2.2 scope presence: the dish has at least one as-eaten row in this scope's slots. */
 function presentInScope(stats: RecordStats, dishId: number, scope: Scope): boolean {
   const dish = stats.perDish.get(dishId);
-  return dish !== undefined && dish.eatenCount[scope] > 0;
+  return dish !== undefined && (dish.eatenCount[scope] ?? 0) > 0;
 }
 
 /** §9 season presence: the fruit has at least one as-eaten row in this season. */
