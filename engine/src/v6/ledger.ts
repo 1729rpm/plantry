@@ -307,14 +307,8 @@ export function reconcile(
   season: Season,
   fruitAllSeason = false,
 ): Ledger {
-  const eaten = countedPicksOfWeek(week.picks, week.weekStart, library, season, fruitAllSeason);
-  const planned = countedPicksOfWeek(
-    week.generatedPlan ?? [],
-    week.weekStart,
-    library,
-    season,
-    fruitAllSeason,
-  );
+  const eaten = countedPicksOfWeek(week, "eaten", library, season, fruitAllSeason);
+  const planned = countedPicksOfWeek(week, "planned", library, season, fruitAllSeason);
   let next = ledger;
   for (const entry of unmatchedEatenPicks(eaten, planned)) {
     next = charge(next, entry.pick.dishId, entry.scope);
@@ -413,13 +407,7 @@ export function replayLedger(args: ReplayLedgerArgs): Ledger {
     const row = sorted.find((candidate) => candidate.weekStart === week);
     if (!row) continue;
 
-    const planned = countedPicksOfWeek(
-      row.generatedPlan ?? [],
-      row.weekStart,
-      library,
-      season,
-      fruitAllSeason,
-    );
+    const planned = countedPicksOfWeek(row, "planned", library, season, fruitAllSeason);
     for (const entry of planned) ledger = charge(ledger, entry.pick.dishId, entry.scope);
     ledger = reconcile(ledger, row, library, season, fruitAllSeason);
   }

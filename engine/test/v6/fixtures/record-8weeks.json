@@ -133,9 +133,7 @@
         "dishId": 279
       }
     ],
-    "skippedDays": [
-      "Fri"
-    ],
+    "skippedDays": ["Fri"],
     "generatedPlan": null
   },
   {
@@ -1007,10 +1005,7 @@
         "dishId": 274
       }
     ],
-    "skippedDays": [
-      "Mon",
-      "Tue"
-    ],
+    "skippedDays": ["Mon", "Tue"],
     "generatedPlan": null
   },
   {
@@ -1127,9 +1122,7 @@
         "dishId": 154
       }
     ],
-    "skippedDays": [
-      "Mon"
-    ],
+    "skippedDays": ["Mon"],
     "generatedPlan": null
   }
 ]

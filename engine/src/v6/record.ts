@@ -24,12 +24,7 @@ import type {
 } from "./types.js";
 
 /** The four §2.2 scopes in their canonical order. Every scope loop uses this order. */
-export const SCOPES: readonly Scope[] = [
-  "weekdayBreakfast",
-  "weekdayLunch",
-  "saturday",
-  "fruit",
-];
+export const SCOPES: readonly Scope[] = ["weekdayBreakfast", "weekdayLunch", "saturday", "fruit"];
 
 /** Monday to Friday, the days that carry a weekday breakfast and a weekday lunch (§4). */
 const WEEKDAYS: readonly Day[] = ["Mon", "Tue", "Wed", "Thu", "Fri"];
@@ -221,9 +216,12 @@ function countedPicks(
   season: Season,
   known: ReadonlySet<number>,
   fruitAllSeason: boolean,
+  skippedDays: readonly Day[],
 ): Array<{ pick: Pick; scope: Scope }> {
+  const skipped = new Set<Day>(skippedDays);
   const out: Array<{ pick: Pick; scope: Scope }> = [];
   for (const pick of [...picks].sort(comparePicks)) {
+    if (skipped.has(pick.day)) continue;
     if (!known.has(pick.dishId)) continue;
     const scope = scopeOfPick(pick);
     if (scope === null) continue;
@@ -276,6 +274,7 @@ export function deriveRecordStats(
 
   for (const week of sorted) {
     const weekSeason = seasonOfWeek(week.weekStart);
+    const skipped = new Set<Day>(week.skippedDays);
 
     // Every scoped, library-known pick feeds the dish-level memory (last eaten week,
     // occupations, per-season fruit counts), whatever season it falls in. Only the
@@ -283,6 +282,7 @@ export function deriveRecordStats(
     // the season-scoped fruit rate; the weekday and Saturday scopes are not
     // season-scoped, so every one of their picks counts.
     for (const pick of [...week.picks].sort(comparePicks)) {
+      if (skipped.has(pick.day)) continue;
       if (!known.has(pick.dishId)) continue;
       const scope = scopeOfPick(pick);
       if (scope === null) continue;
@@ -295,7 +295,10 @@ export function deriveRecordStats(
         acc.lastEatenWeek = week.weekStart;
       }
       const slot = `${pick.day}:${pick.meal}`;
-      const occupation = acc.occupations.get(slot) ?? { lastWeek: week.weekStart, weeks: new Set() };
+      const occupation = acc.occupations.get(slot) ?? {
+        lastWeek: week.weekStart,
+        weeks: new Set(),
+      };
       if (week.weekStart > occupation.lastWeek) occupation.lastWeek = week.weekStart;
       occupation.weeks.add(week.weekStart);
       acc.occupations.set(slot, occupation);
@@ -308,8 +311,22 @@ export function deriveRecordStats(
     }
 
     if (week.generatedPlan !== null) {
-      const eaten = countedPicks(week.picks, weekSeason, season, known, fruitAllSeason);
-      const planned = countedPicks(week.generatedPlan, weekSeason, season, known, fruitAllSeason);
+      const eaten = countedPicks(
+        week.picks,
+        weekSeason,
+        season,
+        known,
+        fruitAllSeason,
+        week.skippedDays,
+      );
+      const planned = countedPicks(
+        week.generatedPlan,
+        weekSeason,
+        season,
+        known,
+        fruitAllSeason,
+        [],
+      );
       swappedOut.push(...unmatchedPlanPicks(planned, eaten));
     }
   }
@@ -396,23 +413,37 @@ export function unmatchedEatenPicks(
   return out;
 }
 
-/** The counted picks of one week, for `reconcile` (§3) and for the replay's plan charges. */
+/**
+ * The picks of one week that count, for `reconcile` (§3) and for the replay's plan
+ * charges.
+ *
+ * `kind` decides which list is read and whether the week's skipped days apply. An
+ * as-eaten row on a skipped day is not a row at all (§2.1: the record is the week's
+ * slot state "minus every day named in its `skippedDays`"), while a plan pick on a
+ * day the household later skipped stays: the engine placed it and §3 charged it, and
+ * §3's no-refund rule keeps that charge.
+ */
 export function countedPicksOfWeek(
-  picks: readonly Pick[],
-  weekStart: string,
+  week: RecordWeek,
+  kind: "eaten" | "planned",
   library: readonly Dish[],
   season: Season,
   fruitAllSeason: boolean,
 ): Array<{ pick: Pick; scope: Scope }> {
   const known = new Set(library.map((dish) => dish.id));
-  return countedPicks(picks, seasonOfWeek(weekStart), season, known, fruitAllSeason);
+  const picks = kind === "eaten" ? week.picks : (week.generatedPlan ?? []);
+  return countedPicks(
+    picks,
+    seasonOfWeek(week.weekStart),
+    season,
+    known,
+    fruitAllSeason,
+    kind === "eaten" ? week.skippedDays : [],
+  );
 }
 
 /** Whether the requested season has no record occasions, so §2.2's fallback is in force. */
-export function isFruitAllSeasonFallback(
-  record: readonly RecordWeek[],
-  season: Season,
-): boolean {
+export function isFruitAllSeasonFallback(record: readonly RecordWeek[], season: Season): boolean {
   return buildSeries(record, season).fruitAllSeason;
 }
 
@@ -484,11 +515,7 @@ export function rateIn(stats: RecordStats, dishId: number, scope: Scope): number
 }
 
 /** The as-eaten rows a dish carries in a scope, or undefined when it is absent from it. */
-export function eatenCountIn(
-  stats: RecordStats,
-  dishId: number,
-  scope: Scope,
-): number | undefined {
+export function eatenCountIn(stats: RecordStats, dishId: number, scope: Scope): number | undefined {
   const dish = stats.perDish.get(dishId);
   if (!dish) return undefined;
   return (dish.eatenCount as Partial<Record<Scope, number>>)[scope];
