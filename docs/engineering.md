@@ -60,10 +60,17 @@ currentWeek
     author: "rajat" | "tuhina"
     skippedAt: number
   }
+  generatedPlan?: array of {           # what the engine placed when the row was written
+    day: "Mon" | "Tue" | "Wed" | "Thu" | "Fri" | "Sat"
+    meal: "breakfast" | "lunch" | "fruit"
+    dishId: number
+  }
   version: number                      # for optimistic concurrency
 ```
 
-Each (day, meal) slot holds the engine's full pick list for that meal. Breakfast carries one or two dishes: the count is variable because a self-sufficient main (a Category=Bread `complete_carb` such as avocado toast, or a `complete_meal` main) fills the slot alone, and a single-pick breakfast whose main carries no HP tag gains one HP protein companion. Mon/Wed/Fri lunch carries 3; Tue/Thu lunch carries 4; Saturday lunch carries 3. Every day Mon to Sat (Saturday included) also carries a `meal: "fruit"` slot of exactly one dish, the Fruit of the day (`docs/engine.md` §3.3); it sits outside the breakfast and lunch composition and outside the item cap. Per-dish author and updatedAt let the slow loop attribute who changed which dish in a multi-dish meal. `includeRecipe` marks a dish whose recipe sheet rides along in the shared image family; it lives on the week so it resets when a new week document is generated. `skippedDays` records days the user is eating out or away; the day's dishes stay in `slots` (restore is lossless), and skipped days are excluded from the grocery list and the finalized archive. The slot `meal` type (`breakfast | lunch | fruit`), and the narrower `breakfast | lunch` meal-time used at the add, delete, recipe, and custom-dish call boundaries, both derive from one validator in `app/convex/lib/meals.ts`; `schema.ts` and every server consumer share that single definition, so a new slot meal is a compile error in any unhandled consumer rather than a silent gap.
+Each (day, meal) slot holds the engine's full pick list for that meal. Breakfast carries one or two dishes (a main plus at most one small item), weekday lunch two or three, Saturday lunch two or three; the counts are ceilings, so a plate with nothing due lands smaller (`docs/engine.md` §5). Every day Mon to Sat (Saturday included) also carries a `meal: "fruit"` slot of exactly one dish, the Fruit of the day (`docs/engine.md` §9); it sits outside the breakfast and lunch composition and outside the item cap. Per-dish author and updatedAt let the slow loop attribute who changed which dish in a multi-dish meal. `includeRecipe` marks a dish whose recipe sheet rides along in the shared image family; it lives on the week so it resets when a new week document is generated. `skippedDays` records days the user is eating out or away; the day's dishes stay in `slots` (restore is lossless), and skipped days are excluded from the grocery list, from the household record, and from the finalized archive.
+
+`currentWeek` is the household record the engine reads (`docs/engine.md` §2.1): every row with an earlier `weekStart` is one record week, in its live edited state. `generatedPlan` is the additive field that makes the ledger replayable: it holds the (day, meal, dishId) list the engine placed when the row was written, so a later run can tell an engine placement from a hand swap-in (`docs/engine.md` §3.1). It is optional, so rows written before the cutover week carry none and read as record-only weeks. The slot `meal` type (`breakfast | lunch | fruit`), and the narrower `breakfast | lunch` meal-time used at the add, delete, recipe, and custom-dish call boundaries, both derive from one validator in `app/convex/lib/meals.ts`; `schema.ts` and every server consumer share that single definition, so a new slot meal is a compile error in any unhandled consumer rather than a silent gap.
 
 ```
 weekArchive
@@ -71,10 +78,16 @@ weekArchive
   finalizedAt: number
   rows: array of {
     day: "Monday" | "Tuesday" | "Wednesday" | "Thursday" | "Friday" | "Saturday" | "Sunday"
-    meal: "Breakfast" | "Lunch" | "Fruit"   # Fruit: the §3.3 Fruit of the day, archived for cross-week fruit recency
+    meal: "Breakfast" | "Lunch" | "Fruit"   # Fruit: the Fruit of the day (docs/engine.md §9)
     dishName: string
     dishId: number
   }                                    # mirrors menu_history.md row format exactly
+
+# Provenance, not signal. Finalize snapshots the week at the moment of
+# finalizing and the household edits weeks after that moment, so the archive
+# under-reports as-eaten rows for edited weeks. Nothing in generation, Explore,
+# or the picker reads it; the record comes from `currentWeek` instead
+# (`docs/engine.md` §2.1). `data/menu_history.md` is provenance on the same terms.
 
 manualChanges                          # append-only log of user edits
   createdAt: number
@@ -106,7 +119,7 @@ favorites                              # the household's rotation list
   # index: by_dishId
 
 # Exactly one of dishId / customLabel is set. Generation guarantees every library
-# favorite a place in the week (`docs/engine.md` §4 step 4); a custom favorite has no
+# favorite a place in the week (`docs/engine.md` §8); a custom favorite has no
 # library id, so it is display-only and generation cannot place it.
 
 wishlist                               # the household's shared "save it to try" list
@@ -177,8 +190,8 @@ Coverage is complete: every active dish carries a photo (a coverage report asser
 **Read (swap picker alternatives):**
 
 1. Frontend calls `getSlotAlternatives({ weekStart, day, meal, position, limit? })`.
-2. The query builds a non-restrictive candidate pool: every dish in the library that is Active, in-season for the current Bangalore season, and matches the meal-time (Breakfast-time dishes for breakfast positions, Lunch-time dishes for lunch positions). For a fruit slot (`meal: "fruit"`) the pool is category-based rather than meal-time-based: every Active, in-season, Category=Fruit dish, the swap-time analogue of the generation-time fruit pool (`docs/engine.md` §3.3). No per-position eligibility filter; §3 composition (HP/partner/Option A-B-C/carb-position) is not enforced.
-3. The engine ranks the pool by `docs/engine.md` §4 priority (longest-unused first, with the ingredient ledger and same-day-breakfast tilts seeded from the live week's other picks, excluding the slot/position being ranked).
+2. The query builds a non-restrictive candidate pool: every dish in the library that is Active, in-season for the current Bangalore season, and non-Fruit, so a breakfast dish is reachable from a lunch slot and vice versa. For a fruit slot (`meal: "fruit"`) the pool is category-based instead: every Active, in-season, Category=Fruit dish, the swap-time analogue of the generation-time fruit pool (`docs/engine.md` §9). No per-position eligibility filter; the composition rules of `docs/engine.md` §5 are not enforced.
+3. The query derives the not-placed-this-week tier from the record (`docs/engine.md` §2.1) and passes it to the engine, which ranks the pool by `docs/engine.md` §13: a head of dishes not already on that day, ordered by that tier then dish id, then a tail of the same-day repeats in the same order, then a stable slot-meal-first partition applied by the caller.
 4. The currently-picked dish at this position is filtered out; the frontend renders the ranked list and the user picks any dish.
 
 **Read (grocery list):**
@@ -194,12 +207,12 @@ Coverage is complete: every active dish carries a photo (a coverage report asser
 **Read (explore feed):**
 
 1. Frontend calls `getExploreFeed({ weekStart })`.
-2. The query feeds the engine `rankExplore` the library, the season for `weekStart`, and the cooking history: the baked `menu_history` plus a synthetic row per `weekArchive` row (weeks finalized since the last bake), so a dish cooked in either record is excluded. The engine returns the eligible (active, in-season), never-cooked dishes ranked familiar-but-new, each with its `dominantAffinity` key (`shared-ingredient` / `protein-match` / `familiar-category`); the query projects `{ dishId, name, dominantAffinity }`. The UI phrases the "why it fits" line from the key; no UI prose leaves the engine. With an empty `weekArchive` the feed is exactly what the engine derives from the seed.
+2. The query loads the record via `lib/record.ts` and feeds the engine `rankExploreV6` the library, the season for `weekStart`, and that record. The engine returns the eligible (active, in-season) dishes with `eatenCount = 0` in every scope, ranked familiar-but-new against record rows of the candidate's own meal type, each with its `dominantAffinity` key (`shared-ingredient` / `protein-match` / `familiar-category`); the query projects `{ dishId, name, dominantAffinity }`. The UI phrases the "why it fits" line from the key; no UI prose leaves the engine. With an empty record every eligible dish is never-eaten, so the feed is the whole active in-season library ranked by id.
 
 **Write (swap a dish):**
 
 1. Frontend optimistically updates the UI.
-2. Convex mutation `swapDish({ author, weekStart, day, meal, position, newDishId, reason, version })` validates: `version` matches the loaded version (optimistic concurrency); the (day, meal) slot exists and `position` is within `slot.dishes`; the new dish is in the library, is Active, and is in season; for a breakfast or lunch slot it must match the meal-time, and for a fruit slot it must be Category=Fruit instead. The `reason` is optional: it is trimmed and an empty one stores as "". Per `docs/product.md` §4 Principle 4 the fast loop stays permissive; §3 composition eligibility is not validated at swap time.
+2. Convex mutation `swapDish({ author, weekStart, day, meal, position, newDishId, reason, version })` validates: `version` matches the loaded version (optimistic concurrency); the (day, meal) slot exists and `position` is within `slot.dishes`; the new dish is in the library, is Active, and is in season; for a breakfast or lunch slot it must match the meal-time, and for a fruit slot it must be Category=Fruit instead. The `reason` is optional: it is trimmed and an empty one stores as "". Per `docs/product.md` §4 Principle 4 the fast loop stays permissive; the composition rules of `docs/engine.md` §5 are not validated at swap time.
 3. On success the slot's `dishes[position]` updates to `{ dishId: newDishId, customLabel: null, source: "swapped", author, updatedAt: now }`, `version` increments, and a `manualChanges` row inserts in the same Convex transaction carrying the slot's pre-change `before`, the new `after`, the user's `reason`, `changeKind: "swap"`, and `status: "queued"`. The grocery list is re-derived by the engine on read.
 4. On failure the frontend rolls back. The tagged-union return distinguishes recoverable reasons (`version-mismatch`, `no-current-week`, `no-such-slot`, `no-such-position`, `dish-not-in-library`, `dish-not-meal-time`, `dish-not-fruit`, `dish-not-active-or-in-season`) the UI handles inline; `dish-not-fruit` is the fruit-slot analogue of `dish-not-meal-time`. A missing or empty `author` throws; an empty `reason` does not.
 
@@ -217,7 +230,7 @@ Coverage is complete: every active dish carries a photo (a coverage report asser
 **Write (add a library dish to a day):**
 
 1. Frontend calls `addDish({ author, weekStart, day, meal, newDishId, reason, version })`.
-2. Validates author, version, slot, and the dish (the `reason` is optional and trimmed; the dish must be in the library, meal-time, Active, in season; same hard filters as swap, no §3 composition check). Appends `{ dishId: newDishId, customLabel: null, source: "swapped", author, updatedAt: now }` to `slot.dishes`, increments `version`, and inserts a `manualChanges` row with `changeKind: "add"`, `before` = a null entry, `after` = the added dish. Returns the new `position`. Recoverable reasons: `version-mismatch`, `no-current-week`, `no-such-slot`, `dish-not-in-library`, `dish-not-meal-time`, `dish-not-active-or-in-season`.
+2. Validates author, version, slot, and the dish (the `reason` is optional and trimmed; the dish must be in the library, meal-time, Active, in season; same hard filters as swap, no composition check). Appends `{ dishId: newDishId, customLabel: null, source: "swapped", author, updatedAt: now }` to `slot.dishes`, increments `version`, and inserts a `manualChanges` row with `changeKind: "add"`, `before` = a null entry, `after` = the added dish. Returns the new `position`. Recoverable reasons: `version-mismatch`, `no-current-week`, `no-such-slot`, `dish-not-in-library`, `dish-not-meal-time`, `dish-not-active-or-in-season`.
 
 **Write (skip / restore a day):**
 
@@ -242,13 +255,19 @@ Coverage is complete: every active dish carries a photo (a coverage report asser
 **Write (finalize the week):**
 
 1. A user finalizes via `finalizeWeek({ author, weekStart, version })` (or a future scheduled action).
-2. Validates `author`, version (optimistic concurrency), that the week exists, and that it is not already `final`. Appends a `weekArchive` row whose `rows` mirror the `menu_history.md` format (long-form day, capitalised meal, dish name from the baked library, dish id), then flips `currentWeek.status` to `"final"` and increments `version`. Skipped days (`currentWeek.skippedDays`) and custom dishes are excluded from the archive: a skipped day was not cooked, so recency (`docs/engine.md` §4) must not see it, and a custom dish has no library id or canonical name. The day's `slots` are untouched (restore stays lossless). With no skipped days every library pick archives, exactly as a week with no skips always has. Recoverable reasons: `version-mismatch`, `no-current-week`, `already-final`.
+2. Validates `author`, version (optimistic concurrency), that the week exists, and that it is not already `final`. Appends a `weekArchive` row whose `rows` mirror the `menu_history.md` format (long-form day, capitalised meal, dish name from the baked library, dish id), then flips `currentWeek.status` to `"final"` and increments `version`. Skipped days (`currentWeek.skippedDays`) and custom dishes are excluded from the archive: a skipped day was not cooked, so it contributes no as-eaten row (`docs/engine.md` §10), and a custom dish has no library id or canonical name. The archive is provenance; `currentWeek` stays the record generation reads. The day's `slots` are untouched (restore stays lossless). With no skipped days every library pick archives, exactly as a week with no skips always has. Recoverable reasons: `version-mismatch`, `no-current-week`, `already-final`.
 
-**Generation (place the household's favorites):**
+**Generation (generate the week):**
 
-1. `generateCurrentWeek({ weekStart, rng?, userRequestedDishId? })`, an `internalMutation` triggered by the EM or a future scheduled action, reads every `favorites` row (createdAt ascending) and passes the library ones to the engine as the guaranteed-placement set (`docs/engine.md` §4 step 4). Custom favorites carry no `dishId`, so they are skipped here. An empty favorites set leaves generation identical to a run with no favorites.
-2. The cooking history it passes the engine is the baked `menu_history` merged with a synthetic row per `weekArchive` row finalized since the last bake, built by the shared `app/convex/lib/archiveHistory.ts` helper (`explore.ts` derives its history from the same helper). Generation recency (`docs/engine.md` §4), the §2 Saturday Menu 3/4 alternation, and the §3.3 fruit rotation therefore rank against the weeks actually finalized since the bake rather than the frozen seed alone; with an empty `weekArchive` the history is exactly the seed.
-3. The engine places each favorite into a slot whose §3 composition accepts it, overriding §4 recency, and never places one twice in a week. A favorite that no slot accepts (out of season, inactive, unknown, or no fitting slot) is left unplaced and named in one `warn` incident for the week, so the run still produces a complete menu rather than failing. The favorites list is standing state, so nothing is consumed or marked: the next run reads it again unchanged.
+1. `generateCurrentWeek({ weekStart })`, an `internalMutation` triggered by the EM or a future scheduled action. It takes no rng and no requested-dish argument: the engine is deterministic (`docs/engine.md` §14) and nothing supplies a request in production.
+2. It loads three inputs. The **record** comes from `app/convex/lib/record.ts`: `loadRecord(ctx, weekStart)` returns every `currentWeek` row with an earlier `weekStart` in ascending order, each as its live slot state with skipped days removed, null-`dishId` custom picks dropped, and its `generatedPlan` passed through (null for a pre-cutover row). The **favorites** are every `favorites` row, createdAt ascending; the library ones go to the engine as the guaranteed-placement set (`docs/engine.md` §8) and custom favorites, which carry no `dishId`, are skipped. The **season** is derived from `weekStart`.
+3. The engine replays the ledger from the record (`docs/engine.md` §3.1), pins the favorites, and plans and places the week. A favorite that no slot accepts (out of season, inactive, unknown, or no fitting slot) is left unplaced and named in one `warn` incident for the week, so the run still produces a complete menu rather than failing. The favorites list is standing state, so nothing is consumed or marked: the next run reads it again unchanged.
+4. The mutation writes the week's slots **and its `generatedPlan`**, the (day, meal, dishId) list the engine placed. Without it the next run cannot separate an engine placement from a hand swap-in, so the write is not optional.
+
+**Record maintenance (two internal functions, no UI):**
+
+1. `recordExport:exportRecord`, an `internalQuery` returning the same `RecordWeek[]` shape `loadRecord` builds, for a read-only pull of the production record (`npx convex run --prod recordExport:exportRecord`). Its output is the fixture the `docs/engine.md` §16 gate harness runs against, so the gate measures the real record rather than a hand-built one.
+2. `promoteCustomPick`, an `internalMutation` that re-points one custom pick (`weekStart, day, meal, position, dishId`) at a library id once that dish is authored. It is guarded: it touches only a pick whose `dishId` is null and whose `customLabel` matches the argument, and it writes no `manualChanges` row, because a re-point is a data repair rather than a household edit. A custom pick contributes no record row until it is promoted this way (`docs/engine.md` §2.1).
 
 ## 6. Auto-recovery middleware
 
@@ -394,8 +413,8 @@ Every PR runs these checks; any failure blocks merge.
 1. **Round-trip parsers.** Each `data/dishes/<slug>.md` file and the `data/ingredients.md` catalog parse and re-serialize byte-identical (modulo declared whitespace policy). `data/menu_history.md` parses cleanly. The data validators (name resolution, group presence, id/slug uniqueness, slug-filename match) also run.
 2. **Engine spec/code parity.** If `docs/engine.md` is modified, the PR must also modify `engine/src/` and `engine/test/`. The check fails with a message naming the missing pair.
 3. **Engine type-check + unit tests.** Standard TS compile + Vitest run.
-4. **Simulation harness.** The 5-week forward simulation runs against the current engine + library. Any newly-invalid menu fails the build.
-5. **Property tests.** Item cap never exceeded, no dish in no-repeat window appears in output, Saturday alternates Menu 3/4 across consecutive weeks.
+4. **Gate harness.** `engine/test/v6/gate.test.ts`, the CI-sized subset of the `docs/engine.md` §16 verification gate: the 60-week self-feeding run against the record fixture, asserting distribution fidelity, lunch-main uniqueness, slot anti-lock, the Saturday thresholds, and plate size and effort. It is kept under a minute. The full three-run harness with its variants is `npm run gate` (`engine/scripts/gate.ts`), run per phase against the production record export rather than per PR, and its report is committed alongside the phase.
+5. **Property tests.** Item cap never exceeded, and generation is deterministic: two runs on the same inputs are byte-identical, and reversing the library array changes nothing.
 6. **Convex schema typecheck.** `npx convex codegen` succeeds; no orphan tables or fields.
 7. **Frontend build.** Vite build succeeds; type-check passes; service worker bundles.
 8. **Lint and format.** ESLint + Prettier + stylelint, no warnings. stylelint parses every `app/web/src/**/*.css` and fails the build on unbalanced or unclosed CSS, which Vite would otherwise tolerate and ship silently.
