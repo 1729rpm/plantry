@@ -3,7 +3,7 @@ id: 128
 name: Paneer salad
 category: Accompaniment
 time: Lunch
-tags: [HP]
+tags: [HP, cuisine_neutral]
 primaryIngredient: Paneer
 preferred: Yes
 active: Yes

@@ -3,7 +3,7 @@ id: 118
 name: Fish tikka
 category: Keto
 time: Lunch
-tags: [HP]
+tags: [HP, cuisine_neutral]
 primaryIngredient: Fish
 preferred: Yes
 active: Yes

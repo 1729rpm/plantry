@@ -6,7 +6,7 @@ time: Lunch
 tags: [HP, complete_meal]
 primaryIngredient: Rice
 preferred: No
-active: Yes
+active: No
 satiety: High
 prepMinutes: 35
 seasons: All
