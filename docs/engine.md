@@ -1,6 +1,6 @@
 # Engine
 
-The meal-planning rules. This document is the human-readable specification; `engine/src/` is its executable form. Both must change together; any pull request that edits this document without a paired change in `engine/src/` and `engine/test/` fails CI. See §16 for the parity rule and the verification gate in full.
+The meal-planning rules. This document is the human-readable specification; `engine/src/` is its executable form. Both change together: a pull request that edits this document carries the paired change under `engine/src/` and `engine/test/`, and review holds that pairing. See §16 for the parity rule and the verification gate in full.
 
 The engine reproduces what the household eats. The **record** of served weeks is not an input to a ranking, it is the target distribution, and the engine's one job is to reproduce its statistics under the composition constraints. Four instincts of the household explain the rules below; a proposed rule that serves none of them does not belong in the engine.
 
@@ -423,7 +423,7 @@ Each numbered section above corresponds to a module under `engine/src/` plus a p
 | §15 field reference                | `data/schemas.ts`, `data/validators.ts`    | `test/data/schemas.test.ts`, `test/data/validators.test.ts`         |
 | §16 the gate                       | `engine/scripts/gate.ts`                   | `test/v6/gate.test.ts`                                              |
 
-CI enforces the pairing at the PR level: any PR that modifies `docs/engine.md` must also modify at least one file under `engine/src/` and at least one file under `engine/test/`. The check fails with a message naming the missing pair.
+The pairing is held by review at the PR level: a pull request that modifies `docs/engine.md` also modifies at least one file under `engine/src/` and at least one under `engine/test/`, and the reviewer names the missing pair when it does not.
 
 ### 16.3 The verification gate
 
