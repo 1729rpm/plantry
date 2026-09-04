@@ -12,6 +12,7 @@
   "scripts": {
     "bake": "tsc -b && node dist/scripts/bake.js",
     "reports": "tsc -b && node dist/scripts/reports.js",
+    "gate": "tsc -b && node dist/scripts/gate.js",
     "prebuild": "npm run bake",
     "build": "tsc -b",
     "typecheck": "tsc -b",

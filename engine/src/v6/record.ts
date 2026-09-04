@@ -485,19 +485,22 @@ function rateOf(
 }
 
 /**
- * Cast a partial scope map to the `Record<Scope, number>` the type contract names.
+ * Rebuild a partial scope map with its keys in `SCOPES` order, so two derivations
+ * of the same record serialize identically (§10).
  *
- * §2.2 requires absence, not rate zero, and `types.ts` (stream A0's, not editable
- * here) types the field as total. The runtime object is deliberately partial; the
- * cast is the one place that is acknowledged.
+ * The map stays partial on purpose: §2.2 requires absence, not rate zero, and
+ * `DishStats.eatenCount` and `DishStats.rate` in `types.ts` are typed
+ * `Partial<Record<Scope, number>>` to say so.
  */
-function partialScopeRecord(partial: Partial<Record<Scope, number>>): Record<Scope, number> {
+function partialScopeRecord(
+  partial: Partial<Record<Scope, number>>,
+): Partial<Record<Scope, number>> {
   const out: Partial<Record<Scope, number>> = {};
   for (const scope of SCOPES) {
     const value = partial[scope];
     if (value !== undefined) out[scope] = value;
   }
-  return out as Record<Scope, number>;
+  return out;
 }
 
 function orderedSeasonCount(
@@ -524,14 +527,10 @@ function buildOccupations(
 
 /** The rate a dish carries in a scope, or undefined when the dish is absent from it (§2.2). */
 export function rateIn(stats: RecordStats, dishId: number, scope: Scope): number | undefined {
-  const dish = stats.perDish.get(dishId);
-  if (!dish) return undefined;
-  return (dish.rate as Partial<Record<Scope, number>>)[scope];
+  return stats.perDish.get(dishId)?.rate[scope];
 }
 
 /** The as-eaten rows a dish carries in a scope, or undefined when it is absent from it. */
 export function eatenCountIn(stats: RecordStats, dishId: number, scope: Scope): number | undefined {
-  const dish = stats.perDish.get(dishId);
-  if (!dish) return undefined;
-  return (dish.eatenCount as Partial<Record<Scope, number>>)[scope];
+  return stats.perDish.get(dishId)?.eatenCount[scope];
 }

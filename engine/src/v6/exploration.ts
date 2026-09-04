@@ -359,7 +359,7 @@ export function demotedFamilies(
     const dish = dishById.get(dishId);
     if (!dish) continue;
     const family = proteinFamilyV6(dish);
-    const eaten = dishStats.eatenCount.weekdayLunch;
+    const eaten = dishStats.eatenCount.weekdayLunch ?? 0;
     if (eaten > 0) recordByFamily.set(family, (recordByFamily.get(family) ?? 0) + eaten);
   }
   const occasions = stats.occasions.weekdayLunch;

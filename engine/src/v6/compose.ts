@@ -32,10 +32,10 @@ import type {
   MealKey,
   PickOrigin,
   PickRole,
-  PlanPick,
   PrepCeilingBreach,
   Scope,
 } from "./types.js";
+import type { Plate } from "./place.js";
 import type { PoolContext, PoolEntry, PoolProvider } from "./pools.js";
 import {
   breakfastChutneyPool,
@@ -60,19 +60,15 @@ import {
 } from "./pools.js";
 
 /**
- * A composed meal before or after day assignment.
+ * A composed meal before or after day assignment (`day` is null until the §6 step
+ * 5 placement pass assigns one; Saturday plates and the Thursday egg-anchored
+ * breakfast are created with the day already set, because §4 fixes them).
  *
- * `day` is null until the §6 step 5 placement pass assigns one; Saturday plates and
- * the Thursday egg-anchored breakfast are created with the day already set, because
- * §4 fixes them.
+ * Declared once, in `place.ts`, and re-exported here so a caller that only builds
+ * plates needs one import. It lived in both files while streams B and C were built
+ * in parallel; `place.ts` is the single home now.
  */
-export interface Plate {
-  meal: MealKey;
-  scope: Scope;
-  day: Day | null;
-  /** Pick order, lead first; each carries its role, scope, and origin. */
-  picks: Array<Omit<PlanPick, "day">>;
-}
+export type { Plate };
 
 /** A pick the caller has already committed to this plate, typically a §8 pinned favorite. */
 export interface PrePlacedPick {
