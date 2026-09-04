@@ -139,5 +139,6 @@ Grouping judgment calls (institutional memory; do not silently re-bucket):
 | Tomato | Aromatics and Herbs | g | | | | | | | |
 | Toor Dal | Pantry | g | | | 22 | 63 | 1.5 | 15 | |
 | Tortilla | Pantry | pcs | | 45 | 8 | 50 | 7 | 3 | |
+| Urad Dal | Pantry | g | | | 25 | 59 | 1.2 | 18 | |
 | Walnut | Pantry | g | | | 15 | 14 | 65 | 7 | |
 | Zucchini | Vegetables | g | | | 1.2 | 3 | 0.3 | 1 | |
