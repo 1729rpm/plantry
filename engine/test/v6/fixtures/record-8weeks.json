@@ -1,0 +1,1135 @@
+[
+  {
+    "weekStart": "2026-06-15",
+    "picks": [
+      {
+        "day": "Mon",
+        "meal": "breakfast",
+        "dishId": 90
+      },
+      {
+        "day": "Mon",
+        "meal": "lunch",
+        "dishId": 1
+      },
+      {
+        "day": "Mon",
+        "meal": "lunch",
+        "dishId": 47
+      },
+      {
+        "day": "Mon",
+        "meal": "lunch",
+        "dishId": 16
+      },
+      {
+        "day": "Mon",
+        "meal": "fruit",
+        "dishId": 154
+      },
+      {
+        "day": "Tue",
+        "meal": "breakfast",
+        "dishId": 273
+      },
+      {
+        "day": "Tue",
+        "meal": "lunch",
+        "dishId": 140
+      },
+      {
+        "day": "Tue",
+        "meal": "lunch",
+        "dishId": 65
+      },
+      {
+        "day": "Tue",
+        "meal": "lunch",
+        "dishId": 21
+      },
+      {
+        "day": "Tue",
+        "meal": "lunch",
+        "dishId": 103
+      },
+      {
+        "day": "Tue",
+        "meal": "fruit",
+        "dishId": 155
+      },
+      {
+        "day": "Wed",
+        "meal": "breakfast",
+        "dishId": 38
+      },
+      {
+        "day": "Wed",
+        "meal": "breakfast",
+        "dishId": 110
+      },
+      {
+        "day": "Wed",
+        "meal": "breakfast",
+        "dishId": 281
+      },
+      {
+        "day": "Wed",
+        "meal": "lunch",
+        "dishId": 219
+      },
+      {
+        "day": "Wed",
+        "meal": "fruit",
+        "dishId": 274
+      },
+      {
+        "day": "Thu",
+        "meal": "breakfast",
+        "dishId": 31
+      },
+      {
+        "day": "Thu",
+        "meal": "breakfast",
+        "dishId": 30
+      },
+      {
+        "day": "Thu",
+        "meal": "lunch",
+        "dishId": 141
+      },
+      {
+        "day": "Thu",
+        "meal": "lunch",
+        "dishId": 6
+      },
+      {
+        "day": "Thu",
+        "meal": "lunch",
+        "dishId": 272
+      },
+      {
+        "day": "Thu",
+        "meal": "fruit",
+        "dishId": 280
+      },
+      {
+        "day": "Sat",
+        "meal": "lunch",
+        "dishId": 96
+      },
+      {
+        "day": "Sat",
+        "meal": "lunch",
+        "dishId": 48
+      },
+      {
+        "day": "Sat",
+        "meal": "lunch",
+        "dishId": 132
+      },
+      {
+        "day": "Sat",
+        "meal": "fruit",
+        "dishId": 279
+      }
+    ],
+    "skippedDays": [
+      "Fri"
+    ],
+    "generatedPlan": null
+  },
+  {
+    "weekStart": "2026-06-22",
+    "picks": [
+      {
+        "day": "Mon",
+        "meal": "breakfast",
+        "dishId": 33
+      },
+      {
+        "day": "Mon",
+        "meal": "lunch",
+        "dishId": 67
+      },
+      {
+        "day": "Mon",
+        "meal": "lunch",
+        "dishId": 118
+      },
+      {
+        "day": "Mon",
+        "meal": "lunch",
+        "dishId": 21
+      },
+      {
+        "day": "Mon",
+        "meal": "lunch",
+        "dishId": 282
+      },
+      {
+        "day": "Mon",
+        "meal": "fruit",
+        "dishId": 155
+      },
+      {
+        "day": "Tue",
+        "meal": "breakfast",
+        "dishId": 273
+      },
+      {
+        "day": "Tue",
+        "meal": "lunch",
+        "dishId": 117
+      },
+      {
+        "day": "Tue",
+        "meal": "lunch",
+        "dishId": 254
+      },
+      {
+        "day": "Tue",
+        "meal": "fruit",
+        "dishId": 276
+      },
+      {
+        "day": "Wed",
+        "meal": "breakfast",
+        "dishId": 33
+      },
+      {
+        "day": "Wed",
+        "meal": "lunch",
+        "dishId": 76
+      },
+      {
+        "day": "Wed",
+        "meal": "lunch",
+        "dishId": 46
+      },
+      {
+        "day": "Wed",
+        "meal": "lunch",
+        "dishId": 103
+      },
+      {
+        "day": "Wed",
+        "meal": "fruit",
+        "dishId": 274
+      },
+      {
+        "day": "Thu",
+        "meal": "breakfast",
+        "dishId": 31
+      },
+      {
+        "day": "Thu",
+        "meal": "breakfast",
+        "dishId": 30
+      },
+      {
+        "day": "Thu",
+        "meal": "lunch",
+        "dishId": 161
+      },
+      {
+        "day": "Thu",
+        "meal": "lunch",
+        "dishId": 272
+      },
+      {
+        "day": "Thu",
+        "meal": "fruit",
+        "dishId": 280
+      },
+      {
+        "day": "Fri",
+        "meal": "breakfast",
+        "dishId": 36
+      },
+      {
+        "day": "Fri",
+        "meal": "breakfast",
+        "dishId": 111
+      },
+      {
+        "day": "Fri",
+        "meal": "lunch",
+        "dishId": 9
+      },
+      {
+        "day": "Fri",
+        "meal": "lunch",
+        "dishId": 47
+      },
+      {
+        "day": "Fri",
+        "meal": "lunch",
+        "dishId": 103
+      },
+      {
+        "day": "Fri",
+        "meal": "fruit",
+        "dishId": 276
+      },
+      {
+        "day": "Sat",
+        "meal": "lunch",
+        "dishId": 98
+      },
+      {
+        "day": "Sat",
+        "meal": "lunch",
+        "dishId": 283
+      },
+      {
+        "day": "Sat",
+        "meal": "lunch",
+        "dishId": 53
+      },
+      {
+        "day": "Sat",
+        "meal": "fruit",
+        "dishId": 274
+      }
+    ],
+    "skippedDays": [],
+    "generatedPlan": null
+  },
+  {
+    "weekStart": "2026-06-29",
+    "picks": [
+      {
+        "day": "Mon",
+        "meal": "breakfast",
+        "dishId": 33
+      },
+      {
+        "day": "Mon",
+        "meal": "lunch",
+        "dishId": 118
+      },
+      {
+        "day": "Mon",
+        "meal": "lunch",
+        "dishId": 65
+      },
+      {
+        "day": "Mon",
+        "meal": "lunch",
+        "dishId": 25
+      },
+      {
+        "day": "Mon",
+        "meal": "lunch",
+        "dishId": 103
+      },
+      {
+        "day": "Mon",
+        "meal": "fruit",
+        "dishId": 274
+      },
+      {
+        "day": "Tue",
+        "meal": "breakfast",
+        "dishId": 32
+      },
+      {
+        "day": "Tue",
+        "meal": "breakfast",
+        "dishId": 111
+      },
+      {
+        "day": "Tue",
+        "meal": "lunch",
+        "dishId": 206
+      },
+      {
+        "day": "Tue",
+        "meal": "lunch",
+        "dishId": 113
+      },
+      {
+        "day": "Tue",
+        "meal": "fruit",
+        "dishId": 274
+      },
+      {
+        "day": "Wed",
+        "meal": "breakfast",
+        "dishId": 38
+      },
+      {
+        "day": "Wed",
+        "meal": "breakfast",
+        "dishId": 112
+      },
+      {
+        "day": "Wed",
+        "meal": "lunch",
+        "dishId": 174
+      },
+      {
+        "day": "Wed",
+        "meal": "lunch",
+        "dishId": 21
+      },
+      {
+        "day": "Wed",
+        "meal": "lunch",
+        "dishId": 282
+      },
+      {
+        "day": "Wed",
+        "meal": "fruit",
+        "dishId": 280
+      },
+      {
+        "day": "Thu",
+        "meal": "breakfast",
+        "dishId": 31
+      },
+      {
+        "day": "Thu",
+        "meal": "breakfast",
+        "dishId": 30
+      },
+      {
+        "day": "Thu",
+        "meal": "lunch",
+        "dishId": 118
+      },
+      {
+        "day": "Thu",
+        "meal": "lunch",
+        "dishId": 8
+      },
+      {
+        "day": "Thu",
+        "meal": "lunch",
+        "dishId": 103
+      },
+      {
+        "day": "Thu",
+        "meal": "fruit",
+        "dishId": 275
+      },
+      {
+        "day": "Fri",
+        "meal": "breakfast",
+        "dishId": 36
+      },
+      {
+        "day": "Fri",
+        "meal": "breakfast",
+        "dishId": 110
+      },
+      {
+        "day": "Fri",
+        "meal": "lunch",
+        "dishId": 20
+      },
+      {
+        "day": "Fri",
+        "meal": "lunch",
+        "dishId": 28
+      },
+      {
+        "day": "Fri",
+        "meal": "lunch",
+        "dishId": 103
+      },
+      {
+        "day": "Fri",
+        "meal": "fruit",
+        "dishId": 276
+      },
+      {
+        "day": "Sat",
+        "meal": "lunch",
+        "dishId": 15
+      },
+      {
+        "day": "Sat",
+        "meal": "lunch",
+        "dishId": 220
+      },
+      {
+        "day": "Sat",
+        "meal": "lunch",
+        "dishId": 52
+      },
+      {
+        "day": "Sat",
+        "meal": "fruit",
+        "dishId": 277
+      }
+    ],
+    "skippedDays": [],
+    "generatedPlan": null
+  },
+  {
+    "weekStart": "2026-07-06",
+    "picks": [
+      {
+        "day": "Mon",
+        "meal": "breakfast",
+        "dishId": 33
+      },
+      {
+        "day": "Mon",
+        "meal": "lunch",
+        "dishId": 101
+      },
+      {
+        "day": "Mon",
+        "meal": "lunch",
+        "dishId": 103
+      },
+      {
+        "day": "Mon",
+        "meal": "lunch",
+        "dishId": 52
+      },
+      {
+        "day": "Mon",
+        "meal": "fruit",
+        "dishId": 274
+      },
+      {
+        "day": "Tue",
+        "meal": "breakfast",
+        "dishId": 273
+      },
+      {
+        "day": "Tue",
+        "meal": "lunch",
+        "dishId": 164
+      },
+      {
+        "day": "Tue",
+        "meal": "lunch",
+        "dishId": 118
+      },
+      {
+        "day": "Tue",
+        "meal": "lunch",
+        "dishId": 15
+      },
+      {
+        "day": "Tue",
+        "meal": "fruit",
+        "dishId": 155
+      },
+      {
+        "day": "Wed",
+        "meal": "lunch",
+        "dishId": 6
+      },
+      {
+        "day": "Wed",
+        "meal": "lunch",
+        "dishId": 272
+      },
+      {
+        "day": "Wed",
+        "meal": "lunch",
+        "dishId": 52
+      },
+      {
+        "day": "Wed",
+        "meal": "fruit",
+        "dishId": 274
+      },
+      {
+        "day": "Thu",
+        "meal": "breakfast",
+        "dishId": 31
+      },
+      {
+        "day": "Thu",
+        "meal": "breakfast",
+        "dishId": 30
+      },
+      {
+        "day": "Thu",
+        "meal": "lunch",
+        "dishId": 236
+      },
+      {
+        "day": "Thu",
+        "meal": "lunch",
+        "dishId": 26
+      },
+      {
+        "day": "Thu",
+        "meal": "lunch",
+        "dishId": 103
+      },
+      {
+        "day": "Thu",
+        "meal": "fruit",
+        "dishId": 275
+      },
+      {
+        "day": "Fri",
+        "meal": "breakfast",
+        "dishId": 82
+      },
+      {
+        "day": "Fri",
+        "meal": "breakfast",
+        "dishId": 30
+      },
+      {
+        "day": "Fri",
+        "meal": "lunch",
+        "dishId": 76
+      },
+      {
+        "day": "Fri",
+        "meal": "lunch",
+        "dishId": 103
+      },
+      {
+        "day": "Fri",
+        "meal": "fruit",
+        "dishId": 276
+      },
+      {
+        "day": "Sat",
+        "meal": "lunch",
+        "dishId": 118
+      },
+      {
+        "day": "Sat",
+        "meal": "lunch",
+        "dishId": 179
+      },
+      {
+        "day": "Sat",
+        "meal": "lunch",
+        "dishId": 69
+      },
+      {
+        "day": "Sat",
+        "meal": "fruit",
+        "dishId": 277
+      }
+    ],
+    "skippedDays": [],
+    "generatedPlan": null
+  },
+  {
+    "weekStart": "2026-07-13",
+    "picks": [
+      {
+        "day": "Mon",
+        "meal": "breakfast",
+        "dishId": 32
+      },
+      {
+        "day": "Mon",
+        "meal": "breakfast",
+        "dishId": 112
+      },
+      {
+        "day": "Mon",
+        "meal": "lunch",
+        "dishId": 2
+      },
+      {
+        "day": "Mon",
+        "meal": "lunch",
+        "dishId": 151
+      },
+      {
+        "day": "Mon",
+        "meal": "fruit",
+        "dishId": 278
+      },
+      {
+        "day": "Tue",
+        "meal": "breakfast",
+        "dishId": 273
+      },
+      {
+        "day": "Tue",
+        "meal": "lunch",
+        "dishId": 165
+      },
+      {
+        "day": "Tue",
+        "meal": "fruit",
+        "dishId": 279
+      },
+      {
+        "day": "Wed",
+        "meal": "breakfast",
+        "dishId": 36
+      },
+      {
+        "day": "Wed",
+        "meal": "breakfast",
+        "dishId": 110
+      },
+      {
+        "day": "Wed",
+        "meal": "lunch",
+        "dishId": 4
+      },
+      {
+        "day": "Wed",
+        "meal": "lunch",
+        "dishId": 103
+      },
+      {
+        "day": "Wed",
+        "meal": "lunch",
+        "dishId": 49
+      },
+      {
+        "day": "Wed",
+        "meal": "fruit",
+        "dishId": 280
+      },
+      {
+        "day": "Thu",
+        "meal": "breakfast",
+        "dishId": 87
+      },
+      {
+        "day": "Thu",
+        "meal": "breakfast",
+        "dishId": 30
+      },
+      {
+        "day": "Thu",
+        "meal": "lunch",
+        "dishId": 118
+      },
+      {
+        "day": "Thu",
+        "meal": "lunch",
+        "dishId": 99
+      },
+      {
+        "day": "Thu",
+        "meal": "fruit",
+        "dishId": 154
+      },
+      {
+        "day": "Fri",
+        "meal": "breakfast",
+        "dishId": 38
+      },
+      {
+        "day": "Fri",
+        "meal": "breakfast",
+        "dishId": 111
+      },
+      {
+        "day": "Fri",
+        "meal": "lunch",
+        "dishId": 134
+      },
+      {
+        "day": "Fri",
+        "meal": "lunch",
+        "dishId": 103
+      },
+      {
+        "day": "Fri",
+        "meal": "fruit",
+        "dishId": 155
+      },
+      {
+        "day": "Sat",
+        "meal": "lunch",
+        "dishId": 50
+      },
+      {
+        "day": "Sat",
+        "meal": "lunch",
+        "dishId": 52
+      },
+      {
+        "day": "Sat",
+        "meal": "lunch",
+        "dishId": 144
+      },
+      {
+        "day": "Sat",
+        "meal": "fruit",
+        "dishId": 274
+      }
+    ],
+    "skippedDays": [],
+    "generatedPlan": null
+  },
+  {
+    "weekStart": "2026-07-20",
+    "picks": [
+      {
+        "day": "Mon",
+        "meal": "breakfast",
+        "dishId": 234
+      },
+      {
+        "day": "Mon",
+        "meal": "breakfast",
+        "dishId": 133
+      },
+      {
+        "day": "Mon",
+        "meal": "lunch",
+        "dishId": 163
+      },
+      {
+        "day": "Mon",
+        "meal": "fruit",
+        "dishId": 275
+      },
+      {
+        "day": "Tue",
+        "meal": "breakfast",
+        "dishId": 30
+      },
+      {
+        "day": "Tue",
+        "meal": "breakfast",
+        "dishId": 110
+      },
+      {
+        "day": "Tue",
+        "meal": "lunch",
+        "dishId": 246
+      },
+      {
+        "day": "Tue",
+        "meal": "fruit",
+        "dishId": 280
+      },
+      {
+        "day": "Wed",
+        "meal": "breakfast",
+        "dishId": 273
+      },
+      {
+        "day": "Wed",
+        "meal": "lunch",
+        "dishId": 284
+      },
+      {
+        "day": "Wed",
+        "meal": "lunch",
+        "dishId": 113
+      },
+      {
+        "day": "Wed",
+        "meal": "fruit",
+        "dishId": 274
+      },
+      {
+        "day": "Thu",
+        "meal": "breakfast",
+        "dishId": 30
+      },
+      {
+        "day": "Thu",
+        "meal": "breakfast",
+        "dishId": 111
+      },
+      {
+        "day": "Thu",
+        "meal": "lunch",
+        "dishId": 141
+      },
+      {
+        "day": "Thu",
+        "meal": "lunch",
+        "dishId": 103
+      },
+      {
+        "day": "Thu",
+        "meal": "lunch",
+        "dishId": 65
+      },
+      {
+        "day": "Thu",
+        "meal": "fruit",
+        "dishId": 279
+      },
+      {
+        "day": "Fri",
+        "meal": "breakfast",
+        "dishId": 32
+      },
+      {
+        "day": "Fri",
+        "meal": "breakfast",
+        "dishId": 111
+      },
+      {
+        "day": "Fri",
+        "meal": "lunch",
+        "dishId": 54
+      },
+      {
+        "day": "Fri",
+        "meal": "lunch",
+        "dishId": 103
+      },
+      {
+        "day": "Fri",
+        "meal": "fruit",
+        "dishId": 280
+      },
+      {
+        "day": "Sat",
+        "meal": "lunch",
+        "dishId": 183
+      },
+      {
+        "day": "Sat",
+        "meal": "lunch",
+        "dishId": 132
+      },
+      {
+        "day": "Sat",
+        "meal": "fruit",
+        "dishId": 274
+      }
+    ],
+    "skippedDays": [],
+    "generatedPlan": null
+  },
+  {
+    "weekStart": "2026-08-03",
+    "picks": [
+      {
+        "day": "Wed",
+        "meal": "breakfast",
+        "dishId": 30
+      },
+      {
+        "day": "Wed",
+        "meal": "breakfast",
+        "dishId": 110
+      },
+      {
+        "day": "Wed",
+        "meal": "lunch",
+        "dishId": 164
+      },
+      {
+        "day": "Wed",
+        "meal": "lunch",
+        "dishId": 113
+      },
+      {
+        "day": "Wed",
+        "meal": "fruit",
+        "dishId": 154
+      },
+      {
+        "day": "Thu",
+        "meal": "breakfast",
+        "dishId": 34
+      },
+      {
+        "day": "Thu",
+        "meal": "breakfast",
+        "dishId": 30
+      },
+      {
+        "day": "Thu",
+        "meal": "lunch",
+        "dishId": 2
+      },
+      {
+        "day": "Thu",
+        "meal": "lunch",
+        "dishId": 103
+      },
+      {
+        "day": "Thu",
+        "meal": "fruit",
+        "dishId": 155
+      },
+      {
+        "day": "Fri",
+        "meal": "breakfast",
+        "dishId": 38
+      },
+      {
+        "day": "Fri",
+        "meal": "breakfast",
+        "dishId": 112
+      },
+      {
+        "day": "Fri",
+        "meal": "lunch",
+        "dishId": 101
+      },
+      {
+        "day": "Fri",
+        "meal": "lunch",
+        "dishId": 103
+      },
+      {
+        "day": "Fri",
+        "meal": "lunch",
+        "dishId": 118
+      },
+      {
+        "day": "Fri",
+        "meal": "fruit",
+        "dishId": 278
+      },
+      {
+        "day": "Sat",
+        "meal": "lunch",
+        "dishId": 81
+      },
+      {
+        "day": "Sat",
+        "meal": "lunch",
+        "dishId": 113
+      },
+      {
+        "day": "Sat",
+        "meal": "lunch",
+        "dishId": 131
+      },
+      {
+        "day": "Sat",
+        "meal": "fruit",
+        "dishId": 274
+      }
+    ],
+    "skippedDays": [
+      "Mon",
+      "Tue"
+    ],
+    "generatedPlan": null
+  },
+  {
+    "weekStart": "2026-08-10",
+    "picks": [
+      {
+        "day": "Tue",
+        "meal": "breakfast",
+        "dishId": 30
+      },
+      {
+        "day": "Tue",
+        "meal": "breakfast",
+        "dishId": 111
+      },
+      {
+        "day": "Tue",
+        "meal": "lunch",
+        "dishId": 233
+      },
+      {
+        "day": "Tue",
+        "meal": "lunch",
+        "dishId": 151
+      },
+      {
+        "day": "Tue",
+        "meal": "fruit",
+        "dishId": 277
+      },
+      {
+        "day": "Wed",
+        "meal": "breakfast",
+        "dishId": 34
+      },
+      {
+        "day": "Wed",
+        "meal": "lunch",
+        "dishId": 174
+      },
+      {
+        "day": "Wed",
+        "meal": "lunch",
+        "dishId": 282
+      },
+      {
+        "day": "Wed",
+        "meal": "fruit",
+        "dishId": 155
+      },
+      {
+        "day": "Thu",
+        "meal": "breakfast",
+        "dishId": 273
+      },
+      {
+        "day": "Thu",
+        "meal": "lunch",
+        "dishId": 141
+      },
+      {
+        "day": "Thu",
+        "meal": "lunch",
+        "dishId": 103
+      },
+      {
+        "day": "Thu",
+        "meal": "lunch",
+        "dishId": 261
+      },
+      {
+        "day": "Thu",
+        "meal": "fruit",
+        "dishId": 279
+      },
+      {
+        "day": "Fri",
+        "meal": "breakfast",
+        "dishId": 39
+      },
+      {
+        "day": "Fri",
+        "meal": "breakfast",
+        "dishId": 30
+      },
+      {
+        "day": "Fri",
+        "meal": "lunch",
+        "dishId": 235
+      },
+      {
+        "day": "Fri",
+        "meal": "lunch",
+        "dishId": 103
+      },
+      {
+        "day": "Fri",
+        "meal": "lunch",
+        "dishId": 135
+      },
+      {
+        "day": "Fri",
+        "meal": "fruit",
+        "dishId": 280
+      },
+      {
+        "day": "Sat",
+        "meal": "lunch",
+        "dishId": 237
+      },
+      {
+        "day": "Sat",
+        "meal": "fruit",
+        "dishId": 154
+      }
+    ],
+    "skippedDays": [
+      "Mon"
+    ],
+    "generatedPlan": null
+  }
+]
