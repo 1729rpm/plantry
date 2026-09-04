@@ -6,7 +6,7 @@ time: Lunch
 tags: [HP]
 primaryIngredient: Soyabean Chunk
 preferred: No
-active: Yes
+active: No
 satiety: High
 prepMinutes: 30
 seasons: All
