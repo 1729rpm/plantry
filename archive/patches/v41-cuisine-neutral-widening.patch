@@ -1,0 +1,66 @@
+# cuisine_neutral widening of the dry-protein pool, salvaged from engine v4.1 Stream C (PR #228, branch feat/C-v41-data-backend, deleted 2026-09-04).
+# Apply with: git apply archive/patches/v41-cuisine-neutral-widening.patch   (Phase 9 stream F1)
+diff --git a/data/dishes/egg-salad.md b/data/dishes/egg-salad.md
+index 0b5adf9..5c5cabb 100644
+--- a/data/dishes/egg-salad.md
++++ b/data/dishes/egg-salad.md
+@@ -3,7 +3,7 @@ id: 127
+ name: Egg salad
+ category: Accompaniment
+ time: Lunch
+-tags: [HP]
++tags: [HP, cuisine_neutral]
+ primaryIngredient: Egg
+ preferred: Yes
+ active: Yes
+diff --git a/data/dishes/fish-fry.md b/data/dishes/fish-fry.md
+index 9d21587..9748e49 100644
+--- a/data/dishes/fish-fry.md
++++ b/data/dishes/fish-fry.md
+@@ -3,7 +3,7 @@ id: 77
+ name: Fish fry
+ category: Dry dish
+ time: Lunch
+-tags: [HP]
++tags: [HP, cuisine_neutral]
+ primaryIngredient: Fish
+ preferred: Yes
+ active: Yes
+diff --git a/data/dishes/fish-tikka.md b/data/dishes/fish-tikka.md
+index 7f75d00..5e79a59 100644
+--- a/data/dishes/fish-tikka.md
++++ b/data/dishes/fish-tikka.md
+@@ -11,6 +11,7 @@ satiety: High
+ prepMinutes: 25
+ seasons: All
+ cuisine: Indian
++pairsWith: [Kadhi]
+ complexity: Medium
+ buySpecially: Firm boneless fish fillets, 300g
+ prePrep: Marinate the fish for at least an hour ahead
+diff --git a/data/dishes/paneer-salad.md b/data/dishes/paneer-salad.md
+index b11eb17..e00d417 100644
+--- a/data/dishes/paneer-salad.md
++++ b/data/dishes/paneer-salad.md
+@@ -3,7 +3,7 @@ id: 128
+ name: Paneer salad
+ category: Accompaniment
+ time: Lunch
+-tags: [HP]
++tags: [HP, cuisine_neutral]
+ primaryIngredient: Paneer
+ preferred: Yes
+ active: Yes
+diff --git a/data/dishes/prawn-salad.md b/data/dishes/prawn-salad.md
+index 0b30bfa..5cee725 100644
+--- a/data/dishes/prawn-salad.md
++++ b/data/dishes/prawn-salad.md
+@@ -3,7 +3,7 @@ id: 44
+ name: Prawn salad
+ category: Accompaniment
+ time: Lunch
+-tags: [HP]
++tags: [HP, cuisine_neutral]
+ primaryIngredient: Prawn
+ preferred: No
+ active: Yes
