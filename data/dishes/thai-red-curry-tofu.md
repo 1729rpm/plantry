@@ -6,7 +6,7 @@ time: Lunch
 tags: [HP]
 primaryIngredient: Tofu
 preferred: No
-active: Yes
+active: No
 satiety: High
 prepMinutes: 25
 seasons: All
