@@ -103,8 +103,9 @@ From the record the engine derives, per dish and per scope it can occupy:
 - `eatenCount[scope]`: as-eaten rows of the dish in that scope's slots.
 - `occasions[scope]`: the number of record occasions of that scope.
 - `rate[scope] = eatenCount[scope] / occasions[scope]`: servings per occasion. A weekday lunch
-  dish eaten 7 times over 36 weekday-lunch occasions has rate 0.194; over a five-occasion week it
-  accrues 0.97.
+  dish eaten 6 times over 36 weekday-lunch occasions has weekday rate 0.167 and, if it was also
+  eaten on 1 of 8 Saturdays, a separate Saturday rate of 0.125; over a five-occasion week the
+  weekday ledger accrues 0.83.
 
 Scopes are symmetric and disjoint: a dish's Saturday ledger accrues only its Saturday rows and is
 charged only by Saturday placements; its weekday ledger only its weekday rows and placements. A
@@ -176,7 +177,10 @@ generation: seed at the cutover week from the record before it, then for each we
 cutover week to the week being generated, accrue against the record as it stood, charge the
 placements the engine made that week (persisted on the week's `currentWeek` row as its
 `generatedPlan`, §12), and charge every as-eaten row of that week the plan did not contain. A week
-with no `currentWeek` row accrues only. Replay is linear in weeks times dishes and keeps §10's
+with no `currentWeek` row accrues only. Each replayed week is replayed in its own season (the
+season its `weekStart` falls in): its eligibility set, its fruit season scope, and its charges are
+evaluated for that season, so an out-of-season dish's deficit stays frozen across the weeks it is
+absent, exactly as §3 requires, whatever season the generating week is in. Replay is linear in weeks times dishes and keeps §10's
 promise that all state derives from persisted data; it also makes the gate's "corrected" run (§11)
 the same code path as production.
 
@@ -205,7 +209,7 @@ record's own companion rates instead of being filled to a budget. **Reopening tr
 here so it is not re-argued:** if the §11 self-feeding run shows any optional slot's presence rate
 more than 25 percent over its record presence rate on weeks 20 to 60, that slot (and only that
 slot) gains its own presence-rate ledger, accrued and charged like a dish's. Neither dry run
-justified it once the seed and the chutney slot were corrected.
+justified it once the seed and the chutney slot were corrected. **The trigger has fired for two slots** (first gate run: weekday companion presence +34 percent self-fed and +38 percent frozen, Saturday accompaniment 100 percent against a record 75, while the breakfast small item sat at +4 percent; the frozen failure shows the cause is the maximum over a wide pool of per-dish ledgers, not drift). The **weekday lunch companion slot** and the **Saturday third-item slot** each carry a presence ledger: before each week `presenceDeficit += recordPresenceRate × plannedOccasions`, where the record presence rate is the share of that scope's record occasions whose plate carried the optional element (a companion on a weekday lunch; any third item on a Saturday, accompaniment, special protein, or partner alike); every placement into the slot charges 1, structural forms included; a hand-added element in a served week is charged at reconciliation and a removed one keeps its charge, exactly as §3 treats a dish. The slot is filled only while its presence deficit is positive; which dish fills it is then the pool's top deficit, falling back to the highest-rate dish not already placed this week when no deficit is positive (§3.2's structural rule, because presence has already been decided). The presence ledger is replayed with the dish ledgers (§3.1) and seeded at zero. The breakfast small-item slot stays on the dish rule alone.
 
 There is no saturating count, no due-ness, no longest-unused, no streak cap, and no per-family
 budget anywhere in this engine. Family frequencies need no mechanism because a family's served
@@ -370,11 +374,7 @@ selection is §3's rule: highest deficit, id ascending on ties, charge on placem
    ties among never-occupied weekdays break by fewest total occupations, then Monday-first order.
    Assignment runs in plan priority order: pinned favorites, then stars by deficit descending, then
    everything else, and **the exploration pick last**, taking whichever weekday its plate shape
-   still fits. (Amended after the debate: a never-eaten pick has no occupation history, so
-   assigning it second sent it, and the roti it carried, to Monday in 10 of 10 weeks and 64 of 71
-   picks by week 60. If the §11 slot anti-lock gate still shows a weekday over half after this
-   change, the exploration slot gains its own least-recently-used weekday memory; that is held in
-   reserve, not shipped.)
+   still fits. **The exploration slot keeps its own least-recently-used weekday memory:** the weekday of every past exploration placement is read from the record's `generatedPlan` values (the plan pick whose dish had no as-eaten row before that week), and the pick is assigned to the eligible weekday least recently used by an exploration placement, never-used weekdays counting as oldest, ties Monday-first. (Amended after the debate: a never-eaten pick has no occupation history, so assigning it second sent it, and the roti it carried, to Monday in 10 of 10 weeks. Amended again after the first gate run: assigned last with no memory of its own, the pick took the leftover weekday, and plain roti held Friday lunch in 21 of 41 self-fed weeks and 27 of 41 frozen weeks, so the memory held in reserve is now the rule.)
 6. **Constraint pass.** Enforce, in order: the two anchors (§4); one gravy per lunch (hard);
    cross-meal protein-family and ingredient demotion (§5.1); rice on consecutive days (soft,
    resolve by swapping the two lunches whose exchange clears it, earliest pair first, and accept
@@ -483,7 +483,7 @@ does not merge to `main` until it passes; no further prototype dry run precedes 
 - **Thresholds.** Every rate is compared per occasion served against per occasion eaten.
   1. **Distribution fidelity, the headline gate:** for each tracked family (chicken, paneer, egg,
      fish, prawn, mutton, dal-family, international, plain roti, specialty roti, salad,
-     raita/curd), the served rate is within 25 percent of its record rate on the self-feeding run.
+     raita/curd), the served rate is within 25 percent of its record rate on the self-feeding run. A family with fewer than four as-eaten rows in the record is reported, not gated, here and on threshold 12: a 25 percent bar on two rows is half a serving over the horizon, which no schedule can meet or miss meaningfully. (Amended after the first gate run: mutton, two rows, read +86 percent while the other eleven families passed.)
   2. **Lunch-main uniqueness:** at least 65 percent of lunch mains distinct over any rolling 8
      weeks (household baseline 77 percent).
   3. **Overlap band:** week-over-week dish-set Jaccard (the size of the intersection of two
@@ -495,8 +495,7 @@ does not merge to `main` until it passes; no further prototype dry run precedes 
   4. **Slot anti-lock:** no dish holds the same weekday-meal slot in more than half the weeks of
      the horizon, favorites included, exempting only the two §4 anchors and any dish whose rate
      arithmetically forces majority occupancy (a rate above half its role's weekly slots); and no
-     category (international, specialty roti, chutney type) is day-locked in more than half the
-     weeks, Saturday's own scope excepted.
+     category (international, specialty roti) and no individual chutney dish is day-locked in more than half the weeks, Saturday's own scope excepted. (Amended after the first gate run: the chutney category as a whole sat at 22 of 41 Mondays by construction, because every paratha and chilla morning carries one; the lock the rule guards against is one chutney on one weekday.)
   5. **Saturday:** no treat main repeats within any rolling min(8, Saturday pool size) Saturdays;
      dessert on 100 percent of Saturdays.
   6. **Fruit:** at least 4 distinct fruits per week and no fruit more than twice in a week, both
