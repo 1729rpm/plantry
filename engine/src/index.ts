@@ -111,3 +111,17 @@ export { rankExplore } from "./explore.js";
 export type { ExploreRankedDish, ExploreAffinityKey, RankExploreArgs } from "./explore.js";
 export { deriveHistoryRows } from "./historyRows.js";
 export type { DeriveHistoryRowsArgs } from "./historyRows.js";
+
+/**
+ * The v6 engine (`features/engine-v6.md`), alongside the production engine while
+ * both live on the integration branch.
+ *
+ * Re-exported wholesale from `./v6/index.ts`, which is the curated surface; this
+ * file adds no v6 name of its own. Two names are aliased there rather than here
+ * because the production engine already exports them: `Day` and `Pick` leave v6
+ * as `V6Day` and `V6Pick`. `cap.ts`'s own `PickRole` (a different union with
+ * different members) has never been exported from this file, so v6's `PickRole`
+ * needs no alias; if `cap.ts`'s is ever exported it takes the alias, and neither
+ * type is renamed at its source.
+ */
+export * from "./v6/index.js";
