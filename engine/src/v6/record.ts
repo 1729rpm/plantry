@@ -10,6 +10,21 @@
  * Nothing here reads the clock, a random source, or the filesystem. Every map is
  * built in a fixed order (dish id ascending, then scope in `SCOPES` order) so that
  * two derivations of the same record serialize identically (§10).
+ *
+ * Two readings of §2 and §3 that the spec does not spell out, and that this module
+ * and `ledger.ts` both hold to:
+ *
+ * 1. A plan pick and an as-eaten pick match as a **multiset match on (scope, dish id)
+ *    within the week**, not on the exact (day, meal, dish) triple. This governs both
+ *    `swappedOut` here and reconciliation in `ledger.ts`: a dish the engine placed on
+ *    Monday and the household ate on Wednesday is one serving in one scope, so it is
+ *    neither a swap-away nor a swap-in.
+ * 2. **The fruit scope is season-scoped in both directions.** A fruit row from a week
+ *    outside the requested season is not counted toward `eatenCount.fruit` and is not
+ *    charged, because the rate it would move is measured over in-season occasions
+ *    only. The §2.2 all-season fallback overrides this whenever the requested season
+ *    has no record occasions at all. `seasonCount`, `lastEatenWeek` and the
+ *    occupation memory stay unscoped: they are dish-level memory, not rates.
  */
 
 import type { Dish, Season } from "../data/schemas.js";

@@ -426,3 +426,108 @@ describe("the replay (§3.1)", () => {
     );
   });
 });
+
+/**
+ * The invariant: **a replayed week is replayed in its own season**, not in the
+ * generating week's.
+ *
+ * §3 says an out-of-season dish neither accrues nor decays ("their deficit freezes
+ * until they return") and §2.2 scopes fruit rates by the season the week falls in. A
+ * replay that spans a season boundary and reads one season for every week banks
+ * servings for dishes that were out of season the whole time.
+ */
+describe("a replay that crosses a season boundary (§2.2, §3)", () => {
+  const BANANA = idOf("Banana bowl");
+  const DAYS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat"] as const;
+
+  const fruitWeek = (weekStart: string, dishId: number): RecordWeek => {
+    const picks = DAYS.map((day) => ({ day, meal: "fruit" as const, dishId }));
+    // The plan is exactly what was eaten, so every charge here is a placement charge
+    // and reconciliation adds nothing: what is left is the accrual under test.
+    return { weekStart, picks, skippedDays: [], generatedPlan: [...picks] };
+  };
+
+  // Mango is a Summer and Monsoon fruit; banana is all-season. The record runs three
+  // Monsoon weeks of mango, then (after a two-week gap) one Winter week of banana,
+  // then two more gap weeks. The generating week, 2026-10-26, is in Winter.
+  const crossing: RecordWeek[] = [
+    fruitWeek("2026-08-31", MANGO),
+    fruitWeek("2026-09-07", MANGO),
+    fruitWeek("2026-09-14", MANGO),
+    fruitWeek("2026-10-05", BANANA),
+  ];
+  const base = {
+    record: crossing,
+    library,
+    season: "Winter" as Season,
+    cutoverWeek: "2026-09-07",
+    structuralDishIds: STRUCTURAL,
+  };
+
+  it("freezes a Monsoon-only fruit across the Winter weeks", () => {
+    const atWinterStart = replayLedger({ ...base, season: "Winter", weekStart: "2026-10-05" });
+    const atGeneratingWeek = replayLedger({ ...base, weekStart: "2026-10-26" });
+
+    // Mango accrued through the two Monsoon weeks that carried rows (each accrual
+    // cancelled by its own six placement charges) and through the two Monsoon gap
+    // weeks that carried none, at a rate of one bowl per fruit occasion: 2 x 6.
+    expect(deficitIn(atWinterStart, MANGO, "fruit")).toBeCloseTo(12, 10);
+    // Then three Winter weeks passed and it moved by exactly nothing.
+    expect(deficitIn(atGeneratingWeek, MANGO, "fruit")).toBe(
+      deficitIn(atWinterStart, MANGO, "fruit"),
+    );
+  });
+
+  it("accrues an all-season fruit only over the weeks whose season it has a rate in", () => {
+    const atWinterStart = replayLedger({ ...base, weekStart: "2026-10-05" });
+    const atGeneratingWeek = replayLedger({ ...base, weekStart: "2026-10-26" });
+
+    // Banana has no Monsoon row, so it is absent from the Monsoon fruit scope and has
+    // no ledger at all while the Monsoon weeks replay.
+    expect(deficitIn(atWinterStart, BANANA, "fruit")).toBeUndefined();
+    // Its Winter week charges six placements, and the two Winter gap weeks that
+    // follow accrue six each at its Winter rate of one per occasion.
+    expect(deficitIn(atGeneratingWeek, BANANA, "fruit")).toBeCloseTo(6, 10);
+  });
+
+  it("keeps the per-week season under the frozenRates variant too", () => {
+    // "Frozen" fixes the record, not the season: mango must still sit out the Winter
+    // weeks, and its frozen rate comes from the one Monsoon week before the cutover.
+    const frozen = replayLedger({
+      ...base,
+      weekStart: "2026-10-26",
+      variant: { frozenRates: true },
+    });
+    const frozenAtWinterStart = replayLedger({
+      ...base,
+      weekStart: "2026-10-05",
+      variant: { frozenRates: true },
+    });
+    expect(deficitIn(frozen, MANGO, "fruit")).toBe(deficitIn(frozenAtWinterStart, MANGO, "fruit"));
+    expect(deficitIn(frozen, MANGO, "fruit")).toBeCloseTo(12, 10);
+  });
+
+  it("does not bank a Summer dish's accrual over the Winter weeks it sat out", () => {
+    // The other polarity, and the one that banks servings: a Winter record replayed
+    // toward a Summer generating week. Mango is eligible in Summer, so reading the
+    // generating week's season for every replayed week would let it accrue through
+    // six Winter weeks it was out of season for. It ate six bowls in the cutover week
+    // and has been frozen at that charge ever since.
+    const winterRecord = [fruitWeek("2027-01-04", MANGO), fruitWeek("2027-01-11", MANGO)];
+    const ledger = replayLedger({
+      record: winterRecord,
+      library,
+      season: "Summer",
+      cutoverWeek: "2027-01-11",
+      structuralDishIds: STRUCTURAL,
+      weekStart: "2027-03-01",
+    });
+    expect(deficitIn(ledger, MANGO, "fruit")).toBeCloseTo(-6, 10);
+  });
+
+  it("refuses a season that is not the generating week's", () => {
+    expect(() => replayLedger({ ...base, season: "Monsoon", weekStart: "2026-10-26" })).toThrow(
+      /not the season of the generating week/,
+    );
+  });
+});

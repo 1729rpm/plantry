@@ -11,6 +11,19 @@
  * returned ledger's `deficits` map is rebuilt in one fixed key order (dish id
  * ascending, then scope in `SCOPES` order), so two ledgers holding the same numbers
  * serialize identically (§10).
+ *
+ * Two readings of §3 that the spec does not spell out, and that this module and
+ * `record.ts` both hold to:
+ *
+ * 1. Reconciliation matches an as-eaten pick to a plan pick as a **multiset match on
+ *    (scope, dish id) within the week**, not on the exact (day, meal, dish) triple.
+ *    §3 charges "every as-eaten dish the engine did not place", and the engine did
+ *    place a dish it put on Monday that the household ate on Wednesday; charging it
+ *    again would take two servings out of the ledger for one meal.
+ * 2. **Fruit charges are season-filtered.** The fruit scope is season-scoped (§2.2),
+ *    so a mango eaten in a Summer week is not charged against a Monsoon-scoped ledger
+ *    it never accrues in. The §2.2 all-season fallback overrides the filter, and each
+ *    replayed week is filtered in its own season, not the generating week's.
  */
 
 import type { Dish, Season } from "../data/schemas.js";
@@ -22,6 +35,7 @@ import {
   deriveRecordStats,
   isFruitAllSeasonFallback,
   rateIn,
+  seasonOfWeek,
   unmatchedEatenPicks,
   type OccasionSeries,
 } from "./record.js";
@@ -351,11 +365,27 @@ export interface ReplayLedgerArgs {
  * that week, and reconciles that week's as-eaten rows. A week with no record row
  * accrues only.
  *
- * Variants honoured (§11): `frozenRates` (every accrual uses the cutover record's
- * rates instead of re-deriving them), `coldStartCap` (the seed cap, per dish or
- * `"pool"`), `seedOptionalPools` (seed every dish present in a scope, not only the
- * structural ones), and `rateFormula` (§14 item 1). `familyGovernor` is stream C's
- * and is not read here.
+ * **Every replayed week is replayed in its own season.** A replay can span a season
+ * boundary, and §3 says an out-of-season dish neither accrues nor decays while §2.2
+ * scopes fruit rates by the season the week falls in. So each iteration derives its
+ * own `seasonOfWeek(week)` and uses it for that week's eligibility set, for the stats
+ * it accrues against, for the plan charges, for reconciliation, and for the §2.2
+ * fruit fallback evaluated against the record as it stood before that week. The
+ * `season` argument names the **generating** week's season, must agree with
+ * `seasonOfWeek(weekStart)`, and is never applied to a replayed week. Without this a
+ * replay run in Summer would accrue every Summer-only dish through the intervening
+ * Monsoon and Winter weeks and bank dozens of servings for it.
+ *
+ * Variants honoured (§11): `frozenRates` (every accrual uses the cutover **record**;
+ * the fruit season scope is still evaluated per replayed week's season against that
+ * fixed record, and each season's derivation is cached so the loop stays cheap),
+ * `coldStartCap` (the seed cap, per dish or `"pool"`), `seedOptionalPools` (seed every
+ * dish present in a scope, not only the structural ones), and `rateFormula` (§14
+ * item 1). `familyGovernor` is stream C's and is not read here.
+ *
+ * The cold start is seeded in the **cutover week's** season for the same reason: the
+ * seed is the backdated accrual the cutover week would have had, and the first
+ * iteration of the loop is that week.
  *
  * Weeks are walked in seven-day steps from `cutoverWeek`, which assumes every
  * `weekStart` in the record is a Monday aligned with the cutover week, as the
@@ -363,13 +393,19 @@ export interface ReplayLedgerArgs {
  */
 export function replayLedger(args: ReplayLedgerArgs): Ledger {
   const { record, library, season, cutoverWeek, structuralDishIds, variant } = args;
+  if (args.weekStart !== undefined && seasonOfWeek(args.weekStart) !== season) {
+    throw new Error(
+      `replayLedger: season ${season} is not the season of the generating week ${args.weekStart}`,
+    );
+  }
   const rateFormula = variant?.rateFormula;
   const sorted = [...record].sort((a, b) =>
     a.weekStart < b.weekStart ? -1 : a.weekStart > b.weekStart ? 1 : 0,
   );
 
   const before = sorted.filter((week) => week.weekStart < cutoverWeek);
-  const cutoverStats = deriveRecordStats(before, library, season, { rateFormula });
+  const cutoverSeason = seasonOfWeek(cutoverWeek);
+  const cutoverStats = deriveRecordStats(before, library, cutoverSeason, { rateFormula });
   const seedSet = variant?.seedOptionalPools
     ? new Set(cutoverStats.perDish.keys())
     : structuralDishIds;
@@ -379,37 +415,57 @@ export function replayLedger(args: ReplayLedgerArgs): Ledger {
     cutoverWeek,
     seedSet,
     cap,
-    deriveOccasionSeries(before, season),
+    deriveOccasionSeries(before, cutoverSeason),
   );
 
-  const eligibleDishIds = new Set(
-    library.filter((dish) => isEligibleDish(dish, season)).map((dish) => dish.id),
-  );
+  const eligibleBySeason = new Map<Season, Set<number>>();
+  const eligibleIn = (weekSeason: Season): ReadonlySet<number> => {
+    const cached = eligibleBySeason.get(weekSeason);
+    if (cached) return cached;
+    const ids = new Set(
+      library.filter((dish) => isEligibleDish(dish, weekSeason)).map((dish) => dish.id),
+    );
+    eligibleBySeason.set(weekSeason, ids);
+    return ids;
+  };
+
+  // The frozen run fixes the record, not the season, so it needs one derivation per
+  // season the replay crosses rather than one for the whole run.
+  const frozen = new Map<Season, { stats: RecordStats; fruitAllSeason: boolean }>();
+  const frozenIn = (weekSeason: Season): { stats: RecordStats; fruitAllSeason: boolean } => {
+    const cached = frozen.get(weekSeason);
+    if (cached) return cached;
+    const derived = {
+      stats: deriveRecordStats(before, library, weekSeason, { rateFormula }),
+      fruitAllSeason: isFruitAllSeasonFallback(before, weekSeason),
+    };
+    frozen.set(weekSeason, derived);
+    return derived;
+  };
+
   const lastRecordWeek = sorted.length > 0 ? sorted[sorted.length - 1].weekStart : cutoverWeek;
   const stop =
     args.weekStart ?? addWeeks(lastRecordWeek > cutoverWeek ? lastRecordWeek : cutoverWeek, 1);
 
-  // §2.2's fallback is a property of the record as a whole, not of one week, so it is
-  // read once and held for the whole replay rather than flipping partway through.
-  const fruitAllSeason = isFruitAllSeasonFallback(sorted, season);
-
   for (let week = cutoverWeek; week < stop; week = addWeeks(week, 1)) {
-    const stats = variant?.frozenRates
-      ? cutoverStats
-      : deriveRecordStats(
-          sorted.filter((row) => row.weekStart < week),
-          library,
-          season,
-          { rateFormula },
-        );
-    ledger = accrue(ledger, stats, eligibleDishIds, PLANNED_OCCASIONS);
+    const weekSeason = seasonOfWeek(week);
+    let stats: RecordStats;
+    let fruitAllSeason: boolean;
+    if (variant?.frozenRates) {
+      ({ stats, fruitAllSeason } = frozenIn(weekSeason));
+    } else {
+      const asItStood = sorted.filter((row) => row.weekStart < week);
+      stats = deriveRecordStats(asItStood, library, weekSeason, { rateFormula });
+      fruitAllSeason = isFruitAllSeasonFallback(asItStood, weekSeason);
+    }
+    ledger = accrue(ledger, stats, eligibleIn(weekSeason), PLANNED_OCCASIONS);
 
     const row = sorted.find((candidate) => candidate.weekStart === week);
     if (!row) continue;
 
-    const planned = countedPicksOfWeek(row, "planned", library, season, fruitAllSeason);
+    const planned = countedPicksOfWeek(row, "planned", library, weekSeason, fruitAllSeason);
     for (const entry of planned) ledger = charge(ledger, entry.pick.dishId, entry.scope);
-    ledger = reconcile(ledger, row, library, season, fruitAllSeason);
+    ledger = reconcile(ledger, row, library, weekSeason, fruitAllSeason);
   }
 
   return ledger;
