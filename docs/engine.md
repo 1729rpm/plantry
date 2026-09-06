@@ -35,7 +35,7 @@ The engine's primary signal is the **household record**: every as-eaten row from
 
 The record is read from the Convex `currentWeek` table, one row per `weekStart`: every row whose `weekStart` is earlier than the week being generated is a **record week**, whatever its `status`. The as-eaten state of a record week is its live slot state (swaps, adds, and deletes applied), minus every day named in its `skippedDays`, minus every pick whose `dishId` is null. A free-text custom one-off has no library identity, so it contributes no row until it is promoted to a library dish and its slot re-pointed at the new id.
 
-`weekArchive` is not the record source: finalize snapshots the week at the moment of finalizing and the household edits weeks after that moment, so the archive under-reports as-eaten rows for edited weeks. It stays as provenance, alongside `data/menu_history.md`.
+`weekArchive` is not the record source: finalize snapshots the week at the moment of finalizing and the household edits weeks after that moment, so the archive under-reports as-eaten rows for edited weeks. It stays as provenance, alongside `data/menu_history.md`, unread by generation, the picker, and Explore, all three of which read the record.
 
 ### 2.2 Occasions and rates
 
@@ -100,7 +100,7 @@ An optional element is included only while its slot is due one. This is how "cei
 **The weekday lunch companion slot and the Saturday third-item slot each carry a presence ledger** of their own, because the maximum over a wide pool of per-dish ledgers overshoots: some dish in a large pool is nearly always due, so the slot fills nearly always. A presence ledger meters the slot rather than its dishes:
 
 - Before each week, `presenceDeficit += recordPresenceRate × plannedOccasions`, where the record presence rate is the share of that scope's record occasions whose plate carried the optional element.
-- Every placement into the slot charges 1, structural forms included.
+- Every placement into the slot charges 1. On a weekday that means a companion placement and only a companion placement, never a §5.1 floor append, which is a safety net rather than the slot. On Saturday it includes the structural forms, because any third item is the slot.
 - A hand-added element in a served week is charged at reconciliation and a removed one keeps its charge, exactly as §3 treats a dish.
 - The slot is filled only while its presence deficit is positive. Which dish then fills it is the pool's top deficit, falling back to the highest-rate dish not already placed this week when no deficit is positive, because presence has already been decided.
 - The presence ledgers are replayed with the dish ledgers (§3.1) and seeded at zero.
@@ -476,7 +476,7 @@ Variants run alongside for measurement only, passed as the engine's `variant` ar
 9. **Breakfast and forms:** at least 10 distinct breakfast mains across any 25-week window; standalone boiled-egg breakfasts present; dal-led lunches present.
 10. **Plate size and effort:** 4-item lunches under 10 percent of lunch days; 5-item lunches zero; days over the 120-minute prep ceiling reported; zero days over 150.
 11. **Presence rates:** breakfast small-item presence, weekday companion presence, and Saturday third-item presence each within 25 percent of the record's presence rate. Both sides are the one quantity §4 defines: the record side read structurally off each record plate, the served side counted by role off each finished plate.
-12. **Drift bound:** each tracked family's rate over weeks 40 to 60 within 10 percent of its rate over weeks 20 to 40 on the self-feeding run, under threshold 1's fewer-than-four-rows exemption.
+12. **Drift bound:** each tracked family's rate over weeks 40 to 60 within **its own counting noise** of its rate over weeks 20 to 40 on the self-feeding run. The noise is the Poisson relative error of the two window counts combined, the square root of (1 divided by the first window's placements plus 1 divided by the second window's), and a shift larger than that is drift. Poisson is the right model because one family's placements are near-independent events at a low per-week rate, so a family placed `n` times in a window carries a relative standard error of about 1 over the square root of `n` on its rate whatever the engine does. The 10 percent figure is reported beside the noise as the aspiration for a horizon long enough to resolve it, roughly 200 placements a window. Threshold 1's fewer-than-four-rows exemption applies here too.
 13. **Reported, not gated:** novelty placements per week; weekday lunches with no animal protein; Saturday plate shape; fills from an exhausted pool per role per week; picks by protein family; the constraint pass's repairs and the violations it could not clear; each lunch plate's lead with its origin and the deficit it spent.
 
 **Order of work.** A threshold that proves arithmetically unsatisfiable is corrected in this document first, and the correction names its measured reason.
