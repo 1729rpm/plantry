@@ -17,7 +17,8 @@ import type {
  * plate a weekday by least-recently-used occupation memory, and
  * `constraintPass` then enforces the rules that are only checkable once days
  * are known (the two anchors, cross-meal protein repeats, rice on consecutive
- * days, the day-scoped protein floor, the whole-day prep ceiling).
+ * days, the same fruit on consecutive days, the day-scoped protein floor, the
+ * whole-day prep ceiling).
  *
  * Both functions are pure: inputs are never mutated, no clock, no RNG, and
  * every tie bottoms out at dish id ascending (§10). Nothing here touches the
@@ -198,6 +199,44 @@ function leadDishId(plate: Plate): number {
 }
 
 /**
+ * Whether this plate carries the §7 exploration pick, and therefore places by the
+ * exploration slot's own weekday memory rather than by its lead dish's occupations.
+ *
+ * The pick leads its plate when its shape is a star and rides as a companion when
+ * it is not; either way it is the plate's novelty and the plate is the one the
+ * memory is about, so the predicate reads the whole plate rather than its lead.
+ */
+function isExplorationPlate(plate: Plate): boolean {
+  return plate.picks.some((pick) => pick.origin === "exploration");
+}
+
+/**
+ * Compare two candidate days for the §6 step 5 exploration slot, oldest exploration
+ * placement first.
+ *
+ * A never-eaten pick has no occupation history of its own, so the slot keeps its
+ * own memory: the weekday of every past exploration placement, read off the
+ * record's `generatedPlan` values (`RecordStats.explorationWeekdays`). A weekday no
+ * exploration placement has ever held counts as oldest, and ties break Monday-first
+ * with no second term, because the memory holds one week per weekday and nothing
+ * else to rank by.
+ */
+function compareDaysForExploration(
+  a: Day,
+  b: Day,
+  memory: ReadonlyMap<Day, string> | undefined,
+): number {
+  const lastA = memory?.get(a);
+  const lastB = memory?.get(b);
+  if (lastA === undefined && lastB !== undefined) return -1;
+  if (lastA !== undefined && lastB === undefined) return 1;
+  if (lastA !== undefined && lastB !== undefined && lastA !== lastB) {
+    return lastA < lastB ? -1 : 1;
+  }
+  return dayIndex(a) - dayIndex(b);
+}
+
+/**
  * Order the plates of one meal group into §6 step 5 assignment order. Fully
  * determined by plate content, never by input order: priority band, then
  * deficit descending inside the star band, then lead dish id ascending.
@@ -242,6 +281,13 @@ function compareDaysForDish(
  * §6 step 5. Give every plate whose `day` is still null the eligible day whose
  * most recent occupation by the plate's lead dish is oldest.
  *
+ * The one plate that does not place by its lead dish is the §7 exploration plate:
+ * it places by the exploration slot's own least-recently-used weekday memory
+ * (`RecordStats.explorationWeekdays`), because a never-eaten pick has no
+ * occupation history to place it by, and assigning it last with no memory of its
+ * own left it, and the roti it carried, taking whichever weekday the repertoire
+ * had not claimed.
+ *
  * Plates are grouped by meal (breakfast, lunch, fruit) because each group has
  * its own days: exactly one breakfast and one lunch per weekday, one fruit per
  * day Monday to Saturday. Plates that arrive with a day already set (every
@@ -264,8 +310,25 @@ export function assignDays(plates: Plate[], stats: RecordStats): Plate[] {
     const supply = (meal === "fruit" ? ALL_DAYS : WEEKDAYS).filter((day) => !taken.has(day));
     const available = new Set<Day>(supply);
 
+    // §6 step 5, as amended after the first gate run: "the memory held in reserve
+    // is now the rule". The exploration plate's weekday is RESERVED out of the
+    // whole supply before the repertoire plates choose, and the plate itself is
+    // still filled in last, so the priority order is unchanged for everything
+    // else. Reserving is what makes the memory a rule at all: five lunch plates
+    // fill five weekdays, so a pick assigned last from what is left has exactly
+    // one day to take and its own memory could never decide anything.
+    const explorationPlate = group.find((plate) => plate.day === null && isExplorationPlate(plate));
+    if (explorationPlate && available.size > 0) {
+      const day = [...available].sort((a, b) =>
+        compareDaysForExploration(a, b, stats.explorationWeekdays),
+      )[0];
+      available.delete(day);
+      assigned.set(explorationPlate, day);
+    }
+
     for (const plate of assignmentOrder(group)) {
       if (plate.day !== null) continue;
+      if (assigned.has(plate)) continue;
       if (available.size === 0) continue;
       const occupations = stats.perDish.get(leadDishId(plate))?.occupations;
       const best = [...available].sort((a, b) => compareDaysForDish(a, b, meal, occupations))[0];
@@ -671,6 +734,59 @@ export function constraintPass(plates: Plate[], args: ConstraintPassArgs): Const
       break;
     }
     ricePair = firstConsecutiveRicePair();
+  }
+
+  // -- 4b. The same fruit on consecutive days, soft (§9) --------------------
+
+  /**
+   * §9: within-week fruit repeats occur only under a thin eligible in-season set,
+   * and even then never on consecutive days when a swap of two fruit days clears
+   * it. The rule is soft in exactly the way §5.1's consecutive-rice rule is: try
+   * the earliest pair, take the first exchange that leaves no adjacent repeat
+   * anywhere, and accept the violation when none does.
+   *
+   * The scan runs Monday to Saturday, not Monday to Friday, because the fruit of
+   * the day is the one slot §4 schedules on all six days.
+   */
+  const fruitPlateFor = (day: Day): WorkingPlate | undefined => plateFor(day, "fruit");
+
+  const fruitDishOn = (day: Day): number | undefined => fruitPlateFor(day)?.picks[0]?.dishId;
+
+  const firstConsecutiveFruitPair = (): [Day, Day] | null => {
+    for (let index = 0; index + 1 < ALL_DAYS.length; index += 1) {
+      const earlier = fruitDishOn(ALL_DAYS[index]);
+      const later = fruitDishOn(ALL_DAYS[index + 1]);
+      if (earlier === undefined || later === undefined) continue;
+      if (earlier === later) return [ALL_DAYS[index], ALL_DAYS[index + 1]];
+    }
+    return null;
+  };
+
+  let fruitPair = firstConsecutiveFruitPair();
+  let fruitAttempts = 0;
+  while (fruitPair !== null && fruitAttempts < ALL_DAYS.length) {
+    fruitAttempts += 1;
+    const [earlier, later] = fruitPair;
+    const offender = fruitPlateFor(later);
+    let swapped = false;
+    if (offender) {
+      for (const other of ALL_DAYS) {
+        if (other === later || other === earlier) continue;
+        const partner = fruitPlateFor(other);
+        if (!partner) continue;
+        swapPlates(offender, partner, "consecutive-fruit");
+        if (firstConsecutiveFruitPair() === null) {
+          swapped = true;
+          break;
+        }
+        // Undo: a repair that does not repair is not a repair. Both the plate
+        // state and the reported repair roll back, as the rice rule does.
+        swapPlates(offender, partner, "consecutive-fruit");
+        repairs.splice(repairs.length - 2, 2);
+      }
+    }
+    if (!swapped) break;
+    fruitPair = firstConsecutiveFruitPair();
   }
 
   // -- 5. The day-scoped protein floor (§5.1) -------------------------------

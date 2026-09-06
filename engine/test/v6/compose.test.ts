@@ -72,13 +72,20 @@ function makeStats(specs: StatSpec[]): RecordStats {
     seasonDayOccasions: { Summer: 48 },
     perDish,
     swappedOut: [],
+    presenceRate: {},
+    explorationWeekdays: new Map(),
   };
 }
 
 /**
  * Build a pool context in which every library dish is present in every scope, then
  * override the deficits that matter. `deficits` is keyed `dishId:scope`, and a dish
- * with no entry sits at zero, which the optional rule reads as "not due".
+ * with no entry sits at zero, which the structural fallback reads as "not due".
+ *
+ * The two §3.2 presence ledgers (`presence:weekdayLunch` and `presence:saturday`)
+ * are seeded positive unless the caller overrides them, so a test about a plate
+ * form is not silently a test about slot presence. A test about presence itself
+ * passes its own value.
  */
 function makeContext(
   library: Dish[],
@@ -98,7 +105,15 @@ function makeContext(
       seasonCount: { Summer: 1 },
     })),
   );
-  const ledger: Ledger = { deficits: new Map(Object.entries(deficits)) };
+  const ledger: Ledger = {
+    deficits: new Map(
+      Object.entries({
+        "presence:weekdayLunch": 1,
+        "presence:saturday": 1,
+        ...deficits,
+      }),
+    ),
+  };
   return { library, season: "Summer", stats, ledger };
 }
 
@@ -241,8 +256,14 @@ describe("compose: §5.1 true complete plates", () => {
     expect(dishIds(plate)).toEqual([20, 21]);
   });
 
-  it("stays solo when its accompaniment is not due", () => {
-    const ctx = makeContext(library, { "21:weekdayLunch": -0.2, "22:weekdayLunch": 8 });
+  it("stays solo when the companion slot's presence deficit is spent", () => {
+    // §3.2 as amended: presence, not the top companion's own deficit, decides
+    // whether a complete plate takes its one Accompaniment.
+    const ctx = makeContext(library, {
+      "21:weekdayLunch": -0.2,
+      "22:weekdayLunch": 8,
+      "presence:weekdayLunch": 0,
+    });
     expect(dishIds(composeWeekdayLunch({ lead: biryani, ctx, placedThisWeek: new Set() }))).toEqual(
       [20],
     );
@@ -498,9 +519,15 @@ describe("compose: §5.4 Saturday", () => {
     expect(dishIds(plate)).toEqual([56, 53, 52]);
     expect(plate.picks[1].origin).toBe("fallback");
 
-    const notDue = makeContext(library, { "53:saturday": 0.6, "52:saturday": -0.4 });
+    // §3.2 as amended: what closes the third-item slot is the Saturday presence
+    // deficit, not the top accompaniment's own deficit.
+    const noPresence = makeContext(library, {
+      "53:saturday": 0.6,
+      "52:saturday": 5,
+      "presence:saturday": 0,
+    });
     expect(
-      dishIds(composeSaturday({ lead: biryani, ctx: notDue, placedThisWeek: new Set() })),
+      dishIds(composeSaturday({ lead: biryani, ctx: noPresence, placedThisWeek: new Set() })),
     ).toEqual([56, 53]);
   });
 
@@ -818,6 +845,7 @@ describe("compose: §5.1 the whole-day prep ceiling", () => {
         removedDishId: 92,
         addedDishId: 93,
         swappedWithDay: null,
+        role: "companion",
       },
     ]);
     expect(result.breach).toBeNull();
@@ -886,5 +914,63 @@ describe("compose: §5.1 the whole-day prep ceiling", () => {
     expect(result.repairs).toEqual([]);
     expect(result.breach).toBeNull();
     expect(result.plates.lunch.picks.length).toBe(2);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// §3.2 as amended: the two presence-gated slots
+// ---------------------------------------------------------------------------
+
+describe("compose: §3.2's presence-gated slots", () => {
+  const dal = makeDish({ id: 70, category: "Gravy dish", primaryIngredient: "Toor Dal" });
+  const roti = makeDish({ id: 71, category: "Chapati", primaryIngredient: "Wheat Flour" });
+  const salad = makeDish({ id: 72, category: "Accompaniment", primaryIngredient: "Cucumber" });
+  const raita = makeDish({ id: 73, category: "Accompaniment", primaryIngredient: "Curd" });
+  const library = [dal, roti, salad, raita];
+
+  it("takes no companion while the presence deficit is spent, however due the pool is", () => {
+    // Adversarial: the top companion's own deficit is far above zero, which is
+    // exactly what the pre-amendment optional rule filled on.
+    const ctx = makeContext(library, {
+      "71:weekdayLunch": 5,
+      "72:weekdayLunch": 9,
+      "73:weekdayLunch": 8,
+      "presence:weekdayLunch": -0.01,
+    });
+    expect(dishIds(composeWeekdayLunch({ lead: dal, ctx, placedThisWeek: new Set() }))).toEqual([
+      70, 71,
+    ]);
+  });
+
+  it("takes the top companion deficit while presence is positive", () => {
+    const ctx = makeContext(library, {
+      "71:weekdayLunch": 5,
+      "72:weekdayLunch": 0.2,
+      "73:weekdayLunch": 0.9,
+      "presence:weekdayLunch": 0.01,
+    });
+    expect(dishIds(composeWeekdayLunch({ lead: dal, ctx, placedThisWeek: new Set() }))).toEqual([
+      70, 71, 73,
+    ]);
+  });
+
+  it("falls back to the highest-rate companion not placed this week when none is due", () => {
+    // §3.2: presence has already decided the slot is filled, so the dish is chosen
+    // by the structural rule and an exhausted pool goes to the workhorse. Raita
+    // has the LEAST negative deficit and would win a deficit ranking; salad is the
+    // higher-rate dish.
+    const ctx = makeContext(
+      library,
+      {
+        "71:weekdayLunch": 5,
+        "72:weekdayLunch": -1.2,
+        "73:weekdayLunch": -0.1,
+        "presence:weekdayLunch": 0.5,
+      },
+      { "72:weekdayLunch": 0.4, "73:weekdayLunch": 0.05 },
+    );
+    expect(dishIds(composeWeekdayLunch({ lead: dal, ctx, placedThisWeek: new Set() }))).toEqual([
+      70, 71, 72,
+    ]);
   });
 });

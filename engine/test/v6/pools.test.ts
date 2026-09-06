@@ -90,6 +90,8 @@ function makeStats(specs: StatSpec[]): RecordStats {
     seasonDayOccasions: { Summer: 48 },
     perDish,
     swappedOut: [],
+    presenceRate: {},
+    explorationWeekdays: new Map(),
   };
 }
 

@@ -78,7 +78,10 @@ function plate(
   };
 }
 
-function statsWith(occupations: Record<number, Record<string, DishOccupation>>): RecordStats {
+function statsWith(
+  occupations: Record<number, Record<string, DishOccupation>>,
+  explorationWeekdays: Map<Day, string> = new Map(),
+): RecordStats {
   const perDish = new Map<number, DishStats>();
   for (const [dishId, slots] of Object.entries(occupations)) {
     const entry: DishStats = {
@@ -96,6 +99,8 @@ function statsWith(occupations: Record<number, Record<string, DishOccupation>>):
     seasonDayOccasions: {},
     perDish,
     swappedOut: [],
+    presenceRate: {},
+    explorationWeekdays,
   };
 }
 
@@ -180,7 +185,7 @@ describe("§6 step 5 assigns the least-recently-used weekday", () => {
   });
 });
 
-describe("§6 step 5 assigns the exploration pick last", () => {
+describe("§6 step 5 places the exploration pick by the slot's own memory", () => {
   // Four repertoire stars, each with occupation memory that leaves exactly one
   // weekday free, and a never-eaten exploration pick with no memory at all.
   const stars = [1, 2, 3, 4].map((id) => makeDish({ id }));
@@ -203,16 +208,51 @@ describe("§6 step 5 assigns the exploration pick last", () => {
     ];
   }
 
-  it("does not default a never-occupied dish to Monday when it is assigned last", () => {
-    const assigned = assignDays(week("exploration"), stats);
-    expect(dayOf(assigned, 9)).toBe("Fri");
+  it("takes the weekday its own memory names, not the one the repertoire left over", () => {
+    // §6 step 5 as amended after the first gate run. Wednesday is the least
+    // recently used exploration weekday; without the reservation the four stars
+    // would take Mon, Tue, Wed and Thu and leave the pick Friday.
+    const memory = new Map<Day, string>([
+      ["Mon", "2026-08-24"],
+      ["Tue", "2026-08-17"],
+      ["Wed", "2026-06-01"],
+      ["Thu", "2026-08-10"],
+      ["Fri", "2026-08-03"],
+    ]);
+    const assigned = assignDays(
+      week("exploration"),
+      statsWith(
+        {
+          1: occupiedExcept("Mon", "lunch"),
+          2: occupiedExcept("Tue", "lunch"),
+          3: occupiedExcept("Wed", "lunch"),
+          4: occupiedExcept("Thu", "lunch"),
+        },
+        memory,
+      ),
+    );
+    expect(dayOf(assigned, 9)).toBe("Wed");
+    // The repertoire plates still place by their own occupations, out of what is
+    // left, in their own priority order: 1 and 2 get their free weekdays, and 3,
+    // whose free weekday the exploration slot reserved, falls through its own
+    // Monday-first tiebreak to Thursday and pushes 4 to Friday.
     expect(dayOf(assigned, 1)).toBe("Mon");
-    expect(dayOf(assigned, 4)).toBe("Thu");
+    expect(dayOf(assigned, 2)).toBe("Tue");
+    expect(dayOf(assigned, 3)).toBe("Thu");
+    expect(dayOf(assigned, 4)).toBe("Fri");
   });
 
-  it("would have sent that same dish to Monday if it were assigned first", () => {
-    // The contrast the §6 step 5 amendment was written against: a pick with no
-    // occupation memory takes the Monday-first tiebreak whenever it goes early.
+  it("falls back to Monday-first only when no exploration placement has been made", () => {
+    // An empty memory makes every weekday equally oldest, which §6 step 5 breaks
+    // Monday-first. This is the state of a household's first generated week and
+    // nothing later: the memory has an entry from week two onward.
+    expect(dayOf(assignDays(week("exploration"), stats), 9)).toBe("Mon");
+  });
+
+  it("places a non-exploration pick by its lead's own occupations instead", () => {
+    // The same never-occupied dish, arriving as a pinned favorite rather than as
+    // the exploration pick, is placed by §6 step 5's ordinary rule and takes the
+    // Monday-first tiebreak from the front of the priority order.
     const assigned = assignDays(week("favorite"), stats);
     expect(dayOf(assigned, 9)).toBe("Mon");
   });
@@ -744,5 +784,168 @@ describe("§6 step 6 is pure and deterministic", () => {
     expect(JSON.stringify(constraintPass(input(), args))).toBe(
       JSON.stringify(constraintPass(input(), args)),
     );
+  });
+});
+
+// ---------------------------------------------------------------------------
+// §6 step 5: the exploration slot's own weekday memory
+// ---------------------------------------------------------------------------
+
+describe("§6 step 5, the exploration slot's weekday memory", () => {
+  const star = (id: number) => makeDish({ id });
+  const novel = makeDish({ id: 99 });
+
+  /** Five weekday lunch plates, one of them the exploration pick, none dated. */
+  function lunchWeek(): Plate[] {
+    return [
+      plate("lunch", null, [pick(star(1), "star")], { deficit: 5 }),
+      plate("lunch", null, [pick(star(2), "star")], { deficit: 4 }),
+      plate("lunch", null, [pick(star(3), "star")], { deficit: 3 }),
+      plate("lunch", null, [pick(star(4), "star")], { deficit: 2 }),
+      plate("lunch", null, [pick(novel, "star", "lunch", "exploration")], { deficit: 0 }),
+    ];
+  }
+
+  const dayOfNovel = (plates: Plate[]): Day | null =>
+    plates.find((entry) => entry.picks.some((p) => p.origin === "exploration"))?.day ?? null;
+
+  it("sends the next pick off a weekday eight straight exploration placements have held", () => {
+    // Every repertoire star has occupied every weekday equally recently, so nothing
+    // but the exploration memory can decide where the novel pick lands.
+    const occupations: Record<number, Record<string, DishOccupation>> = {};
+    for (const id of [1, 2, 3, 4]) occupations[id] = {};
+    const memory = new Map<Day, string>([["Fri", "2026-08-24"]]);
+    const assigned = assignDays(lunchWeek(), statsWith(occupations, memory));
+    expect(dayOfNovel(assigned)).not.toBe("Fri");
+    // Never-used weekdays count as oldest and ties break Monday-first.
+    expect(dayOfNovel(assigned)).toBe("Mon");
+  });
+
+  it("takes the least recently used exploration weekday when every weekday has one", () => {
+    const occupations: Record<number, Record<string, DishOccupation>> = {};
+    for (const id of [1, 2, 3, 4]) occupations[id] = {};
+    const memory = new Map<Day, string>([
+      ["Mon", "2026-08-24"],
+      ["Tue", "2026-06-01"],
+      ["Wed", "2026-08-17"],
+      ["Thu", "2026-08-10"],
+      ["Fri", "2026-08-03"],
+    ]);
+    expect(dayOfNovel(assignDays(lunchWeek(), statsWith(occupations, memory)))).toBe("Tue");
+  });
+
+  it("reserves the weekday, so the repertoire plates cannot leave it the leftover day", () => {
+    // Adversarial: every star's own memory points at Wednesday as its oldest slot,
+    // so without the reservation the four repertoire plates would take Mon, Tue,
+    // Thu and Fri and the novel pick would be forced onto Wednesday whatever its
+    // own memory says.
+    const occupations: Record<number, Record<string, DishOccupation>> = {};
+    for (const id of [1, 2, 3, 4]) occupations[id] = occupiedExcept("Wed", "lunch");
+    const memory = new Map<Day, string>([
+      ["Mon", "2026-08-24"],
+      ["Tue", "2026-08-24"],
+      ["Thu", "2026-08-24"],
+      ["Fri", "2026-08-24"],
+      ["Wed", "2026-06-01"],
+    ]);
+    expect(dayOfNovel(assignDays(lunchWeek(), statsWith(occupations, memory)))).toBe("Wed");
+  });
+
+  it("is deterministic under a reordered input (§10)", () => {
+    const occupations: Record<number, Record<string, DishOccupation>> = {};
+    for (const id of [1, 2, 3, 4]) occupations[id] = occupiedExcept("Thu", "lunch");
+    const memory = new Map<Day, string>([["Mon", "2026-08-24"]]);
+    const stats = statsWith(occupations, memory);
+    const forward = assignDays(lunchWeek(), stats);
+    const reversed = assignDays([...lunchWeek()].reverse(), stats);
+    const asMap = (plates: Plate[]) =>
+      JSON.stringify(
+        plates
+          .map((entry) => [entry.picks[0].dishId, entry.day] as const)
+          .sort((a, b) => a[0] - b[0]),
+      );
+    expect(asMap(reversed)).toBe(asMap(forward));
+  });
+});
+
+// ---------------------------------------------------------------------------
+// §9: the same fruit on consecutive days
+// ---------------------------------------------------------------------------
+
+describe("§6 step 6, the consecutive-fruit pass", () => {
+  const fruit = (id: number) => makeDish({ id, category: "Fruit", time: "Breakfast" });
+  const fruitPlate = (day: Day, id: number): Plate =>
+    plate("fruit", day, [pick(fruit(id), "fruit", "fruit", "deficit", "fruit")], {
+      scope: "fruit",
+    });
+  const emptyProvider: PoolProvider = () => [];
+  const fruitIds = (plates: Plate[]): number[] =>
+    (["Mon", "Tue", "Wed", "Thu", "Fri", "Sat"] as Day[]).map(
+      (day) =>
+        plates.find((entry) => entry.meal === "fruit" && entry.day === day)?.picks[0]?.dishId ?? -1,
+    );
+
+  it("swaps two fruit days apart when a swap clears the adjacent repeat", () => {
+    // Mango (1) sits on Tue and Wed. Swapping Wednesday with a day carrying a
+    // different bowl clears it; the earliest such exchange wins.
+    const plates = [
+      fruitPlate("Mon", 2),
+      fruitPlate("Tue", 1),
+      fruitPlate("Wed", 1),
+      fruitPlate("Thu", 3),
+      fruitPlate("Fri", 4),
+      fruitPlate("Sat", 5),
+    ];
+    const result = constraintPass(plates, {
+      provider: emptyProvider,
+      library: [1, 2, 3, 4, 5].map((id) => fruit(id)),
+      stats: statsWith({}),
+    });
+    const ids = fruitIds(result.plates);
+    for (let index = 0; index + 1 < ids.length; index += 1) {
+      expect(ids[index]).not.toBe(ids[index + 1]);
+    }
+    expect(result.repairs.filter((repair) => repair.reason === "consecutive-fruit")).toHaveLength(
+      1,
+    );
+    expect(new Set(ids)).toEqual(new Set([1, 1, 2, 3, 4, 5]));
+  });
+
+  it("accepts the violation when no swap clears it: the rule is soft (§9)", () => {
+    // A two-bowl week: every arrangement of three-and-three puts two of a kind
+    // side by side, so the pass must stop rather than churn.
+    const plates = [
+      fruitPlate("Mon", 1),
+      fruitPlate("Tue", 1),
+      fruitPlate("Wed", 1),
+      fruitPlate("Thu", 2),
+      fruitPlate("Fri", 2),
+      fruitPlate("Sat", 2),
+    ];
+    const result = constraintPass(plates, {
+      provider: emptyProvider,
+      library: [fruit(1), fruit(2)],
+      stats: statsWith({}),
+    });
+    expect(fruitIds(result.plates).filter((id) => id === 1)).toHaveLength(3);
+    expect(result.unrepairable.some((entry) => entry.startsWith("consecutive-fruit"))).toBe(false);
+  });
+
+  it("leaves a week with no adjacent repeat untouched", () => {
+    const plates = [
+      fruitPlate("Mon", 1),
+      fruitPlate("Tue", 2),
+      fruitPlate("Wed", 1),
+      fruitPlate("Thu", 3),
+      fruitPlate("Fri", 1),
+      fruitPlate("Sat", 4),
+    ];
+    const result = constraintPass(plates, {
+      provider: emptyProvider,
+      library: [1, 2, 3, 4].map((id) => fruit(id)),
+      stats: statsWith({}),
+    });
+    expect(fruitIds(result.plates)).toEqual([1, 2, 1, 3, 1, 4]);
+    expect(result.repairs).toHaveLength(0);
   });
 });

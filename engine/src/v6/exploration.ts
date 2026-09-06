@@ -131,6 +131,17 @@ export interface CandidatePoolArgs {
   mealTimes?: readonly MealTime[];
   /** Record weeks, ascending. Omit to skip the §7 spacing filter (the Explore surface does). */
   record?: readonly RecordWeek[];
+  /**
+   * Where "no as-eaten row in any scope" is read from, when that is not `stats`.
+   *
+   * §11's frozen run holds `stats` at the cutover record for the whole horizon,
+   * which is right for rates and wrong for candidacy: a dish the household ate in
+   * week 21 is not a never-eaten dish in week 22, whatever the frozen rates say,
+   * and §7 makes exploration the door for never-eaten dishes only. The caller
+   * passes the live statistics here so the frozen run freezes rates and nothing
+   * else. Every other run leaves it undefined and `stats` answers both questions.
+   */
+  candidacyStats?: RecordStats;
   /** Ids already in this week's plan (a favorite pinned in §6 step 2, say). */
   exclude?: ReadonlySet<number>;
 }
@@ -138,6 +149,7 @@ export interface CandidatePoolArgs {
 /** Every Active, in-season candidate of the requested meal times, id ascending. */
 export function candidatePool(args: CandidatePoolArgs): Dish[] {
   const { library, stats, season, mealTimes, record, exclude } = args;
+  const candidacy = args.candidacyStats ?? stats;
   const blocked = record ? exploredAndUneaten(record) : new Set<number>();
   return library
     .filter(
@@ -145,7 +157,7 @@ export function candidatePool(args: CandidatePoolArgs): Dish[] {
         isActive(dish) &&
         inSeason(dish, season) &&
         (mealTimes === undefined || mealTimes.includes(dish.time)) &&
-        isCandidate(dish.id, stats) &&
+        isCandidate(dish.id, candidacy) &&
         !blocked.has(dish.id) &&
         !(exclude?.has(dish.id) ?? false),
     )
@@ -424,6 +436,12 @@ export interface PickExplorationArgs {
   variant?: GenerateWeekV6Variant;
   /** Macro inputs for the protein-band signal (see `NutritionInputs`). */
   nutrition?: NutritionInputs;
+  /**
+   * §11's frozen run only: the live statistics, so "never eaten" is read from the
+   * record as it actually stands while the rates stay frozen. See
+   * `CandidatePoolArgs.candidacyStats`.
+   */
+  candidacyStats?: RecordStats;
 }
 
 export interface ExplorationPick {
@@ -450,6 +468,7 @@ export function pickExploration(args: PickExplorationArgs): ExplorationPick | nu
     mealTimes: ["Lunch"],
     record,
     exclude,
+    candidacyStats: args.candidacyStats,
   });
   if (candidates.length === 0) return null;
 

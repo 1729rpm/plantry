@@ -53,6 +53,8 @@ function emptyStats(): RecordStats {
     seasonDayOccasions: {},
     perDish: new Map<number, DishStats>(),
     swappedOut: [],
+    presenceRate: {},
+    explorationWeekdays: new Map(),
   };
 }
 

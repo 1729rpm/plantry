@@ -133,6 +133,41 @@ export interface RecordStats {
   perDish: Map<number, DishStats>;
   /** The swap-away list for the gate's corrected run: dishIds the household removed after generation. */
   swappedOut: Pick[];
+  /**
+   * §3.2 presence rates for the two slots that carry a presence ledger: the
+   * weekday lunch companion slot (`weekdayLunch`) and the Saturday third-item
+   * slot (`saturday`).
+   *
+   * Each is the share of that scope's record occasions whose plate carried the
+   * optional element. The record carries picks, not roles, so "carried the
+   * element" reads as "the occasion's plate holds three or more picks": on a
+   * weekday lunch the third pick beyond the star and the carb is the companion,
+   * and on a Saturday §3.2 counts any third item beside the treat and the
+   * dessert. The §11 harness measures served presence by the same test, so the
+   * ledger's target and the threshold are one definition.
+   *
+   * Partial: only the two scopes §3.2 names carry a key. The breakfast small item
+   * stays on the dish rule alone and has no presence ledger.
+   */
+  presenceRate: Partial<Record<Scope, number>>;
+  /**
+   * §6 step 5: the ISO Monday of the most recent record week in which an
+   * exploration placement held each weekday.
+   *
+   * The exploration slot keeps its own least-recently-used weekday memory,
+   * separate from any dish's `occupations`, because a never-eaten pick has no
+   * occupation history of its own to place it by. A past exploration placement is
+   * read off a record week's `generatedPlan`: a weekday lunch plan pick whose dish
+   * had no as-eaten row in any scope in any earlier record week. The weekday lunch
+   * restriction is §7's ("exactly one placement per week, into a weekday lunch
+   * position"), and it is what keeps §9's fruit overflow candidates, the other
+   * door a never-eaten dish comes through, out of this memory.
+   *
+   * A weekday with no key has never carried an exploration placement and §6 step 5
+   * counts it as infinitely old. Keys are inserted Monday-first so the map
+   * serializes identically across two derivations of the same record (§10).
+   */
+  explorationWeekdays: Map<Day, string>;
 }
 
 /**
@@ -145,6 +180,16 @@ export interface RecordStats {
  * `deficits` is keyed `` `${dishId}:${scope}` `` (for example `"142:weekdayLunch"`).
  * An absent key means the dish has no ledger in that scope: it neither accrues nor
  * competes there. Values may go negative and persist across weeks.
+ *
+ * **Reserved keys.** §3.2's presence ledgers share this map under the reserved key
+ * format `` `presence:${scope}` `` (`"presence:weekdayLunch"` and
+ * `"presence:saturday"`). The prefix `presence:` cannot collide with a dish key
+ * because a dish key's first segment is always a decimal dish id, and `presence`
+ * is not a number. A reserved key holds the slot's presence deficit rather than a
+ * dish's: it accrues the scope's record presence rate times the scope's planned
+ * occasions, and is charged 1 for every planned occasion whose plate carried the
+ * optional element. `ledger.ts` owns the key builder and the readers; nothing
+ * outside it constructs one by hand.
  */
 export interface Ledger {
   deficits: Map<string, number>;
@@ -265,8 +310,8 @@ export interface ConstraintRepair {
   /**
    * The §6 step 6 constraint that fired, in the order the pass enforces them: the
    * two §4 anchors, one gravy per lunch, cross-meal protein family, cross-meal
-   * ingredient, rice on consecutive days, the day-scoped protein floor, item
-   * ceilings, the 120-minute prep ceiling.
+   * ingredient, rice on consecutive days, the same fruit on consecutive days, the
+   * day-scoped protein floor, item ceilings, the 120-minute prep ceiling.
    */
   constraint:
     | "anchor"
@@ -274,6 +319,7 @@ export interface ConstraintRepair {
     | "protein-family"
     | "primary-ingredient"
     | "consecutive-rice"
+    | "consecutive-fruit"
     | "protein-floor"
     | "item-ceiling"
     | "prep-ceiling";
@@ -286,6 +332,12 @@ export interface ConstraintRepair {
   addedDishId: number | null;
   /** The other day of a whole-plate swap; null for an in-place replacement. */
   swappedWithDay: Day | null;
+  /**
+   * The plate position the repair touched, or null for a whole-plate swap, which
+   * touches every position and none. Read by the §11 harness, which needs to say
+   * how many repairs replaced a lunch star rather than a companion.
+   */
+  role: PickRole | null;
 }
 
 /** One day whose composed plates exceed the §5.1 whole-day prep ceiling of 120 active minutes. */
@@ -330,6 +382,24 @@ export interface V6Diagnostics {
    * by §11 threshold 8.
    */
   weekdayInternationalStars: number;
+  /**
+   * §11's diagnosis instrument: each lunch plate's lead, with why it is there and
+   * the scope deficit it spent at pick time.
+   *
+   * `generatedPlan` (§12) carries only (day, meal, dishId), because that is all
+   * §3.1's replay needs. A §11 diagnosis has to answer why a pick is where it is,
+   * and the origin and the deficit are known only inside generation, so they are
+   * reported here. One entry per lunch plate, the Saturday plate included, in day
+   * order. Reported, never gated.
+   */
+  lunchLeads: Array<{
+    day: Day | null;
+    scope: Scope;
+    dishId: number;
+    origin: PickOrigin;
+    /** The lead's ledger deficit in `scope` when it was chosen, before its charge. */
+    deficit: number;
+  }>;
   /**
    * The §12 cutover week this generation replayed from, derived unless the
    * caller overrode it. Reported so the §11 harness can show that a self-feeding

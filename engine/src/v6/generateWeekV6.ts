@@ -63,11 +63,12 @@ import type {
   RecordWeek,
   Scope,
 } from "./types.js";
-import { deriveRecordStats } from "./record.js";
+import { PRESENCE_PLATE_ITEMS, deriveRecordStats } from "./record.js";
 import {
   PLANNED_OCCASIONS,
   accrue,
   charge,
+  chargePresence,
   isEligibleDish,
   refund,
   replayLedger,
@@ -234,6 +235,20 @@ export function generateWeekV6(args: GenerateWeekV6Args): GeneratedWeekV6 {
   const stats = deriveRecordStats(statsRecord, library, season, {
     rateFormula: variant?.rateFormula,
   });
+  /**
+   * §7 candidacy under §11's frozen run.
+   *
+   * The frozen run fixes the rates selection reads at the cutover record. It must
+   * not fix which dishes the household has eaten: §7 makes exploration the door
+   * for a **never-eaten** dish, and a dish served in week 21 is not never-eaten in
+   * week 22 whatever the frozen rates say. Left frozen, the channel re-offers the
+   * same candidate every week (the first gate run put one dish in five of eight
+   * stars of a rolling window). Every other run reads one live derivation and this
+   * is the same object.
+   */
+  const candidacyStats = variant?.frozenRates
+    ? deriveRecordStats(record, library, season, { rateFormula: variant?.rateFormula })
+    : stats;
 
   let ledger = replayLedger({
     record,
@@ -284,7 +299,26 @@ export function generateWeekV6(args: GenerateWeekV6Args): GeneratedWeekV6 {
   /** Commit every pick of a freshly composed plate except its lead, already committed. */
   const commitPlateBody = (plate: Plate): void => {
     for (const pick of plate.picks.slice(1)) commitPick(pick);
+    chargePlatePresence(plate);
   };
+
+  /**
+   * §3.2's presence charge for a freshly composed plate: one occasion out of the
+   * slot's presence ledger when the plate carried its optional element.
+   *
+   * "Carried it" is the plate-size test `RecordStats.presenceRate` and §3.1's
+   * replay both use (three or more picks on a lunch plate), rather than the role of
+   * any one pick, so the charge the engine makes now is exactly the charge the
+   * replay will make from this week's `generatedPlan` next week. That is what keeps
+   * a structural Saturday partner or special protein charging presence, as §3.2
+   * requires, with no special case: it is the plate's third item.
+   */
+  function chargePlatePresence(plate: Plate): void {
+    if (plate.meal !== "lunch") return;
+    if (plate.scope !== "weekdayLunch" && plate.scope !== "saturday") return;
+    if (plate.picks.length < PRESENCE_PLATE_ITEMS) return;
+    ledger = chargePresence(ledger, plate.scope);
+  }
 
   // ---------------------------------------------------------------------------
   // Step 2: pin the favorites (§6 step 2, §8).
@@ -324,6 +358,7 @@ export function generateWeekV6(args: GenerateWeekV6Args): GeneratedWeekV6 {
     exclude: placed,
     variant,
     nutrition: args.nutrition,
+    candidacyStats,
   });
   // §7 makes the pick conditional on a weekday lunch position accepting it, so it
   // is charged when its plate is committed rather than here. The two are
@@ -589,30 +624,68 @@ export function generateWeekV6(args: GenerateWeekV6Args): GeneratedWeekV6 {
   // Step 4d: six fruits by deficit, with §9's exhausted-pool rule.
   // ---------------------------------------------------------------------------
 
+  /**
+   * §9's within-week repeat rule: "within-week repeats therefore occur only when
+   * the whole eligible in-season set holds fewer than six fruits."
+   *
+   * That sentence is arithmetic about the six fruit slots, so the fill honours it
+   * directly rather than by counting the set: a fruit already on this week's table
+   * is passed over while any eligible in-season fruit is still unplaced, in the
+   * season's repertoire pool first and then through §9's overflow door. Only when
+   * every eligible in-season fruit is already on the table (which is exactly the
+   * case of a set smaller than six) does a repeat happen, and then it goes to the
+   * fruit placed fewest times this week, which keeps a four-fruit or five-fruit
+   * season at four or more distinct bowls with none more than twice.
+   *
+   * The overflow door opening while the repertoire still has a positive deficit is
+   * the same sentence's consequence, not a new rule: with a wide eligible set and a
+   * narrow repertoire, admitting candidates is the only way six days carry six
+   * distinct bowls.
+   */
   const fruitsThisWeek = new Set<number>();
+  const fruitPlacements = new Map<number, number>();
+  const unplacedFruits = (pool: readonly PoolEntry[]): PoolEntry[] =>
+    pool.filter((entry) => !fruitsThisWeek.has(entry.dish.id));
+  /** The pool's leader among the fruits placed fewest times this week; ranking survives inside the tier. */
+  const leastPlacedFruit = (pool: readonly PoolEntry[]): PoolEntry | undefined => {
+    if (pool.length === 0) return undefined;
+    let fewest = Number.POSITIVE_INFINITY;
+    for (const entry of pool) {
+      fewest = Math.min(fewest, fruitPlacements.get(entry.dish.id) ?? 0);
+    }
+    return pool.find((entry) => (fruitPlacements.get(entry.dish.id) ?? 0) === fewest);
+  };
+
   for (let slot = 0; slot < FRUIT_SLOTS; slot += 1) {
     const repertoire = fruitPool(ctx());
-    const due = repertoire[0];
+    const repertoireUnplaced = unplacedFruits(repertoire);
     let entry: PoolEntry | undefined;
-    let origin: PickOrigin;
-    if (due && due.deficit > 0) {
-      entry = due;
-      origin = "deficit";
+    if (repertoire[0] !== undefined && repertoire[0].deficit > 0 && repertoireUnplaced.length > 0) {
+      entry = repertoireUnplaced[0];
     } else {
       // §9: when every fruit in the season's repertoire pool has a non-positive
       // deficit, the day's fruit is drawn by least-recently-served from every
-      // Active, in-season Category Fruit dish, candidates included. Fruits already
-      // on this week's table are held back, so a within-week repeat happens only
-      // when the whole eligible in-season set holds fewer than six fruits.
+      // Active, in-season Category Fruit dish, candidates included.
       const overflow = fruitOverflowPool(ctx());
-      const unserved = overflow.filter((candidate) => !fruitsThisWeek.has(candidate.dish.id));
-      entry = (unserved.length > 0 ? unserved : overflow)[0];
-      origin = "fallback";
+      const overflowUnplaced = unplacedFruits(overflow);
+      entry =
+        overflowUnplaced.length > 0
+          ? overflowUnplaced[0]
+          : leastPlacedFruit(repertoire.length > 0 ? repertoire : overflow);
     }
     if (!entry) break;
-    const pick = pickOf(entry.dish.id, "fruit", "fruit", "fruit", origin);
+    // §11 threshold 13 counts a fill from an exhausted pool, so the origin follows
+    // the deficit the fill actually spent, not which door it came through.
+    const pick = pickOf(
+      entry.dish.id,
+      "fruit",
+      "fruit",
+      "fruit",
+      entry.deficit > 0 ? "deficit" : "fallback",
+    );
     commitPick(pick);
     fruitsThisWeek.add(entry.dish.id);
+    fruitPlacements.set(entry.dish.id, (fruitPlacements.get(entry.dish.id) ?? 0) + 1);
     plates.push({
       meal: "fruit",
       scope: "fruit",
@@ -639,6 +712,7 @@ export function generateWeekV6(args: GenerateWeekV6Args): GeneratedWeekV6 {
     removedDishId: repair.replaced?.dishId ?? null,
     addedDishId: repair.replacement?.dishId ?? null,
     swappedWithDay: repair.swappedWithDay,
+    role: repair.replaced?.role ?? repair.replacement?.role ?? null,
   }));
 
   // ---------------------------------------------------------------------------
@@ -796,6 +870,18 @@ export function generateWeekV6(args: GenerateWeekV6Args): GeneratedWeekV6 {
       prepCeilingBreaches,
       unrepairable: pass.unrepairable,
       weekdayInternationalStars,
+      // §11's diagnosis instrument. The plate's own `deficit` is the lead's ledger
+      // value at composition time, which is exactly "the deficit at pick time".
+      lunchLeads: finalPlates
+        .filter((plate) => plate.meal === "lunch" && plate.picks.length > 0)
+        .map((plate) => ({
+          day: plate.day,
+          scope: plate.scope,
+          dishId: plate.picks[0].dishId,
+          origin: plate.picks[0].origin,
+          deficit: plate.deficit ?? 0,
+        }))
+        .sort((a, b) => ALL_DAYS.indexOf(a.day as Day) - ALL_DAYS.indexOf(b.day as Day)),
       cutoverWeek,
     },
   };

@@ -65,6 +65,8 @@ function makeStats(
     seasonDayOccasions: {},
     perDish,
     swappedOut: [],
+    presenceRate: {},
+    explorationWeekdays: new Map(),
   };
 }
 

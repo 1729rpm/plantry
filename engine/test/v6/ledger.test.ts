@@ -17,13 +17,18 @@ import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
 import type { Dish, Season } from "../../src/data/schemas.js";
-import type { Ledger, RecordWeek } from "../../src/v6/types.js";
+import type { Ledger, Pick, RecordWeek } from "../../src/v6/types.js";
 import {
   PLANNED_OCCASIONS,
   accrue,
   charge,
+  chargePlanPresence,
+  chargePresence,
   deficitIn,
   emptyLedger,
+  presenceDays,
+  presenceDeficitIn,
+  presenceKey,
   reconcile,
   refund,
   replayLedger,
@@ -529,5 +534,122 @@ describe("a replay that crosses a season boundary (§2.2, §3)", () => {
     expect(() => replayLedger({ ...base, season: "Monsoon", weekStart: "2026-10-26" })).toThrow(
       /not the season of the generating week/,
     );
+  });
+});
+
+// ---------------------------------------------------------------------------
+// §3.2 presence ledgers
+// ---------------------------------------------------------------------------
+
+describe("§3.2 presence ledgers", () => {
+  const threeItemLunch = (day: "Mon" | "Tue" | "Wed" | "Thu" | "Fri"): Pick[] => [
+    { day, meal: "lunch", dishId: FISH_TIKKA },
+    { day, meal: "lunch", dishId: ROTI },
+    { day, meal: "lunch", dishId: ONION_TOMATO_SALAD },
+  ];
+  const twoItemLunch = (day: "Mon" | "Tue" | "Wed" | "Thu" | "Fri"): Pick[] => [
+    { day, meal: "lunch", dishId: FISH_TIKKA },
+    { day, meal: "lunch", dishId: ROTI },
+  ];
+
+  it("reads presence off plate size, in both scopes", () => {
+    const picks = [
+      ...threeItemLunch("Mon"),
+      ...twoItemLunch("Tue"),
+      { day: "Sat" as const, meal: "lunch" as const, dishId: FISH_TIKKA },
+      { day: "Sat" as const, meal: "lunch" as const, dishId: ROTI },
+      { day: "Sat" as const, meal: "lunch" as const, dishId: ONION_TOMATO_SALAD },
+    ];
+    expect([...presenceDays(picks, "weekdayLunch")]).toEqual(["Mon"]);
+    expect([...presenceDays(picks, "saturday")]).toEqual(["Sat"]);
+  });
+
+  it("seeds both presence ledgers at zero, never backdated", () => {
+    const stats = deriveRecordStats(record, library, SEASON);
+    const ledger = seedLedger(stats, CUTOVER, structuralPoolIds(library), 1);
+    expect(presenceDeficitIn(ledger, "weekdayLunch")).toBe(0);
+    expect(presenceDeficitIn(ledger, "saturday")).toBe(0);
+  });
+
+  it("accrues each presence ledger at its record rate times the scope's planned occasions", () => {
+    const stats = deriveRecordStats(record, library, SEASON);
+    const eligible = new Set(library.map((dish) => dish.id));
+    const after = accrue(emptyLedger(), stats, eligible, PLANNED_OCCASIONS);
+    expect(presenceDeficitIn(after, "weekdayLunch")).toBeCloseTo(
+      (stats.presenceRate.weekdayLunch ?? 0) * PLANNED_OCCASIONS.weekdayLunch,
+      10,
+    );
+    expect(presenceDeficitIn(after, "saturday")).toBeCloseTo(
+      (stats.presenceRate.saturday ?? 0) * PLANNED_OCCASIONS.saturday,
+      10,
+    );
+  });
+
+  it("charges one per planned occasion that carried the element, and never refunds a removed one", () => {
+    const week: RecordWeek = {
+      weekStart: "2026-08-17",
+      // The plan carried a third item on Monday and Tuesday; the household ate the
+      // Monday one and stripped the Tuesday one. §3.2 keeps both charges.
+      generatedPlan: [...threeItemLunch("Mon"), ...threeItemLunch("Tue")],
+      picks: [...threeItemLunch("Mon"), ...twoItemLunch("Tue")],
+      skippedDays: [],
+    };
+    const planCharged = chargePlanPresence(emptyLedger(), week, library, SEASON);
+    expect(presenceDeficitIn(planCharged, "weekdayLunch")).toBe(-2);
+    const reconciled = reconcile(planCharged, week, library, SEASON);
+    expect(presenceDeficitIn(reconciled, "weekdayLunch")).toBe(-2);
+  });
+
+  it("charges a hand-added element at reconciliation", () => {
+    const week: RecordWeek = {
+      weekStart: "2026-08-17",
+      generatedPlan: twoItemLunch("Mon"),
+      picks: threeItemLunch("Mon"),
+      skippedDays: [],
+    };
+    const planCharged = chargePlanPresence(emptyLedger(), week, library, SEASON);
+    expect(presenceDeficitIn(planCharged, "weekdayLunch")).toBe(0);
+    const reconciled = reconcile(planCharged, week, library, SEASON);
+    expect(presenceDeficitIn(reconciled, "weekdayLunch")).toBe(-1);
+  });
+
+  it("replays the presence ledgers with the dish ledgers, and never collides with a dish key", () => {
+    const stats = deriveRecordStats(record, library, SEASON);
+    const replayed = replayLedger({
+      record,
+      library,
+      season: SEASON,
+      cutoverWeek: CUTOVER,
+      structuralDishIds: structuralPoolIds(library),
+      weekStart: "2026-08-24",
+    });
+    // One accrual of the cutover week, nothing charged: no record week sits at or
+    // after the cutover, so §3.1 accrues only.
+    expect(presenceDeficitIn(replayed, "weekdayLunch")).toBeCloseTo(
+      (stats.presenceRate.weekdayLunch ?? 0) * PLANNED_OCCASIONS.weekdayLunch,
+      6,
+    );
+    expect(replayed.deficits.has(presenceKey("weekdayLunch"))).toBe(true);
+    // Adversarial: nothing in the library can produce the reserved key, because a
+    // dish key's first segment is always a decimal id.
+    for (const key of replayed.deficits.keys()) {
+      if (key.startsWith("presence:")) continue;
+      expect(Number.isNaN(Number(key.slice(0, key.lastIndexOf(":"))))).toBe(false);
+    }
+  });
+
+  it("puts the reserved keys first in one fixed order, whatever order they were written in (§10)", () => {
+    let a = charge(emptyLedger(), FISH_TIKKA, "weekdayLunch");
+    a = chargePresence(a, "saturday");
+    a = chargePresence(a, "weekdayLunch");
+    let b = chargePresence(emptyLedger(), "weekdayLunch");
+    b = chargePresence(b, "saturday");
+    b = charge(b, FISH_TIKKA, "weekdayLunch");
+    expect([...a.deficits.keys()]).toEqual([
+      "presence:weekdayLunch",
+      "presence:saturday",
+      `${FISH_TIKKA}:weekdayLunch`,
+    ]);
+    expect(JSON.stringify([...a.deficits])).toBe(JSON.stringify([...b.deficits]));
   });
 });

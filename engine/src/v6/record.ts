@@ -5,7 +5,9 @@
  * week, swaps applied and skipped days excluded) into the statistics selection
  * reads: per-scope occasion counts, per-dish eaten counts and rates, the
  * weekday-occupation memory §6 step 5 places by, the per-season fruit counts §9
- * ranks by, and the swap-away list the §11 gate's corrected run replays.
+ * ranks by, the swap-away list the §11 gate's corrected run replays, the §3.2
+ * presence rates the two slot-level presence ledgers accrue against, and the §6
+ * step 5 weekday memory the exploration slot places by.
  *
  * Nothing here reads the clock, a random source, or the filesystem. Every map is
  * built in a fixed order (dish id ascending, then scope in `SCOPES` order) so that
@@ -43,6 +45,21 @@ export const SCOPES: readonly Scope[] = ["weekdayBreakfast", "weekdayLunch", "sa
 
 /** Monday to Friday, the days that carry a weekday breakfast and a weekday lunch (§4). */
 const WEEKDAYS: readonly Day[] = ["Mon", "Tue", "Wed", "Thu", "Fri"];
+
+/** The single Saturday occasion, so the presence loop can share one shape with the weekdays. */
+const SATURDAY: readonly Day[] = ["Sat"];
+
+/** The two §3.2 slots that carry a presence ledger. The breakfast small item is not one. */
+export const PRESENCE_SCOPES: readonly Scope[] = ["weekdayLunch", "saturday"];
+
+/**
+ * How many picks a lunch plate holds when it carried the §3.2 optional element.
+ *
+ * A weekday lunch is a star, a carb, and at most one companion; a Saturday is a
+ * treat, a dessert, and at most one third item. In both scopes the third pick is
+ * the optional element, and the record carries no roles to read it off directly.
+ */
+export const PRESENCE_PLATE_ITEMS = 3;
 
 /** The three seasons in a fixed order, so per-season maps serialize identically (§10). */
 const SEASONS: readonly Season[] = ["Summer", "Monsoon", "Winter"];
@@ -286,6 +303,14 @@ export function deriveRecordStats(
 
   const accumulators = new Map<number, DishAccumulator>();
   const swappedOut: Pick[] = [];
+  const presenceHits: Partial<Record<Scope, number>> = { weekdayLunch: 0, saturday: 0 };
+  const explorationWeekdays = new Map<Day, string>();
+  /**
+   * Dish ids with an as-eaten row in any scope in a **strictly earlier** week: the
+   * §6 step 5 test for whether a plan pick was an exploration placement. Grown at
+   * the end of each week's pass, so a week's own rows never mask its own novelty.
+   */
+  const eatenBefore = new Set<number>();
 
   for (const week of sorted) {
     const weekSeason = seasonOfWeek(week.weekStart);
@@ -325,6 +350,38 @@ export function deriveRecordStats(
       acc.eaten[scope] = (acc.eaten[scope] ?? 0) + 1;
     }
 
+    // §3.2 presence: the share of the scope's occasions whose plate carried the
+    // optional element. The record has no roles, so a plate of three or more picks
+    // is what "carried the element" reads as; see `RecordStats.presenceRate`.
+    for (const scope of PRESENCE_SCOPES) {
+      for (const day of scope === "saturday" ? SATURDAY : WEEKDAYS) {
+        if (skipped.has(day)) continue;
+        const items = week.picks.filter(
+          (pick) => pick.day === day && pick.meal === "lunch" && known.has(pick.dishId),
+        ).length;
+        if (items >= PRESENCE_PLATE_ITEMS) {
+          presenceHits[scope] = (presenceHits[scope] ?? 0) + 1;
+        }
+      }
+    }
+
+    // §6 step 5: the exploration slot's own weekday memory. A weekday lunch plan
+    // pick whose dish had no as-eaten row in any scope before this week is an
+    // exploration placement (§7 makes the exploration slot a weekday lunch
+    // position, and no other weekday lunch pool admits a dish with no scope rows).
+    for (const pick of [...(week.generatedPlan ?? [])].sort(comparePicks)) {
+      if (pick.meal !== "lunch" || pick.day === "Sat") continue;
+      if (!known.has(pick.dishId)) continue;
+      if (eatenBefore.has(pick.dishId)) continue;
+      explorationWeekdays.set(pick.day, week.weekStart);
+    }
+    for (const pick of week.picks) {
+      if (skipped.has(pick.day)) continue;
+      if (!known.has(pick.dishId)) continue;
+      if (scopeOfPick(pick) === null) continue;
+      eatenBefore.add(pick.dishId);
+    }
+
     if (week.generatedPlan !== null) {
       const eaten = countedPicks(
         week.picks,
@@ -358,13 +415,31 @@ export function deriveRecordStats(
     });
   }
 
+  const presenceRate: Partial<Record<Scope, number>> = {};
+  for (const scope of PRESENCE_SCOPES) {
+    const denominator = occasions[scope];
+    if (denominator > 0) presenceRate[scope] = (presenceHits[scope] ?? 0) / denominator;
+  }
+
   return {
     weeks: record.length,
     occasions,
     seasonDayOccasions,
     perDish,
     swappedOut,
+    presenceRate,
+    explorationWeekdays: orderedExplorationWeekdays(explorationWeekdays),
   };
+}
+
+/** Monday-first key order, so two derivations of the same record serialize identically (§10). */
+function orderedExplorationWeekdays(raw: ReadonlyMap<Day, string>): Map<Day, string> {
+  const out = new Map<Day, string>();
+  for (const day of DAY_ORDER) {
+    const week = raw.get(day);
+    if (week !== undefined) out.set(day, week);
+  }
+  return out;
 }
 
 /**
