@@ -47,35 +47,25 @@ const CI_THRESHOLDS = [1, 2, 4, 5, 10] as const;
  *
  * Delete an entry when its threshold starts passing; this test fails until you do.
  *
- * The map did not shrink in this cycle. Thresholds 6 and 11 (the two the spec
- * amendments targeted) went from FAIL to PASS on every run, and threshold 2 went
- * from FAIL to PASS on the frozen run; but metering the two optional slots to the
- * record's own presence rates moved star selection, and threshold 2 slipped from
- * exactly 65.0 to 62.5 on the self-feeding run. That is a spec question rather than
- * an engine one and it is written up as an `EM check needed` block on the stream's
- * PR, with the measured arithmetic ceiling (69.3 percent) that says the bar is
- * reachable.
+ * The map shrank by one in this cycle. Threshold 1, distribution fidelity, went to
+ * PASS on the self-feeding run with all eleven gated families inside the bar, once
+ * §3.2's presence was metered by role on the engine side and by the same
+ * classification on the record side, so that the §5.1 protein-floor append stopped
+ * spending the companion slot's budget. Threshold 8, which CI does not measure,
+ * went to PASS on the same change, and thresholds 2 and 3 pass on the frozen run.
+ * Three entries remain.
  */
 const KNOWN_GATE_FAILURES = new Map<
   number,
   { measured: number; collapseGuard: number; finding: string }
 >([
   [
-    1,
-    {
-      measured: 1,
-      collapseGuard: 4,
-      finding:
-        "raita/curd runs at -25.5 percent (0.047 served against 0.063 in the record), half a point outside the bar; salad sits just inside at -24.6 percent. Both are weekday lunch companions, and §3.2's new presence ledger meters that slot to the record's own 0.528 presence. About 12 percent of the slot's presence budget (13 of 108 charged occasions in the horizon) is spent by the §5.1 protein-floor append, which takes a two-item lunch to three and so reads as a companion under the plate-size test the record forces, and the two companion families come out short by about that much. Mutton, which failed this threshold on the first run at +86 percent, is now reported and not gated on its two record rows (§11 as amended).",
-    },
-  ],
-  [
     2,
     {
       measured: 0.625,
       collapseGuard: 0.55,
       finding:
-        "The worst rolling 8-week window is 62.5 percent distinct against a 65 percent floor: 15 repeats in 40 stars where 14 are allowed and 12.3 are arithmetically forced by the record's own rates (the ceiling any rate-matching schedule can reach is 69.3 percent). The frozen run reaches 70.0 percent, so this is drift and not engine bias: on the same 34 to 35 weekday-lunch placements, fish tikka takes 14 stars frozen and 27 self-feeding, because metering the companion slot to its record presence rate leaves a high-rate dry protein fewer optional turns and its one weekday-lunch ledger spends them in the star slot instead.",
+        "The worst rolling 8-week window is 62.5 percent distinct against a 65 percent floor: 15 repeats in 40 stars where 14 are allowed and about 12 are arithmetically forced by the record's own rates (the ceiling any rate-matching schedule can reach is 69.3 percent). The frozen run passes at 70.0 percent, so this is drift and not engine bias: one weekday-lunch ledger serves both the star position and the companion position, so a high-rate dry protein whose companion turns are metered by §3.2's presence ledger spends the rest of its deficit in the star slot.",
     },
   ],
   [

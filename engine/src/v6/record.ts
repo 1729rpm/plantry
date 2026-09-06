@@ -27,9 +27,59 @@
  *    only. The §2.2 all-season fallback overrides this whenever the requested season
  *    has no record occasions at all. `seasonCount`, `lastEatenWeek` and the
  *    occupation memory stay unscoped: they are dish-level memory, not rates.
+ *
+ * ## The presence definition (§3.2), stated once and read from everywhere
+ *
+ * §3.2's presence rate is "the share of that scope's record occasions whose plate
+ * carried **the optional element** (a companion on a weekday lunch; any third item
+ * on a Saturday)". The record carries picks and not roles, so the optional element
+ * has to be read off the plate, and `presenceDaysOf` is the one place that reading
+ * lives. It is the definition the record's rate is measured with, the definition
+ * §3.1's replay charges by, and the definition §11 threshold 11 measures the record
+ * side with, so the ledger's target and the threshold are one quantity.
+ *
+ * - **Saturday.** Any third item beside the treat and the dessert is the optional
+ *   element, accompaniment, structural dry-protein partner and §5.4 special protein
+ *   alike, exactly as §3.2 says. Three or more picks is the whole test.
+ * - **Weekday lunch.** The optional element is the companion, and only the
+ *   companion, so the plate is read rather than counted: everything it holds beyond
+ *   the positions its §5.1 form structurally requires is the companion. Plate size
+ *   alone would be wrong in both directions, because a complete plate that takes a
+ *   companion (khichdi and a salad) is two picks and a standard plate that takes a
+ *   protein floor (dal, roti and a grilled chicken) is three.
+ *   1. **The §5.1 protein-floor append comes off first.** §5.1 calls the floor a
+ *      safety net that fires only when neither meal of the day carries protein, so
+ *      it is not a companion. A lunch pick is read as that append when the dish
+ *      passes the floor pool's own predicate (`isPlainProtein` and not
+ *      `isSoyaProtein`), no other pick of the day carries protein (`carriesProtein`
+ *      over the lunch's other picks and the day's breakfast, which is the condition
+ *      under which the floor fires at all), and the lunch's other picks still hold
+ *      a lunch star, so what is left when the append is removed is the plate the
+ *      floor appended to. Without that last clause the classification would read a
+ *      dry-protein **star** beside a carb and a companion (fish tikka, roti and a
+ *      salad on a day whose breakfast is meatless) as a floor day and lose a real
+ *      companion.
+ *   2. **Then the form's own structural positions.** The star always; the carb on a
+ *      standard plate (a true complete plate has none); and on a carb-forward
+ *      international main the one plain protein §5.1 gives it, which is a partner
+ *      and not a companion.
+ *   3. **Anything still on the plate is the companion.**
+ *
+ * The engine charges the same occasions from the other side by role, a `companion`
+ * placement and nothing else, which is what makes the two sides one quantity;
+ * `generateWeekV6.ts` states that half, and §11 threshold 11 prints how far the two
+ * readings sit apart on the same plans so the gap is never invisible.
  */
 
 import type { Dish, Season } from "../data/schemas.js";
+import { carriesProtein } from "./place.js";
+import {
+  isCarbForwardInternational,
+  isLunchCarb,
+  isLunchStar,
+  isPlainProtein,
+  isSoyaProtein,
+} from "./pools.js";
 import type {
   Day,
   DishOccupation,
@@ -60,6 +110,122 @@ export const PRESENCE_SCOPES: readonly Scope[] = ["weekdayLunch", "saturday"];
  * the optional element, and the record carries no roles to read it off directly.
  */
 export const PRESENCE_PLATE_ITEMS = 3;
+
+/**
+ * The §5.1 protein-floor pool's own predicate, dish side: a plain protein in
+ * Category Keto or Dry dish, never a Gravy dish or a complete meal, and never a
+ * soya dish (§13). Exactly what `proteinFloorPool` filters on, so the
+ * classification and the pool cannot drift apart.
+ */
+function isFloorAppendCandidate(dish: Dish): boolean {
+  return isPlainProtein(dish) && !isSoyaProtein(dish);
+}
+
+/**
+ * Whether one weekday lunch carried a §5.1 protein-floor append: the three-part
+ * test the module doc comment states as the presence definition.
+ *
+ * `lunch` is the day's lunch dishes and `breakfast` the same day's breakfast
+ * dishes, both in the record's own order; the test is order-independent.
+ */
+function floorAppendIndex(lunch: readonly Dish[], breakfast: readonly Dish[]): number {
+  for (let index = 0; index < lunch.length; index += 1) {
+    const candidate = lunch[index];
+    if (!isFloorAppendCandidate(candidate)) continue;
+    const rest = lunch.filter((_, other) => other !== index);
+    if (rest.some(carriesProtein) || breakfast.some(carriesProtein)) continue;
+    if (!rest.some(isLunchStar)) continue;
+    return index;
+  }
+  return -1;
+}
+
+/** The dishes one meal of one day carried, library-known picks only, in pick order. */
+function dishesOfMeal(
+  picks: readonly Pick[],
+  day: Day,
+  meal: "breakfast" | "lunch",
+  dishById: ReadonlyMap<number, Dish>,
+): Dish[] {
+  const out: Dish[] = [];
+  for (const pick of picks) {
+    if (pick.day !== day || pick.meal !== meal) continue;
+    const dish = dishById.get(pick.dishId);
+    if (dish !== undefined) out.push(dish);
+  }
+  return out;
+}
+
+/**
+ * Whether one weekday lunch carried the §3.2 optional companion: everything the
+ * plate holds beyond the positions §5.1's form structurally requires.
+ *
+ * The plate is read, not counted, because a weekday lunch is not always three items
+ * when it carries a companion and not always a companion when it is three items:
+ *
+ * - the §5.1 protein-floor append is subtracted first (`floorAppendIndex`);
+ * - a carb-forward international main takes exactly one plain protein and nothing
+ *   else, so that partner is structural and not a companion;
+ * - a standard plate's carb is structural, and a true complete plate has none;
+ * - the star is structural in every form.
+ *
+ * What is left is the companion, which is why a complete plate of two picks
+ * (khichdi and a salad) is presence while a standard plate of two (dal and roti) is
+ * not.
+ */
+function carriedWeekdayCompanion(lunch: readonly Dish[], breakfast: readonly Dish[]): boolean {
+  const floorIndex = floorAppendIndex(lunch, breakfast);
+  const plate = lunch.filter((_, index) => index !== floorIndex);
+  if (plate.length === 0) return false;
+  let structural = 1;
+  if (plate.some(isCarbForwardInternational)) {
+    if (plate.some((dish) => !isCarbForwardInternational(dish) && isPlainProtein(dish))) {
+      structural += 1;
+    }
+  } else if (plate.some(isLunchCarb)) {
+    structural += 1;
+  }
+  return plate.length > structural;
+}
+
+/**
+ * §3.2: the days of a pick list on which one scope's plate carried the optional
+ * element. The presence definition in the module doc comment, in code.
+ *
+ * The same reading measures the record, charges §3.1's replay, and is what §11
+ * threshold 11 compares the engine's own role-metered charges against, so a
+ * presence ledger accrued from the record is paid down by exactly the occasions the
+ * record would have counted.
+ *
+ * `skippedDays` are days the household did not eat (§2.2): they are occasions of no
+ * scope, so they can carry no presence either.
+ */
+export function presenceDaysOf(
+  picks: readonly Pick[],
+  scope: Scope,
+  library: readonly Dish[],
+  skippedDays: readonly Day[] = [],
+): Set<Day> {
+  const out = new Set<Day>();
+  if (scope !== "weekdayLunch" && scope !== "saturday") return out;
+  const dishById = new Map<number, Dish>();
+  for (const dish of library) dishById.set(dish.id, dish);
+  const skipped = new Set<Day>(skippedDays);
+
+  for (const day of scope === "saturday" ? SATURDAY : WEEKDAYS) {
+    if (skipped.has(day)) continue;
+    const lunch = dishesOfMeal(picks, day, "lunch", dishById);
+    if (scope === "saturday") {
+      // §3.2 counts any third item on a Saturday, accompaniment, structural
+      // partner and §5.4 special protein alike, so plate size is the whole test.
+      if (lunch.length >= PRESENCE_PLATE_ITEMS) out.add(day);
+      continue;
+    }
+    const breakfast = dishesOfMeal(picks, day, "breakfast", dishById);
+    if (carriedWeekdayCompanion(lunch, breakfast)) out.add(day);
+  }
+  return out;
+}
 
 /** The three seasons in a fixed order, so per-season maps serialize identically (§10). */
 const SEASONS: readonly Season[] = ["Summer", "Monsoon", "Winter"];
@@ -351,18 +517,11 @@ export function deriveRecordStats(
     }
 
     // §3.2 presence: the share of the scope's occasions whose plate carried the
-    // optional element. The record has no roles, so a plate of three or more picks
-    // is what "carried the element" reads as; see `RecordStats.presenceRate`.
+    // optional element, by the one classification the module doc comment states
+    // and `presenceDaysOf` holds.
     for (const scope of PRESENCE_SCOPES) {
-      for (const day of scope === "saturday" ? SATURDAY : WEEKDAYS) {
-        if (skipped.has(day)) continue;
-        const items = week.picks.filter(
-          (pick) => pick.day === day && pick.meal === "lunch" && known.has(pick.dishId),
-        ).length;
-        if (items >= PRESENCE_PLATE_ITEMS) {
-          presenceHits[scope] = (presenceHits[scope] ?? 0) + 1;
-        }
-      }
+      const days = presenceDaysOf(week.picks, scope, library, week.skippedDays);
+      presenceHits[scope] = (presenceHits[scope] ?? 0) + days.size;
     }
 
     // §6 step 5: the exploration slot's own weekday memory. A weekday lunch plan

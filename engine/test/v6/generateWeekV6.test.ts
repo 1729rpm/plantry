@@ -15,16 +15,23 @@ import {
   applyRepairsToLedger,
   deriveCutoverWeek,
   generateWeekV6,
+  presenceOccasionsOf,
 } from "../../src/v6/generateWeekV6.js";
 import { charge, deficitIn, emptyLedger } from "../../src/v6/ledger.js";
-import { seasonOfWeek } from "../../src/v6/record.js";
+import { deriveRecordStats, presenceDaysOf, seasonOfWeek } from "../../src/v6/record.js";
 import { proteinFamily } from "../../src/v6/compose.js";
 import {
   isCarbForwardInternational as isCarbForward,
   isEverydayBase as isBase,
 } from "../../src/v6/pools.js";
 import type { Repair } from "../../src/v6/place.js";
-import type { GenerateWeekV6Args, RecordWeek } from "../../src/v6/types.js";
+import type {
+  GenerateWeekV6Args,
+  PickRole,
+  PlanPick,
+  RecordWeek,
+  Scope,
+} from "../../src/v6/types.js";
 import { loadRecordFixture } from "./loadRecordFixture.js";
 import { loadLiveData } from "../loadLive.js";
 
@@ -421,32 +428,33 @@ describe("§3.2 presence ledgers, over a self-fed horizon", () => {
     return generated;
   }
 
+  /**
+   * The served presence rate of a scope, metered by role off the engine's own
+   * diagnostics: the §3.2 quantity the presence ledger charges, and the one §11
+   * threshold 11 compares against `RecordStats.presenceRate`.
+   */
   const presenceOf = (
     weeks: Array<ReturnType<typeof generateWeekV6>>,
     scope: "weekdayLunch" | "saturday",
   ): number => {
-    const days = scope === "saturday" ? ["Sat"] : ["Mon", "Tue", "Wed", "Thu", "Fri"];
-    let occasions = 0;
+    const slots = scope === "saturday" ? 1 : 5;
     let carried = 0;
-    for (const week of weeks) {
-      for (const day of days) {
-        occasions += 1;
-        const items = week.generatedPlan.filter(
-          (pick) => pick.day === day && pick.meal === "lunch",
-        ).length;
-        if (items >= 3) carried += 1;
-      }
-    }
+    for (const week of weeks) carried += week.diagnostics.presenceOccasions[scope] ?? 0;
+    const occasions = weeks.length * slots;
     return occasions > 0 ? carried / occasions : 0;
   };
 
-  it("holds the weekday companion slot near the record's own presence rate over 20 weeks", () => {
+  it("holds the weekday companion slot inside §3.2's own bar over 20 weeks", () => {
     const weeks = selfFeed(20);
     const served = presenceOf(weeks, "weekdayLunch");
-    // The record's companion presence is about 0.53. Without the presence ledger
-    // this ran at 0.71, which is what armed §3.2's reopening trigger.
-    expect(served).toBeGreaterThan(0.4);
-    expect(served).toBeLessThan(0.66);
+    const target =
+      deriveRecordStats(record, library, seasonOfWeek(WEEK_START)).presenceRate.weekdayLunch ?? 0;
+    expect(target).toBeGreaterThan(0);
+    // §3.2's reopening trigger is 25 percent over the record's own rate, and it is
+    // the bar this ledger exists to hold. Without the ledger this ran at 0.71
+    // against a record rate near 0.58, which is what armed the trigger.
+    expect(served).toBeGreaterThan(target * 0.75);
+    expect(served).toBeLessThan(target * 1.25);
   });
 
   it("keeps Saturday's third item off every Saturday, structural forms included", () => {
@@ -484,5 +492,104 @@ describe("§3.2 presence ledgers, over a self-fed horizon", () => {
 
   it("is deterministic across a replayed horizon (§10)", () => {
     expect(selfFeed(6).map(fingerprint)).toEqual(selfFeed(6).map(fingerprint));
+  });
+
+  /**
+   * The §5.1 protein-floor append is a safety net, not a companion, so it must not
+   * spend the weekday companion slot's presence budget. These are the plates that
+   * would have been charged under the plate-size reading.
+   */
+  it("never charges the weekday slot for a protein-floor append", () => {
+    const pick = (dishId: number, role: PickRole): Omit<PlanPick, "day"> => ({
+      meal: "lunch",
+      dishId,
+      role,
+      scope: "weekdayLunch",
+      origin: role === "floor" ? "structural" : "deficit",
+    });
+    const plate = (picks: Array<Omit<PlanPick, "day">>, scope: Scope = "weekdayLunch") => ({
+      meal: "lunch" as const,
+      scope,
+      day: "Mon" as const,
+      picks,
+    });
+
+    // Three picks, no companion: the floor took a two-item plate to three.
+    expect(
+      presenceOccasionsOf([
+        plate([
+          pick(idOf("Aloo matar"), "star"),
+          pick(idOf("Roti"), "carb"),
+          pick(idOf("Grilled chicken breast"), "floor"),
+        ]),
+      ]).weekdayLunch,
+    ).toBe(0);
+
+    // Four picks, and one of them is a companion: the floor comes off, the
+    // companion stays, and the slot is charged once.
+    expect(
+      presenceOccasionsOf([
+        plate([
+          pick(idOf("Aloo matar"), "star"),
+          pick(idOf("Roti"), "carb"),
+          pick(idOf("Cucumber raita"), "companion"),
+          pick(idOf("Grilled chicken breast"), "floor"),
+        ]),
+      ]).weekdayLunch,
+    ).toBe(1);
+
+    // Two picks, one of them a companion: §5.1's complete plate takes one small
+    // companion, which plate size cannot see and the role can.
+    expect(
+      presenceOccasionsOf([
+        plate([pick(idOf("Khichdi"), "star"), pick(idOf("Onion tomato salad"), "companion")]),
+      ]).weekdayLunch,
+    ).toBe(1);
+
+    // Saturday counts any third item, structural roles included (§3.2).
+    expect(
+      presenceOccasionsOf([
+        plate(
+          [
+            pick(idOf("Khichdi"), "treat"),
+            pick(idOf("Kheer"), "dessert"),
+            pick(idOf("Grilled chicken breast"), "special-protein"),
+          ],
+          "saturday",
+        ),
+      ]).saturday,
+    ).toBe(1);
+  });
+
+  it("keeps the served and record readings of presence within the record's own ambiguity", () => {
+    const weeks = selfFeed(20);
+    let byRole = 0;
+    let byClassification = 0;
+    let plateSize = 0;
+    let floorRepairs = 0;
+    for (const week of weeks) {
+      byRole += week.diagnostics.presenceOccasions.weekdayLunch ?? 0;
+      byClassification += presenceDaysOf(week.generatedPlan, "weekdayLunch", library).size;
+      for (const day of ["Mon", "Tue", "Wed", "Thu", "Fri"]) {
+        const items = week.generatedPlan.filter(
+          (entry) => entry.day === day && entry.meal === "lunch",
+        ).length;
+        if (items >= 3) plateSize += 1;
+      }
+      floorRepairs += week.diagnostics.repairs.filter(
+        (repair) => repair.constraint === "protein-floor",
+      ).length;
+    }
+    // The horizon has to exercise the floor, or the first assertion is vacuous.
+    expect(floorRepairs).toBeGreaterThan(0);
+    // Plate size counts floor appends as companions; neither of the two real
+    // measures does, so both sit below it.
+    expect(byRole).toBeLessThan(plateSize);
+    // The two readings of the one quantity: the record carries no roles, so a
+    // plate of a dry-protein star, a carb and a gravy companion is indistinguishable
+    // from a gravy star, a carb and a floor append, and the classification reads
+    // some of those the other way. The residual is small and bounded; a wide gap
+    // would put every §11 threshold 11 number out by that much.
+    expect(Math.abs(byRole - byClassification) / byRole).toBeLessThan(0.15);
   });
 });

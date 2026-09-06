@@ -193,6 +193,49 @@ export function applyRepairsToLedger(ledger: Ledger, repairs: readonly Repair[])
   return next;
 }
 
+/**
+ * §3.2 presence, the served side, counted by role on the finished plates: the
+ * `V6Diagnostics.presenceOccasions` §11 threshold 11 measures.
+ *
+ * A weekday lunch carried the optional element when it carries a `companion` pick;
+ * a Saturday when its plate holds a third item at all. This runs after the §6 step
+ * 6 repairs and the §9 cap, so a companion a repair dropped does not count, which
+ * is what a replay of the week's `generatedPlan` would also conclude.
+ *
+ * Exported for the same reason `applyRepairsToLedger` is: the counting rule is
+ * testable on its own, without reaching inside a generation.
+ */
+export function presenceOccasionsOf(plates: readonly Plate[]): Partial<Record<Scope, number>> {
+  const out: Partial<Record<Scope, number>> = { weekdayLunch: 0, saturday: 0 };
+  for (const plate of plates) {
+    if (!plateCarriesPresence(plate)) continue;
+    out[plate.scope] = (out[plate.scope] ?? 0) + 1;
+  }
+  return out;
+}
+
+/**
+ * Whether one plate carried its scope's §3.2 optional element, by role: the engine
+ * side of the presence definition `record.ts` states in full.
+ *
+ * - **Weekday lunch:** a `companion` placement and nothing else. §3.2's optional
+ *   element here is "a companion on a weekday lunch", and the §5.1 protein-floor
+ *   append is a safety net that fires only when neither meal of the day carries
+ *   protein, so it is not a companion and never spends the slot's budget.
+ * - **Saturday:** any third item, so the structural dry-protein partner and the
+ *   §5.4 special protein consume the slot's presence just as an accompaniment does,
+ *   exactly as §3.2 says. Saturday is exempt from the protein floor (§5.1), so
+ *   plate size is the whole test.
+ */
+function plateCarriesPresence(plate: Plate): boolean {
+  if (plate.meal !== "lunch") return false;
+  if (plate.scope === "weekdayLunch") {
+    return plate.picks.some((pick) => pick.role === "companion");
+  }
+  if (plate.scope === "saturday") return plate.picks.length >= PRESENCE_PLATE_ITEMS;
+  return false;
+}
+
 /** A plan pick before day assignment: what a plate carries. */
 type PlatePick = Omit<PlanPick, "day">;
 
@@ -306,17 +349,14 @@ export function generateWeekV6(args: GenerateWeekV6Args): GeneratedWeekV6 {
    * §3.2's presence charge for a freshly composed plate: one occasion out of the
    * slot's presence ledger when the plate carried its optional element.
    *
-   * "Carried it" is the plate-size test `RecordStats.presenceRate` and §3.1's
-   * replay both use (three or more picks on a lunch plate), rather than the role of
-   * any one pick, so the charge the engine makes now is exactly the charge the
-   * replay will make from this week's `generatedPlan` next week. That is what keeps
-   * a structural Saturday partner or special protein charging presence, as §3.2
-   * requires, with no special case: it is the plate's third item.
+   * The engine knows every pick's role, so it charges by `plateCarriesPresence`,
+   * the role-side half of the presence definition `record.ts` states in full. The
+   * §5.1 protein-floor append appends in the §6 step 6 constraint pass, after this
+   * charge, and metering it would have spent the companion slot's budget on a plate
+   * that never asked the slot for anything.
    */
   function chargePlatePresence(plate: Plate): void {
-    if (plate.meal !== "lunch") return;
-    if (plate.scope !== "weekdayLunch" && plate.scope !== "saturday") return;
-    if (plate.picks.length < PRESENCE_PLATE_ITEMS) return;
+    if (!plateCarriesPresence(plate)) return;
     ledger = chargePresence(ledger, plate.scope);
   }
 
@@ -868,6 +908,7 @@ export function generateWeekV6(args: GenerateWeekV6Args): GeneratedWeekV6 {
         : null,
       repairs,
       prepCeilingBreaches,
+      presenceOccasions: presenceOccasionsOf(finalPlates),
       unrepairable: pass.unrepairable,
       weekdayInternationalStars,
       // §11's diagnosis instrument. The plate's own `deficit` is the lead's ledger
