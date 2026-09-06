@@ -332,6 +332,12 @@ export interface ConstraintRepair {
   addedDishId: number | null;
   /** The other day of a whole-plate swap; null for an in-place replacement. */
   swappedWithDay: Day | null;
+  /**
+   * The plate position the repair touched, or null for a whole-plate swap, which
+   * touches every position and none. Read by the §11 harness, which needs to say
+   * how many repairs replaced a lunch star rather than a companion.
+   */
+  role: PickRole | null;
 }
 
 /** One day whose composed plates exceed the §5.1 whole-day prep ceiling of 120 active minutes. */
@@ -376,6 +382,24 @@ export interface V6Diagnostics {
    * by §11 threshold 8.
    */
   weekdayInternationalStars: number;
+  /**
+   * §11's diagnosis instrument: each lunch plate's lead, with why it is there and
+   * the scope deficit it spent at pick time.
+   *
+   * `generatedPlan` (§12) carries only (day, meal, dishId), because that is all
+   * §3.1's replay needs. A §11 diagnosis has to answer why a pick is where it is,
+   * and the origin and the deficit are known only inside generation, so they are
+   * reported here. One entry per lunch plate, the Saturday plate included, in day
+   * order. Reported, never gated.
+   */
+  lunchLeads: Array<{
+    day: Day | null;
+    scope: Scope;
+    dishId: number;
+    origin: PickOrigin;
+    /** The lead's ledger deficit in `scope` when it was chosen, before its charge. */
+    deficit: number;
+  }>;
   /**
    * The §12 cutover week this generation replayed from, derived unless the
    * caller overrode it. Reported so the §11 harness can show that a self-feeding

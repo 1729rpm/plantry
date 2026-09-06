@@ -310,15 +310,28 @@ export function assignDays(plates: Plate[], stats: RecordStats): Plate[] {
     const supply = (meal === "fruit" ? ALL_DAYS : WEEKDAYS).filter((day) => !taken.has(day));
     const available = new Set<Day>(supply);
 
+    // §6 step 5, as amended after the first gate run: "the memory held in reserve
+    // is now the rule". The exploration plate's weekday is RESERVED out of the
+    // whole supply before the repertoire plates choose, and the plate itself is
+    // still filled in last, so the priority order is unchanged for everything
+    // else. Reserving is what makes the memory a rule at all: five lunch plates
+    // fill five weekdays, so a pick assigned last from what is left has exactly
+    // one day to take and its own memory could never decide anything.
+    const explorationPlate = group.find((plate) => plate.day === null && isExplorationPlate(plate));
+    if (explorationPlate && available.size > 0) {
+      const day = [...available].sort((a, b) =>
+        compareDaysForExploration(a, b, stats.explorationWeekdays),
+      )[0];
+      available.delete(day);
+      assigned.set(explorationPlate, day);
+    }
+
     for (const plate of assignmentOrder(group)) {
       if (plate.day !== null) continue;
+      if (assigned.has(plate)) continue;
       if (available.size === 0) continue;
       const occupations = stats.perDish.get(leadDishId(plate))?.occupations;
-      const best = isExplorationPlate(plate)
-        ? [...available].sort((a, b) =>
-            compareDaysForExploration(a, b, stats.explorationWeekdays),
-          )[0]
-        : [...available].sort((a, b) => compareDaysForDish(a, b, meal, occupations))[0];
+      const best = [...available].sort((a, b) => compareDaysForDish(a, b, meal, occupations))[0];
       available.delete(best);
       assigned.set(plate, best);
     }

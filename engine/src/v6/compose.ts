@@ -326,9 +326,7 @@ export function composeWeekdayLunch(args: ComposeLunchArgs): Plate {
         ? fillStructuralWithOrigin(pool, placedThisWeek)
         : null;
     if (companion) {
-      plate.picks.push(
-        pickOf(companion.entry.dish, "companion", scope, "lunch", companion.origin),
-      );
+      plate.picks.push(pickOf(companion.entry.dish, "companion", scope, "lunch", companion.origin));
       onPlate.push(companion.entry.dish);
     }
   }
@@ -723,6 +721,7 @@ export function repairPrepCeiling(
         removedDishId: offender.dish.id,
         addedDishId: replacement.dish.id,
         swappedWithDay: null,
+        role,
       });
     } else {
       offender.plate.picks.splice(offender.index, 1);
@@ -733,6 +732,7 @@ export function repairPrepCeiling(
         removedDishId: offender.dish.id,
         addedDishId: null,
         swappedWithDay: null,
+        role,
       });
     }
   }

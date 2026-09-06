@@ -235,6 +235,20 @@ export function generateWeekV6(args: GenerateWeekV6Args): GeneratedWeekV6 {
   const stats = deriveRecordStats(statsRecord, library, season, {
     rateFormula: variant?.rateFormula,
   });
+  /**
+   * §7 candidacy under §11's frozen run.
+   *
+   * The frozen run fixes the rates selection reads at the cutover record. It must
+   * not fix which dishes the household has eaten: §7 makes exploration the door
+   * for a **never-eaten** dish, and a dish served in week 21 is not never-eaten in
+   * week 22 whatever the frozen rates say. Left frozen, the channel re-offers the
+   * same candidate every week (the first gate run put one dish in five of eight
+   * stars of a rolling window). Every other run reads one live derivation and this
+   * is the same object.
+   */
+  const candidacyStats = variant?.frozenRates
+    ? deriveRecordStats(record, library, season, { rateFormula: variant?.rateFormula })
+    : stats;
 
   let ledger = replayLedger({
     record,
@@ -344,6 +358,7 @@ export function generateWeekV6(args: GenerateWeekV6Args): GeneratedWeekV6 {
     exclude: placed,
     variant,
     nutrition: args.nutrition,
+    candidacyStats,
   });
   // §7 makes the pick conditional on a weekday lunch position accepting it, so it
   // is charged when its plate is committed rather than here. The two are
@@ -697,6 +712,7 @@ export function generateWeekV6(args: GenerateWeekV6Args): GeneratedWeekV6 {
     removedDishId: repair.replaced?.dishId ?? null,
     addedDishId: repair.replacement?.dishId ?? null,
     swappedWithDay: repair.swappedWithDay,
+    role: repair.replaced?.role ?? repair.replacement?.role ?? null,
   }));
 
   // ---------------------------------------------------------------------------
@@ -854,6 +870,18 @@ export function generateWeekV6(args: GenerateWeekV6Args): GeneratedWeekV6 {
       prepCeilingBreaches,
       unrepairable: pass.unrepairable,
       weekdayInternationalStars,
+      // §11's diagnosis instrument. The plate's own `deficit` is the lead's ledger
+      // value at composition time, which is exactly "the deficit at pick time".
+      lunchLeads: finalPlates
+        .filter((plate) => plate.meal === "lunch" && plate.picks.length > 0)
+        .map((plate) => ({
+          day: plate.day,
+          scope: plate.scope,
+          dishId: plate.picks[0].dishId,
+          origin: plate.picks[0].origin,
+          deficit: plate.deficit ?? 0,
+        }))
+        .sort((a, b) => ALL_DAYS.indexOf(a.day as Day) - ALL_DAYS.indexOf(b.day as Day)),
       cutoverWeek,
     },
   };
