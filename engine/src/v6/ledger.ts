@@ -7,6 +7,11 @@
  * cutover week on every generation: seed, then accrue, charge placements, and charge
  * the as-eaten rows the plan did not contain, week by week.
  *
+ * §3.2's two slot-level presence ledgers (the weekday lunch companion slot and the
+ * Saturday third-item slot) ride in the same map under reserved keys, so they are
+ * seeded, accrued, charged, and replayed by exactly the same machinery, with no
+ * second structure to keep in step.
+ *
  * Every operation here returns a **new** `Ledger`; nothing mutates its input. Every
  * returned ledger's `deficits` map is rebuilt in one fixed key order (dish id
  * ascending, then scope in `SCOPES` order), so two ledgers holding the same numbers
@@ -27,8 +32,18 @@
  */
 
 import type { Dish, Season } from "../data/schemas.js";
-import type { GenerateWeekV6Variant, Ledger, RecordStats, RecordWeek, Scope } from "./types.js";
+import type {
+  Day,
+  GenerateWeekV6Variant,
+  Ledger,
+  Pick,
+  RecordStats,
+  RecordWeek,
+  Scope,
+} from "./types.js";
 import {
+  PRESENCE_PLATE_ITEMS,
+  PRESENCE_SCOPES,
   SCOPES,
   countedPicksOfWeek,
   deriveOccasionSeries,
@@ -85,7 +100,45 @@ function ledgerKey(dishId: number, scope: Scope): string {
   return `${dishId}:${scope}`;
 }
 
+/**
+ * The reserved prefix §3.2's presence ledgers live under. It cannot collide with a
+ * dish key, whose first segment is always a decimal dish id.
+ */
+const PRESENCE_PREFIX = "presence:";
+
+/**
+ * The §3.2 presence-ledger key for a slot: `` `presence:${scope}` ``.
+ *
+ * Two of these exist, `presence:weekdayLunch` (the weekday lunch companion slot)
+ * and `presence:saturday` (the Saturday third-item slot). They hold the slot's
+ * presence deficit rather than any dish's, and they share `Ledger.deficits` so that
+ * §3.1's replay carries them with no second structure to seed, accrue, or persist.
+ */
+export function presenceKey(scope: Scope): string {
+  return `${PRESENCE_PREFIX}${scope}`;
+}
+
+/** The presence deficit of a §3.2 slot, or 0 when the ledger has no entry for it yet. */
+export function presenceDeficitIn(ledger: Ledger, scope: Scope): number {
+  return ledger.deficits.get(presenceKey(scope)) ?? 0;
+}
+
+/**
+ * Key order: the reserved presence keys first, in `PRESENCE_SCOPES` order, then the
+ * dish keys by dish id ascending and scope in `SCOPES` order. Total and independent
+ * of insertion order, which is what makes a serialized ledger a stable fingerprint
+ * (§10).
+ */
 function compareKeys(a: string, b: string): number {
+  const aReserved = a.startsWith(PRESENCE_PREFIX);
+  const bReserved = b.startsWith(PRESENCE_PREFIX);
+  if (aReserved || bReserved) {
+    if (aReserved !== bReserved) return aReserved ? -1 : 1;
+    return (
+      PRESENCE_SCOPES.indexOf(a.slice(PRESENCE_PREFIX.length) as Scope) -
+      PRESENCE_SCOPES.indexOf(b.slice(PRESENCE_PREFIX.length) as Scope)
+    );
+  }
   const aColon = a.lastIndexOf(":");
   const bColon = b.lastIndexOf(":");
   const dish = Number(a.slice(0, aColon)) - Number(b.slice(0, bColon));
@@ -93,6 +146,28 @@ function compareKeys(a: string, b: string): number {
   return (
     SCOPES.indexOf(a.slice(aColon + 1) as Scope) - SCOPES.indexOf(b.slice(bColon + 1) as Scope)
   );
+}
+
+/** Monday to Friday: the weekday lunch occasions of one generated or record week (§4). */
+const WEEKDAYS: readonly Day[] = ["Mon", "Tue", "Wed", "Thu", "Fri"];
+
+/**
+ * The days of a pick list on which the §3.2 optional element was present, for one
+ * scope: a lunch plate of three or more picks (§3.2, and `RecordStats.presenceRate`
+ * for why plate size is the test).
+ *
+ * The same reading measures the record, charges the replay, and gates generation, so
+ * a presence ledger accrued from the record is paid down by exactly the occasions
+ * the record would have counted.
+ */
+export function presenceDays(picks: readonly Pick[], scope: Scope): Set<Day> {
+  const days = scope === "saturday" ? (["Sat"] as const) : WEEKDAYS;
+  const out = new Set<Day>();
+  for (const day of days) {
+    const items = picks.filter((pick) => pick.day === day && pick.meal === "lunch").length;
+    if (items >= PRESENCE_PLATE_ITEMS) out.add(day);
+  }
+  return out;
 }
 
 /**
@@ -214,6 +289,11 @@ export function seedLedger(
     }
   }
 
+  // §3.2: the presence ledgers are seeded at zero, never backdated. A slot has no
+  // "last served" week to accrue from, and seeding one would bank a transient of
+  // exactly the kind §3's cold-start amendment removed from the optional pools.
+  for (const scope of PRESENCE_SCOPES) raw.set(presenceKey(scope), 0);
+
   if (cap === "pool") {
     const rawTotal: Record<Scope, number> = {
       weekdayBreakfast: 0,
@@ -252,6 +332,15 @@ export function accrue(
   plannedOccasions: Record<Scope, number>,
 ): Ledger {
   const next = new Map(ledger.deficits);
+  // §3.2: each presence ledger accrues its scope's record presence rate times the
+  // scope's planned occasions, on the same clock as a dish's deficit. A scope the
+  // record has no occasions for accrues nothing, exactly as an absent rate does.
+  for (const scope of PRESENCE_SCOPES) {
+    const rate = stats.presenceRate[scope];
+    if (rate === undefined) continue;
+    const key = presenceKey(scope);
+    next.set(key, (next.get(key) ?? 0) + rate * (plannedOccasions[scope] ?? 0));
+  }
   for (const dishId of [...stats.perDish.keys()].sort((a, b) => a - b)) {
     if (!eligibleDishIds.has(dishId)) continue;
     for (const scope of SCOPES) {
@@ -275,6 +364,22 @@ export function accrue(
 export function charge(ledger: Ledger, dishId: number, scope: Scope): Ledger {
   const next = new Map(ledger.deficits);
   const key = ledgerKey(dishId, scope);
+  next.set(key, (next.get(key) ?? 0) - 1);
+  return freeze(next);
+}
+
+/**
+ * §3.2's presence charge: one occasion out of a slot's presence ledger.
+ *
+ * Charged once per planned occasion whose plate carried the optional element,
+ * whatever form that element took: an ordinary companion or accompaniment, and on
+ * Saturday the structural dry-protein partner and the special protein beside an
+ * everyday base too (§5.4 gives those forms the third item's place, so they consume
+ * the slot's presence just as an accompaniment would).
+ */
+export function chargePresence(ledger: Ledger, scope: Scope): Ledger {
+  const next = new Map(ledger.deficits);
+  const key = presenceKey(scope);
   next.set(key, (next.get(key) ?? 0) - 1);
   return freeze(next);
 }
@@ -326,6 +431,46 @@ export function reconcile(
   let next = ledger;
   for (const entry of unmatchedEatenPicks(eaten, planned)) {
     next = charge(next, entry.pick.dishId, entry.scope);
+  }
+  // §3.2: a hand-added optional element is charged at reconciliation, and a removed
+  // one keeps its charge, exactly as §3 treats a dish. So an occasion the household
+  // ate a third item on that the plan did not carry is charged here, and an occasion
+  // the plan carried one on that the household stripped is not refunded (it was
+  // charged by `chargePlanPresence` and stays charged).
+  const eatenPicks = eaten.map((entry) => entry.pick);
+  const plannedPicks = planned.map((entry) => entry.pick);
+  for (const scope of PRESENCE_SCOPES) {
+    const fromPlan = presenceDays(plannedPicks, scope);
+    for (const day of presenceDays(eatenPicks, scope)) {
+      if (!fromPlan.has(day)) next = chargePresence(next, scope);
+    }
+  }
+  return next;
+}
+
+/**
+ * §3.2's presence charge for what the engine placed in a record week: one charge per
+ * planned occasion whose plate carried the optional element.
+ *
+ * The mirror of the dish plan charges in §3.1's replay, and it runs beside them so
+ * the two ledgers stay on one clock. A week with no `generatedPlan` charges nothing
+ * here; `reconcile` then charges every occasion the household's own plates carried,
+ * which is the same one-charge-per-occasion bookkeeping from the other side.
+ */
+export function chargePlanPresence(
+  ledger: Ledger,
+  week: RecordWeek,
+  library: readonly Dish[],
+  season: Season,
+  fruitAllSeason = false,
+): Ledger {
+  const planned = countedPicksOfWeek(week, "planned", library, season, fruitAllSeason).map(
+    (entry) => entry.pick,
+  );
+  let next = ledger;
+  for (const scope of PRESENCE_SCOPES) {
+    const occasions = presenceDays(planned, scope).size;
+    for (let index = 0; index < occasions; index += 1) next = chargePresence(next, scope);
   }
   return next;
 }
@@ -465,6 +610,7 @@ export function replayLedger(args: ReplayLedgerArgs): Ledger {
 
     const planned = countedPicksOfWeek(row, "planned", library, weekSeason, fruitAllSeason);
     for (const entry of planned) ledger = charge(ledger, entry.pick.dishId, entry.scope);
+    ledger = chargePlanPresence(ledger, row, library, weekSeason, fruitAllSeason);
     ledger = reconcile(ledger, row, library, weekSeason, fruitAllSeason);
   }
 

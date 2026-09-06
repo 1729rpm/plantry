@@ -96,6 +96,8 @@ function statsWith(occupations: Record<number, Record<string, DishOccupation>>):
     seasonDayOccasions: {},
     perDish,
     swappedOut: [],
+    presenceRate: {},
+    explorationWeekdays: new Map(),
   };
 }
 
