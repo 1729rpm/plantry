@@ -23,14 +23,14 @@ TypeScript is the single language across engine, backend, and frontend. Schema v
 
 Plantry has two stores by design. The split is the load-bearing engineering decision; if a piece of data sits in the wrong place, fix the placement rather than working around it.
 
-| Stays in git markdown                                                                          | Stays in Convex tables                                                        |
-| ---------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------- |
-| `data/dishes/<slug>.md`, one file per dish (frontmatter + ingredient rows)                     | `currentWeek`, the live Mon-Sat plan with overrides                           |
-| `data/ingredients.md`, the ingredient catalog (one row per ingredient: group, unit, pack size) | `weekArchive`, finalized past weeks (queryable for the engine's recency rule) |
-| `data/menu_history.md`, seed for first deploy (later, a periodic snapshot)                     | `manualChanges`, the append-only log of user edits to the week                |
-| `data/changelog.md`, structural changes audit                                                  | `incidents`, runtime errors written by the auto-recovery middleware           |
-| `docs/engine.md`, the rules spec                                                               | `userProfiles`, device identity ("I am Rajat" or "I am Tuhina")               |
-| `engine/` source code                                                                          | `swiggyCarts`, future Swiggy MCP integration state                            |
+| Stays in git markdown                                                                          | Stays in Convex tables                                              |
+| ---------------------------------------------------------------------------------------------- | ------------------------------------------------------------------- |
+| `data/dishes/<slug>.md`, one file per dish (frontmatter + ingredient rows)                     | `currentWeek`, the live Mon-Sat plan with overrides                 |
+| `data/ingredients.md`, the ingredient catalog (one row per ingredient: group, unit, pack size) | `weekArchive`, finalized past weeks, kept as provenance             |
+| `data/menu_history.md`, the pre-app menu record, kept as provenance                            | `manualChanges`, the append-only log of user edits to the week      |
+| `data/changelog.md`, structural changes audit                                                  | `incidents`, runtime errors written by the auto-recovery middleware |
+| `docs/engine.md`, the rules spec                                                               | `userProfiles`, device identity ("I am Rajat" or "I am Tuhina")     |
+| `engine/` source code                                                                          | `swiggyCarts`, future Swiggy MCP integration state                  |
 
 Principle for the split: anything a human edits by hand stays in git, because git's pull-request/diff/review workflow is what we want. Anything the running app writes stays in Convex, because committing on every swap would be slow, noisy, and turn git history into a transactional log. The audit-trail argument for git is preserved where it matters (library and rules); operational state has author + timestamp inside Convex.
 
@@ -149,10 +149,15 @@ dishDislikes                           # dishes disliked from Explore ("Not for 
 incidents
   createdAt: number
   source: "engine" | "backend" | "frontend"
-  severity: "warn" | "error"
+  severity: "info" | "warn" | "error"
   context: object                      # structured fields
   message: string
   resolvedAt: number | null
+
+# `severity` carries three levels. "error" and "warn" are what the auto-recovery
+# middleware writes. "info" is the routine-trail level: a generation writes one per
+# constraint repair (`docs/engine.md` §6 step 6), which is expected behaviour worth
+# reading back rather than a problem.
 
 userProfiles
   deviceId: string
@@ -166,7 +171,9 @@ The library + rules are not in Convex. Convex functions load them by importing t
 
 ## 4. Build-time bake of library + rules
 
-Convex functions cannot read the markdown files at runtime. The build pipeline reads every `data/dishes/<slug>.md` file plus the `data/ingredients.md` catalog and emits `engine/src/data/library.ts` (typed export of dishes, the flattened per-dish ingredient rows, the catalog, and the catalog-derived pack-size list) and `engine/src/data/history.ts` (typed export of `menu_history.md` for first-deploy seeding) at build time. Convex functions import these. The engine module reads the typed objects, never markdown directly.
+Convex functions cannot read the markdown files at runtime. The build pipeline reads every `data/dishes/<slug>.md` file plus the `data/ingredients.md` catalog and emits one module at build time, `engine/src/data/library.ts` (typed export of dishes, the flattened per-dish ingredient rows, the catalog, and the catalog-derived pack-size list), reachable as the package's `./library` export path. Convex functions import it. The engine module reads the typed objects, never markdown directly.
+
+The bake parses and validates `data/menu_history.md` too, so the file cannot rot, but it emits no module for it and nothing imports it: the household record comes from `currentWeek` (§3).
 
 Round-trip discipline: the build's parser is the same parser used by the round-trip tests, so any drift between markdown source and bundled output is caught in CI. The bake also runs the blocking data validators before emitting (every dish ingredient row resolves to a catalog row, every catalog row has a group, dish ids and slugs are unique, slugs match filenames), so bad data fails the build rather than reaching the bundle.
 
@@ -191,7 +198,7 @@ Coverage is complete: every active dish carries a photo (a coverage report asser
 
 1. Frontend calls `getSlotAlternatives({ weekStart, day, meal, position, limit? })`.
 2. The query builds a non-restrictive candidate pool: every dish in the library that is Active, in-season for the current Bangalore season, and non-Fruit, so a breakfast dish is reachable from a lunch slot and vice versa. For a fruit slot (`meal: "fruit"`) the pool is category-based instead: every Active, in-season, Category=Fruit dish, the swap-time analogue of the generation-time fruit pool (`docs/engine.md` §9). No per-position eligibility filter; the composition rules of `docs/engine.md` §5 are not enforced.
-3. The query derives the not-placed-this-week tier from the record (`docs/engine.md` §2.1) and passes it to the engine, which ranks the pool by `docs/engine.md` §13: a head of dishes not already on that day, ordered by that tier then dish id, then a tail of the same-day repeats in the same order, then a stable slot-meal-first partition applied by the caller.
+3. The query derives the recency tier off the live week itself, the set of dish ids its slots already hold excluding the position being ranked, and passes it to the engine, which ranks the pool by `docs/engine.md` §13: a head of dishes not already on that day, ordered by that tier then dish id, then a tail of the same-day repeats in the same order. The caller then stable-partitions slot-meal-matching dishes to the front. The seed history is not merged in and no cross-week recency is read.
 4. The currently-picked dish at this position is filtered out; the frontend renders the ranked list and the user picks any dish.
 
 **Read (grocery list):**
@@ -207,7 +214,7 @@ Coverage is complete: every active dish carries a photo (a coverage report asser
 **Read (explore feed):**
 
 1. Frontend calls `getExploreFeed({ weekStart })`.
-2. The query loads the record via `lib/record.ts` and feeds the engine `rankExploreV6` the library, the season for `weekStart`, and that record. The engine returns the eligible (active, in-season) dishes with `eatenCount = 0` in every scope, ranked familiar-but-new against record rows of the candidate's own meal type, each with its `dominantAffinity` key (`shared-ingredient` / `protein-match` / `familiar-category`); the query projects `{ dishId, name, dominantAffinity }`. The UI phrases the "why it fits" line from the key; no UI prose leaves the engine. With an empty record every eligible dish is never-eaten, so the feed is the whole active in-season library ranked by id.
+2. The query loads the record via `loadRecord`, reduces it with the engine's `deriveRecordStats`, and feeds `rankExploreV6` those stats plus the library, the season for `weekStart`, and the record itself. The engine returns the eligible (active, in-season) dishes with `eatenCount = 0` in every scope, ranked familiar-but-new against record rows of the candidate's own meal type, each with its `dominantAffinity` key (`shared-ingredient` / `protein-match` / `familiar-category`); the query projects `{ dishId, name, dominantAffinity }`. The UI phrases the "why it fits" line from the key; no UI prose leaves the engine. With an empty record every eligible dish is never-eaten, so the feed is the whole active in-season library ranked by id.
 
 **Write (swap a dish):**
 
@@ -263,6 +270,7 @@ Coverage is complete: every active dish carries a photo (a coverage report asser
 2. It loads three inputs. The **record** comes from `app/convex/lib/record.ts`: `loadRecord(ctx, weekStart)` returns every `currentWeek` row with an earlier `weekStart` in ascending order, each as its live slot state with skipped days removed, null-`dishId` custom picks dropped, and its `generatedPlan` passed through (null for a pre-cutover row). The **favorites** are every `favorites` row, createdAt ascending; the library ones go to the engine as the guaranteed-placement set (`docs/engine.md` §8) and custom favorites, which carry no `dishId`, are skipped. The **season** is derived from `weekStart`.
 3. The engine replays the ledger from the record (`docs/engine.md` §3.1), pins the favorites, and plans and places the week. A favorite that no slot accepts (out of season, inactive, unknown, or no fitting slot) is left unplaced and named in one `warn` incident for the week, so the run still produces a complete menu rather than failing. The favorites list is standing state, so nothing is consumed or marked: the next run reads it again unchanged.
 4. The mutation writes the week's slots **and its `generatedPlan`**, the (day, meal, dishId) list the engine placed. Without it the next run cannot separate an engine placement from a hand swap-in, so the write is not optional.
+5. It then writes the run's incidents: one `warn` naming any favorite no slot accepted, one `info` per constraint repair the pass made (the routine trail, in the order it made them), and one `warn` per day whose protected items alone exceed the prep ceiling. A repair the pass could still clear stays in the diagnostics rather than the incident log.
 
 **Record maintenance (two internal functions, no UI):**
 
@@ -383,7 +391,7 @@ plantry/
     dishes/            # one file per dish: data/dishes/<slug>.md (frontmatter + ingredient rows)
     dish-photos/       # web-ready dish photos (data/dish-photos/<slug>.jpg) + STYLE.md photo spec + details.md per-dish detail map
     ingredients.md     # ingredient catalog: one row per ingredient (group, unit, pack size)
-    menu_history.md    # history seed read on first deploy
+    menu_history.md    # the pre-app menu record, provenance; parsed at bake time, read by nothing
     changelog.md       # structural-change audit (slow-loop rationale entries)
     test-fixtures/     # slow-loop dry-run fixtures (data/test-fixtures/slow-loop/*.example.json)
   features/            # active feature spec (one at a time)
@@ -411,11 +419,11 @@ Naming:
 Every PR runs these checks; any failure blocks merge.
 
 1. **Round-trip parsers.** Each `data/dishes/<slug>.md` file and the `data/ingredients.md` catalog parse and re-serialize byte-identical (modulo declared whitespace policy). `data/menu_history.md` parses cleanly. The data validators (name resolution, group presence, id/slug uniqueness, slug-filename match) also run.
-2. **Engine spec/code parity.** If `docs/engine.md` is modified, the PR must also modify `engine/src/` and `engine/test/`. The check fails with a message naming the missing pair.
+2. **Engine spec/code parity, held by review.** A PR that modifies `docs/engine.md` also modifies at least one file under `engine/src/` and at least one under `engine/test/`. This is a review check, not a workflow step: the EM confirms the pairing at PR review and names the missing half when it is absent.
 3. **Engine type-check + unit tests.** Standard TS compile + Vitest run.
 4. **Gate harness.** `engine/test/v6/gate.test.ts`, the CI-sized subset of the `docs/engine.md` §16 verification gate: the 60-week self-feeding run against the record fixture, asserting distribution fidelity, lunch-main uniqueness, slot anti-lock, the Saturday thresholds, and plate size and effort. It is kept under a minute. The full three-run harness with its variants is `npm run gate` (`engine/scripts/gate.ts`), run per phase against the production record export rather than per PR, and its report is committed alongside the phase.
 5. **Property tests.** Item cap never exceeded, and generation is deterministic: two runs on the same inputs are byte-identical, and reversing the library array changes nothing.
-6. **Convex schema typecheck.** `npx convex codegen` succeeds; no orphan tables or fields.
+6. **Convex codegen.** `app/convex/_generated/` is committed, so the typecheck in gate 3 compiles every server function against the checked-in API types; a stale or missing regeneration fails there.
 7. **Frontend build.** Vite build succeeds; type-check passes; service worker bundles.
 8. **Lint and format.** ESLint + Prettier + stylelint, no warnings. stylelint parses every `app/web/src/**/*.css` and fails the build on unbalanced or unclosed CSS, which Vite would otherwise tolerate and ship silently.
 
