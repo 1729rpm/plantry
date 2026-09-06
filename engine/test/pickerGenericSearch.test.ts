@@ -13,8 +13,7 @@ import type { Dish } from "../src/data/schemas.js";
  *      matching dishes lead and cross-meal dishes follow, each group keeping its
  *      ranked order.
  *
- * This file is the engine-layer analogue of `broadPoolRanking.test.ts`; the
- * convex handler's reject paths (cross-meal accepted, Fruit rejected from a meal
+ * The convex handler's reject paths (cross-meal accepted, Fruit rejected from a meal
  * slot, fruit slot rejects non-fruit) are not covered here because the convex
  * package has no runner. See the PR diagnosis card.
  */
@@ -111,7 +110,7 @@ describe("generic-search slot-meal-first partition", () => {
       pool,
       meal: "Lunch",
       dishesOnDay: [],
-      history: [],
+      placedThisWeek: new Set<number>(),
     });
     const partitioned = partitionSlotMealFirst(ranked, "Lunch");
     const ids = partitioned.map((d) => d.id);
@@ -134,7 +133,7 @@ describe("generic-search slot-meal-first partition", () => {
     const pav = makeDish({ name: "Pav", time: "Breakfast" });
     const rajma = makeDish({ name: "Rajma", time: "Lunch" });
     const pool = broadMealPool([pav, rajma], "Monsoon");
-    const ranked = rankPickerAlternatives({ pool, meal: "Lunch", dishesOnDay: [], history: [] });
+    const ranked = rankPickerAlternatives({ pool, meal: "Lunch", dishesOnDay: [], placedThisWeek: new Set<number>() });
     const partitioned = partitionSlotMealFirst(ranked, "Lunch");
     const ids = partitioned.map((d) => d.id);
     expect(ids).toContain(pav.id);
