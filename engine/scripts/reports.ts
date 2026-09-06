@@ -9,7 +9,6 @@ import {
 } from "../src/data/parse.js";
 import {
   coverageReport,
-  poolCoverageReport,
   hpProteinConsistencyReport,
   specialSourcingReport,
 } from "../src/data/validators.js";
@@ -74,18 +73,12 @@ export function runReports(options: ReportsOptions): string {
   );
   lines.push("");
 
-  // --- Pool-coverage report -----------------------------------------------
-  const pools = poolCoverageReport(dishes);
-  lines.push("=== Pool-coverage report (eligible candidates per slot, per season) ===");
-  const seasons = [...new Set(pools.map((p) => p.season))];
-  for (const season of seasons) {
-    lines.push(`${season}:`);
-    for (const row of pools.filter((p) => p.season === season)) {
-      const thin = row.count <= 2 ? "  <- thin" : "";
-      lines.push(`  ${row.slot.padEnd(38)} ${String(row.count).padStart(3)}${thin}`);
-    }
-  }
-  lines.push("");
+  // The pool-coverage report is gone with the v3 menu forms it counted
+  // (`features/engine-v6.md` §12, §13): its rows named Menu 1 to Menu 4, the
+  // breakfast options and the lunch-carb pools, none of which v6 builds. v6's
+  // role pools are context-dependent (each is scoped and deficit-ranked, so it
+  // cannot be counted from the library alone), and the §11 gate reports their
+  // health per occasion instead: `npm run gate`.
 
   // --- HP-vs-protein consistency -----------------------------------------
   const drift = hpProteinConsistencyReport(dishes, ingredients, catalog);

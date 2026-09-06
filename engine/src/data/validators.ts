@@ -6,22 +6,11 @@ import type {
   Ingredient,
   MenuHistoryRow,
   PackSizeHeader,
-  Season,
 } from "./schemas.js";
 import { CatalogIngredientSchema, DishSchema } from "./schemas.js";
 import { baseSlug, slugForDishes } from "./slug.js";
 import { serializeDishFile } from "./serialize.js";
 import { deriveDishMacros } from "../nutrition.js";
-import { eligibleDishes } from "../eligibility.js";
-import {
-  breakfastWeekdayPair,
-  breakfastSinglePick,
-  fruitOfDayPool,
-  menu1,
-  menu2,
-  menu3,
-  menu4,
-} from "../composition.js";
 
 export function validateMenuHistoryAgainstLibrary(history: MenuHistoryRow[], dishes: Dish[]): void {
   const dishIds = new Set(dishes.map((d) => d.id));
@@ -216,8 +205,6 @@ export function validateDishFileRoundTrip(file: DishFile, original: string): voi
 // none: the coverage report reading near-zero on those is correct, not a failure.
 // ===========================================================================
 
-const ALL_SEASONS: readonly Season[] = ["Summer", "Monsoon", "Winter"];
-
 /**
  * Catalog rows that SHOULD carry macros, so the coverage denominator is not
  * diluted by spices and aromatics that legitimately stay blank forever
@@ -291,71 +278,6 @@ export function coverageReport(dishes: Dish[], catalog: CatalogIngredient[]): Co
     macroRelevantWithFat: macroRelevant.filter(hasFat).length,
     macroRelevantWithFiber: macroRelevant.filter(hasFiber).length,
   };
-}
-
-/** One composition slot's candidate count, for one season. */
-export interface PoolCount {
-  season: Season;
-  /** Composition slot label, mirroring docs/engine.md §3. */
-  slot: string;
-  count: number;
-}
-
-/**
- * For each composition slot in docs/engine.md §3, per season, the count of
- * eligible candidates. Surfaces thin pools (the source of repetition) and flags
- * when a season change strands a slot. The slot pools come from the live
- * composition functions, so the report cannot drift from the engine.
- *
- * Lunch carbs are reported as the §3.1 default pool (no Rice-already-used
- * constraint applied: this is a static pool snapshot, not a within-week pick).
- */
-export function poolCoverageReport(library: Dish[]): PoolCount[] {
-  const out: PoolCount[] = [];
-  for (const season of ALL_SEASONS) {
-    // §3 composition reads from the eligible (active, in-season) set for the
-    // meal; breakfast and lunch share the same eligible set here since
-    // eligibility is season + active only (docs/engine.md §1).
-    const eligible = eligibleDishes({
-      library,
-      history: [],
-      season,
-      slot: { day: "Mon", meal: "Lunch" },
-    });
-
-    const pair = breakfastWeekdayPair(eligible);
-    const single = breakfastSinglePick(eligible);
-    const fruit = fruitOfDayPool(eligible);
-    const m1 = menu1(eligible);
-    const m2 = menu2(eligible);
-    const m3 = menu3(eligible);
-    const m4 = menu4(eligible);
-
-    const rows: Array<[string, number]> = [
-      ["Fruit of the day (§3.3)", fruit.length],
-      ["Breakfast Option B: complete_carb", pair.optionB.completeCarb.length],
-      ["Breakfast Option B: accompaniment", pair.optionB.accompaniment.length],
-      ["Breakfast Option C: dry main", pair.optionC.dryMain.length],
-      ["Breakfast Option C: plain carb", pair.optionC.plainCarb.length],
-      ["Breakfast single (Tue/Thu)", single.pool.length],
-      ["Menu 1: protein lead (HP)", m1.hp.length],
-      ["Menu 2: protein lead (Keto)", m2.keto.length],
-      ["Weekday companions (non-HP Gravy/Dry/Accompaniment)", m1.companions.length],
-      ["Lunch protein floor (HP or Keto, Indian)", m1.proteinFloor.length],
-      ["Menu 3: complete_meal + HP", m3.completeMealHp.length],
-      ["Menu 3: Accompaniment", m3.accompaniment.length],
-      ["Menu 3: Dessert", m3.dessert.length],
-      ["Menu 4: complete_meal non-HP", m4.completeMealNonHp.length],
-      ["Menu 4: Keto", m4.keto.length],
-      ["Menu 4: Accompaniment", m4.accompaniment.length],
-      ["Lunch carb: Rice (§3.4)", m1.riceCarb.length],
-      ["Lunch carb: Chapati (§3.4)", m1.chapatiCarb.length],
-    ];
-    for (const [slot, count] of rows) {
-      out.push({ season, slot, count });
-    }
-  }
-  return out;
 }
 
 /** One dish whose computed protein disagrees with its HP tag. */

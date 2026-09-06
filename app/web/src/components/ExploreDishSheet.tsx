@@ -13,7 +13,7 @@
 // "why it fits" line, the default-open cook section, and the actions are owned
 // here.
 
-import type { ExploreAffinityKey } from "@plantry/engine";
+import type { ExploreAffinityKeyV6 as ExploreAffinityKey } from "@plantry/engine";
 import { dishById } from "../lib/library.js";
 import { Sheet, PrimaryButton, QuietButton } from "./primitives.js";
 import { DishDetailBody } from "./DishDetailBody.js";
