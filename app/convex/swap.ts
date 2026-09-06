@@ -126,8 +126,12 @@ function broadPool(meal: SlotMeal, season: Season): Dish[] {
  * gets one row dated `weekStart`; every other dish gets none. `rankPickerAlternatives`
  * reduces the rows with `lastCookedMap` and buckets by last-cooked week, so with
  * one week in play the buckets collapse to exactly two: never-seen (tier 0, the
- * better tier) for a dish not placed this week, and tier 1 for a dish that is. The
- * head then orders on dish id, which is the §12 rule.
+ * better tier) for a dish not placed this week, and tier 1 for a dish that is.
+ *
+ * That is the §12 tier. §12's other half, ordering the head on dish id alone, is
+ * not fully in force yet: the picker's protein-band-distance term still sits
+ * between the tier and the id, so it orders within a tier. §12 removes that term,
+ * and stream H removes it with the rest of the picker rework.
  *
  * Nothing here reads the baked seed history or `weekArchive`. Under v6 they are
  * not the record: the archive under-reports weeks the household edited after
