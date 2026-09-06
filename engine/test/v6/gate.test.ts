@@ -29,10 +29,13 @@ import { beforeAll, describe, expect, it } from "vitest";
 import { resolve } from "node:path";
 import {
   DEFAULT_WEEKS,
+  LOCK_EXEMPTION_RATE,
   loadGateData,
+  lockExempt,
   measureRun,
   normalCdf,
   simulate,
+  unbiasedSpread,
   type GateData,
   type RunReport,
 } from "../../scripts/gate.js";
@@ -48,13 +51,19 @@ const CI_THRESHOLDS = [1, 2, 4, 5, 10] as const;
  *
  * Delete an entry when its threshold starts passing; this test fails until you do.
  *
- * The map shrank by one in this cycle. Threshold 1, distribution fidelity, went to
- * PASS on the self-feeding run with all eleven gated families inside the bar, once
- * §3.2's presence was metered by role on the engine side and by the same
- * classification on the record side, so that the §5.1 protein-floor append stopped
- * spending the companion slot's budget. Threshold 8, which CI does not measure,
- * went to PASS on the same change, and thresholds 2 and 3 pass on the frozen run.
- * Three entries remain.
+ * The map shrank by one again in this cycle. Threshold 4, slot anti-lock, went to
+ * PASS on the self-feeding run once §11's arithmetic exemption was amended to the
+ * conjunction the EM settled after gate fix cycle 2: a rate at or above 0.4 of the
+ * role's weekly slots, and a preference-free spread that already puts one of the
+ * role's days over half the horizon more often than not. Plain roti sits at 0.473
+ * of the carb role's occasions and fails the threshold nine times in ten under an
+ * assignment with no weekday preference at all, so the two weekdays it holds 23 of
+ * 41 weeks are arithmetic and not a lock. Two entries remain.
+ *
+ * Threshold 4 still fails the **frozen** run, which CI does not measure, on a
+ * banana bowl that holds Monday's fruit slot 23 of 41 weeks at a rate of 0.146.
+ * That one is a real lock, and it is an artifact of how the frozen run is built
+ * rather than engine bias; the PR carries the numbers.
  */
 const KNOWN_GATE_FAILURES = new Map<
   number,
@@ -67,15 +76,6 @@ const KNOWN_GATE_FAILURES = new Map<
       collapseGuard: 0.55,
       finding:
         "The worst rolling 8-week window is 62.5 percent distinct against a 65 percent floor: 15 repeats in 40 stars where 14 are allowed and about 12 are arithmetically forced by the record's own rates (the ceiling any rate-matching schedule can reach is 69.3 percent). The frozen run passes at 70.0 percent, so this is drift and not engine bias: one weekday-lunch ledger serves both the star position and the companion position, so a high-rate dry protein whose companion turns are metered by §3.2's presence ledger spends the rest of its deficit in the star slot.",
-    },
-  ],
-  [
-    4,
-    {
-      measured: 2,
-      collapseGuard: 8,
-      finding:
-        "Roti holds Monday lunch in 23 of 41 weeks and Thursday lunch in 23, and the rest of its spread is Tue 17, Wed 20, Fri 14. The instrumented run says this is arithmetic and not an engine deviation. Roti takes 97 of the horizon's 205 weekday lunches, 0.473 of the role's occasions, so an assignment with no weekday preference at all expects 19.4 of 41 on each weekday with a spread of 3.2, puts one named weekday over half the horizon 36.5 percent of the time, and puts at least one of the five over it 89.7 percent of the time; the engine's worst weekday is 23 against a uniform-random mean worst of 23.4. Neither of the two mechanisms that could add a weekday preference is doing so: the §6 step 5 exploration reserve is even (Mon 8, Tue 6, Wed 6, Thu 8, Fri 7), and the §6 step 6 pass made 12 whole-plate lunch swaps, which exchange two days' plates and move a carb only with the plate it rides on. §11's exemption asks for a rate above 0.5 and roti sits at 0.473; the threshold as written is not reachable for a carb at that rate, and the PR carries the EM check needed block.",
     },
   ],
   [
@@ -181,5 +181,83 @@ describe("the normal tail threshold 4's diagnosis reads", () => {
       expect(value).toBeGreaterThanOrEqual(previous);
       previous = value;
     }
+  });
+});
+
+/**
+ * §11 threshold 4's arithmetic exemption, as the EM amended it after gate fix
+ * cycle 2. The invariant it must not break is the one the threshold exists for: a
+ * dish that genuinely holds a weekday is still reported. So the fixtures here are
+ * adversarial in that direction, a low-rate dish jammed onto one day, and only
+ * then in the direction the amendment was made for.
+ */
+describe("threshold 4's amended arithmetic exemption", () => {
+  const HORIZON = 41;
+  const BAR = HORIZON / 2;
+
+  it("does not exempt a genuinely locked dish at a low rate", () => {
+    // The frozen run's banana bowl: 36 placements over six fruit days, 23 of them
+    // on Monday. Six per day is what chance would give, so the lock is real.
+    const spread = unbiasedSpread({ placements: 36, weeks: HORIZON, days: 6, bar: BAR });
+    expect(spread.rate).toBeCloseTo(0.146, 3);
+    expect(spread.anyDay).toBeLessThan(0.001);
+    expect(lockExempt(spread)).toBe(false);
+  });
+
+  it("exempts plain roti's weekday lunch carb slot, which is what the amendment is for", () => {
+    // 97 of the horizon's 205 weekday lunches: an assignment with no weekday
+    // preference at all fails the threshold nine times in ten.
+    const spread = unbiasedSpread({ placements: 97, weeks: HORIZON, days: 5, bar: BAR });
+    expect(spread.rate).toBeCloseTo(0.473, 3);
+    expect(spread.anyDay).toBeGreaterThan(0.85);
+    expect(lockExempt(spread)).toBe(true);
+  });
+
+  it("holds the 0.4 floor as a floor, not as the exemption itself", () => {
+    // At exactly the floor the preference-free chance is still under half, so the
+    // rate alone never exempts: both halves of the conjunction have to hold.
+    const atFloor = unbiasedSpread({
+      placements: Math.round(LOCK_EXEMPTION_RATE * 5 * HORIZON),
+      weeks: HORIZON,
+      days: 5,
+      bar: BAR,
+    });
+    expect(atFloor.rate).toBeGreaterThanOrEqual(LOCK_EXEMPTION_RATE);
+    expect(atFloor.anyDay).toBeLessThan(0.5);
+    expect(lockExempt(atFloor)).toBe(false);
+  });
+
+  it("never exempts anything below the floor, however likely the spread", () => {
+    // The floor is what keeps a short horizon from exempting a thin rate: over
+    // eight weeks the counts are so coarse that a dish at 0.35 of the role's
+    // occasions goes over half the horizon on some weekday 64 percent of the time.
+    const thin = unbiasedSpread({ placements: 14, weeks: 8, days: 5, bar: 4 });
+    expect(thin.rate).toBeLessThan(LOCK_EXEMPTION_RATE);
+    expect(thin.anyDay).toBeGreaterThan(0.5);
+    expect(lockExempt(thin)).toBe(false);
+  });
+
+  it("reads a seasonal dish against the weeks it was eligible, not the horizon", () => {
+    // The same 17 placements over 17 in-season weeks and over the whole horizon are
+    // two different rates, and only the in-season one is what §2.2 lets it place at.
+    const inSeason = unbiasedSpread({ placements: 17, weeks: 17, days: 6, bar: BAR });
+    const wholeHorizon = unbiasedSpread({ placements: 17, weeks: HORIZON, days: 6, bar: BAR });
+    expect(inSeason.rate).toBeGreaterThan(wholeHorizon.rate);
+    expect(inSeason.rate).toBeCloseTo(17 / (17 * 6), 6);
+  });
+
+  it("is monotone in the rate, so the exemption cannot open and close again", () => {
+    let previous = -1;
+    for (let placements = 0; placements <= 5 * HORIZON; placements += 5) {
+      const spread = unbiasedSpread({ placements, weeks: HORIZON, days: 5, bar: BAR });
+      expect(spread.anyDay).toBeGreaterThanOrEqual(previous);
+      previous = spread.anyDay;
+    }
+  });
+
+  it("is deterministic: the same arguments give the same numbers (§10)", () => {
+    const once = unbiasedSpread({ placements: 97, weeks: HORIZON, days: 5, bar: BAR });
+    const twice = unbiasedSpread({ placements: 97, weeks: HORIZON, days: 5, bar: BAR });
+    expect(JSON.stringify(once)).toBe(JSON.stringify(twice));
   });
 });

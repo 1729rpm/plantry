@@ -364,6 +364,72 @@ export function normalCdf(z: number): number {
   return 0.5 * (1 + sign * y);
 }
 
+/**
+ * What a schedule with no weekday preference at all would do with `placements` of
+ * one dish spread over `days` named days of `weeks` weeks: how often one named day,
+ * and how often at least one of the days, ends up holding the dish more than `bar`
+ * times.
+ *
+ * Each named day holds the dish `Binomial(weeks, rate)` times, and the normal
+ * approximation is exact enough at a horizon of forty weeks. `weeks` is the weeks
+ * the dish was **eligible** in, not the whole horizon, because §2.2 freezes a dish
+ * out of season and it cannot be placed on a day of a week it was not eligible in;
+ * `bar` stays half the whole horizon, which is what §11 threshold 4 measures against.
+ *
+ * Arithmetic, not sampling, so the report stays deterministic (§10).
+ */
+export interface UnbiasedSpread {
+  rate: number;
+  weeks: number;
+  expected: number;
+  sd: number;
+  /** The chance one named day goes over the bar. */
+  perDay: number;
+  /** The chance at least one of the `days` named days does. */
+  anyDay: number;
+}
+
+export function unbiasedSpread(args: {
+  placements: number;
+  weeks: number;
+  days: number;
+  bar: number;
+}): UnbiasedSpread {
+  const { placements, weeks, days, bar } = args;
+  const occasions = Math.max(1, weeks * days);
+  const rate = placements / occasions;
+  const expected = rate * weeks;
+  const sd = Math.sqrt(Math.max(0, weeks * rate * (1 - rate)));
+  const perDay = sd > 0 ? 1 - normalCdf((bar - expected) / sd) : expected > bar ? 1 : 0;
+  const anyDay = 1 - Math.pow(1 - perDay, days);
+  return { rate, weeks, expected, sd, perDay, anyDay };
+}
+
+/**
+ * §11 threshold 4's arithmetic exemption, as the EM amended it after gate fix
+ * cycle 2 (PR #253's `EM check needed` block).
+ *
+ * It used to read "a rate above half its role's weekly slots", which the harness
+ * reduced to a per-occasion rate above 0.5. Cycle 2 measured that the bar is not
+ * reachable well below that: plain roti sits at 0.473 of the carb role's occasions
+ * and an assignment with no weekday preference at all puts one of the five weekdays
+ * over half the horizon 89.7 percent of the time, while the engine's own worst
+ * weekday (23 of 41) sits at the random mean (23.4). The amended exemption is a
+ * conjunction: a rate **at or above 0.4** of the role's weekly slots, **and** a
+ * preference-free spread that already puts one of the role's days over half the
+ * horizon more often than not.
+ *
+ * The probability half is what does the work; the 0.4 is a floor under it, so a
+ * short horizon can never exempt a genuinely locked dish on a thin rate. Over a
+ * 41-week horizon the two conditions bind at about 0.415 for a five-weekday role
+ * and about 0.407 for the six-day fruit role.
+ */
+export const LOCK_EXEMPTION_RATE = 0.4;
+
+export function lockExempt(spread: UnbiasedSpread): boolean {
+  return spread.rate >= LOCK_EXEMPTION_RATE && spread.anyDay > 0.5;
+}
+
 // ---------------------------------------------------------------------------
 // The thresholds
 // ---------------------------------------------------------------------------
@@ -554,14 +620,14 @@ export function measureRun(args: MeasureArgs): RunReport {
     const slotCounts = new Map<string, number>();
     const categoryCounts = new Map<string, number>();
     const scopeRows = new Map<string, number>();
-    let weekdayOccasions = 0;
-    let saturdayOccasions = 0;
-    let fruitOccasions = 0;
+    /** Horizon weeks each dish was Active and in season, the denominator §2.2 allows. */
+    const eligibleWeeks = new Map<number, number>();
 
     for (const view of horizon) {
-      weekdayOccasions += 5;
-      saturdayOccasions += 1;
-      fruitOccasions += 6;
+      for (const dish of data.library) {
+        if (!isEligibleDish(dish, view.season)) continue;
+        eligibleWeeks.set(dish.id, (eligibleWeeks.get(dish.id) ?? 0) + 1);
+      }
       const seenSlots = new Set<string>();
       const seenCategories = new Set<string>();
       for (const pick of view.week.generatedPlan) {
@@ -596,14 +662,12 @@ export function measureRun(args: MeasureArgs): RunReport {
       }
     }
 
-    const occasionsOf = (scope: string): number =>
-      scope === "saturday"
-        ? saturdayOccasions
-        : scope === "fruit"
-          ? fruitOccasions
-          : weekdayOccasions;
+    /** The named days a scope's role spreads over: six for fruit, five weekdays, one Saturday. */
+    const daysOf = (scope: string): number =>
+      scope === "fruit" ? 6 : scope === "saturday" ? 1 : 5;
 
     const dishLocks: string[] = [];
+    const exemptLocks: string[] = [];
     for (const [key, count] of slotCounts) {
       if (count <= half) continue;
       const [idText, day, meal] = key.split("|");
@@ -625,12 +689,27 @@ export function measureRun(args: MeasureArgs): RunReport {
             : meal === "breakfast"
               ? "weekdayBreakfast"
               : "weekdayLunch";
-      // §11: a dish whose rate arithmetically forces majority occupancy is exempt.
-      // Every scope's planned occasions equal its weekly slots, so "a rate above
-      // half its role's weekly slots" reduces to a per-occasion rate above 0.5.
-      const rate = (scopeRows.get(`${dish.id}:${scope}`) ?? 0) / Math.max(1, occasionsOf(scope));
-      if (rate > 0.5) continue;
-      dishLocks.push(`${dish.name} holds ${day} ${meal} in ${count} of ${horizonWeeks} weeks`);
+      // §11's arithmetic exemption as the EM amended it after gate fix cycle 2: a
+      // rate at or above 0.4 of the role's weekly slots, where a preference-free
+      // spread already puts one of the role's days over half the horizon more often
+      // than not. The rate is measured over the weeks the dish was eligible, which
+      // for a seasonal fruit is not the whole horizon.
+      const spread = unbiasedSpread({
+        placements: scopeRows.get(`${dish.id}:${scope}`) ?? 0,
+        weeks: eligibleWeeks.get(dish.id) ?? horizonWeeks,
+        days: daysOf(scope),
+        bar: half,
+      });
+      const held = `${dish.name} holds ${day} ${meal} in ${count} of ${horizonWeeks} weeks`;
+      const rated =
+        `${held}, at ${fmt(spread.rate)} of the role's occasions over ${spread.weeks} eligible weeks ` +
+        `(a preference-free spread of ${scopeRows.get(`${dish.id}:${scope}`) ?? 0} placements over ${daysOf(scope)} days ` +
+        `puts one day over ${fmt(half, 1)} weeks ${(spread.anyDay * 100).toFixed(1)} percent of the time)`;
+      if (lockExempt(spread)) {
+        exemptLocks.push(`${rated}: exempt, §11's arithmetic exemption`);
+        continue;
+      }
+      dishLocks.push(rated);
     }
 
     const categoryLocks: string[] = [];
@@ -651,8 +730,11 @@ export function measureRun(args: MeasureArgs): RunReport {
       pass,
       metric: { value: dishLocks.length + categoryLocks.length, bound: 0, worseWhen: "above" },
       lines: pass
-        ? [`no non-exempt dish lock; worst category run ${worstCategory} of ${horizonWeeks} weeks`]
-        : [...dishLocks, ...categoryLocks],
+        ? [
+            `no non-exempt dish lock; worst category run ${worstCategory} of ${horizonWeeks} weeks`,
+            ...exemptLocks,
+          ]
+        : [...dishLocks, ...categoryLocks, ...exemptLocks],
       diagnosis: !pass
         ? `${dishLocks.length} dish and ${categoryLocks.length} category slot locks: least-recently-used day assignment is not moving these picks off their weekday.`
         : undefined,
@@ -1432,15 +1514,23 @@ export function measureRun(args: MeasureArgs): RunReport {
     // dish simply appears too often for five days to share it evenly.
     const spread = new Map<string, Map<Day, number>>();
     const roleOccasions = new Map<string, number>();
+    const roleWeeks = new Map<string, number>();
     for (const view of horizon) {
       for (const pick of view.week.generatedPlan) {
-        if (pick.meal === "fruit" || pick.day === "Sat") continue;
+        if (pick.day === "Sat") continue;
         const key = `${pick.dishId}|${pick.meal}`;
         const row = spread.get(key) ?? new Map<Day, number>();
         row.set(pick.day, (row.get(pick.day) ?? 0) + 1);
         spread.set(key, row);
         roleOccasions.set(key, (roleOccasions.get(key) ?? 0) + 1);
       }
+    }
+    // The weeks each (dish, meal) role was eligible in, which for a seasonal fruit
+    // is a fraction of the horizon and is the denominator its rate is read against.
+    for (const key of spread.keys()) {
+      const dish = dishById.get(Number(key.split("|")[0]));
+      if (!dish) continue;
+      roleWeeks.set(key, horizon.filter((view) => isEligibleDish(dish, view.season)).length);
     }
     const busiest = [...spread.entries()]
       .filter(([, row]) => Math.max(...row.values()) > horizonWeeks / 3)
@@ -1449,19 +1539,20 @@ export function measureRun(args: MeasureArgs): RunReport {
       const [idText, meal] = key.split("|");
       const dish = dishById.get(Number(idText));
       const placements = roleOccasions.get(key) ?? 0;
-      // The dish's own rate in the role, and what a schedule with no weekday
-      // preference at all would do with that many placements: five weekdays, so
-      // each weekday holds it Binomial(horizon, placements / (5 x horizon)).
-      const rate = placements / (5 * horizonWeeks);
-      const expected = rate * horizonWeeks;
-      const sd = Math.sqrt(horizonWeeks * rate * (1 - rate));
-      const perDay = sd > 0 ? 1 - normalCdf((horizonWeeks / 2 - expected) / sd) : 0;
-      const anyDay = 1 - Math.pow(1 - perDay, 5);
+      // The fruit role runs Monday to Saturday, every other role Monday to Friday.
+      const days = meal === "fruit" ? 6 : 5;
+      const named = meal === "fruit" ? ALL_DAYS : WEEKDAYS;
+      const stat = unbiasedSpread({
+        placements,
+        weeks: roleWeeks.get(key) ?? horizonWeeks,
+        days,
+        bar: horizonWeeks / 2,
+      });
       lines.push(
-        `${dish?.name ?? idText} ${meal}: ${WEEKDAYS.map((day) => `${day} ${row.get(day) ?? 0}`).join("  ")} over ${horizonWeeks} weeks`,
+        `${dish?.name ?? idText} ${meal}: ${named.map((day) => `${day} ${row.get(day) ?? 0}`).join("  ")} over ${horizonWeeks} weeks`,
       );
       lines.push(
-        `  ${placements} placements, ${fmt(rate)} of the role's weekday occasions, so an unbiased assignment expects ${fmt(expected, 1)} of ${horizonWeeks} on each weekday with a spread of ${fmt(sd, 1)}: one named weekday goes over half the horizon ${(perDay * 100).toFixed(1)} percent of the time and at least one of the five does ${(anyDay * 100).toFixed(1)} percent of the time. §11's exemption asks for a rate above 0.5.`,
+        `  ${placements} placements over ${stat.weeks} eligible weeks, ${fmt(stat.rate)} of the role's occasions, so an unbiased assignment expects ${fmt(stat.expected, 1)} of ${horizonWeeks} on each of its ${days} days with a spread of ${fmt(stat.sd, 1)}: one named day goes over half the horizon ${(stat.perDay * 100).toFixed(1)} percent of the time and at least one of the ${days} does ${(stat.anyDay * 100).toFixed(1)} percent of the time. §11's exemption asks for a rate at or above ${fmt(LOCK_EXEMPTION_RATE, 2)} with that last figure over 50 percent, so this role is ${lockExempt(stat) ? "exempt" : "not exempt"}.`,
       );
     }
 
@@ -1615,7 +1706,7 @@ export function runGate(options: { fixture: string; weeks: number; dataDir: stri
     "- Families are keyed on library fields, never on dish names: chicken is the §4.6 chicken family, dal-family is a lunch star whose primary ingredient is a pulse, international is a non-Indian cuisine, plain roti is Category Chapati with a Wheat Flour primary and specialty roti is every other Chapati, raita/curd is a Lunch-time Accompaniment with a Curd primary and salad is every other Lunch-time Accompaniment.",
     "- Lunch-main uniqueness counts weekday lunch stars only; Saturday is its own register (§2.2).",
     "- The Jaccard baseline is re-measured by this harness's own method on the record weeks (§11 threshold 3's amendment), over the whole dish set of each week, fruit included.",
-    "- Threshold 4's arithmetic exemption reduces to a per-occasion rate above 0.5, because every scope's planned occasions equal its weekly slots.",
+    "- Threshold 4's arithmetic exemption, as the EM amended it after gate fix cycle 2, is a conjunction: a rate **at or above 0.4** of the role's weekly slots, **and** a preference-free spread that already puts one of the role's days over half the horizon more often than not. The role's days are the five weekdays for a breakfast or lunch slot and the six fruit days for the fruit slot; the rate is measured over the weeks the dish was Active and in season, which for a seasonal fruit is not the whole horizon. Every lock the exemption clears is still printed, with its rate and its preference-free chance, so an exemption is never invisible.",
     "- Presence (threshold 11) is measured **by role on the served side and by the record-side classification on the record side**, which is what §3.2's two presence ledgers accrue and charge against. Served: a weekday lunch counts when the engine's finished plate carries a `companion` pick, a Saturday when its plate holds a third item of any role. Record: a Saturday counts on any third item, and a weekday lunch on a third item that is not the §5.1 protein-floor append (the floor is a safety net that fires only when neither meal of the day carries protein, so it is not a companion; `record.ts` states the classification in full). The breakfast small item has no presence ledger and stays a pick count on both sides: a breakfast of two or more picks carried one. The threshold's own lines print how far the two readings of the weekday companion sit apart on the same plans, because they are two measures of one quantity and a wide gap would put every number here out by that much.",
     "- Thresholds 1 and 12 report, and do not gate, any tracked family with fewer than four as-eaten rows in the record at simulation start (§11 as amended after the first gate run). Each family's row count is printed on its line so the exemption is never invisible.",
     "- Threshold 4 counts a chutney day-lock per individual chutney dish, not for the chutney category as a whole (§11 as amended after the first gate run): every paratha and chilla morning carries a chutney, so the category is locked to the paratha mornings by construction and the lock the rule guards against is one chutney on one weekday.",
