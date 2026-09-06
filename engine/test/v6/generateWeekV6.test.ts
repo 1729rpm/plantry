@@ -17,7 +17,12 @@ import {
   generateWeekV6,
 } from "../../src/v6/generateWeekV6.js";
 import { charge, deficitIn, emptyLedger } from "../../src/v6/ledger.js";
+import { seasonOfWeek } from "../../src/v6/record.js";
 import { proteinFamily } from "../../src/v6/compose.js";
+import {
+  isCarbForwardInternational as isCarbForward,
+  isEverydayBase as isBase,
+} from "../../src/v6/pools.js";
 import type { Repair } from "../../src/v6/place.js";
 import type { GenerateWeekV6Args, RecordWeek } from "../../src/v6/types.js";
 import { loadRecordFixture } from "./loadRecordFixture.js";
@@ -322,5 +327,162 @@ describe("§9 the item cap is the safety net behind the ceilings", () => {
     for (const pick of week.generatedPlan) {
       expect(dishById(pick.dishId), `dish ${pick.dishId} is not in the library`).toBeDefined();
     }
+  });
+});
+
+// ---------------------------------------------------------------------------
+// §9 within-week fruit repeats, end to end
+// ---------------------------------------------------------------------------
+
+describe("§9 within-week fruit repeats", () => {
+  /** The library with every Category Fruit dish inactive except the named ones. */
+  function libraryWithFruits(names: string[]): Dish[] {
+    const keep = new Set(names.map((name) => name.toLowerCase()));
+    return library.map((dish) =>
+      dish.category === "Fruit" && !keep.has(dish.name.toLowerCase())
+        ? { ...dish, active: "No" as const }
+        : dish,
+    );
+  }
+
+  const bowlsOf = (week: ReturnType<typeof generateWeekV6>): string[] =>
+    week.days.filter((day) => day.fruit !== undefined).map((day) => (day.fruit as Dish).name);
+
+  it("gives a six-fruit season six distinct bowls", () => {
+    // The eligible in-season set holds exactly six, so §9's "repeats only under a
+    // set smaller than six" leaves no room for one.
+    const names = [
+      "Mango bowl",
+      "Banana bowl",
+      "Papaya bowl",
+      "Jamun bowl",
+      "Litchi bowl",
+      "Pomegranate bowl",
+    ];
+    const week = generateWeekV6(baseArgs({ library: libraryWithFruits(names) }));
+    const bowls = bowlsOf(week);
+    expect(bowls).toHaveLength(6);
+    expect(new Set(bowls).size).toBe(6);
+  });
+
+  it("repeats under a three-fruit season, but never on consecutive days", () => {
+    const week = generateWeekV6(
+      baseArgs({ library: libraryWithFruits(["Mango bowl", "Banana bowl", "Papaya bowl"]) }),
+    );
+    const bowls = bowlsOf(week);
+    expect(bowls).toHaveLength(6);
+    // Three bowls over six days must repeat; §9 only asks that a repeat is spread.
+    expect(new Set(bowls).size).toBe(3);
+    for (let index = 0; index + 1 < bowls.length; index += 1) {
+      expect(bowls[index], `bowls: ${bowls.join(", ")}`).not.toBe(bowls[index + 1]);
+    }
+    // Evenly, two each: the least-placed tier is what stops one bowl taking four.
+    for (const name of new Set(bowls)) {
+      expect(bowls.filter((bowl) => bowl === name)).toHaveLength(2);
+    }
+  });
+
+  it("is deterministic under both fruit seasons (§10)", () => {
+    for (const names of [
+      ["Mango bowl", "Banana bowl", "Papaya bowl"],
+      ["Mango bowl", "Banana bowl", "Papaya bowl", "Jamun bowl", "Litchi bowl", "Pomegranate bowl"],
+    ]) {
+      const args = baseArgs({ library: libraryWithFruits(names) });
+      expect(fingerprint(generateWeekV6(args))).toBe(fingerprint(generateWeekV6(args)));
+    }
+  });
+});
+
+// ---------------------------------------------------------------------------
+// §3.2 presence ledgers, end to end
+// ---------------------------------------------------------------------------
+
+describe("§3.2 presence ledgers, over a self-fed horizon", () => {
+  /** Generate `weeks` weeks self-feeding from the fixture, as the §11 harness does. */
+  function selfFeed(weeks: number, seed: RecordWeek[] = record) {
+    const rolling: RecordWeek[] = [...seed];
+    const generated: Array<ReturnType<typeof generateWeekV6>> = [];
+    let weekStart = WEEK_START;
+    for (let index = 0; index < weeks; index += 1) {
+      const week = generateWeekV6(
+        baseArgs({ weekStart, record: rolling, season: seasonOfWeek(weekStart) }),
+      );
+      generated.push(week);
+      rolling.push({
+        weekStart,
+        picks: week.generatedPlan,
+        skippedDays: [],
+        generatedPlan: week.generatedPlan,
+      });
+      const next = new Date(`${weekStart}T00:00:00Z`);
+      next.setUTCDate(next.getUTCDate() + 7);
+      weekStart = next.toISOString().slice(0, 10);
+    }
+    return generated;
+  }
+
+  const presenceOf = (
+    weeks: Array<ReturnType<typeof generateWeekV6>>,
+    scope: "weekdayLunch" | "saturday",
+  ): number => {
+    const days = scope === "saturday" ? ["Sat"] : ["Mon", "Tue", "Wed", "Thu", "Fri"];
+    let occasions = 0;
+    let carried = 0;
+    for (const week of weeks) {
+      for (const day of days) {
+        occasions += 1;
+        const items = week.generatedPlan.filter(
+          (pick) => pick.day === day && pick.meal === "lunch",
+        ).length;
+        if (items >= 3) carried += 1;
+      }
+    }
+    return occasions > 0 ? carried / occasions : 0;
+  };
+
+  it("holds the weekday companion slot near the record's own presence rate over 20 weeks", () => {
+    const weeks = selfFeed(20);
+    const served = presenceOf(weeks, "weekdayLunch");
+    // The record's companion presence is about 0.53. Without the presence ledger
+    // this ran at 0.71, which is what armed §3.2's reopening trigger.
+    expect(served).toBeGreaterThan(0.4);
+    expect(served).toBeLessThan(0.66);
+  });
+
+  it("keeps Saturday's third item off every Saturday, structural forms included", () => {
+    const weeks = selfFeed(20);
+    const served = presenceOf(weeks, "saturday");
+    // The record's Saturday third-item presence is 0.75. The structural
+    // dry-protein partner and the special protein beside an everyday base charge
+    // the slot as an accompaniment does, so they cannot hold it at 1.00.
+    expect(served).toBeLessThan(1);
+    expect(served).toBeGreaterThan(0.4);
+  });
+
+  it("charges Saturday presence for a structural partner or special protein", () => {
+    const weeks = selfFeed(12);
+    const structuralThirds = weeks.filter((week) => {
+      const saturday = week.generatedPlan.filter(
+        (pick) => pick.day === "Sat" && pick.meal === "lunch",
+      );
+      if (saturday.length < 3) return false;
+      const lead = dishById(saturday[0].dishId);
+      return lead !== undefined && (isCarbForward(lead) || isBase(lead));
+    });
+    // The horizon has to contain at least one, or the assertion below is vacuous.
+    expect(structuralThirds.length).toBeGreaterThan(0);
+    // And a Saturday with no third item has to exist too, which is only possible
+    // if those structural forms spent the slot's presence.
+    expect(
+      weeks.some(
+        (week) =>
+          week.generatedPlan.filter((pick) => pick.day === "Sat" && pick.meal === "lunch").length <
+          3,
+      ),
+    ).toBe(true);
+  });
+
+  it("is deterministic across a replayed horizon (§10)", () => {
+    expect(selfFeed(6).map(fingerprint)).toEqual(selfFeed(6).map(fingerprint));
   });
 });

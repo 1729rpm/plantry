@@ -313,3 +313,142 @@ describe("determinism (§10)", () => {
     expect([...stats.perDish.keys()]).toEqual([ONION_TOMATO_SALAD]);
   });
 });
+
+// ---------------------------------------------------------------------------
+// §3.2 presence rates and §6 step 5's exploration weekday memory
+// ---------------------------------------------------------------------------
+
+describe("§3.2 presence rates", () => {
+  /**
+   * Two weekday lunches on Monday and Tuesday, one of them three items and one of
+   * them two, and one Saturday of three items. The rates are what §3.2's presence
+   * ledgers accrue against, so they are asserted as exact fractions of the scope's
+   * occasions and not as a shape.
+   */
+  const week = (weekStart: string, picks: Pick[]): RecordWeek => ({
+    weekStart,
+    picks,
+    skippedDays: ["Wed", "Thu", "Fri"],
+    generatedPlan: null,
+  });
+
+  it("counts a lunch of three or more picks as carrying the optional element", () => {
+    const stats = deriveRecordStats(
+      [
+        week("2026-06-01", [
+          { day: "Mon", meal: "lunch", dishId: FISH_TIKKA },
+          { day: "Mon", meal: "lunch", dishId: ROTI },
+          { day: "Mon", meal: "lunch", dishId: ONION_TOMATO_SALAD },
+          { day: "Tue", meal: "lunch", dishId: FISH_TIKKA },
+          { day: "Tue", meal: "lunch", dishId: ROTI },
+          { day: "Sat", meal: "lunch", dishId: FISH_TIKKA },
+          { day: "Sat", meal: "lunch", dishId: ROTI },
+          { day: "Sat", meal: "lunch", dishId: ONION_TOMATO_SALAD },
+        ]),
+      ],
+      library,
+      "Summer",
+    );
+    expect(stats.occasions.weekdayLunch).toBe(2);
+    expect(stats.occasions.saturday).toBe(1);
+    expect(stats.presenceRate.weekdayLunch).toBeCloseTo(0.5, 10);
+    expect(stats.presenceRate.saturday).toBeCloseTo(1, 10);
+  });
+
+  it("does not give the breakfast small item a presence rate: it stays on the dish rule", () => {
+    const stats = deriveRecordStats([...record], library, "Monsoon");
+    expect(stats.presenceRate.weekdayBreakfast).toBeUndefined();
+    expect(stats.presenceRate.fruit).toBeUndefined();
+    expect(stats.presenceRate.weekdayLunch).toBeGreaterThan(0);
+    expect(stats.presenceRate.saturday).toBeGreaterThan(0);
+  });
+
+  it("excludes a skipped day from both sides of the rate", () => {
+    const stats = deriveRecordStats(
+      [
+        {
+          weekStart: "2026-06-01",
+          picks: [
+            { day: "Mon", meal: "lunch", dishId: FISH_TIKKA },
+            { day: "Mon", meal: "lunch", dishId: ROTI },
+            { day: "Mon", meal: "lunch", dishId: ONION_TOMATO_SALAD },
+          ],
+          skippedDays: ["Mon", "Tue", "Wed", "Thu", "Sat"],
+          generatedPlan: null,
+        },
+      ],
+      library,
+      "Summer",
+    );
+    expect(stats.occasions.weekdayLunch).toBe(1);
+    expect(stats.presenceRate.weekdayLunch).toBe(0);
+  });
+});
+
+describe("§6 step 5, the exploration slot's weekday memory", () => {
+  const plannedWeek = (weekStart: string, plan: Pick[], eaten: Pick[] = plan): RecordWeek => ({
+    weekStart,
+    picks: eaten,
+    skippedDays: [],
+    generatedPlan: plan,
+  });
+
+  it("reads a never-before-eaten weekday lunch plan pick as an exploration placement", () => {
+    const stats = deriveRecordStats(
+      [
+        plannedWeek("2026-06-01", [
+          { day: "Mon", meal: "lunch", dishId: FISH_TIKKA },
+          { day: "Fri", meal: "lunch", dishId: SINGAPORE_NOODLES },
+        ]),
+        // Week two repeats both dishes: neither is novel any more, so the memory
+        // must still say Friday, not update to whatever week two placed.
+        plannedWeek("2026-06-08", [
+          { day: "Tue", meal: "lunch", dishId: SINGAPORE_NOODLES },
+          { day: "Wed", meal: "lunch", dishId: FISH_TIKKA },
+        ]),
+      ],
+      library,
+      "Summer",
+    );
+    expect([...stats.explorationWeekdays.entries()]).toEqual([
+      ["Mon", "2026-06-01"],
+      ["Fri", "2026-06-01"],
+    ]);
+  });
+
+  it("ignores a never-eaten fruit, which enters through §9's overflow door and not §7", () => {
+    const stats = deriveRecordStats(
+      [
+        plannedWeek("2026-06-01", [
+          { day: "Mon", meal: "fruit", dishId: MANGO },
+          { day: "Tue", meal: "lunch", dishId: FISH_TIKKA },
+        ]),
+      ],
+      library,
+      "Summer",
+    );
+    expect([...stats.explorationWeekdays.keys()]).toEqual(["Tue"]);
+  });
+
+  it("ignores a Saturday lunch pick: §7 puts the slot on a weekday", () => {
+    const stats = deriveRecordStats(
+      [plannedWeek("2026-06-01", [{ day: "Sat", meal: "lunch", dishId: FISH_TIKKA }])],
+      library,
+      "Summer",
+    );
+    expect(stats.explorationWeekdays.size).toBe(0);
+  });
+
+  it("keys the memory Monday-first, so two derivations serialize identically (§10)", () => {
+    const weeks = [
+      plannedWeek("2026-06-01", [{ day: "Fri", meal: "lunch", dishId: SINGAPORE_NOODLES }]),
+      plannedWeek("2026-06-08", [{ day: "Mon", meal: "lunch", dishId: FISH_TIKKA }]),
+    ];
+    const forward = deriveRecordStats(weeks, library, "Summer");
+    const reversed = deriveRecordStats([...weeks].reverse(), library, "Summer");
+    expect([...forward.explorationWeekdays.keys()]).toEqual(["Mon", "Fri"]);
+    expect(JSON.stringify([...reversed.explorationWeekdays])).toBe(
+      JSON.stringify([...forward.explorationWeekdays]),
+    );
+  });
+});
