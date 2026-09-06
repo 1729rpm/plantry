@@ -7,7 +7,10 @@
  * weekday-occupation memory §6 step 5 places by, the per-season fruit counts §9
  * ranks by, the swap-away list the §11 gate's corrected run replays, the §3.2
  * presence rates the two slot-level presence ledgers accrue against, and the §6
- * step 5 weekday memory the exploration slot places by.
+ * step 5 weekday memory the exploration slot places by. It also keeps one
+ * measurement §2 does not ask for: `weekdayLunchRolesOf` splits each dish's
+ * weekday-lunch rows by §5.1 role, which is what the §11 `starRoleShare` variant
+ * reads and what the harness reports beside it.
  *
  * Nothing here reads the clock, a random source, or the filesystem. Every map is
  * built in a fixed order (dish id ascending, then scope in `SCOPES` order) so that
@@ -72,6 +75,7 @@
  */
 
 import type { Dish, Season } from "../data/schemas.js";
+import { isSelfSufficientMain } from "../composition.js";
 import { carriesProtein } from "./place.js";
 import {
   isCarbForwardInternational,
@@ -85,9 +89,11 @@ import type {
   DishOccupation,
   DishStats,
   Pick,
+  PickRole,
   RecordStats,
   RecordWeek,
   Scope,
+  WeekdayLunchRoleCounts,
 } from "./types.js";
 
 /** The four §2.2 scopes in their canonical order. Every scope loop uses this order. */
@@ -157,8 +163,35 @@ function dishesOfMeal(
 }
 
 /**
- * Whether one weekday lunch carried the §3.2 optional companion: everything the
- * plate holds beyond the positions §5.1's form structurally requires.
+ * Which of a weekday lunch's picks leads the plate, when the plate holds more than
+ * one dish §5.1 would admit as a star. Lower rank leads.
+ *
+ * §5.1 gives a weekday lunch exactly one star and calls it "a protein, a gravy, or
+ * a hearty dal or legume", so a plate of a dal and a grilled chicken beside a roti
+ * reads two ways and the record carries no role to settle it. Two of §5.1's own
+ * rules settle it structurally, and they agree with each other: a carb-forward
+ * international main takes one plain protein and that protein is its **partner**,
+ * and the day-scoped protein floor **appends** a plain protein to a plate that is
+ * already complete. In both, a Category Keto or Dry dish beside a more substantial
+ * main is what accompanies the main and never the main itself. So a self-sufficient
+ * main leads a Gravy dish, a Gravy dish (the dal family included, which is Category
+ * Gravy dish) leads a plain protein, and a Category Accompaniment never leads at all
+ * (§5.1 states that directly).
+ *
+ * Ties inside a rank break by dish id ascending, so the reading does not depend on
+ * the order the record happens to carry the picks in (§10).
+ */
+function leadRank(dish: Dish): number {
+  if (!isLunchStar(dish)) return 3;
+  if (isSelfSufficientMain(dish)) return 0;
+  if (dish.category === "Gravy dish") return 1;
+  return 2;
+}
+
+/**
+ * The §5.1 role each pick of one weekday lunch filled, aligned index by index to
+ * `lunch`: everything the plate holds beyond the positions its form structurally
+ * requires is a `companion`.
  *
  * The plate is read, not counted, because a weekday lunch is not always three items
  * when it carries a companion and not always a companion when it is three items:
@@ -167,25 +200,67 @@ function dishesOfMeal(
  * - a carb-forward international main takes exactly one plain protein and nothing
  *   else, so that partner is structural and not a companion;
  * - a standard plate's carb is structural, and a true complete plate has none;
- * - the star is structural in every form.
+ * - the star is structural in every form, and `leadRank` says which pick it is.
  *
  * What is left is the companion, which is why a complete plate of two picks
  * (khichdi and a salad) is presence while a standard plate of two (dal and roti) is
  * not.
+ *
+ * One structural position is always spent on the lead, even on the degenerate plate
+ * that holds nothing §5.1 would admit as a star: the plate still has a lead, and
+ * spending the position is what keeps this reading and §3.2's presence rate one
+ * quantity. A dish that is not star-eligible can therefore be marked `star` here; it
+ * belongs to no star pool either way (`isLunchStar` is what `lunchStarPool` filters
+ * on), so nothing selects on it.
+ */
+export function weekdayLunchRolesOf(
+  lunch: readonly Dish[],
+  breakfast: readonly Dish[],
+): PickRole[] {
+  const roles: PickRole[] = lunch.map(() => "companion");
+  if (lunch.length === 0) return roles;
+
+  const floorIndex = floorAppendIndex(lunch, breakfast);
+  if (floorIndex >= 0) roles[floorIndex] = "floor";
+  const plate = lunch.map((_, index) => index).filter((index) => index !== floorIndex);
+  if (plate.length === 0) return roles;
+
+  /** The better lead of two plate positions: lower `leadRank`, then lower dish id. */
+  const better = (a: number, b: number): number => {
+    const rankA = leadRank(lunch[a]);
+    const rankB = leadRank(lunch[b]);
+    if (rankA !== rankB) return rankA < rankB ? a : b;
+    return lunch[a].id <= lunch[b].id ? a : b;
+  };
+
+  const carbForward = plate.filter((index) => isCarbForwardInternational(lunch[index]));
+  if (carbForward.length > 0) {
+    const star = carbForward.reduce(better);
+    roles[star] = "star";
+    const partners = plate.filter(
+      (index) =>
+        index !== star && !isCarbForwardInternational(lunch[index]) && isPlainProtein(lunch[index]),
+    );
+    if (partners.length > 0) roles[partners.reduce(better)] = "partner";
+    return roles;
+  }
+
+  const nonCarb = plate.filter((index) => !isLunchCarb(lunch[index]));
+  const starEligible = nonCarb.filter((index) => isLunchStar(lunch[index]));
+  const leadPool = starEligible.length > 0 ? starEligible : nonCarb.length > 0 ? nonCarb : plate;
+  const star = leadPool.reduce(better);
+  roles[star] = "star";
+  const carbs = plate.filter((index) => index !== star && isLunchCarb(lunch[index]));
+  if (carbs.length > 0) roles[carbs.reduce(better)] = "carb";
+  return roles;
+}
+
+/**
+ * Whether one weekday lunch carried the §3.2 optional companion. One reading, held
+ * by `weekdayLunchRolesOf`: presence is a `companion` role on the plate.
  */
 function carriedWeekdayCompanion(lunch: readonly Dish[], breakfast: readonly Dish[]): boolean {
-  const floorIndex = floorAppendIndex(lunch, breakfast);
-  const plate = lunch.filter((_, index) => index !== floorIndex);
-  if (plate.length === 0) return false;
-  let structural = 1;
-  if (plate.some(isCarbForwardInternational)) {
-    if (plate.some((dish) => !isCarbForwardInternational(dish) && isPlainProtein(dish))) {
-      structural += 1;
-    }
-  } else if (plate.some(isLunchCarb)) {
-    structural += 1;
-  }
-  return plate.length > structural;
+  return weekdayLunchRolesOf(lunch, breakfast).includes("companion");
 }
 
 /**
@@ -382,6 +457,7 @@ interface DishAccumulator {
   firstEatenWeek: string | null;
   lastEatenWeek: string | null;
   occupations: Map<string, { lastWeek: string; weeks: Set<string> }>;
+  weekdayLunchRoles: WeekdayLunchRoleCounts;
 }
 
 function accumulatorFor(map: Map<number, DishAccumulator>, dishId: number): DishAccumulator {
@@ -393,6 +469,7 @@ function accumulatorFor(map: Map<number, DishAccumulator>, dishId: number): Dish
     firstEatenWeek: null,
     lastEatenWeek: null,
     occupations: new Map(),
+    weekdayLunchRoles: { star: 0, companion: 0, rows: 0 },
   };
   map.set(dishId, fresh);
   return fresh;
@@ -457,6 +534,8 @@ export function deriveRecordStats(
   const rateFormula = options.rateFormula ?? "occasions";
   const { series, seasonDayOccasions, fruitAllSeason } = buildSeries(record, season);
   const known = new Set(library.map((dish) => dish.id));
+  const dishById = new Map<number, Dish>();
+  for (const dish of library) dishById.set(dish.id, dish);
   const fruitDishIds = new Set(
     library.filter((dish) => dish.category === "Fruit").map((dish) => dish.id),
   );
@@ -524,6 +603,24 @@ export function deriveRecordStats(
       presenceHits[scope] = (presenceHits[scope] ?? 0) + days.size;
     }
 
+    // The same plate reading, kept per dish rather than per day: how each dish's
+    // weekday-lunch rows split by §5.1 role. Read by the §11 `starRoleShare`
+    // variant and reported by the harness; §2.2's own statistics do not use it.
+    for (const day of WEEKDAYS) {
+      if (skipped.has(day)) continue;
+      const lunch = dishesOfMeal(week.picks, day, "lunch", dishById);
+      const roles = weekdayLunchRolesOf(
+        lunch,
+        dishesOfMeal(week.picks, day, "breakfast", dishById),
+      );
+      for (let index = 0; index < lunch.length; index += 1) {
+        const counts = accumulatorFor(accumulators, lunch[index].id).weekdayLunchRoles;
+        counts.rows += 1;
+        if (roles[index] === "star") counts.star += 1;
+        else if (roles[index] === "companion") counts.companion += 1;
+      }
+    }
+
     // §6 step 5: the exploration slot's own weekday memory. A weekday lunch plan
     // pick whose dish had no as-eaten row in any scope before this week is an
     // exploration placement (§7 makes the exploration slot a weekday lunch
@@ -571,6 +668,7 @@ export function deriveRecordStats(
       lastEatenWeek: acc.lastEatenWeek,
       occupations: buildOccupations(acc.occupations),
       seasonCount: orderedSeasonCount(acc.seasonCount),
+      weekdayLunchRoles: { ...acc.weekdayLunchRoles },
     });
   }
 

@@ -24,6 +24,7 @@ import {
   rateIn,
   scopeOfPick,
   seasonOfWeek,
+  weekdayLunchRolesOf,
 } from "../../src/v6/record.js";
 import { loadLiveData } from "../loadLive.js";
 
@@ -500,6 +501,97 @@ describe("§3.2 presence, the weekday companion classification", () => {
     expect([...presenceDaysOf(picks, "weekdayLunch", [...library].reverse())]).toEqual([
       ...presenceDaysOf(picks, "weekdayLunch", library),
     ]);
+  });
+});
+
+/**
+ * The same plate reading, named role by role. This is what the §11 `starRoleShare`
+ * variant selects on, so a wrong lead here would meter the star pool by a fiction.
+ */
+describe("§5.1 roles, read off a record plate", () => {
+  const dishOf = (id: number): Dish => {
+    const dish = library.find((candidate) => candidate.id === id);
+    if (!dish) throw new Error(`no library dish with id ${id}`);
+    return dish;
+  };
+  const rolesOf = (lunch: number[], breakfast: number[] = []): string[] =>
+    weekdayLunchRolesOf(lunch.map(dishOf), breakfast.map(dishOf));
+
+  it("gives the star to the gravy and the companion to the dry protein beside it", () => {
+    // The household's own record: fish tikka takes 5 of its 6 weekday-lunch rows
+    // beside a dal or a gravy and leads none of them. §5.1's protein floor and its
+    // carb-forward partner both make a plain protein the thing beside the main.
+    expect(rolesOf([FISH_TIKKA, ALOO_MATAR, ROTI], [BOILED_EGGS])).toEqual([
+      "companion",
+      "star",
+      "carb",
+    ]);
+  });
+
+  it("gives the star to the dry protein when nothing more substantial is there", () => {
+    expect(rolesOf([FISH_TIKKA, ROTI], [BOILED_EGGS])).toEqual(["star", "carb"]);
+  });
+
+  it("gives the star to a self-sufficient main over a gravy", () => {
+    // §5.1: a true complete plate carries the meal, so the gravy beside it is what
+    // accompanies it. This is why the record's one Chicken masala gravy row reads
+    // as a companion, and why one row is thin evidence for the variant.
+    expect(rolesOf([KHICHDI, ALOO_MATAR])).toEqual(["star", "companion"]);
+  });
+
+  it("reads the plain protein beside a carb-forward international main as its partner", () => {
+    expect(rolesOf([SINGAPORE_NOODLES, FISH_TIKKA], [BOILED_EGGS])).toEqual(["star", "partner"]);
+  });
+
+  it("takes the protein-floor append off before anything else", () => {
+    expect(rolesOf([ALOO_MATAR, ROTI, GRILLED_CHICKEN], [POHA])).toEqual(["star", "carb", "floor"]);
+  });
+
+  it("still spends one structural position on a plate with no star-eligible pick", () => {
+    // Degenerate, but it is what keeps this reading and §3.2's presence rate one
+    // quantity: a carb and an accompaniment is a plate with no companion.
+    const roles = rolesOf([ROTI, ONION_TOMATO_SALAD]);
+    expect(roles).toContain("star");
+    expect(roles).not.toContain("companion");
+  });
+
+  it("is order-independent, so the record's pick order never leaks in (§10)", () => {
+    const plate = [FISH_TIKKA, ALOO_MATAR, ROTI];
+    expect([...rolesOf([...plate].reverse())].reverse()).toEqual(rolesOf(plate));
+  });
+
+  it("agrees with §3.2's presence rate on every plate, because it is one reading", () => {
+    for (const plate of [
+      [ALOO_MATAR, ROTI, CUCUMBER_RAITA],
+      [ALOO_MATAR, ROTI, GRILLED_CHICKEN],
+      [KHICHDI, ONION_TOMATO_SALAD],
+      [KHICHDI],
+      [SINGAPORE_NOODLES, FISH_TIKKA],
+      [ROTI, ONION_TOMATO_SALAD],
+    ]) {
+      const picks: Pick[] = [
+        { day: "Mon", meal: "breakfast", dishId: POHA },
+        ...plate.map((dishId) => ({ day: "Mon" as const, meal: "lunch" as const, dishId })),
+      ];
+      const days = presenceDaysOf(picks, "weekdayLunch", library);
+      expect(rolesOf(plate, [POHA]).includes("companion")).toBe(days.has("Mon"));
+    }
+  });
+
+  it("tallies each dish's weekday-lunch rows by role over the whole record", () => {
+    const stats = deriveRecordStats(record, library, "Monsoon");
+    expect(stats.perDish.get(FISH_TIKKA)?.weekdayLunchRoles).toEqual({
+      star: 0,
+      companion: 5,
+      rows: 6,
+    });
+    // The denominator is the dish's weekday-lunch rows, so it agrees with §2.2.
+    expect(stats.perDish.get(FISH_TIKKA)?.weekdayLunchRoles?.rows).toBe(
+      eatenCountIn(stats, FISH_TIKKA, "weekdayLunch"),
+    );
+    const roti = stats.perDish.get(ROTI)?.weekdayLunchRoles;
+    expect(roti?.star).toBe(0);
+    expect(roti?.rows).toBe(eatenCountIn(stats, ROTI, "weekdayLunch"));
   });
 });
 
