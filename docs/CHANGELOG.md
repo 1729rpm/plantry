@@ -15,6 +15,44 @@ work queue for /reconcile-docs and /reconcile-ops; or "none".
 
 ---
 
+## 2026-09-04  Promote four eaten custom one-offs to the library (Dosa, Atta halva, Paneer manchurian, Stuffed capsicum)
+
+Content batch F2 of Phase 9 (#241). Four dishes the household ate as free-text custom
+picks in the served weeks become library dishes, ids 285 to 288, all Active with photos
+and a `details.md` line each, plus one catalog row (`Urad Dal`). The fifth custom,
+"Cabbage matar aaloo", is identified as the existing Cabbage peas aloo (id 23) and not
+authored; the sixth, Red sauce pasta, was already id 284. Active library 253 to 257.
+The prod slot re-points wait for the v6 backend's `promoteCustomPick` mutation.
+Why: a custom pick has no library id and contributes nothing to the v6 household record
+until it is a library dish (`features/engine-v6.md` §2.1).
+Updated: none (data only; `ADDING-DISHES.md` already describes the path).
+
+## 2026-09-04  Deactivate eight soya and tofu dishes; widen cuisine_neutral to five plain proteins
+
+Content batch F1 of Phase 9 (#242). Soya pulao, Tandoori soya chunks, Soya matar keema,
+Thai tofu stir fry, Tofu bibimbap, Soyabean curry, Teriyaki tofu rice, and Thai red curry
+tofu go `active: No`; Soya chunks masala stays Active. Egg salad, Fish fry, Fish tikka,
+Paneer salad, and Prawn salad gain the `cuisine_neutral` tag (four from the salvaged v4.1
+patch, Fish tikka by hand; the patch's `pairsWith` hunk is dropped). Active library 261
+to 253; one live-data snapshot moved (the Tofu bibimbap special-sourcing row).
+Why: `features/engine-v6.md` §13 retires soya-as-protein and tofu dishes from the
+engine's reach, and §5.1 and §5.4 need the plain proteins in the dry-protein partner pool.
+Updated: none (data only).
+
+## 2026-09-04  Phase 9 (engine v6) opened; v4.1 spec archived
+
+Activation PR of Phase 9 (#239). Commits the engine v6 round-3 spec, its development plan,
+the household rulebook as amended, reviews 1 to 7, both dry runs, the as-eaten 8-week
+record, the v5 spec, and the decision brief under `features/`; moves the v4.1 spec and
+its restart brief to `archive/features/`; marks Phase 8 abandoned and adds Phase 9 as
+building in `docs/PLAN.md`; points `CLAUDE.md` at the plan; appends the two 2026-09-04
+`DECISIONS.md` entries; preserves the salvaged `cuisine_neutral` widening as a patch
+under `archive/patches/`. The integration branch `feat/engine-v6` is created off `main`.
+Why: the v4.1 gate failed twice and the record-matching design replaced it; the phase
+needs its documents on `main` before streams build against them.
+Updated: none (the phase docs are not canonical; `docs/engine.md` is rewritten by stream G
+inside the phase).
+
 ## 2026-08-24  Canonical reconcile: the Yours tab, and the last of the comment channel
 
 `docs/product.md` and `docs/engineering.md` catch up to Phase 7, which shipped on
