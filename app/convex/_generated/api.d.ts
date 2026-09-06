@@ -15,7 +15,6 @@ import type * as favorites from "../favorites.js";
 import type * as generateWeek from "../generateWeek.js";
 import type * as groceryList from "../groceryList.js";
 import type * as incidentsMutations from "../incidentsMutations.js";
-import type * as lib_archiveHistory from "../lib/archiveHistory.js";
 import type * as lib_author from "../lib/author.js";
 import type * as lib_meals from "../lib/meals.js";
 import type * as lib_record from "../lib/record.js";
@@ -49,7 +48,6 @@ declare const fullApi: ApiFromModules<{
   generateWeek: typeof generateWeek;
   groceryList: typeof groceryList;
   incidentsMutations: typeof incidentsMutations;
-  "lib/archiveHistory": typeof lib_archiveHistory;
   "lib/author": typeof lib_author;
   "lib/meals": typeof lib_meals;
   "lib/record": typeof lib_record;

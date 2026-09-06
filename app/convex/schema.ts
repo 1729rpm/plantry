@@ -257,10 +257,16 @@ export default defineSchema({
 
   // Structured runtime error log written by the auto-recovery middleware.
   // Also fuel for the slow loop.
+  //
+  // `severity` carries three levels. "error" and "warn" are the two the middleware
+  // has always written. "info" is the routine-trail level: a v6 generation logs one
+  // per §6 step 6 constraint repair (`features/engine-v6.md`), which is expected
+  // behaviour worth reading back, not a problem. Widening the union is additive, so
+  // every existing row still validates at deploy time.
   incidents: defineTable({
     createdAt: v.number(),
     source: v.union(v.literal("engine"), v.literal("backend"), v.literal("frontend")),
-    severity: v.union(v.literal("warn"), v.literal("error")),
+    severity: v.union(v.literal("info"), v.literal("warn"), v.literal("error")),
     context: v.any(),
     message: v.string(),
     resolvedAt: v.union(v.number(), v.null()),
