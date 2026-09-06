@@ -18,7 +18,7 @@ Sources:
 - `data/dishes/<slug>.md`: dish library, one file per dish (YAML frontmatter for the dish fields, a `## Ingredients` table for its ingredient rows)
 - `data/ingredients.md`: ingredient catalog, one row per canonical ingredient, carrying its grocery group, canonical unit, and pack size
 - Convex `currentWeek`: the household record, one row per week (§2)
-- `data/menu_history.md` and Convex `weekArchive`: provenance. Both hold week rows for reference; neither is read by generation, Explore, or the picker.
+- `data/menu_history.md` and Convex `weekArchive`: provenance. Both hold week rows for reference. `menu_history.md` is parsed and validated at bake time so it cannot rot, and nothing reads either of them: not generation, not Explore, not the picker.
 
 A dish is eligible for the current week if Active=Yes and its Seasons include the current Bangalore season.
 
@@ -52,7 +52,7 @@ From the record the engine derives, per dish and per scope it can occupy:
 
 - `eatenCount[scope]`: as-eaten rows of the dish in that scope's slots.
 - `occasions[scope]`: the number of record occasions of that scope.
-- `rate[scope] = eatenCount[scope] / occasions[scope]`: servings per occasion. A weekday lunch dish eaten 7 times over 36 weekday-lunch occasions has rate 0.194; over a five-occasion week it accrues 0.97.
+- `rate[scope] = eatenCount[scope] / occasions[scope]`: servings per occasion. A weekday lunch dish eaten 6 times over 36 weekday-lunch occasions has a weekday rate of 0.167 and, if it was also eaten on 1 of 8 Saturdays, a separate Saturday rate of 0.125; over a five-occasion week its weekday ledger accrues 0.83.
 
 Scopes are symmetric and disjoint: a dish's Saturday ledger accrues only its Saturday rows and is charged only by Saturday placements; its weekday ledger only its weekday rows and placements. A dish with no as-eaten row in a scope is **absent** from that scope's pools, not present at rate zero, so a weekday pasta never competes for the Saturday treat and a Saturday chole bhature never competes for a weekday star.
 
@@ -79,6 +79,8 @@ Deficits persist across weeks and may go negative.
 
 No table holds deficits. The ledger is a pure function of persisted data and is replayed on every generation: seed at the cutover week from the record before it, then for each week from the cutover week to the week being generated, accrue against the record as it stood, charge the placements the engine made that week (persisted on the week's `currentWeek` row as its `generatedPlan`, §16), and charge every as-eaten row of that week the plan did not contain. A week with no `currentWeek` row accrues only.
 
+Each replayed week is replayed **in its own season**, the season its `weekStart` falls in: its eligibility set, its fruit season scope, and its charges are all evaluated for that season. An out-of-season dish's deficit therefore stays frozen across the weeks it is absent, exactly as §3 requires, whatever season the generating week is in.
+
 The **cutover week** is derived, never configured: the earliest `weekStart` among record weeks that carry a `generatedPlan`, or the generating week itself when none does. The cold start seeds at that week and the replay starts there.
 
 Replay is linear in weeks times dishes and keeps §14's promise that all state derives from persisted data. It also makes the gate's corrected run (§16) the same code path as production.
@@ -91,9 +93,22 @@ Pools are role-partitioned (breakfast mains, breakfast small items, lunch stars,
 
 **Structural versus optional elements.** A slot the plate structurally requires (a lunch star, the carb on a standard plate, the Saturday main and dessert, the daily fruit, a breakfast main) is always filled. When at least one dish in its pool has a positive deficit, the top deficit wins. When every deficit in the pool is negative or zero, the slot is filled by the **highest-rate dish in the pool not already placed this week**, ties by id: the thing the household eats most is what the plate reaches for when nothing is due. The fruit slot's exhausted-pool rule is different and is stated in §9.
 
-An optional element (a lunch companion, a breakfast small item, the Saturday accompaniment) is included only when the top dish in its pool has a positive deficit; otherwise the plate stays smaller. This is how "ceilings, never targets" becomes mechanism: plate sizes are metered by the record's own companion rates instead of being filled to a budget.
+An optional element is included only while its slot is due one. This is how "ceilings, never targets" becomes mechanism: plate sizes are metered by the record's own rates instead of being filled to a budget. Two of the three optional slots meter presence with a ledger of their own, and the third meters it through its dishes.
 
-**Reopening trigger.** If the §16 self-feeding run shows any optional slot's presence rate more than 25 percent over its record presence rate on weeks 20 to 60, that slot (and only that slot) gains its own presence-rate ledger, accrued and charged like a dish's.
+**The breakfast small-item slot** is filled when the top dish in its pool has a positive deficit, and otherwise left empty. Its presence is the sum of its dishes' rates, which is enough because the pool is narrow and dish-driven.
+
+**The weekday lunch companion slot and the Saturday third-item slot each carry a presence ledger** of their own, because the maximum over a wide pool of per-dish ledgers overshoots: some dish in a large pool is nearly always due, so the slot fills nearly always. A presence ledger meters the slot rather than its dishes:
+
+- Before each week, `presenceDeficit += recordPresenceRate × plannedOccasions`, where the record presence rate is the share of that scope's record occasions whose plate carried the optional element.
+- Every placement into the slot charges 1, structural forms included.
+- A hand-added element in a served week is charged at reconciliation and a removed one keeps its charge, exactly as §3 treats a dish.
+- The slot is filled only while its presence deficit is positive. Which dish then fills it is the pool's top deficit, falling back to the highest-rate dish not already placed this week when no deficit is positive, because presence has already been decided.
+- The presence ledgers are replayed with the dish ledgers (§3.1) and seeded at zero.
+
+**Presence is one quantity, read the same way on both sides.** The record carries picks and not roles, so the optional element is read structurally off each record plate, and the engine's own charge is counted by role off each finished plate; the two readings are defined to agree, so a presence ledger accrued from the record is paid down by exactly the occasions the record would have counted.
+
+- **Saturday:** any third item beside the treat and the dessert is the optional element, accompaniment, dry-protein partner, and special protein alike. Three or more picks is the whole test.
+- **Weekday lunch:** the optional element is the companion and only the companion, so the plate is read rather than counted. Subtract the protein-floor append (§5.1) first, then the positions the plate's form structurally requires: the star always, the carb on a standard plate, the one plain protein a carb-forward international main takes. What is left is the companion. Plate size alone would be wrong in both directions, because a complete plate that takes a companion (khichdi and a salad) is two picks while a standard plate carrying a floor append (dal, roti, and a grilled chicken) is three.
 
 The ledger is the engine's only frequency mechanism: no per-family budget, no streak cap, and no separate due-ness score sits beside it. Family frequencies need none, because a family's served rate is the sum of its dishes' rates: chicken sums to about 1.4 lunches a week, paneer to about 1.25 appearances across all its forms, the dal family to about 1.3, salads and raita to their observed near-equal split, and mutton to about 0.25, surfacing every four to five weeks without any rule naming it. Starvation is impossible by construction: any dish with a positive rate accumulates deficit until it is served.
 
@@ -193,10 +208,17 @@ Generation plans the whole week before assigning days, in this exact order. With
 2. **Pin favorites** (§8). Every favorites-table dish is placed into exactly one slot of its meal type, oldest-added first, never breaking a hard composition rule; unplaceable favorites are reported, not forced. Pinning charges deficit like any placement; a favorite may still earn a second placement later through its own deficit.
 3. **The exploration pick** (§7): exactly one, into a weekday lunch position, when a placeable candidate exists.
 4. **Fill the plan.** Saturday treat main (and its special protein or dry-protein partner where the form calls for one), dessert, and optional accompaniment; the remaining weekday lunch stars (respecting the international ceiling, counting an international exploration pick); each plate's carb (standard plates always, by deficit from the carb pool); each plate's optional companion (positive-deficit rule, §4); the five breakfast mains (Thursday's from the egg-anchored pool of §5, the other four from the full breakfast-main pool); breakfast small items (§5.3); six fruits by deficit from the season's fruit pool (§9).
-5. **Assign dishes to days by least-recently-used weekday.** Each dish remembers, in the record, which weekday-meal slots it has occupied. It is placed on the eligible weekday whose most recent occupation by this dish is oldest; a weekday it has never occupied counts as infinitely old; ties among never-occupied weekdays break by fewest total occupations, then Monday-first order. Assignment runs in plan priority order: pinned favorites, then stars by deficit descending, then everything else, and **the exploration pick last**, taking whichever weekday its plate shape still fits.
+5. **Assign dishes to days by least-recently-used weekday.** Each dish remembers, in the record, which weekday-meal slots it has occupied. It is placed on the eligible weekday whose most recent occupation by this dish is oldest; a weekday it has never occupied counts as infinitely old; ties among never-occupied weekdays break by fewest total occupations, then Monday-first order. Assignment runs in plan priority order: pinned favorites, then stars by deficit descending, then everything else.
+
+   **The exploration slot keeps its own least-recently-used weekday memory,** because a never-eaten pick has no occupation history to place it by. The memory is the weekday of every past exploration placement, read off the record's `generatedPlan` values (the plan pick whose dish had no as-eaten row before that week). The pick goes to the eligible weekday least recently used by an exploration placement, never-used weekdays counting as oldest, ties Monday-first.
+
+   **That weekday is reserved out of the whole supply before the repertoire plates choose,** and the exploration plate is then filled in last, so the priority order above is unchanged for everything else. Reserving is what makes the memory a rule at all: five lunch plates fill five weekdays, so a pick assigned from what is left has exactly one day to take and its own memory could decide nothing.
+
 6. **Constraint pass.** Enforce, in order: the two anchors (§5); one gravy per lunch (hard); cross-meal protein-family and ingredient demotion (§5.1); rice on consecutive days (soft, resolve by swapping the two lunches whose exchange clears it, earliest pair first, and accept the violation if no swap clears it); the day-scoped protein floor with its category restriction; item ceilings; the 120-minute prep ceiling. Every repair is deterministic: replace the offending dish with the next-ranked alternative from its own pool, or swap whole plates between the earliest pair of days that clears the violation. An engine-internal repair refunds the replaced dish's charge and charges the replacement; the no-refund rule of §3 is for household swap-outs only.
 
-The output of generation is the week's plates plus the **generated plan**: the list of every (day, meal, dishId) the engine placed, persisted with the week (§16) so that §3.1's replay and §3's reconciliation can tell an engine placement from a hand swap-in. Generation also emits `incidents`, `unplacedFavorites`, and a `diagnostics` object the gate reads (per-role fills from an exhausted pool, the exploration pick and its family, the constraint-pass repairs, and days over the prep ceiling).
+The output of generation is the week's plates plus the **generated plan**: the list of every (day, meal, dishId) the engine placed, persisted with the week (§16) so that §3.1's replay and §3's reconciliation can tell an engine placement from a hand swap-in.
+
+Generation also emits `incidents`, `unplacedFavorites`, and a `diagnostics` object the §16 gate reads. The plan carries only (day, meal, dishId) because that is all the replay needs; a diagnosis has to answer why a pick is where it is, and origin and deficit are known only inside generation, so they are reported here. Diagnostics hold: per-role fills from an exhausted pool; the exploration pick and its protein family; every constraint-pass repair in the order it was made; days over the prep ceiling; the §4 presence occasions this week's finished plates carried, counted by role; violations the constraint pass could not clear deterministically; the count of weekday international stars the plan carried into the §5.4 ceiling; each lunch plate's lead with its origin and the scope deficit it spent; and the cutover week the run replayed from. All of it is reported, never gated, except where a §16 threshold names it.
 
 ## 7. Exploration and the Explore ranking
 
@@ -268,13 +290,13 @@ The cap counts breakfast and lunch items only. The Fruit of the day (§9) is out
 
 The cap is role-aware. Each composed pick carries a structural role from §5: `breakfast-main`, `breakfast-small`, `star`, `carb`, `companion`, `floor`, `partner`, `treat`, `special-protein`, `accompaniment`, `dessert`, or `fruit`. When composition produces a menu over the cap, drop picks one at a time:
 
-1. Drop only a droppable side (role `companion` or `accompaniment`) while any remains. The star, carb, breakfast main, breakfast small item, protein floor, dry-protein partner, Saturday treat, special protein, and dessert are protected: they are never dropped while a droppable side is still on the day.
+1. Drop only a droppable side (role `companion`, `accompaniment`, or `dessert`) while any remains. The star, carb, breakfast main, breakfast small item, protein floor, dry-protein partner, Saturday treat, and special protein are protected: they are never dropped while a droppable side is still on the day.
 2. Among the droppable sides, drop the lowest Satiety; among those the longest Prep Min; among those the later position in the day (earlier slots win).
 3. Fallback (rare): if the day is still over the cap with no droppable side left, drop the worst pick overall by the same Satiety then Prep Min then position order, so the day still resolves.
 
 Repeat until at the cap.
 
-The cap is a safety net, not the per-day budget. §5's ceilings compose each day at or under it by construction (a 1-or-2-item breakfast with a 2-or-3-item lunch, Saturday at 2 or 3), so the cap should not fire in normal generation; when it does, it signals a real defect, and the role-aware order still protects the structural elements by dropping a side first. An over-cap incident is a genuine warning to investigate, not steady-state noise.
+The cap is a safety net, not the per-day budget. §5's ceilings compose each day at or under it by construction (a 1-or-2-item breakfast with a 2-or-3-item lunch, Saturday at 2 or 3), so the cap should not fire in normal generation; when it does, it signals a real defect, and the role-aware order still protects the structural elements by dropping a side first. An over-cap incident is a genuine warning to investigate, not steady-state noise. The Saturday dessert is droppable in this ordering and structural in §5.5; the two do not collide, because Saturday composes at 2 or 3 items against a 3-item cap, so the cap has no dessert to reach.
 
 ## 12. Nutrition
 
@@ -306,7 +328,8 @@ The macros are derived for display and for the reporting layer (below); they are
 Alongside the blocking validators (§1, §15), a reporting layer in `engine/src/data/validators.ts` produces non-blocking reports, regenerated by `npm run reports` and printed in CI output without failing the build. They carry judgment CI cannot make and feed the slow loop:
 
 - **Coverage report:** the share of active dishes carrying each enrichment field (description, recipe, complexity, photo) and the share of macro-relevant catalog rows carrying macros, tracked per macro column (protein/carbs, fat, and fibre, so the energy and Healthy inputs ratchet independently). Macro-relevant rows are the food groups (Proteins and Dairy, Pantry, Vegetables); aromatics and herbs may stay blank, and the Fruit group is excluded from the denominator (the generic "Fruit" placeholder row carries no macros). This is the ratchet the enrichment work burns down; blank macros and unpopulated fields are expected until they are filled, so near-zero coverage is correct, not a failure.
-- **Pool-coverage report:** for each §4 pool, per season, the count of eligible candidates. Surfaces thin pools (the source of repetition) and flags when a season change strands a slot. The pools come from the live pool functions, so the report cannot drift from the engine.
+  Pool health is not one of them. A pool's health is how often it can meet the rate the record asks of it, which is a per-occasion question the library alone cannot answer, so the §16 gate measures it per occasion instead.
+
 - **HP-vs-protein consistency:** warns when a dish's derived protein and its `HP` tag disagree, using a high-protein threshold of 20 g per person. Dishes whose macros are not yet populated are skipped, so the report stays silent until macros exist. The `HP` tag remains the rule input; this only surfaces drift.
 - **Special-sourcing report:** for each active dish, the special-sourcing ingredients it uses, resolved against the catalog's `Special` flag (§15). Answers "which dishes need a special shopping trip, and for what", so the week's supermarket or specialty-store run is visible up front; a dish with no special ingredients is omitted. This is the sourcing signal the future Swiggy ordering automation (product.md §8) consumes.
 
@@ -324,7 +347,7 @@ The picker does not narrow the pool (Principle 4: a swap may land on any Active,
 headOrder(dish) = (recencyTier, id)
 ```
 
-- **recencyTier** is the two-value tier the record supplies for the week being edited: a dish not placed anywhere in this week sits in the first tier, a dish already placed elsewhere in the week in the second. It is the dominant term, so a fresh dish always outranks one the week already holds.
+- **recencyTier** is a two-value tier read off the week being edited: a dish not placed anywhere in that week sits in the first tier, a dish already placed elsewhere in it in the second. The caller supplies the set of dish ids the week holds; the ranking itself does no history lookup. It is the dominant term, so a fresh dish always outranks one the week already holds.
 - **id** is dish id ascending, the total tie-break. Within a tier the order is stable and total, so the same pool always renders in the same order.
 
 **Tail.** Every other pool dish (the same-day repeats the head excluded), ordered by the same tuple comparison. The tail keeps the pool complete (nothing is dropped) while pushing dishes the day already has below fresh options.
@@ -396,38 +419,41 @@ Enrichment fields, all optional (absent on a dish parses unchanged; the UI degra
 The record and the ledger are derivable from persisted data alone:
 
 - `currentWeek` carries an optional `generatedPlan` field: the (day, meal, dishId) list the engine placed when the row was written. Rows written before the cutover week have none and read as record-only weeks.
-- Generation reads every `currentWeek` row with `weekStart` before the generating week as the record (§2.1), the favorites table, and the season, and writes the week plus its `generatedPlan`. It takes no rng and no requested-dish argument from production.
-- The Explore feed's never-eaten set and the picker's recency tier read the record (§2.1).
+- One loader turns those rows into the record: `loadRecord(ctx, beforeWeekStart)` returns every row with an earlier `weekStart` in ascending order, each reduced by `recordWeekFromDoc` to live slot state minus skipped days minus null-`dishId` picks, with its `generatedPlan` passed through. Generation, Explore, and the picker all read it, so there is one record and not three.
+- Generation takes only the week it is generating. It reads the record, the favorites table, and the season, and writes the week plus its `generatedPlan`. There is no rng argument and no requested-dish argument.
 - The cutover week is derived, never configured (§3.1).
+- Two internal functions maintain the record and have no UI: one exports it read-only, which is how the gate harness gets a real record to run against, and one re-points a custom pick at a library id once that dish is authored, guarded to picks whose `dishId` is null and writing no `manualChanges` row, because a re-point is a data repair and not a household edit.
 
 ### 16.2 Section-to-module pairing
 
 Each numbered section above corresponds to a module under `engine/src/` plus a paired test under `engine/test/`:
 
-| Section                            | Module                                     | Test                                                                |
-| ---------------------------------- | ------------------------------------------ | ------------------------------------------------------------------- |
-| §1 data and eligibility            | `eligibility.ts`, `data/parse.ts`          | `test/eligibility.test.ts`, `test/data/dishFiles.roundtrip.test.ts` |
-| §2 the record                      | `v6/record.ts`                             | `test/v6/record.test.ts`                                            |
-| §3 rate-deficit scheduling         | `v6/ledger.ts`                             | `test/v6/ledger.test.ts`                                            |
-| §4 pools and selection             | `v6/pools.ts`                              | `test/v6/pools.test.ts`                                             |
-| §5 the week and the plate          | `v6/compose.ts`                            | `test/v6/compose.test.ts`                                           |
-| §6 generation                      | `v6/generateWeekV6.ts`, `v6/place.ts`      | `test/v6/generateWeekV6.test.ts`, `test/v6/place.test.ts`           |
-| §7 exploration and Explore ranking | `v6/exploration.ts`                        | `test/v6/exploration.test.ts`                                       |
-| §8 favorites and requested dishes  | `v6/favoritesPin.ts`                       | `test/v6/favoritesPin.test.ts`                                      |
-| §9 fruit of the day                | `v6/pools.ts` (fruit scope), `v6/place.ts` | `test/v6/pools.test.ts`                                             |
-| §10 skipped days                   | `groceryList.ts`, `historyRows.ts`         | `test/groceryList.test.ts`, `test/historyRows.test.ts`              |
-| §11 item cap                       | `cap.ts`                                   | `test/cap.test.ts`                                                  |
-| §12 nutrition and reports          | `nutrition.ts`, `data/validators.ts`       | `test/nutrition.test.ts`, `test/data/reports.test.ts`               |
-| §13 picker ranking                 | `pickerRanking.ts`                         | `test/pickerRanking.test.ts`                                        |
-| §14 determinism                    | `v6/generateWeekV6.ts`                     | `test/v6/generateWeekV6.test.ts`                                    |
-| §15 field reference                | `data/schemas.ts`, `data/validators.ts`    | `test/data/schemas.test.ts`, `test/data/validators.test.ts`         |
-| §16 the gate                       | `engine/scripts/gate.ts`                   | `test/v6/gate.test.ts`                                              |
+| Section                            | Module                                                                       | Test                                                                |
+| ---------------------------------- | ---------------------------------------------------------------------------- | ------------------------------------------------------------------- |
+| §1 data and eligibility            | `eligibility.ts`, `data/parse.ts`                                            | `test/eligibility.test.ts`, `test/data/dishFiles.roundtrip.test.ts` |
+| §2 the record                      | `v6/record.ts`                                                               | `test/v6/record.test.ts`                                            |
+| §3 rate-deficit scheduling         | `v6/ledger.ts`                                                               | `test/v6/ledger.test.ts`                                            |
+| §4 pools and selection             | `v6/pools.ts`, `v6/ledger.ts` (presence), `v6/record.ts` (the presence read) | `test/v6/pools.test.ts`, `test/v6/ledger.test.ts`                   |
+| §5 the week and the plate          | `v6/compose.ts`, `composition.ts` (the shared predicates)                    | `test/v6/compose.test.ts`, `test/composition.test.ts`               |
+| §6 generation                      | `v6/generateWeekV6.ts`, `v6/place.ts`                                        | `test/v6/generateWeekV6.test.ts`, `test/v6/place.test.ts`           |
+| §7 exploration and Explore ranking | `v6/exploration.ts`                                                          | `test/v6/exploration.test.ts`                                       |
+| §8 favorites and requested dishes  | `v6/favoritesPin.ts`                                                         | `test/v6/favoritesPin.test.ts`                                      |
+| §9 fruit of the day                | `v6/pools.ts` (fruit scope), `v6/place.ts`                                   | `test/v6/pools.test.ts`, `test/v6/place.test.ts`                    |
+| §10 skipped days                   | `groceryList.ts`, `historyRows.ts`                                           | `test/groceryList.test.ts`, `test/historyRows.test.ts`              |
+| §11 item cap                       | `cap.ts`                                                                     | `test/cap.test.ts`                                                  |
+| §12 nutrition and reports          | `nutrition.ts`, `data/validators.ts`, `scripts/reports.ts`                   | `test/nutrition.test.ts`, `test/data/reports.test.ts`               |
+| §13 picker ranking                 | `pickerRanking.ts`                                                           | `test/pickerRanking.test.ts`, `test/pickerGenericSearch.test.ts`    |
+| §14 determinism                    | `v6/generateWeekV6.ts`                                                       | `test/v6/generateWeekV6.test.ts`                                    |
+| §15 field reference                | `data/schemas.ts`, `data/validators.ts`                                      | `test/data/schemas.test.ts`, `test/data/validators.test.ts`         |
+| §16 the gate                       | `scripts/gate.ts`                                                            | `test/v6/gate.test.ts`                                              |
+
+Paths are relative to `engine/`. Everything under `engine/src/v6/` is the selection engine; `engine/src/v6/index.ts` is its public surface and `engine/src/index.ts` re-exports it. `eligibility.ts`, `composition.ts`, `cap.ts`, `nutrition.ts`, `groceryList.ts`, `historyRows.ts`, and `pickerRanking.ts` sit beside it as shared modules the v6 engine and the backend both import; `generateWeek.ts` holds the output-shape types (`GeneratedWeek` and its day and slot shapes) that `GeneratedWeekV6` extends, and nothing else.
 
 The pairing is held by review at the PR level: a pull request that modifies `docs/engine.md` also modifies at least one file under `engine/src/` and at least one under `engine/test/`, and the reviewer names the missing pair when it does not.
 
 ### 16.3 The verification gate
 
-A rule correct in isolation can be wrong in interaction, and only a long self-feeding simulation shows it, so the gate is part of the spec. `engine/scripts/gate.ts` runs it against the built engine (`npm run gate`) and writes its report; `engine/test/v6/gate.test.ts` is the CI-sized subset that holds the line after merge (the self-feeding run, asserting thresholds 1, 2, 4, 5, and 10, under a minute).
+A rule correct in isolation can be wrong in interaction, and only a long self-feeding simulation shows it, so the gate is part of the spec. `engine/scripts/gate.ts` runs it against the built engine (`npm run gate`) and writes `features/engine-v6-gate-report.md`, one line per threshold in the order below with a PASS or FAIL and a one-line diagnosis. `engine/test/v6/gate.test.ts` is the CI-sized subset that holds the line after merge: the self-feeding run only, asserting thresholds 1, 2, 4, 5, and 10, kept under a minute.
 
 **Method.** The harness runs the engine self-feeding (each generated week is treated as eaten, unedited, and fed into the record that feeds the next) for 60 weeks from the current record. All thresholds are measured on weeks 20 to 60, the steady state, not the warm-up. Three runs:
 
@@ -435,23 +461,23 @@ A rule correct in isolation can be wrong in interaction, and only a long self-fe
 2. **Self-feeding:** the production path. Measures drift; a family that passes frozen and fails here is the self-feed ratchet, not bias.
 3. **Corrected:** the self-feeding run with the record's own swap-away list replayed against the generated weeks (every dish the household swapped out in the served weeks is swapped out of any generated week that proposes it), so §3's reconciliation branch executes at least once.
 
-Variants run alongside for measurement only: the cold-start cap at 0.5 and a pool-level cap beside the structural-only seed; the §7 family governor off; and the alternative rate formula (`eatenCount / occasionsSinceFirstEaten`).
+Variants run alongside for measurement only, passed as the engine's `variant` argument, which production never sets: the cold-start cap at 0.5 and at pool level beside the structural-only seed; seeding the optional pools too; the §7 family governor off; and the alternative rate formula (`eatenCount / occasionsSinceFirstEaten`).
 
 **Thresholds.** Every rate is compared per occasion served against per occasion eaten.
 
-1. **Distribution fidelity, the headline gate:** for each tracked family (chicken, paneer, egg, fish, prawn, mutton, dal-family, international, plain roti, specialty roti, salad, raita/curd), the served rate is within 25 percent of its record rate on the self-feeding run.
+1. **Distribution fidelity, the headline gate:** for each tracked family (chicken, paneer, egg, fish, prawn, mutton, dal-family, international, plain roti, specialty roti, salad, raita/curd), the served rate is within 25 percent of its record rate on the self-feeding run. A family with fewer than four as-eaten rows in the record at simulation start is **reported, not gated**, here and on threshold 12: a 25 percent bar on two rows is half a serving over the horizon, which no schedule can meet or miss meaningfully. The row count is printed beside every family, so an exempted one is never invisible.
 2. **Lunch-main uniqueness:** at least 65 percent of lunch mains distinct over any rolling 8 weeks (household baseline 77 percent).
 3. **Overlap band:** week-over-week dish-set Jaccard (the size of the intersection of two consecutive weeks' dish sets divided by the size of their union) averaged over the horizon, within 0.05 of the household baseline re-measured by the harness's own method on the record weeks.
-4. **Slot anti-lock:** no dish holds the same weekday-meal slot in more than half the weeks of the horizon, favorites included, exempting only the two §5 anchors and any dish whose rate arithmetically forces majority occupancy (a rate above half its role's weekly slots); and no category (international, specialty roti, chutney type) is day-locked in more than half the weeks, Saturday's own scope excepted.
+4. **Slot anti-lock:** no dish holds the same weekday-meal slot in more than half the weeks of the horizon, favorites included, exempting only the two §5 anchors and any dish whose rate arithmetically forces majority occupancy. The arithmetic exemption is **a rate at or above 0.4 of the role's weekly slots**: at that rate an assignment with no weekday preference at all already puts one named weekday over half the horizon more often than not, so a lock above it measures arithmetic rather than an engine deviation. Also: no category (international, specialty roti) and **no individual chutney dish** is day-locked in more than half the weeks, Saturday's own scope excepted. The chutney test is per dish because the chutney category as a whole is day-locked by construction, every paratha and chilla morning carrying one; the lock the rule guards against is one chutney on one weekday.
 5. **Saturday:** no treat main repeats within any rolling min(8, Saturday pool size) Saturdays; dessert on 100 percent of Saturdays.
 6. **Fruit:** at least 4 distinct fruits per week and no fruit more than twice in a week, both measured only when the eligible in-season set holds 4 or more fruits; no consecutive-day repeat except under a thin pool.
 7. **Coverage:** every dish with `eatenCount >= 2` at simulation start is served at least once in any rolling 20-week window in which it is eligible.
 8. **International persistence:** 0.75 to 1.75 weekday international lunch stars per week averaged over every 10-week window, and never a 10-week window at 0.
 9. **Breakfast and forms:** at least 10 distinct breakfast mains across any 25-week window; standalone boiled-egg breakfasts present; dal-led lunches present.
 10. **Plate size and effort:** 4-item lunches under 10 percent of lunch days; 5-item lunches zero; days over the 120-minute prep ceiling reported; zero days over 150.
-11. **Presence rates:** breakfast small-item presence, weekday companion presence, and Saturday accompaniment presence each within 25 percent of the record's presence rate (this is what arms the §4 reopening trigger).
-12. **Drift bound:** each tracked family's rate over weeks 40 to 60 within 10 percent of its rate over weeks 20 to 40 on the self-feeding run.
-13. **Reported, not gated:** novelty placements per week; weekday lunches with no animal protein; Saturday plate shape; fills from an exhausted pool per role per week; picks by protein family.
+11. **Presence rates:** breakfast small-item presence, weekday companion presence, and Saturday third-item presence each within 25 percent of the record's presence rate. Both sides are the one quantity §4 defines: the record side read structurally off each record plate, the served side counted by role off each finished plate.
+12. **Drift bound:** each tracked family's rate over weeks 40 to 60 within 10 percent of its rate over weeks 20 to 40 on the self-feeding run, under threshold 1's fewer-than-four-rows exemption.
+13. **Reported, not gated:** novelty placements per week; weekday lunches with no animal protein; Saturday plate shape; fills from an exhausted pool per role per week; picks by protein family; the constraint pass's repairs and the violations it could not clear; each lunch plate's lead with its origin and the deficit it spent.
 
 **Order of work.** A threshold that proves arithmetically unsatisfiable is corrected in this document first, and the correction names its measured reason.
 
