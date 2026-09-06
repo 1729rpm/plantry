@@ -1,6 +1,6 @@
 import type { Doc } from "../_generated/dataModel.js";
 import type { QueryCtx } from "../_generated/server.js";
-import type { SlotMeal } from "./meals.js";
+import type { V6Day as Day, V6Pick as Pick, RecordWeek } from "@plantry/engine";
 
 /**
  * The household record, read out of `currentWeek` (`features/engine-v6.md` §2.1).
@@ -15,46 +15,24 @@ import type { SlotMeal } from "./meals.js";
  */
 
 /**
- * The six days the engine schedules. Sunday is never generated.
+ * The three shapes this module speaks are the engine's own, re-exported here so
+ * every backend caller keeps importing them from one place.
  *
- * Mirrors `Day` in `engine/src/v6/types.ts`. The engine package's `exports` map
- * does not expose the `v6/types` path today (stream D owns the root index), so the
- * two shapes in this file are declared locally with identical field names, and
- * stream E2 swaps them for the engine export once D has landed.
- */
-export type Day = "Mon" | "Tue" | "Wed" | "Thu" | "Fri" | "Sat";
-
-/**
- * One as-eaten pick, or one engine placement. Same shape for both (§2.1, §6).
+ * They were declared locally when this file was written (stream E1), because the
+ * engine package's root index did not yet carry the v6 surface. It does now, so
+ * the mirror is gone: `Day` and `Pick` leave the engine aliased as `V6Day` and
+ * `V6Pick` (the production engine already exports both names), and `RecordWeek`
+ * comes through unaliased. Aliasing them back to the short names here keeps this
+ * module's callers unchanged and keeps the aliasing in exactly one place.
  *
- * Mirrors `Pick` in `engine/src/v6/types.ts`. `meal` is the stored slot's own
- * meal, so the standalone fruit slot passes through as `"fruit"` rather than being
- * folded into breakfast or lunch: the fruit scope is separate all the way down (§2.2).
+ * What the shapes mean, all per `features/engine-v6.md`: a `Day` is one of the six
+ * days the engine schedules (Sunday is never generated); a `Pick` is one as-eaten
+ * pick or one engine placement, whose `meal` is the stored slot's own meal, so the
+ * standalone fruit slot passes through as `"fruit"` rather than being folded into
+ * breakfast or lunch (§2.2 keeps the fruit scope separate all the way down); a
+ * `RecordWeek` is one record week as the backend hands it over (§2.1).
  */
-export interface Pick {
-  day: Day;
-  meal: SlotMeal;
-  dishId: number;
-}
-
-/**
- * One record week as the backend hands it to the engine (§2.1).
- *
- * Mirrors `RecordWeek` in `engine/src/v6/types.ts`.
- */
-export interface RecordWeek {
-  /** ISO date of the Monday that anchors the week. */
-  weekStart: string;
-  /** As-eaten picks: live slot state, skipped days and custom picks excluded. */
-  picks: Pick[];
-  /** Days the household skipped; they contribute no occasions and no rows (§2.2). */
-  skippedDays: Day[];
-  /**
-   * What the engine placed when the row was written (§12), or null for weeks
-   * written before cutover, which are read as record-only weeks.
-   */
-  generatedPlan: Pick[] | null;
-}
+export type { Day, Pick, RecordWeek };
 
 /**
  * Converts one stored `currentWeek` row into its as-eaten `RecordWeek` (§2.1).
