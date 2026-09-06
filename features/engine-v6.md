@@ -469,8 +469,7 @@ does not merge to `main` until it passes; no further prototype dry run precedes 
 - **Method.** The harness runs the engine self-feeding (each generated week is treated as eaten,
   unedited, and fed into the record that feeds the next) for 60 weeks from the current record. All
   thresholds are measured on weeks 20 to 60, the steady state, not the warm-up. Three runs:
-  1. **Frozen:** rates fixed at the cutover record for the whole horizon. Measures the engine's
-     own bias; a family that fails here needs an engine fix.
+  1. **Frozen:** rates fixed at the cutover record for the whole horizon (dish rates, the eaten counts behind them, and `lastEatenWeek` for the cold start), while the occupation memory, the exploration-weekday memory, exploration candidacy, and the presence rate read the live record, so the run measures rate-following bias and not a stalled calendar. Measures the engine's own bias; a family that fails here needs an engine fix.
   2. **Self-feeding:** the production path. Measures drift; a family that passes frozen and fails
      here is the self-feed ratchet, not bias.
   3. **Corrected:** the self-feeding run with the record's own swap-away list replayed against the
