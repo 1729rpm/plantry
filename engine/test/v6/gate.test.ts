@@ -2,7 +2,7 @@
  * The CI-sized §11 gate: the self-feeding run only, 60 weeks, thresholds 1, 2, 4,
  * 5 and 10, the ones that are cheap and decisive.
  *
- * The full harness (`npm run gate`) runs all three §11 runs plus the four
+ * The full harness (`npm run gate`) runs all three §11 runs plus the five
  * measurement variants and writes `features/engine-v6-gate-report.md`. That is
  * the artifact the phase's merge decision reads. This file exists so CI keeps
  * measuring the same numbers on every later change, in a couple of seconds
@@ -10,13 +10,13 @@
  *
  * ## The engine does not pass its gate yet, and this file records exactly that
  *
- * Three of the five thresholds this test measures fail today. They are listed in
+ * Two of the five thresholds this test measures fail today. They are listed in
  * `KNOWN_GATE_FAILURES` with the number measured when this stream landed and the
  * reason as far as the harness can see it. This is not a suppression: the list is
  * asserted in both directions, so a threshold that starts passing fails this test
  * until its entry is deleted, and a listed threshold that collapses further fails
  * on its collapse guard. §11 makes passing the gate the condition for merging the
- * phase to `main`, and the EM owns that decision; the three entries below are the
+ * phase to `main`, and the EM owns that decision; the two entries below are the
  * findings that decision reads.
  *
  * The collapse guards are deliberately generous rather than exact ratchets: the
@@ -29,6 +29,8 @@ import { beforeAll, describe, expect, it } from "vitest";
 import { resolve } from "node:path";
 import {
   DEFAULT_WEEKS,
+  DRIFT_BOUND_PERCENT,
+  driftNoisePercent,
   LOCK_EXEMPTION_RATE,
   loadGateData,
   lockExempt,
@@ -259,5 +261,38 @@ describe("threshold 4's amended arithmetic exemption", () => {
     const once = unbiasedSpread({ placements: 97, weeks: HORIZON, days: 5, bar: BAR });
     const twice = unbiasedSpread({ placements: 97, weeks: HORIZON, days: 5, bar: BAR });
     expect(JSON.stringify(once)).toBe(JSON.stringify(twice));
+  });
+});
+
+/**
+ * Threshold 12 is provisional in §11 "until the first run shows the window-to-window
+ * noise of the two-row families". The counting noise on each family's line is that
+ * number, and it decides whether a 10 percent bound is a bound or a coin flip.
+ */
+describe("threshold 12's counting noise", () => {
+  it("is the Poisson relative error of the two windows, combined", () => {
+    // 100 placements in each window: 10 percent each, sqrt(2) x 10 combined.
+    expect(driftNoisePercent(100, 100)).toBeCloseTo(10 * Math.SQRT2, 6);
+    expect(driftNoisePercent(25, 25)).toBeCloseTo(20 * Math.SQRT2, 6);
+  });
+
+  it("shrinks as the counts grow, which is the only way to reach the bound", () => {
+    let previous = Number.POSITIVE_INFINITY;
+    for (const n of [4, 10, 25, 100, 400, 1000]) {
+      const noise = driftNoisePercent(n, n);
+      expect(noise).toBeLessThan(previous);
+      previous = noise;
+    }
+    // The counts a 10 percent bound would need: 200 placements per window exactly
+    // reaches it, and the busiest family the harness measures manages 57 in twenty
+    // weeks, so the bound is out of reach at the horizon §11 gives each window.
+    expect(driftNoisePercent(200, 200)).toBeCloseTo(DRIFT_BOUND_PERCENT, 6);
+    expect(driftNoisePercent(250, 250)).toBeLessThan(DRIFT_BOUND_PERCENT);
+    expect(driftNoisePercent(150, 150)).toBeGreaterThan(DRIFT_BOUND_PERCENT);
+  });
+
+  it("says a family with no placements in a window carries unbounded noise", () => {
+    expect(driftNoisePercent(0, 20)).toBe(Number.POSITIVE_INFINITY);
+    expect(driftNoisePercent(20, 0)).toBe(Number.POSITIVE_INFINITY);
   });
 });
