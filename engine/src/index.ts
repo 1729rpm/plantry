@@ -37,11 +37,7 @@ export {
 } from "./composition.js";
 export { applyCap, WEEKDAY_CAP, SATURDAY_CAP } from "./cap.js";
 export type { SlotPick, ApplyCapArgs, ApplyCapResult } from "./cap.js";
-export type {
-  GeneratedWeek,
-  GeneratedWeekDay,
-  GeneratedWeekSlot,
-} from "./generateWeek.js";
+export type { GeneratedWeek, GeneratedWeekDay, GeneratedWeekSlot } from "./generateWeek.js";
 export { aggregateGroceryList } from "./groceryList.js";
 export type { GroceryItem, GroceryList, GroceryDayPicks } from "./groceryList.js";
 export {

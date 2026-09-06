@@ -133,7 +133,12 @@ describe("generic-search slot-meal-first partition", () => {
     const pav = makeDish({ name: "Pav", time: "Breakfast" });
     const rajma = makeDish({ name: "Rajma", time: "Lunch" });
     const pool = broadMealPool([pav, rajma], "Monsoon");
-    const ranked = rankPickerAlternatives({ pool, meal: "Lunch", dishesOnDay: [], placedThisWeek: new Set<number>() });
+    const ranked = rankPickerAlternatives({
+      pool,
+      meal: "Lunch",
+      dishesOnDay: [],
+      placedThisWeek: new Set<number>(),
+    });
     const partitioned = partitionSlotMealFirst(ranked, "Lunch");
     const ids = partitioned.map((d) => d.id);
     expect(ids).toContain(pav.id);
