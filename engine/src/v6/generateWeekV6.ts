@@ -307,7 +307,7 @@ export function generateWeekV6(args: GenerateWeekV6Args): GeneratedWeekV6 {
   );
   ledger = accrue(ledger, stats, eligibleDishIds, PLANNED_OCCASIONS);
 
-  const ctx = (): PoolContext => ({ library, season, stats, ledger });
+  const ctx = (): PoolContext => ({ library, season, stats, ledger, variant });
   /** Every pool read goes through here, so each one sees the ledger as it stands. */
   const provider: PoolProvider = (role, scope, exclude) =>
     poolProvider(ctx())(role, scope, exclude);
