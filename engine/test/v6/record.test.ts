@@ -22,6 +22,7 @@ import {
   eatenCountIn,
   presenceDaysOf,
   rateIn,
+  frozenRatesStats,
   scopeOfPick,
   seasonOfWeek,
   weekdayLunchRolesOf,
@@ -505,8 +506,8 @@ describe("§3.2 presence, the weekday companion classification", () => {
 });
 
 /**
- * The same plate reading, named role by role. This is what the §11 `starRoleShare`
- * variant selects on, so a wrong lead here would meter the star pool by a fiction.
+ * The same plate reading, named role by role. §3.2's presence rate is one line over
+ * it, so a wrong lead here would move threshold 11 and the companion ledger with it.
  */
 describe("§5.1 roles, read off a record plate", () => {
   const dishOf = (id: number): Dish => {
@@ -534,8 +535,7 @@ describe("§5.1 roles, read off a record plate", () => {
 
   it("gives the star to a self-sufficient main over a gravy", () => {
     // §5.1: a true complete plate carries the meal, so the gravy beside it is what
-    // accompanies it. This is why the record's one Chicken masala gravy row reads
-    // as a companion, and why one row is thin evidence for the variant.
+    // accompanies it.
     expect(rolesOf([KHICHDI, ALOO_MATAR])).toEqual(["star", "companion"]);
   });
 
@@ -576,22 +576,6 @@ describe("§5.1 roles, read off a record plate", () => {
       const days = presenceDaysOf(picks, "weekdayLunch", library);
       expect(rolesOf(plate, [POHA]).includes("companion")).toBe(days.has("Mon"));
     }
-  });
-
-  it("tallies each dish's weekday-lunch rows by role over the whole record", () => {
-    const stats = deriveRecordStats(record, library, "Monsoon");
-    expect(stats.perDish.get(FISH_TIKKA)?.weekdayLunchRoles).toEqual({
-      star: 0,
-      companion: 5,
-      rows: 6,
-    });
-    // The denominator is the dish's weekday-lunch rows, so it agrees with §2.2.
-    expect(stats.perDish.get(FISH_TIKKA)?.weekdayLunchRoles?.rows).toBe(
-      eatenCountIn(stats, FISH_TIKKA, "weekdayLunch"),
-    );
-    const roti = stats.perDish.get(ROTI)?.weekdayLunchRoles;
-    expect(roti?.star).toBe(0);
-    expect(roti?.rows).toBe(eatenCountIn(stats, ROTI, "weekdayLunch"));
   });
 });
 
@@ -660,5 +644,128 @@ describe("§6 step 5, the exploration slot's weekday memory", () => {
     expect(JSON.stringify([...reversed.explorationWeekdays])).toBe(
       JSON.stringify([...forward.explorationWeekdays]),
     );
+  });
+});
+
+/**
+ * §11's frozen run, built. The invariant these fixtures guard is the one the run
+ * exists for and the one it broke: it must freeze every rate at the cutover record,
+ * and it must **not** freeze the memories §6 step 5 places by, because a frozen
+ * least-recently-used memory resolves the same day every week of the horizon and
+ * reports that as a slot lock.
+ *
+ * So each fixture below is a record whose post-cutover weeks move a memory, and the
+ * assertion is that the merged stats moved with it while the rates did not.
+ */
+describe("§11's frozen run: rates frozen, memories live", () => {
+  const week = (weekStart: string, picks: Pick[], plan: Pick[] | null = null): RecordWeek => ({
+    weekStart,
+    picks,
+    skippedDays: [],
+    generatedPlan: plan,
+  });
+
+  /** Two weeks before cutover, two after. The two halves place the same dishes on different days. */
+  const before = [
+    week("2026-06-01", [
+      { day: "Mon", meal: "lunch", dishId: ALOO_MATAR },
+      { day: "Mon", meal: "lunch", dishId: ROTI },
+      { day: "Mon", meal: "lunch", dishId: CUCUMBER_RAITA },
+    ]),
+    week("2026-06-08", [
+      { day: "Mon", meal: "lunch", dishId: ALOO_MATAR },
+      { day: "Mon", meal: "lunch", dishId: ROTI },
+    ]),
+  ];
+  const after = [
+    ...before,
+    week(
+      "2026-06-15",
+      [
+        { day: "Thu", meal: "lunch", dishId: ALOO_MATAR },
+        { day: "Thu", meal: "lunch", dishId: ROTI },
+      ],
+      [
+        { day: "Thu", meal: "lunch", dishId: ALOO_MATAR },
+        { day: "Thu", meal: "lunch", dishId: ROTI },
+      ],
+    ),
+    // Singapore noodles has no as-eaten row in either earlier week, so this is an
+    // exploration placement and it moves the exploration slot's weekday memory.
+    week(
+      "2026-06-22",
+      [
+        { day: "Fri", meal: "lunch", dishId: SINGAPORE_NOODLES },
+        { day: "Fri", meal: "lunch", dishId: FISH_TIKKA },
+      ],
+      [
+        { day: "Fri", meal: "lunch", dishId: SINGAPORE_NOODLES },
+        { day: "Fri", meal: "lunch", dishId: FISH_TIKKA },
+      ],
+    ),
+  ];
+
+  const frozen = deriveRecordStats(before, library, "Summer");
+  const live = deriveRecordStats(after, library, "Summer");
+  const merged = frozenRatesStats(frozen, live);
+
+  it("freezes the rates, the eaten counts, and the occasions they are computed from", () => {
+    expect(merged.weeks).toBe(frozen.weeks);
+    expect(merged.occasions).toEqual(frozen.occasions);
+    expect(rateIn(merged, ALOO_MATAR, "weekdayLunch")).toBe(
+      rateIn(frozen, ALOO_MATAR, "weekdayLunch"),
+    );
+    expect(eatenCountIn(merged, ALOO_MATAR, "weekdayLunch")).toBe(2);
+    // The live record has three rows for it, so a merge that leaked the live rate
+    // would fail here and the frozen run would be measuring the self-feed.
+    expect(eatenCountIn(live, ALOO_MATAR, "weekdayLunch")).toBe(3);
+    expect(rateIn(merged, ALOO_MATAR, "weekdayLunch")).not.toBe(
+      rateIn(live, ALOO_MATAR, "weekdayLunch"),
+    );
+  });
+
+  it("does not freeze the occupation memory §6 step 5 places by", () => {
+    // The Thursday of week three: frozen, the memory is Monday alone forever, and
+    // that is the shape that reported a banana bowl locked to Monday 23 of 41 weeks.
+    expect([...(frozen.perDish.get(ALOO_MATAR)?.occupations.keys() ?? [])]).toEqual(["Mon:lunch"]);
+    expect([...(merged.perDish.get(ALOO_MATAR)?.occupations.keys() ?? [])]).toEqual([
+      "Mon:lunch",
+      "Thu:lunch",
+    ]);
+    expect(merged.perDish.get(ALOO_MATAR)?.occupations.get("Mon:lunch")?.count).toBe(2);
+  });
+
+  it("does not freeze the exploration slot's own weekday memory", () => {
+    expect([...frozen.explorationWeekdays.keys()]).toEqual([]);
+    expect([...merged.explorationWeekdays.entries()]).toEqual([
+      ...live.explorationWeekdays.entries(),
+    ]);
+    expect(merged.explorationWeekdays.get("Fri")).toBe("2026-06-22");
+  });
+
+  it("does not freeze §3.2's presence rates or the swap-away list", () => {
+    expect(merged.presenceRate).toEqual(live.presenceRate);
+    expect(merged.presenceRate.weekdayLunch).not.toBe(frozen.presenceRate.weekdayLunch);
+    expect(merged.swappedOut).toEqual(live.swappedOut);
+  });
+
+  it("gives a dish first eaten after cutover its memory but no rate", () => {
+    // §2.2 reads an absent scope key as absence, not as rate zero, so freezing is
+    // exactly this: the dish sits in no pool, and its occupation memory costs
+    // nothing until something else puts it on a plate.
+    const entry = merged.perDish.get(SINGAPORE_NOODLES);
+    expect(entry).toBeDefined();
+    expect(entry?.eatenCount).toEqual({});
+    expect(rateIn(merged, SINGAPORE_NOODLES, "weekdayLunch")).toBeUndefined();
+    expect([...(entry?.occupations.keys() ?? [])]).toEqual(["Fri:lunch"]);
+  });
+
+  it("is deterministic over the union of the two dish maps (§10)", () => {
+    const again = frozenRatesStats(
+      deriveRecordStats([...before].reverse(), library, "Summer"),
+      deriveRecordStats([...after].reverse(), library, "Summer"),
+    );
+    expect([...again.perDish.keys()]).toEqual([...merged.perDish.keys()]);
+    expect([...again.perDish.keys()]).toEqual([...again.perDish.keys()].sort((a, b) => a - b));
   });
 });

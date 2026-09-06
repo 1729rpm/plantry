@@ -36,7 +36,7 @@ import {
   isSelfSufficientMain,
 } from "../composition.js";
 import type { PoolEntry, PoolProvider } from "./place.js";
-import type { GenerateWeekV6Variant, Ledger, PickRole, RecordStats, Scope } from "./types.js";
+import type { Ledger, PickRole, RecordStats, Scope } from "./types.js";
 
 /**
  * Everything a pool reads. Assembled once per generation by the orchestrator and
@@ -49,12 +49,6 @@ export interface PoolContext {
   stats: RecordStats;
   /** The replayed ledger (§3.1) as it stands for the week being generated. */
   ledger: Ledger;
-  /**
-   * The §11 measurement variants. Production passes nothing, and only
-   * `starRoleShare` changes any pool's membership; every other flag is read
-   * upstream of the pools.
-   */
-  variant?: GenerateWeekV6Variant;
 }
 
 /**
@@ -406,33 +400,8 @@ export function breakfastEggRiderPool(
 }
 
 /** §5.1 lunch stars for a scope. */
-/**
- * The share of a dish's record weekday-lunch rows that were in the star role, or
- * `null` when the record carries no rows to read (and so no evidence either way).
- */
-export function starRoleShareOf(stats: RecordStats, dishId: number): number | null {
-  const roles = stats.perDish.get(dishId)?.weekdayLunchRoles;
-  if (roles === undefined || roles.rows === 0) return null;
-  return roles.star / roles.rows;
-}
-
-/**
- * The §11 `starRoleShare` variant's membership rule, off by default: a dish enters
- * the weekday lunch star pool only when at least half its record weekday-lunch rows
- * were in the star role. A dish with no rows to read is not restricted.
- */
-const STAR_ROLE_SHARE_FLOOR = 0.5;
-
 export function lunchStarPool(ctx: PoolContext, scope: Scope = "weekdayLunch"): PoolEntry[] {
-  const pool = buildPool(ctx, scope, isLunchStar);
-  if (!ctx.variant?.starRoleShare || scope !== "weekdayLunch") return pool;
-  const metered = pool.filter((entry) => {
-    const share = starRoleShareOf(ctx.stats, entry.dish.id);
-    return share === null || share >= STAR_ROLE_SHARE_FLOOR;
-  });
-  // A structural slot is always filled (§3.2), so the variant never empties the
-  // star pool: with nothing left that clears the share, the unmetered pool stands.
-  return metered.length > 0 ? metered : pool;
+  return buildPool(ctx, scope, isLunchStar);
 }
 
 /** §5.1 lunch companions for a scope, before the plate's own gravy and HP filters. */

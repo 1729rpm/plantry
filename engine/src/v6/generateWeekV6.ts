@@ -63,7 +63,7 @@ import type {
   RecordWeek,
   Scope,
 } from "./types.js";
-import { PRESENCE_PLATE_ITEMS, deriveRecordStats } from "./record.js";
+import { PRESENCE_PLATE_ITEMS, deriveRecordStats, frozenRatesStats } from "./record.js";
 import {
   PLANNED_OCCASIONS,
   accrue,
@@ -269,15 +269,33 @@ export function generateWeekV6(args: GenerateWeekV6Args): GeneratedWeekV6 {
   // Step 1: replay the ledger (§3.1), then accrue the generating week (§3).
   // ---------------------------------------------------------------------------
 
-  // §11's frozen run fixes the rates at the cutover record for the whole horizon,
-  // which means selection reads the cutover record too, not just accrual. Every
-  // other run reads the record as it stands.
-  const statsRecord = variant?.frozenRates
-    ? record.filter((week) => week.weekStart < cutoverWeek)
-    : record;
-  const stats = deriveRecordStats(statsRecord, library, season, {
+  /**
+   * The record as it stands. Every run reads this; §11's frozen run overlays the
+   * cutover record's rates on top of it and keeps the rest.
+   */
+  const liveStats = deriveRecordStats(record, library, season, {
     rateFormula: variant?.rateFormula,
   });
+  /**
+   * §11's frozen run fixes the **rates** selection competes on at the cutover
+   * record, and nothing else: the occupation memory §6 step 5 places dishes by,
+   * the exploration slot's own weekday memory, and §3.2's presence rates all read
+   * the record as it stands. `frozenRatesStats` states the split in full and says
+   * why. Frozen memories never advance, so every week of the horizon resolves the
+   * same least-recently-used day and the run reports a slot lock that belongs to
+   * the harness rather than to the engine.
+   */
+  const stats = variant?.frozenRates
+    ? frozenRatesStats(
+        deriveRecordStats(
+          record.filter((week) => week.weekStart < cutoverWeek),
+          library,
+          season,
+          { rateFormula: variant?.rateFormula },
+        ),
+        liveStats,
+      )
+    : liveStats;
   /**
    * §7 candidacy under §11's frozen run.
    *
@@ -289,9 +307,7 @@ export function generateWeekV6(args: GenerateWeekV6Args): GeneratedWeekV6 {
    * stars of a rolling window). Every other run reads one live derivation and this
    * is the same object.
    */
-  const candidacyStats = variant?.frozenRates
-    ? deriveRecordStats(record, library, season, { rateFormula: variant?.rateFormula })
-    : stats;
+  const candidacyStats = liveStats;
 
   let ledger = replayLedger({
     record,
@@ -307,7 +323,7 @@ export function generateWeekV6(args: GenerateWeekV6Args): GeneratedWeekV6 {
   );
   ledger = accrue(ledger, stats, eligibleDishIds, PLANNED_OCCASIONS);
 
-  const ctx = (): PoolContext => ({ library, season, stats, ledger, variant });
+  const ctx = (): PoolContext => ({ library, season, stats, ledger });
   /** Every pool read goes through here, so each one sees the ledger as it stands. */
   const provider: PoolProvider = (role, scope, exclude) =>
     poolProvider(ctx())(role, scope, exclude);

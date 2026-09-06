@@ -1,13 +1,6 @@
 import { describe, it, expect } from "vitest";
 import type { Dish, Season } from "../../src/data/schemas.js";
-import type {
-  DishStats,
-  GenerateWeekV6Variant,
-  Ledger,
-  RecordStats,
-  Scope,
-  WeekdayLunchRoleCounts,
-} from "../../src/v6/types.js";
+import type { DishStats, Ledger, RecordStats, Scope } from "../../src/v6/types.js";
 import {
   breakfastChutneyPool,
   breakfastEggRiderPool,
@@ -38,7 +31,6 @@ import {
   saturdayAccompanimentPool,
   saturdayTreatPool,
   specialProteinPool,
-  starRoleShareOf,
   thursdayEggBreakfastPool,
 } from "../../src/v6/pools.js";
 import type { PoolContext, PoolEntry } from "../../src/v6/pools.js";
@@ -72,8 +64,6 @@ interface StatSpec {
   rate?: Partial<Record<Scope, number>>;
   lastEatenWeek?: string | null;
   seasonCount?: Partial<Record<Season, number>>;
-  /** The §11 `starRoleShare` variant's evidence: the dish's record role split. */
-  roles?: WeekdayLunchRoleCounts;
 }
 
 const ZERO_BY_SCOPE: Record<Scope, number> = {
@@ -92,7 +82,6 @@ function makeStats(specs: StatSpec[]): RecordStats {
       lastEatenWeek: spec.lastEatenWeek ?? "2026-06-01",
       occupations: new Map(),
       seasonCount: spec.seasonCount ?? {},
-      weekdayLunchRoles: spec.roles,
     });
   }
   return {
@@ -117,9 +106,8 @@ function makeContext(
   specs: StatSpec[],
   ledgerRows: Array<[number, Scope, number]>,
   season: Season = "Summer",
-  variant?: GenerateWeekV6Variant,
 ): PoolContext {
-  return { library, season, stats: makeStats(specs), ledger: makeLedger(ledgerRows), variant };
+  return { library, season, stats: makeStats(specs), ledger: makeLedger(ledgerRows) };
 }
 
 const ids = (pool: PoolEntry[]): number[] => pool.map((entry) => entry.dish.id);
@@ -658,95 +646,5 @@ describe("v6 pools: the provider and the international predicates", () => {
     // §5.2 allows exactly two things in the small-item position, so the provider
     // returns the chutneys and the egg riders together.
     expect(ids(provider("breakfast-small", "weekdayBreakfast", new Set()))).toEqual([104, 105]);
-  });
-});
-
-/**
- * The §11 `starRoleShare` variant, a measurement and not the default.
- *
- * The invariant that must survive it is §3.2's: a structural slot is always
- * filled. So the fixtures here are adversarial about the pool going empty as much
- * as they are about the membership rule doing what it says.
- */
-describe("v6 pools: the §11 starRoleShare variant", () => {
-  const gravy = makeDish({ id: 1, category: "Gravy dish", name: "Toor dal" });
-  const dryProtein = makeDish({
-    id: 2,
-    category: "Keto",
-    tags: ["HP"],
-    primaryIngredient: "Fish",
-    name: "Fish tikka",
-  });
-  const library = [gravy, dryProtein];
-  // The household's own reading: the gravy leads its plates, the dry protein sits
-  // beside them. Both carry weekday-lunch rows, so both are in the pool untouched.
-  const specs: StatSpec[] = [
-    {
-      id: 1,
-      eaten: { weekdayLunch: 6 },
-      rate: { weekdayLunch: 0.15 },
-      roles: { star: 6, companion: 0, rows: 6 },
-    },
-    {
-      id: 2,
-      eaten: { weekdayLunch: 6 },
-      rate: { weekdayLunch: 0.15 },
-      roles: { star: 0, companion: 5, rows: 6 },
-    },
-  ];
-  const ledger: Array<[number, Scope, number]> = [
-    [1, "weekdayLunch", 0.5],
-    [2, "weekdayLunch", 2],
-  ];
-
-  it("leaves the star pool alone with the flag off, which is production", () => {
-    expect(ids(lunchStarPool(makeContext(library, specs, ledger)))).toEqual([2, 1]);
-  });
-
-  it("drops a dish whose record rows are mostly not the star role", () => {
-    const ctx = makeContext(library, specs, ledger, "Summer", { starRoleShare: true });
-    expect(ids(lunchStarPool(ctx))).toEqual([1]);
-  });
-
-  it("keeps a dish exactly at the half share, because the rule says at least half", () => {
-    const half: StatSpec[] = [specs[0], { ...specs[1], roles: { star: 3, companion: 3, rows: 6 } }];
-    const ctx = makeContext(library, half, ledger, "Summer", { starRoleShare: true });
-    expect(ids(lunchStarPool(ctx))).toEqual([2, 1]);
-  });
-
-  it("does not restrict a dish the record carries no role evidence for", () => {
-    const blind: StatSpec[] = [specs[0], { ...specs[1], roles: undefined }];
-    const ctx = makeContext(library, blind, ledger, "Summer", { starRoleShare: true });
-    expect(ids(lunchStarPool(ctx))).toEqual([2, 1]);
-  });
-
-  it("never empties the pool, because §3.2 always fills a structural slot", () => {
-    // Every candidate below the share: the unmetered pool has to stand, or the
-    // lunch star position would have nothing to fill from.
-    const none: StatSpec[] = specs.map((spec) => ({
-      ...spec,
-      roles: { star: 0, companion: 4, rows: 4 },
-    }));
-    const ctx = makeContext(library, none, ledger, "Summer", { starRoleShare: true });
-    expect(ids(lunchStarPool(ctx))).toEqual([2, 1]);
-  });
-
-  it("does not touch the Saturday treat pool, which is its own register", () => {
-    const saturday: StatSpec[] = specs.map((spec) => ({
-      ...spec,
-      eaten: { ...spec.eaten, saturday: 2 },
-      rate: { ...spec.rate, saturday: 0.25 },
-    }));
-    const ctx = makeContext(library, saturday, [[2, "saturday", 1]], "Summer", {
-      starRoleShare: true,
-    });
-    expect(ids(saturdayTreatPool(ctx))).toEqual([2, 1]);
-  });
-
-  it("reads the share off the record's own role tally", () => {
-    const stats = makeStats(specs);
-    expect(starRoleShareOf(stats, 1)).toBe(1);
-    expect(starRoleShareOf(stats, 2)).toBe(0);
-    expect(starRoleShareOf(stats, 999)).toBeNull();
   });
 });

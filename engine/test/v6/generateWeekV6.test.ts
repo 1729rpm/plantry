@@ -101,29 +101,18 @@ describe("generateWeekV6 determinism (§10)", () => {
     expect(reversed).toBe(forward);
   });
 
-  it("stays deterministic with the §11 starRoleShare variant on", () => {
-    const args = baseArgs({ variant: { starRoleShare: true } });
+  it("stays deterministic under §11's frozen run, whose stats are two derivations merged", () => {
+    // The frozen run reads a merged `RecordStats` (cutover rates, live memories),
+    // so it has a map built from the union of two key sets. Union order is exactly
+    // where a merge leaks input order into output, which §10 forbids.
+    const args = baseArgs({ variant: { frozenRates: true } });
     expect(fingerprint(generateWeekV6(args))).toBe(fingerprint(generateWeekV6(args)));
     const reversed = baseArgs({
-      variant: { starRoleShare: true },
+      variant: { frozenRates: true },
       library: [...library].reverse(),
       record: [...record].reverse(),
     });
     expect(fingerprint(generateWeekV6(reversed))).toBe(fingerprint(generateWeekV6(args)));
-  });
-
-  it("actually changes the week, so the variant flag is wired to the star pool", () => {
-    // Fish tikka takes 5 of its 6 record weekday-lunch rows beside a gravy and
-    // leads none, so the membership rule has to keep it out of the star pool. If
-    // this ever matches the default week the flag is measuring nothing.
-    const off = generateWeekV6(baseArgs());
-    const on = generateWeekV6(baseArgs({ variant: { starRoleShare: true } }));
-    expect(fingerprint(on)).not.toBe(fingerprint(off));
-    const starsOf = (week: ReturnType<typeof generateWeekV6>): number[] =>
-      week.diagnostics.lunchLeads
-        .filter((lead) => lead.scope === "weekdayLunch")
-        .map((lead) => lead.dishId);
-    expect(starsOf(on)).not.toContain(idOf("Fish tikka"));
   });
 });
 

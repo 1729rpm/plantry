@@ -7,10 +7,9 @@
  * weekday-occupation memory §6 step 5 places by, the per-season fruit counts §9
  * ranks by, the swap-away list the §11 gate's corrected run replays, the §3.2
  * presence rates the two slot-level presence ledgers accrue against, and the §6
- * step 5 weekday memory the exploration slot places by. It also keeps one
- * measurement §2 does not ask for: `weekdayLunchRolesOf` splits each dish's
- * weekday-lunch rows by §5.1 role, which is what the §11 `starRoleShare` variant
- * reads and what the harness reports beside it.
+ * step 5 weekday memory the exploration slot places by. `weekdayLunchRolesOf`
+ * names the §5.1 role of every pick of a weekday lunch, and §3.2's presence
+ * reading is one line over it, so the two cannot drift apart.
  *
  * Nothing here reads the clock, a random source, or the filesystem. Every map is
  * built in a fixed order (dish id ascending, then scope in `SCOPES` order) so that
@@ -93,7 +92,6 @@ import type {
   RecordStats,
   RecordWeek,
   Scope,
-  WeekdayLunchRoleCounts,
 } from "./types.js";
 
 /** The four §2.2 scopes in their canonical order. Every scope loop uses this order. */
@@ -457,7 +455,6 @@ interface DishAccumulator {
   firstEatenWeek: string | null;
   lastEatenWeek: string | null;
   occupations: Map<string, { lastWeek: string; weeks: Set<string> }>;
-  weekdayLunchRoles: WeekdayLunchRoleCounts;
 }
 
 function accumulatorFor(map: Map<number, DishAccumulator>, dishId: number): DishAccumulator {
@@ -469,7 +466,6 @@ function accumulatorFor(map: Map<number, DishAccumulator>, dishId: number): Dish
     firstEatenWeek: null,
     lastEatenWeek: null,
     occupations: new Map(),
-    weekdayLunchRoles: { star: 0, companion: 0, rows: 0 },
   };
   map.set(dishId, fresh);
   return fresh;
@@ -603,24 +599,6 @@ export function deriveRecordStats(
       presenceHits[scope] = (presenceHits[scope] ?? 0) + days.size;
     }
 
-    // The same plate reading, kept per dish rather than per day: how each dish's
-    // weekday-lunch rows split by §5.1 role. Read by the §11 `starRoleShare`
-    // variant and reported by the harness; §2.2's own statistics do not use it.
-    for (const day of WEEKDAYS) {
-      if (skipped.has(day)) continue;
-      const lunch = dishesOfMeal(week.picks, day, "lunch", dishById);
-      const roles = weekdayLunchRolesOf(
-        lunch,
-        dishesOfMeal(week.picks, day, "breakfast", dishById),
-      );
-      for (let index = 0; index < lunch.length; index += 1) {
-        const counts = accumulatorFor(accumulators, lunch[index].id).weekdayLunchRoles;
-        counts.rows += 1;
-        if (roles[index] === "star") counts.star += 1;
-        else if (roles[index] === "companion") counts.companion += 1;
-      }
-    }
-
     // §6 step 5: the exploration slot's own weekday memory. A weekday lunch plan
     // pick whose dish had no as-eaten row in any scope before this week is an
     // exploration placement (§7 makes the exploration slot a weekday lunch
@@ -668,7 +646,6 @@ export function deriveRecordStats(
       lastEatenWeek: acc.lastEatenWeek,
       occupations: buildOccupations(acc.occupations),
       seasonCount: orderedSeasonCount(acc.seasonCount),
-      weekdayLunchRoles: { ...acc.weekdayLunchRoles },
     });
   }
 
@@ -865,4 +842,69 @@ export function rateIn(stats: RecordStats, dishId: number, scope: Scope): number
 /** The as-eaten rows a dish carries in a scope, or undefined when it is absent from it. */
 export function eatenCountIn(stats: RecordStats, dishId: number, scope: Scope): number | undefined {
   return stats.perDish.get(dishId)?.eatenCount[scope];
+}
+
+/**
+ * §11's frozen run, built: the cutover record's **rates**, the live record's
+ * **memories**.
+ *
+ * The frozen run is a control. It answers "does the engine hold the household's
+ * distribution when the record cannot answer back", so the quantities it must hold
+ * fixed are the ones selection competes on: every scope rate, the eaten counts and
+ * occasion counts those rates are computed from, the per-season fruit counts, and
+ * the `lastEatenWeek` §3's cold start backdates from. Freezing those is the whole
+ * point of the run.
+ *
+ * What must **not** freeze is everything the record carries that is a memory of
+ * where things went rather than how often they were eaten. §6 step 5 assigns days
+ * by a least-recently-used memory (`DishStats.occupations` for a dish, and
+ * `explorationWeekdays` for the exploration reserve, which has no dish history of
+ * its own). Frozen, that memory never advances: every week of the horizon resolves
+ * the same least-recently-used day, and the run reports a slot lock that is an
+ * artifact of the harness rather than a property of the engine. The first gate
+ * cycle hit the same class of artifact on §7 candidacy and fixed it the same way
+ * (`GenerateWeekV6Args.variant.frozenRates` no longer decides which dishes count as
+ * never-eaten); this is the rest of it.
+ *
+ * So, precisely:
+ *
+ * - **frozen** (from `frozen`): `weeks`, `occasions`, `seasonDayOccasions`, and per
+ *   dish `eatenCount`, `rate`, `seasonCount`, `lastEatenWeek`;
+ * - **live** (from `live`): per dish `occupations`, plus `explorationWeekdays`,
+ *   `presenceRate`, and `swappedOut`.
+ *
+ * A dish the live record has eaten since cutover but the frozen record has not
+ * carries no rate and no eaten count, which is exactly what freezing means (§2.2
+ * reads an absent scope key as absence, not as rate zero, so it sits in no pool).
+ * It still gets its live occupation memory, which costs nothing until something
+ * else puts it on a plate.
+ *
+ * Deterministic (§10): `perDish` is rebuilt in dish id ascending order over the
+ * union of the two maps, so two calls on the same pair serialize identically.
+ */
+export function frozenRatesStats(frozen: RecordStats, live: RecordStats): RecordStats {
+  const perDish = new Map<number, DishStats>();
+  const dishIds = [...new Set([...frozen.perDish.keys(), ...live.perDish.keys()])].sort(
+    (a, b) => a - b,
+  );
+  for (const dishId of dishIds) {
+    const rates = frozen.perDish.get(dishId);
+    const memory = live.perDish.get(dishId);
+    perDish.set(dishId, {
+      eatenCount: rates?.eatenCount ?? {},
+      rate: rates?.rate ?? {},
+      seasonCount: rates?.seasonCount ?? {},
+      lastEatenWeek: rates?.lastEatenWeek ?? null,
+      occupations: memory?.occupations ?? new Map(),
+    });
+  }
+  return {
+    weeks: frozen.weeks,
+    occasions: frozen.occasions,
+    seasonDayOccasions: frozen.seasonDayOccasions,
+    perDish,
+    swappedOut: live.swappedOut,
+    presenceRate: live.presenceRate,
+    explorationWeekdays: live.explorationWeekdays,
+  };
 }

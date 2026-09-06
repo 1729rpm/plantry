@@ -2,7 +2,7 @@
  * The CI-sized §11 gate: the self-feeding run only, 60 weeks, thresholds 1, 2, 4,
  * 5 and 10, the ones that are cheap and decisive.
  *
- * The full harness (`npm run gate`) runs all three §11 runs plus the five
+ * The full harness (`npm run gate`) runs all three §11 runs plus the four
  * measurement variants and writes `features/engine-v6-gate-report.md`. That is
  * the artifact the phase's merge decision reads. This file exists so CI keeps
  * measuring the same numbers on every later change, in a couple of seconds
@@ -29,7 +29,7 @@ import { beforeAll, describe, expect, it } from "vitest";
 import { resolve } from "node:path";
 import {
   DEFAULT_WEEKS,
-  DRIFT_BOUND_PERCENT,
+  DRIFT_ASPIRATION_PERCENT,
   driftNoisePercent,
   LOCK_EXEMPTION_RATE,
   loadGateData,
@@ -38,6 +38,7 @@ import {
   normalCdf,
   simulate,
   unbiasedSpread,
+  withinDriftNoise,
   type GateData,
   type RunReport,
 } from "../../scripts/gate.js";
@@ -53,8 +54,9 @@ const CI_THRESHOLDS = [1, 2, 4, 5, 10] as const;
  *
  * Delete an entry when its threshold starts passing; this test fails until you do.
  *
- * The map shrank by one again in this cycle. Threshold 4, slot anti-lock, went to
- * PASS on the self-feeding run once §11's arithmetic exemption was amended to the
+ * The map is unchanged in this cycle and holds the two entries gate fix cycle 3
+ * left it with. Threshold 4, slot anti-lock, went to PASS on the self-feeding run
+ * in that cycle once §11's arithmetic exemption was amended to the
  * conjunction the EM settled after gate fix cycle 2: a rate at or above 0.4 of the
  * role's weekly slots, and a preference-free spread that already puts one of the
  * role's days over half the horizon more often than not. Plain roti sits at 0.473
@@ -62,10 +64,11 @@ const CI_THRESHOLDS = [1, 2, 4, 5, 10] as const;
  * assignment with no weekday preference at all, so the two weekdays it holds 23 of
  * 41 weeks are arithmetic and not a lock. Two entries remain.
  *
- * Threshold 4 still fails the **frozen** run, which CI does not measure, on a
- * banana bowl that holds Monday's fruit slot 23 of 41 weeks at a rate of 0.146.
- * That one is a real lock, and it is an artifact of how the frozen run is built
- * rather than engine bias; the PR carries the numbers.
+ * The frozen run's own threshold 4 failure went with it in this cycle. It was the
+ * artifact the cycle-3 PR called it: `variant.frozenRates` froze the whole
+ * `RecordStats`, so §6 step 5's least-recently-used memories never advanced and
+ * every week of the horizon resolved the same day. Frozen now freezes the rates
+ * alone (`record.ts`'s `frozenRatesStats`) and the run passes all twelve.
  */
 const KNOWN_GATE_FAILURES = new Map<
   number,
@@ -77,7 +80,7 @@ const KNOWN_GATE_FAILURES = new Map<
       measured: 0.625,
       collapseGuard: 0.55,
       finding:
-        "The worst rolling 8-week window is 62.5 percent distinct against a 65 percent floor: 15 repeats in 40 stars where 14 are allowed and about 12 are arithmetically forced by the record's own rates (the ceiling any rate-matching schedule can reach is 69.3 percent). The frozen run passes at 70.0 percent, so this is drift and not engine bias: one weekday-lunch ledger serves both the star position and the companion position, so a high-rate dry protein whose companion turns are metered by §3.2's presence ledger spends the rest of its deficit in the star slot.",
+        "The worst rolling 8-week window is 62.5 percent distinct against a 65 percent floor: 15 repeats in 40 stars where 14 are allowed and about 12 are arithmetically forced by the record's own rates (the ceiling any rate-matching schedule can reach is 69.3 percent). The frozen run passes, at 65.0 percent exactly on the floor (70.0 before this cycle unfroze §6 step 5's placement memories), so this is drift and not engine bias: one weekday-lunch ledger serves both the star position and the companion position, so a high-rate dry protein whose companion turns are metered by §3.2's presence ledger spends the rest of its deficit in the star slot.",
     },
   ],
   [
@@ -265,9 +268,11 @@ describe("threshold 4's amended arithmetic exemption", () => {
 });
 
 /**
- * Threshold 12 is provisional in §11 "until the first run shows the window-to-window
- * noise of the two-row families". The counting noise on each family's line is that
- * number, and it decides whether a 10 percent bound is a bound or a coin flip.
+ * Threshold 12's bound, as §11 was amended after gate fix cycle 3: each family is
+ * gated against its own counting noise, and the 10 percent figure is the aspiration
+ * reported beside the verdict. The invariant these fixtures guard is that the
+ * amendment widened the bound without switching the threshold off: a family that
+ * really ratchets still fails, and a family that vanishes from a window still fails.
  */
 describe("threshold 12's counting noise", () => {
   it("is the Poisson relative error of the two windows, combined", () => {
@@ -283,16 +288,50 @@ describe("threshold 12's counting noise", () => {
       expect(noise).toBeLessThan(previous);
       previous = noise;
     }
-    // The counts a 10 percent bound would need: 200 placements per window exactly
-    // reaches it, and the busiest family the harness measures manages 57 in twenty
-    // weeks, so the bound is out of reach at the horizon §11 gives each window.
-    expect(driftNoisePercent(200, 200)).toBeCloseTo(DRIFT_BOUND_PERCENT, 6);
-    expect(driftNoisePercent(250, 250)).toBeLessThan(DRIFT_BOUND_PERCENT);
-    expect(driftNoisePercent(150, 150)).toBeGreaterThan(DRIFT_BOUND_PERCENT);
+    // The counts the 10 percent aspiration would need: 200 placements per window
+    // exactly reaches it, and the busiest family the harness measures manages 57 in
+    // twenty weeks, so it is out of reach at the horizon §11 gives each window.
+    expect(driftNoisePercent(200, 200)).toBeCloseTo(DRIFT_ASPIRATION_PERCENT, 6);
+    expect(driftNoisePercent(250, 250)).toBeLessThan(DRIFT_ASPIRATION_PERCENT);
+    expect(driftNoisePercent(150, 150)).toBeGreaterThan(DRIFT_ASPIRATION_PERCENT);
   });
 
   it("says a family with no placements in a window carries unbounded noise", () => {
     expect(driftNoisePercent(0, 20)).toBe(Number.POSITIVE_INFINITY);
     expect(driftNoisePercent(20, 0)).toBe(Number.POSITIVE_INFINITY);
+  });
+
+  it("gates a family on its own noise, which is what the amendment changed", () => {
+    // paneer at the 41-week horizon: 34 placements then 40, a +12.0 percent shift
+    // against 23.3 percent of noise. The old fixed bound failed it; its own noise
+    // cannot tell that shift from the coarseness of 34 and 40 counts.
+    const noise = driftNoisePercent(34, 40);
+    expect(noise).toBeGreaterThan(DRIFT_ASPIRATION_PERCENT);
+    expect(withinDriftNoise(12.0, noise)).toBe(true);
+  });
+
+  it("still fails a family whose shift is larger than its own noise", () => {
+    // The amendment must not switch the threshold off. A family that doubles
+    // between the windows moves further than any noise those counts carry.
+    const noise = driftNoisePercent(34, 68);
+    expect(withinDriftNoise(100, noise)).toBe(false);
+    // And a shift exactly at the noise is inside it: the bound is inclusive, so a
+    // family sitting on its own noise is not called drifting.
+    expect(withinDriftNoise(noise, noise)).toBe(true);
+    expect(withinDriftNoise(noise + 0.001, noise)).toBe(false);
+  });
+
+  it("fails a family that vanished from a window, whose noise is unbounded", () => {
+    // Infinite noise must not excuse an infinite shift: a rate that went to zero is
+    // the drift the threshold exists to catch, and an unmeasurable shift is a fail.
+    expect(withinDriftNoise(Number.POSITIVE_INFINITY, driftNoisePercent(20, 0))).toBe(false);
+    expect(withinDriftNoise(-100, driftNoisePercent(20, 0))).toBe(false);
+    expect(withinDriftNoise(1, Number.POSITIVE_INFINITY)).toBe(false);
+  });
+
+  it("is symmetric in the direction of the shift", () => {
+    const noise = driftNoisePercent(50, 50);
+    expect(withinDriftNoise(15, noise)).toBe(withinDriftNoise(-15, noise));
+    expect(withinDriftNoise(25, noise)).toBe(withinDriftNoise(-25, noise));
   });
 });
