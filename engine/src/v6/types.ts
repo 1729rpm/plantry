@@ -107,30 +107,6 @@ export interface DishStats {
   occupations: Map<string, DishOccupation>;
   /** Fruit only: as-eaten rows per season (§2.2). */
   seasonCount: Partial<Record<Season, number>>;
-  /**
-   * How the dish's weekday-lunch as-eaten rows split by §5.1 role, read off each
-   * record plate by `weekdayLunchRolesOf`.
-   *
-   * Optional because it is a measurement and not a §2.2 statistic: it is what the
-   * §11 `starRoleShare` variant reads, and the harness reports it. Absent means the
-   * record was derived without it, which the variant treats as no evidence and so
-   * as no restriction.
-   */
-  weekdayLunchRoles?: WeekdayLunchRoleCounts;
-}
-
-/**
- * One dish's weekday-lunch rows split by the §5.1 role it filled on each plate.
- *
- * `rows` is every weekday-lunch as-eaten row of the dish, so it equals
- * `eatenCount.weekdayLunch`, and `star + companion` is at most `rows`: the balance
- * is the rows the dish spent as a carb, as a carb-forward international main's
- * partner, or as the §5.1 protein-floor append.
- */
-export interface WeekdayLunchRoleCounts {
-  star: number;
-  companion: number;
-  rows: number;
 }
 
 /** One entry of the §6 step 5 occupation memory: when a dish last held a slot, and how often. */
@@ -286,22 +262,15 @@ export interface GenerateWeekV6Variant {
   familyGovernor?: boolean;
   /** The §14 rate-formula variant: per occasion (specified) versus since first eaten. */
   rateFormula?: "occasions" | "sinceFirstEaten";
-  /**
-   * Meter the weekday lunch **star pool** by the record's own role split: a dish
-   * enters it only when at least half of its weekday-lunch as-eaten rows were in
-   * the star role (`DishStats.weekdayLunchRoles`). A dish below that share stays a
-   * companion or a partner, and its ledger is untouched.
-   *
-   * The measurement §11's threshold 2 asks for, and nothing the spec states. §3
-   * gives a dish one deficit per scope and charges it wherever the dish is placed,
-   * so once §3.2's presence ledger meters the companion slot, a high-rate dry
-   * protein spends the rest of its weekday-lunch deficit in the star slot: fish
-   * tikka takes 27 weekday stars self-feeding against 14 frozen, while the
-   * household's own record has it mostly beside a dal or gravy star. This flag
-   * measures what a record-derived membership rule would do about that. It is off
-   * in production and off in the three §11 headline runs.
-   */
-  starRoleShare?: boolean;
+  // `starRoleShare` stood here and is rejected, with the numbers: metering the
+  // weekday lunch star pool by the record's own role split (a dish enters only when
+  // at least half its weekday-lunch rows led a plate) moved threshold 2 from 62.5 to
+  // 57.5 percent distinct against a 65 percent floor, and weekday lunches with no
+  // animal protein from 38.5 to 47.8 percent, in gate fix cycle 3. It is also
+  // absorbing (a dish below the share can never take a star turn, so it can never
+  // raise its share) and settled by single record rows (22 of the 48 dishes with
+  // weekday-lunch rows in the seed record sit below the share, most on one or two
+  // rows). Do not re-propose it without new numbers.
 }
 
 /** Everything `generateWeekV6` reads. All of it derives from persisted data (§10). */

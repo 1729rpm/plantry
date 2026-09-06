@@ -47,6 +47,7 @@ import {
   countedPicksOfWeek,
   deriveOccasionSeries,
   deriveRecordStats,
+  frozenRatesStats,
   isFruitAllSeasonFallback,
   presenceDaysOf,
   rateIn,
@@ -520,9 +521,11 @@ export interface ReplayLedgerArgs {
  * replay run in Summer would accrue every Summer-only dish through the intervening
  * Monsoon and Winter weeks and bank dozens of servings for it.
  *
- * Variants honoured (§11): `frozenRates` (every accrual uses the cutover **record**;
- * the fruit season scope is still evaluated per replayed week's season against that
- * fixed record, and each season's derivation is cached so the loop stays cheap),
+ * Variants honoured (§11): `frozenRates` (every accrual uses the cutover **record**'s
+ * rates, while §3.2's presence rate and every memory the record carries track the
+ * record as it stands, the split `frozenRatesStats` states; the fruit season scope is
+ * still evaluated per replayed week's season against the fixed record, and each
+ * season's rate derivation is cached so the loop stays cheap),
  * `coldStartCap` (the seed cap, per dish or `"pool"`), `seedOptionalPools` (seed every
  * dish present in a scope, not only the structural ones), and `rateFormula` (§14
  * item 1). `familyGovernor` is stream C's and is not read here.
@@ -574,7 +577,9 @@ export function replayLedger(args: ReplayLedgerArgs): Ledger {
   };
 
   // The frozen run fixes the record, not the season, so it needs one derivation per
-  // season the replay crosses rather than one for the whole run.
+  // season the replay crosses rather than one for the whole run. Only the rate side
+  // is cached: the memories the frozen run reads live are re-derived per week below,
+  // exactly as every other run derives them.
   const frozen = new Map<Season, { stats: RecordStats; fruitAllSeason: boolean }>();
   const frozenIn = (weekSeason: Season): { stats: RecordStats; fruitAllSeason: boolean } => {
     const cached = frozen.get(weekSeason);
@@ -595,10 +600,19 @@ export function replayLedger(args: ReplayLedgerArgs): Ledger {
     const weekSeason = seasonOfWeek(week);
     let stats: RecordStats;
     let fruitAllSeason: boolean;
+    const asItStood = sorted.filter((row) => row.weekStart < week);
     if (variant?.frozenRates) {
-      ({ stats, fruitAllSeason } = frozenIn(weekSeason));
+      // §11's frozen run freezes the rates, not the memories: `accrue` reads §3.2's
+      // presence rate off these stats too, and that is a rate the record keeps
+      // rather than a quantity selection competes on, so it tracks the live record
+      // like the occupation memories do. `frozenRatesStats` states the whole split.
+      const rates = frozenIn(weekSeason);
+      stats = frozenRatesStats(
+        rates.stats,
+        deriveRecordStats(asItStood, library, weekSeason, { rateFormula }),
+      );
+      fruitAllSeason = rates.fruitAllSeason;
     } else {
-      const asItStood = sorted.filter((row) => row.weekStart < week);
       stats = deriveRecordStats(asItStood, library, weekSeason, { rateFormula });
       fruitAllSeason = isFruitAllSeasonFallback(asItStood, weekSeason);
     }
