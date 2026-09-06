@@ -36,13 +36,7 @@ import {
   isSelfSufficientMain,
 } from "../composition.js";
 import type { PoolEntry, PoolProvider } from "./place.js";
-import type {
-  GenerateWeekV6Variant,
-  Ledger,
-  PickRole,
-  RecordStats,
-  Scope,
-} from "./types.js";
+import type { GenerateWeekV6Variant, Ledger, PickRole, RecordStats, Scope } from "./types.js";
 
 /**
  * Everything a pool reads. Assembled once per generation by the orchestrator and

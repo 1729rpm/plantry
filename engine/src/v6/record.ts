@@ -239,9 +239,7 @@ export function weekdayLunchRolesOf(
     roles[star] = "star";
     const partners = plate.filter(
       (index) =>
-        index !== star &&
-        !isCarbForwardInternational(lunch[index]) &&
-        isPlainProtein(lunch[index]),
+        index !== star && !isCarbForwardInternational(lunch[index]) && isPlainProtein(lunch[index]),
     );
     if (partners.length > 0) roles[partners.reduce(better)] = "partner";
     return roles;
