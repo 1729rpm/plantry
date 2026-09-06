@@ -15,6 +15,28 @@ work queue for /reconcile-docs and /reconcile-ops; or "none".
 
 ---
 
+## 2026-09-07  Engine v6, the record-matching engine (Phase 9 integration)
+
+Production generation, the Explore feed, and the picker read the household record
+(`currentWeek` rows with `generatedPlan`) through the v6 engine under `engine/src/v6/`:
+rate-deficit scheduling per occasion and per scope, plan-then-place generation with
+one exploration pick a week, Saturday-scoped treats, a replayed deficit ledger, and a
+fruit slot that admits candidates when the season's pool runs short. The v3 selection
+engine, the seed-history read path, and the Saturday coin flip are gone. `docs/engine.md`
+is rewritten wholesale from `features/engine-v6.md`. The §11 gate harness (`npm run gate`)
+and its CI-sized test ship with the engine; the committed report reads frozen 12 of 12
+and self-feeding 10 of 12 on the 8-week fixture, thresholds 2 and 5 open by decision
+until the gate runs on the prod record at cutover. (#256; integration of #240, #244,
+#245, #246, #247, #249, #250, #251, #252, #253, #254, #255, #243)
+Why: v5 and v4.1 failed their gates structurally (a phase-locked limit cycle; a
+saturating count that destroyed the frequency signal); v6 makes the record the target
+distribution and reproduces its rates under the composition constraints.
+Updated: `docs/engine.md` (rewritten in this PR), `docs/engineering.md` §2, §3, §4, §5,
+§14, §15 (updated in this PR); `MAINTENANCE.md`, `ADDING-DISHES.md`, `docs/development.md`
+§6 and the `/slow-loop` command brief still describe `poolCoverageReport` and the seed
+history and gain the monthly v6 monitor table (plan §8 step 7): queued for `/reconcile-ops`;
+`README.md` and `CLAUDE.md` doc hierarchy for the archived as-built doc: `/reconcile-ops`.
+
 ## 2026-09-04  Promote four eaten custom one-offs to the library (Dosa, Atta halva, Paneer manchurian, Stuffed capsicum)
 
 Content batch F2 of Phase 9 (#241). Four dishes the household ate as free-text custom
