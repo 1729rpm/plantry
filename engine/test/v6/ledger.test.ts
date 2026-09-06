@@ -552,7 +552,7 @@ describe("§3.2 presence ledgers", () => {
     { day, meal: "lunch", dishId: ROTI },
   ];
 
-  it("reads presence off plate size, in both scopes", () => {
+  it("reads presence off the plate, in both scopes", () => {
     const picks = [
       ...threeItemLunch("Mon"),
       ...twoItemLunch("Tue"),
@@ -560,8 +560,8 @@ describe("§3.2 presence ledgers", () => {
       { day: "Sat" as const, meal: "lunch" as const, dishId: ROTI },
       { day: "Sat" as const, meal: "lunch" as const, dishId: ONION_TOMATO_SALAD },
     ];
-    expect([...presenceDays(picks, "weekdayLunch")]).toEqual(["Mon"]);
-    expect([...presenceDays(picks, "saturday")]).toEqual(["Sat"]);
+    expect([...presenceDays(picks, "weekdayLunch", library)]).toEqual(["Mon"]);
+    expect([...presenceDays(picks, "saturday", library)]).toEqual(["Sat"]);
   });
 
   it("seeds both presence ledgers at zero, never backdated", () => {

@@ -42,13 +42,13 @@ import type {
   Scope,
 } from "./types.js";
 import {
-  PRESENCE_PLATE_ITEMS,
   PRESENCE_SCOPES,
   SCOPES,
   countedPicksOfWeek,
   deriveOccasionSeries,
   deriveRecordStats,
   isFruitAllSeasonFallback,
+  presenceDaysOf,
   rateIn,
   seasonOfWeek,
   unmatchedEatenPicks,
@@ -148,26 +148,23 @@ function compareKeys(a: string, b: string): number {
   );
 }
 
-/** Monday to Friday: the weekday lunch occasions of one generated or record week (§4). */
-const WEEKDAYS: readonly Day[] = ["Mon", "Tue", "Wed", "Thu", "Fri"];
-
 /**
  * The days of a pick list on which the §3.2 optional element was present, for one
- * scope: a lunch plate of three or more picks (§3.2, and `RecordStats.presenceRate`
- * for why plate size is the test).
+ * scope.
  *
- * The same reading measures the record, charges the replay, and gates generation, so
- * a presence ledger accrued from the record is paid down by exactly the occasions
- * the record would have counted.
+ * One line of delegation to `record.ts`, which owns the presence definition (its
+ * module doc comment states it): any third item on a Saturday, and on a weekday
+ * lunch a third item that is not the §5.1 protein-floor append. The replay charges
+ * by the same reading the record's rate is measured with, so a presence ledger
+ * accrued from the record is paid down by exactly the occasions the record would
+ * have counted.
  */
-export function presenceDays(picks: readonly Pick[], scope: Scope): Set<Day> {
-  const days = scope === "saturday" ? (["Sat"] as const) : WEEKDAYS;
-  const out = new Set<Day>();
-  for (const day of days) {
-    const items = picks.filter((pick) => pick.day === day && pick.meal === "lunch").length;
-    if (items >= PRESENCE_PLATE_ITEMS) out.add(day);
-  }
-  return out;
+export function presenceDays(
+  picks: readonly Pick[],
+  scope: Scope,
+  library: readonly Dish[],
+): Set<Day> {
+  return presenceDaysOf(picks, scope, library);
 }
 
 /**
@@ -371,11 +368,13 @@ export function charge(ledger: Ledger, dishId: number, scope: Scope): Ledger {
 /**
  * §3.2's presence charge: one occasion out of a slot's presence ledger.
  *
- * Charged once per planned occasion whose plate carried the optional element,
- * whatever form that element took: an ordinary companion or accompaniment, and on
- * Saturday the structural dry-protein partner and the special protein beside an
- * everyday base too (§5.4 gives those forms the third item's place, so they consume
- * the slot's presence just as an accompaniment would).
+ * Charged once per planned occasion whose plate carried the optional element. On
+ * Saturday that is any third item, the structural dry-protein partner and the
+ * special protein beside an everyday base included (§5.4 gives those forms the
+ * third item's place, so they consume the slot's presence just as an accompaniment
+ * would). On a weekday lunch it is the companion and only the companion: the §5.1
+ * protein-floor append is a safety net that fires when the day carries no protein
+ * at all, so it is not the optional element and does not spend the slot's budget.
  */
 export function chargePresence(ledger: Ledger, scope: Scope): Ledger {
   const next = new Map(ledger.deficits);
@@ -440,8 +439,8 @@ export function reconcile(
   const eatenPicks = eaten.map((entry) => entry.pick);
   const plannedPicks = planned.map((entry) => entry.pick);
   for (const scope of PRESENCE_SCOPES) {
-    const fromPlan = presenceDays(plannedPicks, scope);
-    for (const day of presenceDays(eatenPicks, scope)) {
+    const fromPlan = presenceDays(plannedPicks, scope, library);
+    for (const day of presenceDays(eatenPicks, scope, library)) {
       if (!fromPlan.has(day)) next = chargePresence(next, scope);
     }
   }
@@ -469,7 +468,7 @@ export function chargePlanPresence(
   );
   let next = ledger;
   for (const scope of PRESENCE_SCOPES) {
-    const occasions = presenceDays(planned, scope).size;
+    const occasions = presenceDays(planned, scope, library).size;
     for (let index = 0; index < occasions; index += 1) next = chargePresence(next, scope);
   }
   return next;

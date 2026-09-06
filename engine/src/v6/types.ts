@@ -139,12 +139,14 @@ export interface RecordStats {
    * slot (`saturday`).
    *
    * Each is the share of that scope's record occasions whose plate carried the
-   * optional element. The record carries picks, not roles, so "carried the
-   * element" reads as "the occasion's plate holds three or more picks": on a
-   * weekday lunch the third pick beyond the star and the carb is the companion,
-   * and on a Saturday §3.2 counts any third item beside the treat and the
-   * dessert. The §11 harness measures served presence by the same test, so the
-   * ledger's target and the threshold are one definition.
+   * optional element. The record carries picks, not roles, so the element is read
+   * off the plate: on a Saturday any third item beside the treat and the dessert,
+   * and on a weekday lunch a third item that is not the §5.1 protein-floor append
+   * (a safety net, not a companion). `record.ts`'s module doc comment states that
+   * classification in full and `presenceDaysOf` is the one place it lives. The
+   * engine charges the same occasions from the other side by role, and §11
+   * threshold 11 compares the two measures, so the ledger's target and the
+   * threshold are one quantity.
    *
    * Partial: only the two scopes §3.2 names carry a key. The breakfast small item
    * stays on the dish rule alone and has no presence ledger.
@@ -368,6 +370,19 @@ export interface V6Diagnostics {
   repairs: ConstraintRepair[];
   /** Days over the §5.1 120-minute prep ceiling after repairs (§11 threshold 10). */
   prepCeilingBreaches: PrepCeilingBreach[];
+  /**
+   * §3.2 presence, the served side: how many of each metered scope's occasions
+   * this week's finished plates carried the optional element, counted **by role**.
+   *
+   * A weekday lunch counts when it carries a `companion` pick; a Saturday counts
+   * when its plate holds three or more picks (§3.2 counts any third item there).
+   * Counted on the finished plates, after the §6 step 6 repairs and the §9 cap, so
+   * a companion a repair dropped is not counted. This is the quantity §11
+   * threshold 11 compares against `RecordStats.presenceRate`, which reads the same
+   * occasions off a plan with no roles; the two definitions are stated together in
+   * `record.ts`'s module doc comment. Reported, never gated.
+   */
+  presenceOccasions: Partial<Record<Scope, number>>;
   /**
    * Violations the §6 step 6 constraint pass could not clear deterministically,
    * as `reason:day` or `reason:day:meal` keys (for example `prep-ceiling:Thu`,

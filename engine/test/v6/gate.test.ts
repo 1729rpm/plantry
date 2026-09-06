@@ -10,7 +10,7 @@
  *
  * ## The engine does not pass its gate yet, and this file records exactly that
  *
- * Four of the five thresholds this test measures fail today. They are listed in
+ * Three of the five thresholds this test measures fail today. They are listed in
  * `KNOWN_GATE_FAILURES` with the number measured when this stream landed and the
  * reason as far as the harness can see it. This is not a suppression: the list is
  * asserted in both directions, so a threshold that starts passing fails this test
@@ -31,6 +31,7 @@ import {
   DEFAULT_WEEKS,
   loadGateData,
   measureRun,
+  normalCdf,
   simulate,
   type GateData,
   type RunReport,
@@ -47,35 +48,25 @@ const CI_THRESHOLDS = [1, 2, 4, 5, 10] as const;
  *
  * Delete an entry when its threshold starts passing; this test fails until you do.
  *
- * The map did not shrink in this cycle. Thresholds 6 and 11 (the two the spec
- * amendments targeted) went from FAIL to PASS on every run, and threshold 2 went
- * from FAIL to PASS on the frozen run; but metering the two optional slots to the
- * record's own presence rates moved star selection, and threshold 2 slipped from
- * exactly 65.0 to 62.5 on the self-feeding run. That is a spec question rather than
- * an engine one and it is written up as an `EM check needed` block on the stream's
- * PR, with the measured arithmetic ceiling (69.3 percent) that says the bar is
- * reachable.
+ * The map shrank by one in this cycle. Threshold 1, distribution fidelity, went to
+ * PASS on the self-feeding run with all eleven gated families inside the bar, once
+ * §3.2's presence was metered by role on the engine side and by the same
+ * classification on the record side, so that the §5.1 protein-floor append stopped
+ * spending the companion slot's budget. Threshold 8, which CI does not measure,
+ * went to PASS on the same change, and thresholds 2 and 3 pass on the frozen run.
+ * Three entries remain.
  */
 const KNOWN_GATE_FAILURES = new Map<
   number,
   { measured: number; collapseGuard: number; finding: string }
 >([
   [
-    1,
-    {
-      measured: 1,
-      collapseGuard: 4,
-      finding:
-        "raita/curd runs at -25.5 percent (0.047 served against 0.063 in the record), half a point outside the bar; salad sits just inside at -24.6 percent. Both are weekday lunch companions, and §3.2's new presence ledger meters that slot to the record's own 0.528 presence. About 12 percent of the slot's presence budget (13 of 108 charged occasions in the horizon) is spent by the §5.1 protein-floor append, which takes a two-item lunch to three and so reads as a companion under the plate-size test the record forces, and the two companion families come out short by about that much. Mutton, which failed this threshold on the first run at +86 percent, is now reported and not gated on its two record rows (§11 as amended).",
-    },
-  ],
-  [
     2,
     {
       measured: 0.625,
       collapseGuard: 0.55,
       finding:
-        "The worst rolling 8-week window is 62.5 percent distinct against a 65 percent floor: 15 repeats in 40 stars where 14 are allowed and 12.3 are arithmetically forced by the record's own rates (the ceiling any rate-matching schedule can reach is 69.3 percent). The frozen run reaches 70.0 percent, so this is drift and not engine bias: on the same 34 to 35 weekday-lunch placements, fish tikka takes 14 stars frozen and 27 self-feeding, because metering the companion slot to its record presence rate leaves a high-rate dry protein fewer optional turns and its one weekday-lunch ledger spends them in the star slot instead.",
+        "The worst rolling 8-week window is 62.5 percent distinct against a 65 percent floor: 15 repeats in 40 stars where 14 are allowed and about 12 are arithmetically forced by the record's own rates (the ceiling any rate-matching schedule can reach is 69.3 percent). The frozen run passes at 70.0 percent, so this is drift and not engine bias: one weekday-lunch ledger serves both the star position and the companion position, so a high-rate dry protein whose companion turns are metered by §3.2's presence ledger spends the rest of its deficit in the star slot.",
     },
   ],
   [
@@ -84,7 +75,7 @@ const KNOWN_GATE_FAILURES = new Map<
       measured: 2,
       collapseGuard: 8,
       finding:
-        "Roti holds Wednesday lunch in 21 of 41 weeks and Friday lunch in 23, both just over the half-horizon bar. Roti is placed about 2.4 times over five weekday lunches, so uniform spreading predicts 47 percent occupancy against a 50 percent bar, and a carb never places by its own occupation memory: §6 step 5 assigns a plate by its LEAD dish, and roti is nobody's lead. The three chutney category locks of the first run are gone, both because §11's counting amendment keys the lock per individual chutney dish and because the exploration slot now reserves its own weekday.",
+        "Roti holds Monday lunch in 23 of 41 weeks and Thursday lunch in 23, and the rest of its spread is Tue 17, Wed 20, Fri 14. The instrumented run says this is arithmetic and not an engine deviation. Roti takes 97 of the horizon's 205 weekday lunches, 0.473 of the role's occasions, so an assignment with no weekday preference at all expects 19.4 of 41 on each weekday with a spread of 3.2, puts one named weekday over half the horizon 36.5 percent of the time, and puts at least one of the five over it 89.7 percent of the time; the engine's worst weekday is 23 against a uniform-random mean worst of 23.4. Neither of the two mechanisms that could add a weekday preference is doing so: the §6 step 5 exploration reserve is even (Mon 8, Tue 6, Wed 6, Thu 8, Fri 7), and the §6 step 6 pass made 12 whole-plate lunch swaps, which exchange two days' plates and move a carb only with the plate it rides on. §11's exemption asks for a rate above 0.5 and roti sits at 0.473; the threshold as written is not reachable for a carb at that rate, and the PR carries the EM check needed block.",
     },
   ],
   [
@@ -161,5 +152,34 @@ describe("§11 gate, self-feeding run", () => {
       1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12,
     ]);
     expect(report.reported.length).toBeGreaterThan(0);
+  });
+});
+
+/**
+ * Threshold 4's diagnosis rests on one piece of arithmetic: how often a dish placed
+ * on a given share of a role's occasions puts a weekday over half the horizon when
+ * nothing about the assignment prefers a weekday. A wrong tail would make the
+ * diagnosis lie in the direction of "no engine defect", so it is checked against
+ * values that can be looked up rather than derived from the same approximation.
+ */
+describe("the normal tail threshold 4's diagnosis reads", () => {
+  it("matches the standard normal table", () => {
+    expect(normalCdf(0)).toBeCloseTo(0.5, 6);
+    expect(normalCdf(1)).toBeCloseTo(0.8413447, 6);
+    expect(normalCdf(-1)).toBeCloseTo(0.1586553, 6);
+    expect(normalCdf(1.959964)).toBeCloseTo(0.975, 6);
+    expect(normalCdf(-2.5)).toBeCloseTo(0.0062097, 6);
+  });
+
+  it("is symmetric and monotone, which is what the percentages are read as", () => {
+    for (const z of [-3, -1.5, -0.25, 0.25, 1.5, 3]) {
+      expect(normalCdf(z) + normalCdf(-z)).toBeCloseTo(1, 6);
+    }
+    let previous = 0;
+    for (let z = -4; z <= 4; z += 0.5) {
+      const value = normalCdf(z);
+      expect(value).toBeGreaterThanOrEqual(previous);
+      previous = value;
+    }
   });
 });

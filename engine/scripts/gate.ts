@@ -42,7 +42,7 @@ import {
 } from "../src/data/parse.js";
 import { loadDishFiles } from "./bake.js";
 import { generateWeekV6 } from "../src/v6/generateWeekV6.js";
-import { deriveRecordStats, seasonOfWeek } from "../src/v6/record.js";
+import { deriveRecordStats, presenceDaysOf, seasonOfWeek } from "../src/v6/record.js";
 import { addWeeks, isEligibleDish } from "../src/v6/ledger.js";
 import { isEverydayBase, isLunchStar, isStandaloneEggMain } from "../src/v6/pools.js";
 import { proteinFamily, saturdayFormFor } from "../src/v6/compose.js";
@@ -340,6 +340,28 @@ function fmt(value: number, digits = 3): string {
 function signed(value: number): string {
   if (!Number.isFinite(value)) return "n/a";
   return `${value >= 0 ? "+" : ""}${value.toFixed(1)}%`;
+}
+
+/**
+ * The standard normal cumulative distribution, by the Abramowitz and Stegun 7.1.26
+ * rational approximation of the error function (absolute error below 1.5e-7).
+ *
+ * Threshold 4's diagnosis needs to say how often a dish placed on a given share of
+ * a role's occasions puts one weekday over half the horizon when nothing about the
+ * assignment prefers a weekday. That is a binomial tail, and the normal
+ * approximation is exact enough at a horizon of forty weeks. It is arithmetic and
+ * not sampling, so the report stays deterministic (§10).
+ */
+export function normalCdf(z: number): number {
+  const sign = z < 0 ? -1 : 1;
+  const x = Math.abs(z) / Math.SQRT2;
+  const t = 1 / (1 + 0.3275911 * x);
+  const y =
+    1 -
+    ((((1.061405429 * t - 1.453152027) * t + 1.421413741) * t - 0.284496736) * t + 0.254829592) *
+      t *
+      Math.exp(-x * x);
+  return 0.5 * (1 + sign * y);
 }
 
 // ---------------------------------------------------------------------------
@@ -911,61 +933,114 @@ export function measureRun(args: MeasureArgs): RunReport {
   // -- 11. Presence rates ----------------------------------------------------
 
   {
-    const presence = (
+    /**
+     * The breakfast small item has no presence ledger (§3.2 leaves it on the dish
+     * rule), so it has no role-metered counterpart and stays a plate-size count on
+     * both sides: a breakfast of two or more picks carried one.
+     */
+    const smallItemRate = (
       weeks: ReadonlyArray<{ picks: readonly Pick[]; skippedDays: readonly Day[] }>,
-    ): { small: number; companion: number; accompaniment: number } => {
-      let breakfastSlots = 0;
-      let breakfastWithSmall = 0;
-      let lunchSlots = 0;
-      let lunchWithCompanion = 0;
-      let saturdays = 0;
-      let saturdayWithThird = 0;
+    ): number => {
+      let slots = 0;
+      let withSmall = 0;
       for (const week of weeks) {
         const skipped = new Set<Day>(week.skippedDays);
-        const bySlot = new Map<string, number>();
+        const bySlot = new Map<Day, number>();
         for (const pick of week.picks) {
-          if (pick.meal === "fruit" || skipped.has(pick.day)) continue;
-          const key = `${pick.day}|${pick.meal}`;
-          bySlot.set(key, (bySlot.get(key) ?? 0) + 1);
+          if (pick.meal !== "breakfast" || skipped.has(pick.day)) continue;
+          bySlot.set(pick.day, (bySlot.get(pick.day) ?? 0) + 1);
         }
         for (const day of WEEKDAYS) {
           if (skipped.has(day)) continue;
-          breakfastSlots += 1;
-          if ((bySlot.get(`${day}|breakfast`) ?? 0) >= 2) breakfastWithSmall += 1;
-          lunchSlots += 1;
-          if ((bySlot.get(`${day}|lunch`) ?? 0) >= 3) lunchWithCompanion += 1;
-        }
-        if (!skipped.has("Sat")) {
-          saturdays += 1;
-          if ((bySlot.get("Sat|lunch") ?? 0) >= 3) saturdayWithThird += 1;
+          slots += 1;
+          if ((bySlot.get(day) ?? 0) >= 2) withSmall += 1;
         }
       }
-      return {
-        small: breakfastSlots > 0 ? breakfastWithSmall / breakfastSlots : 0,
-        companion: lunchSlots > 0 ? lunchWithCompanion / lunchSlots : 0,
-        accompaniment: saturdays > 0 ? saturdayWithThird / saturdays : 0,
-      };
+      return slots > 0 ? withSmall / slots : 0;
     };
 
-    const recordPresence = presence(seed);
-    const servedPresence = presence(
+    /**
+     * The record side of the two metered slots (§3.2), by the one classification
+     * `record.ts` owns: any third item on a Saturday, and on a weekday lunch a
+     * third item that is not the §5.1 protein-floor append.
+     */
+    const recordSide = (
+      weeks: ReadonlyArray<{ picks: readonly Pick[]; skippedDays: readonly Day[] }>,
+    ): { companion: number; accompaniment: number; lunchSlots: number; saturdays: number } => {
+      let lunchSlots = 0;
+      let companions = 0;
+      let saturdays = 0;
+      let accompaniments = 0;
+      for (const week of weeks) {
+        const skipped = new Set<Day>(week.skippedDays);
+        lunchSlots += WEEKDAYS.filter((day) => !skipped.has(day)).length;
+        companions += presenceDaysOf(
+          week.picks,
+          "weekdayLunch",
+          data.library,
+          week.skippedDays,
+        ).size;
+        if (!skipped.has("Sat")) saturdays += 1;
+        accompaniments += presenceDaysOf(
+          week.picks,
+          "saturday",
+          data.library,
+          week.skippedDays,
+        ).size;
+      }
+      return { companion: companions, accompaniment: accompaniments, lunchSlots, saturdays };
+    };
+
+    const record = recordSide(seed);
+    const recordCompanion = record.lunchSlots > 0 ? record.companion / record.lunchSlots : 0;
+    const recordAccompaniment = record.saturdays > 0 ? record.accompaniment / record.saturdays : 0;
+
+    // The served side is metered by role, off the engine's own finished plates: a
+    // weekday lunch that carries a `companion` pick, and a Saturday plate with a
+    // third item. The engine charges the presence ledger by exactly this count.
+    let servedCompanions = 0;
+    let servedAccompaniments = 0;
+    for (const view of horizon) {
+      servedCompanions += view.week.diagnostics.presenceOccasions.weekdayLunch ?? 0;
+      servedAccompaniments += view.week.diagnostics.presenceOccasions.saturday ?? 0;
+    }
+    const servedLunchSlots = horizon.length * WEEKDAYS.length;
+    const servedCompanion = servedLunchSlots > 0 ? servedCompanions / servedLunchSlots : 0;
+    const servedAccompaniment = horizon.length > 0 ? servedAccompaniments / horizon.length : 0;
+
+    // Harness honesty: the two sides are two readings of one quantity, so the
+    // report says how far apart they are on the very same weeks. A large gap means
+    // the record-side classification is misreading roles it cannot see, and every
+    // number on this threshold would be that much out.
+    const replayed = recordSide(
       horizon.map((view) => ({ picks: view.week.generatedPlan, skippedDays: [] as Day[] })),
     );
+    const classificationGap = replayed.companion - servedCompanions;
+
     const rows: Array<[string, number, number]> = [
-      ["breakfast small item", servedPresence.small, recordPresence.small],
-      ["weekday companion", servedPresence.companion, recordPresence.companion],
-      ["Saturday accompaniment", servedPresence.accompaniment, recordPresence.accompaniment],
+      [
+        "breakfast small item",
+        smallItemRate(
+          horizon.map((view) => ({ picks: view.week.generatedPlan, skippedDays: [] as Day[] })),
+        ),
+        smallItemRate(seed),
+      ],
+      ["weekday companion", servedCompanion, recordCompanion],
+      ["Saturday accompaniment", servedAccompaniment, recordAccompaniment],
     ];
     const lines: string[] = [];
     let failures = 0;
-    for (const [name, served, record] of rows) {
-      const delta = percentDelta(served, record);
-      const ok = record === 0 ? true : Math.abs(delta) <= 25;
+    for (const [name, served, recordRate] of rows) {
+      const delta = percentDelta(served, recordRate);
+      const ok = recordRate === 0 ? true : Math.abs(delta) <= 25;
       if (!ok) failures += 1;
       lines.push(
-        `${name}: served ${fmt(served)} vs record ${fmt(record)} (${signed(delta)}) ${ok ? "PASS" : "FAIL"}`,
+        `${name}: served ${fmt(served)} vs record ${fmt(recordRate)} (${signed(delta)}) ${ok ? "PASS" : "FAIL"}`,
       );
     }
+    lines.push(
+      `served weekday companions ${servedCompanions} of ${servedLunchSlots} occasions, counted by role; the same plans read back by the record-side classification give ${replayed.companion} (gap ${classificationGap >= 0 ? "+" : ""}${classificationGap}, ${servedCompanions > 0 ? ((Math.abs(classificationGap) / servedCompanions) * 100).toFixed(1) : "0.0"} percent), which is how far the two readings of one quantity sit apart`,
+    );
     thresholds.push({
       id: 11,
       name: "Presence rates (each optional slot within 25 percent of the record's presence rate)",
@@ -1345,6 +1420,86 @@ export function measureRun(args: MeasureArgs): RunReport {
     });
   }
 
+  // -- Threshold 4: where a locked dish's weekday actually comes from -----------
+
+  if (wantDiagnostics) {
+    const locked = (thresholds.find((entry) => entry.id === 4)?.lines ?? []).length > 0;
+    const lines: string[] = [];
+
+    // Every (dish, meal) that holds any weekday in more than a third of the
+    // horizon, with its whole weekday spread. A lock is a tail of this spread, so
+    // the spread is what says whether one weekday is being chosen or whether the
+    // dish simply appears too often for five days to share it evenly.
+    const spread = new Map<string, Map<Day, number>>();
+    const roleOccasions = new Map<string, number>();
+    for (const view of horizon) {
+      for (const pick of view.week.generatedPlan) {
+        if (pick.meal === "fruit" || pick.day === "Sat") continue;
+        const key = `${pick.dishId}|${pick.meal}`;
+        const row = spread.get(key) ?? new Map<Day, number>();
+        row.set(pick.day, (row.get(pick.day) ?? 0) + 1);
+        spread.set(key, row);
+        roleOccasions.set(key, (roleOccasions.get(key) ?? 0) + 1);
+      }
+    }
+    const busiest = [...spread.entries()]
+      .filter(([, row]) => Math.max(...row.values()) > horizonWeeks / 3)
+      .sort((a, b) => Math.max(...b[1].values()) - Math.max(...a[1].values()));
+    for (const [key, row] of busiest.slice(0, 8)) {
+      const [idText, meal] = key.split("|");
+      const dish = dishById.get(Number(idText));
+      const placements = roleOccasions.get(key) ?? 0;
+      // The dish's own rate in the role, and what a schedule with no weekday
+      // preference at all would do with that many placements: five weekdays, so
+      // each weekday holds it Binomial(horizon, placements / (5 x horizon)).
+      const rate = placements / (5 * horizonWeeks);
+      const expected = rate * horizonWeeks;
+      const sd = Math.sqrt(horizonWeeks * rate * (1 - rate));
+      const perDay = sd > 0 ? 1 - normalCdf((horizonWeeks / 2 - expected) / sd) : 0;
+      const anyDay = 1 - Math.pow(1 - perDay, 5);
+      lines.push(
+        `${dish?.name ?? idText} ${meal}: ${WEEKDAYS.map((day) => `${day} ${row.get(day) ?? 0}`).join("  ")} over ${horizonWeeks} weeks`,
+      );
+      lines.push(
+        `  ${placements} placements, ${fmt(rate)} of the role's weekday occasions, so an unbiased assignment expects ${fmt(expected, 1)} of ${horizonWeeks} on each weekday with a spread of ${fmt(sd, 1)}: one named weekday goes over half the horizon ${(perDay * 100).toFixed(1)} percent of the time and at least one of the five does ${(anyDay * 100).toFixed(1)} percent of the time. §11's exemption asks for a rate above 0.5.`,
+      );
+    }
+
+    // The two mechanisms the day assignment could be adding on top of that: the
+    // §6 step 5 exploration reserve, which takes its weekday before the repertoire
+    // plates choose, and the §6 step 6 whole-plate swaps, which are the only thing
+    // that moves a plate after its day is set.
+    const explorationDays = new Map<Day, number>();
+    for (const view of horizon) {
+      const lead = view.week.diagnostics.lunchLeads.find(
+        (entry) => entry.scope === "weekdayLunch" && entry.origin === "exploration",
+      );
+      if (lead?.day) explorationDays.set(lead.day, (explorationDays.get(lead.day) ?? 0) + 1);
+    }
+    lines.push(
+      `Exploration plates that led their lunch, by weekday: ${WEEKDAYS.map((day) => `${day} ${explorationDays.get(day) ?? 0}`).join("  ")}. §6 step 5 reserves this weekday out of the supply before the repertoire plates choose, so a skew here would push every other plate onto the leftovers.`,
+    );
+    const swaps: string[] = [];
+    for (const view of horizon) {
+      for (const repair of view.week.diagnostics.repairs) {
+        if (repair.meal !== "lunch" || repair.swappedWithDay === null) continue;
+        swaps.push(
+          `week ${view.index} ${repair.constraint} ${repair.day} for ${repair.swappedWithDay}`,
+        );
+      }
+    }
+    lines.push(
+      `Whole-plate lunch swaps in the §6 step 6 pass: ${swaps.length}${swaps.length > 0 ? ` (${swaps.join("; ")})` : ""}. A swap exchanges two days' plates, so it moves a carb only with the plate it rides on.`,
+    );
+
+    diagnostics.push({
+      title: locked
+        ? "Diagnosis, threshold 4: where the locked weekdays come from"
+        : "Diagnosis, threshold 4: the weekday spread of the busiest slots",
+      lines,
+    });
+  }
+
   return { label, weeks: simulated.length, thresholds, reported, diagnostics };
 }
 
@@ -1461,7 +1616,7 @@ export function runGate(options: { fixture: string; weeks: number; dataDir: stri
     "- Lunch-main uniqueness counts weekday lunch stars only; Saturday is its own register (§2.2).",
     "- The Jaccard baseline is re-measured by this harness's own method on the record weeks (§11 threshold 3's amendment), over the whole dish set of each week, fruit included.",
     "- Threshold 4's arithmetic exemption reduces to a per-occasion rate above 0.5, because every scope's planned occasions equal its weekly slots.",
-    "- Presence (threshold 11) is measured by pick count on both sides, because the record carries no roles: a breakfast with two or more picks has a small item, a weekday lunch with three or more has a companion, a Saturday with three or more has an accompaniment. §3.2's two presence ledgers accrue against the same reading, so the ledger's target and this threshold are one definition.",
+    "- Presence (threshold 11) is measured **by role on the served side and by the record-side classification on the record side**, which is what §3.2's two presence ledgers accrue and charge against. Served: a weekday lunch counts when the engine's finished plate carries a `companion` pick, a Saturday when its plate holds a third item of any role. Record: a Saturday counts on any third item, and a weekday lunch on a third item that is not the §5.1 protein-floor append (the floor is a safety net that fires only when neither meal of the day carries protein, so it is not a companion; `record.ts` states the classification in full). The breakfast small item has no presence ledger and stays a pick count on both sides: a breakfast of two or more picks carried one. The threshold's own lines print how far the two readings of the weekday companion sit apart on the same plans, because they are two measures of one quantity and a wide gap would put every number here out by that much.",
     "- Thresholds 1 and 12 report, and do not gate, any tracked family with fewer than four as-eaten rows in the record at simulation start (§11 as amended after the first gate run). Each family's row count is printed on its line so the exemption is never invisible.",
     "- Threshold 4 counts a chutney day-lock per individual chutney dish, not for the chutney category as a whole (§11 as amended after the first gate run): every paratha and chilla morning carries a chutney, so the category is locked to the paratha mornings by construction and the lock the rule guards against is one chutney on one weekday.",
     "",

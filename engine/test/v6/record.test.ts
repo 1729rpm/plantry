@@ -20,6 +20,7 @@ import {
   deriveOccasionSeries,
   deriveRecordStats,
   eatenCountIn,
+  presenceDaysOf,
   rateIn,
   scopeOfPick,
   seasonOfWeek,
@@ -47,6 +48,12 @@ const SINGAPORE_NOODLES = idOf("Singapore noodles");
 const MANGO = idOf("Mango bowl");
 const ONION_TOMATO_SALAD = idOf("Onion tomato salad");
 const ROTI = idOf("Roti");
+const ALOO_MATAR = idOf("Aloo matar");
+const GRILLED_CHICKEN = idOf("Grilled chicken breast");
+const CUCUMBER_RAITA = idOf("Cucumber raita");
+const KHICHDI = idOf("Khichdi");
+const POHA = idOf("Poha");
+const BOILED_EGGS = idOf("Boiled eggs");
 
 /** The record's own totals, restated so an accidental fixture edit fails loudly. */
 describe("the 8-week record fixture", () => {
@@ -382,6 +389,117 @@ describe("§3.2 presence rates", () => {
     );
     expect(stats.occasions.weekdayLunch).toBe(1);
     expect(stats.presenceRate.weekdayLunch).toBe(0);
+  });
+});
+
+/**
+ * §3.2's presence classification, the adversarial cases.
+ *
+ * The record carries picks and not roles, so the classification has to read the
+ * optional companion off the plate. Each case here is a plate the plate-size
+ * reading gets wrong, and the number the ledger accrues against would be wrong by
+ * exactly that much.
+ */
+describe("§3.2 presence, the weekday companion classification", () => {
+  const weekOf = (picks: Pick[]): RecordWeek[] => [
+    {
+      weekStart: "2026-06-01",
+      picks,
+      skippedDays: ["Tue", "Wed", "Thu", "Fri"],
+      generatedPlan: null,
+    },
+  ];
+  const rateOf = (picks: Pick[]): number =>
+    deriveRecordStats(weekOf(picks), library, "Summer").presenceRate.weekdayLunch ?? -1;
+
+  it("reads a §5.1 protein-floor append as a floor item, not as presence", () => {
+    // Monday: a meatless breakfast, a meatless gravy star, a carb, and a plain
+    // protein. That is exactly the plate the day-scoped floor produces, and the
+    // slot was never asked for a companion.
+    expect(
+      rateOf([
+        { day: "Mon", meal: "breakfast", dishId: POHA },
+        { day: "Mon", meal: "lunch", dishId: ALOO_MATAR },
+        { day: "Mon", meal: "lunch", dishId: ROTI },
+        { day: "Mon", meal: "lunch", dishId: GRILLED_CHICKEN },
+      ]),
+    ).toBe(0);
+  });
+
+  it("counts a raita on the same plate as presence", () => {
+    expect(
+      rateOf([
+        { day: "Mon", meal: "breakfast", dishId: POHA },
+        { day: "Mon", meal: "lunch", dishId: ALOO_MATAR },
+        { day: "Mon", meal: "lunch", dishId: ROTI },
+        { day: "Mon", meal: "lunch", dishId: CUCUMBER_RAITA },
+      ]),
+    ).toBe(1);
+  });
+
+  it("counts the companion on a four-item plate the floor appended to", () => {
+    // Star, carb, raita, and then the floor: the plate carried a companion and a
+    // floor append, and subtracting the append still leaves the companion.
+    expect(
+      rateOf([
+        { day: "Mon", meal: "breakfast", dishId: POHA },
+        { day: "Mon", meal: "lunch", dishId: ALOO_MATAR },
+        { day: "Mon", meal: "lunch", dishId: ROTI },
+        { day: "Mon", meal: "lunch", dishId: CUCUMBER_RAITA },
+        { day: "Mon", meal: "lunch", dishId: GRILLED_CHICKEN },
+      ]),
+    ).toBe(1);
+  });
+
+  it("does not read a dry-protein star beside a companion as a floor day", () => {
+    // Fish tikka leads, the day carries no other protein, and the plate still has
+    // a salad on it. Reading the star as the floor append would lose that salad,
+    // which is the failure the "what is left must still be a plate" clause blocks.
+    expect(
+      rateOf([
+        { day: "Mon", meal: "breakfast", dishId: POHA },
+        { day: "Mon", meal: "lunch", dishId: FISH_TIKKA },
+        { day: "Mon", meal: "lunch", dishId: ROTI },
+        { day: "Mon", meal: "lunch", dishId: ONION_TOMATO_SALAD },
+      ]),
+    ).toBe(1);
+  });
+
+  it("counts a complete plate's companion, which is only two picks", () => {
+    // §5.1: a true complete plate stays solo or takes one Accompaniment companion.
+    // Plate size cannot see that companion; the structural reading can.
+    expect(
+      rateOf([
+        { day: "Mon", meal: "lunch", dishId: KHICHDI },
+        { day: "Mon", meal: "lunch", dishId: ONION_TOMATO_SALAD },
+      ]),
+    ).toBe(1);
+    expect(rateOf([{ day: "Mon", meal: "lunch", dishId: KHICHDI }])).toBe(0);
+  });
+
+  it("reads the dry protein beside a carb-forward international main as its partner", () => {
+    // §5.1 gives that register exactly one plain protein and nothing else, so the
+    // plate carried no companion even though the breakfast makes it no floor day.
+    expect(
+      rateOf([
+        { day: "Mon", meal: "breakfast", dishId: BOILED_EGGS },
+        { day: "Mon", meal: "lunch", dishId: SINGAPORE_NOODLES },
+        { day: "Mon", meal: "lunch", dishId: FISH_TIKKA },
+      ]),
+    ).toBe(0);
+  });
+
+  it("classifies a plate the same way whichever order its picks arrive in (§10)", () => {
+    const picks: Pick[] = [
+      { day: "Mon", meal: "breakfast", dishId: POHA },
+      { day: "Mon", meal: "lunch", dishId: ALOO_MATAR },
+      { day: "Mon", meal: "lunch", dishId: ROTI },
+      { day: "Mon", meal: "lunch", dishId: GRILLED_CHICKEN },
+    ];
+    expect(rateOf([...picks].reverse())).toBe(rateOf(picks));
+    expect([...presenceDaysOf(picks, "weekdayLunch", [...library].reverse())]).toEqual([
+      ...presenceDaysOf(picks, "weekdayLunch", library),
+    ]);
   });
 });
 
