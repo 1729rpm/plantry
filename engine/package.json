@@ -6,8 +6,7 @@
   "main": "./src/index.ts",
   "exports": {
     ".": "./src/index.ts",
-    "./library": "./src/data/library.ts",
-    "./history": "./src/data/history.ts"
+    "./library": "./src/data/library.ts"
   },
   "scripts": {
     "bake": "tsc -b && node dist/scripts/bake.js",

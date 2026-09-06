@@ -5,7 +5,7 @@
 // into a plain, calm sentence; no internal label ("HP", "primaryIngredient",
 // the key strings themselves) ever reaches a screen.
 
-import type { ExploreAffinityKey } from "@plantry/engine";
+import type { ExploreAffinityKeyV6 as ExploreAffinityKey } from "@plantry/engine";
 
 // One plain line per affinity key. Phrased the way the design handoff's
 // EXPLORE_WHY lines read: warm, second-person, no jargon, no em dashes.
