@@ -80,7 +80,12 @@ function makeStats(specs: StatSpec[]): RecordStats {
 /**
  * Build a pool context in which every library dish is present in every scope, then
  * override the deficits that matter. `deficits` is keyed `dishId:scope`, and a dish
- * with no entry sits at zero, which the optional rule reads as "not due".
+ * with no entry sits at zero, which the structural fallback reads as "not due".
+ *
+ * The two §3.2 presence ledgers (`presence:weekdayLunch` and `presence:saturday`)
+ * are seeded positive unless the caller overrides them, so a test about a plate
+ * form is not silently a test about slot presence. A test about presence itself
+ * passes its own value.
  */
 function makeContext(
   library: Dish[],
@@ -100,7 +105,15 @@ function makeContext(
       seasonCount: { Summer: 1 },
     })),
   );
-  const ledger: Ledger = { deficits: new Map(Object.entries(deficits)) };
+  const ledger: Ledger = {
+    deficits: new Map(
+      Object.entries({
+        "presence:weekdayLunch": 1,
+        "presence:saturday": 1,
+        ...deficits,
+      }),
+    ),
+  };
   return { library, season: "Summer", stats, ledger };
 }
 
@@ -243,8 +256,14 @@ describe("compose: §5.1 true complete plates", () => {
     expect(dishIds(plate)).toEqual([20, 21]);
   });
 
-  it("stays solo when its accompaniment is not due", () => {
-    const ctx = makeContext(library, { "21:weekdayLunch": -0.2, "22:weekdayLunch": 8 });
+  it("stays solo when the companion slot's presence deficit is spent", () => {
+    // §3.2 as amended: presence, not the top companion's own deficit, decides
+    // whether a complete plate takes its one Accompaniment.
+    const ctx = makeContext(library, {
+      "21:weekdayLunch": -0.2,
+      "22:weekdayLunch": 8,
+      "presence:weekdayLunch": 0,
+    });
     expect(dishIds(composeWeekdayLunch({ lead: biryani, ctx, placedThisWeek: new Set() }))).toEqual(
       [20],
     );
@@ -500,9 +519,15 @@ describe("compose: §5.4 Saturday", () => {
     expect(dishIds(plate)).toEqual([56, 53, 52]);
     expect(plate.picks[1].origin).toBe("fallback");
 
-    const notDue = makeContext(library, { "53:saturday": 0.6, "52:saturday": -0.4 });
+    // §3.2 as amended: what closes the third-item slot is the Saturday presence
+    // deficit, not the top accompaniment's own deficit.
+    const noPresence = makeContext(library, {
+      "53:saturday": 0.6,
+      "52:saturday": 5,
+      "presence:saturday": 0,
+    });
     expect(
-      dishIds(composeSaturday({ lead: biryani, ctx: notDue, placedThisWeek: new Set() })),
+      dishIds(composeSaturday({ lead: biryani, ctx: noPresence, placedThisWeek: new Set() })),
     ).toEqual([56, 53]);
   });
 

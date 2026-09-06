@@ -36,6 +36,7 @@ import type {
   Scope,
 } from "./types.js";
 import type { Plate } from "./place.js";
+import { presenceDeficitIn } from "./ledger.js";
 import type { PoolContext, PoolEntry, PoolProvider } from "./pools.js";
 import {
   breakfastChutneyPool,
@@ -316,10 +317,19 @@ export function composeWeekdayLunch(args: ComposeLunchArgs): Plate {
     pool = excludeGravyIfPlateHasGravy(pool, plateHasGravy(onPlate));
     pool = excludeHpEntriesIfMealHasHp(pool, plateHasHp(onPlate));
     pool = demoteCrossMealRepeats(pool, args.breakfastDishes ?? []);
-    const companion = fillOptional(pool);
+    // §3.2 as amended: the weekday lunch companion slot carries its own presence
+    // ledger, so whether the slot is filled is the presence deficit's question and
+    // not the top companion's. Which dish fills it is then §3.2's structural rule,
+    // because presence has already been decided.
+    const companion =
+      presenceDeficitIn(ctx.ledger, scope) > 0
+        ? fillStructuralWithOrigin(pool, placedThisWeek)
+        : null;
     if (companion) {
-      plate.picks.push(pickOf(companion.dish, "companion", scope, "lunch", "deficit"));
-      onPlate.push(companion.dish);
+      plate.picks.push(
+        pickOf(companion.entry.dish, "companion", scope, "lunch", companion.origin),
+      );
+      onPlate.push(companion.entry.dish);
     }
   }
 
@@ -497,12 +507,20 @@ export function composeSaturday(args: ComposeSaturdayArgs): Plate {
   }
 
   if (filledRoles.has("accompaniment")) return plate;
+  // §3.2 as amended: the Saturday third-item slot carries its own presence ledger,
+  // and the two structural forms above (the dry-protein partner and the special
+  // protein beside an everyday base) take that slot's place on the plate, so they
+  // consume its presence without asking it first. Only the accompaniment, the one
+  // form §5.4 leaves optional, is gated here.
+  if (presenceDeficitIn(ctx.ledger, scope) <= 0) return plate;
   let pool = excludeIds(saturdayAccompanimentPool(ctx), exclude);
   pool = excludeGravyIfPlateHasGravy(pool, plateHasGravy(onPlate));
   pool = excludeHpEntriesIfMealHasHp(pool, plateHasHp(onPlate));
-  const accompaniment = fillOptional(pool);
+  const accompaniment = fillStructuralWithOrigin(pool, placedThisWeek);
   if (accompaniment) {
-    plate.picks.push(pickOf(accompaniment.dish, "accompaniment", scope, "lunch", "deficit"));
+    plate.picks.push(
+      pickOf(accompaniment.entry.dish, "accompaniment", scope, "lunch", accompaniment.origin),
+    );
   }
   return plate;
 }
