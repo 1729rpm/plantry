@@ -21,71 +21,23 @@ export {
   validateIngredientNamesResolve,
   validateDishFileRoundTrip,
   coverageReport,
-  poolCoverageReport,
   hpProteinConsistencyReport,
   HP_PROTEIN_THRESHOLD_PER_PERSON,
 } from "./data/validators.js";
-export type { CoverageReport, PoolCount, HpProteinDrift } from "./data/validators.js";
+export type { CoverageReport, HpProteinDrift } from "./data/validators.js";
 export { baseSlug, slugForDishes } from "./data/slug.js";
 export { eligibleDishes } from "./eligibility.js";
 export type { EligibleDishesArgs, Slot, Day, Meal } from "./eligibility.js";
-export { weekSchedule } from "./schedule.js";
-export type { SlotPlan, WeekScheduleArgs, LunchMenu } from "./schedule.js";
 export {
-  composeSlot,
-  candidateSetPools,
-  fruitOfDayPool,
-  breakfastOptionB,
-  breakfastOptionC,
-  breakfastWeekdayPair,
-  breakfastSinglePick,
-  menu1,
-  menu2,
-  menu3,
-  menu4,
-  lunchBudget,
-  LUNCH_MAX_ITEMS,
-  shouldSubstituteWeekday,
+  isHp,
+  isSelfSufficientMain,
+  breakfastMainCarriesChutney,
+  excludeHpIfMealHasHp,
+  isCuisineNeutral,
 } from "./composition.js";
-export type {
-  CandidateSet,
-  BreakfastWeekdayPairCandidateSet,
-  BreakfastSinglePickCandidateSet,
-  Menu1CandidateSet,
-  Menu2CandidateSet,
-  Menu3CandidateSet,
-  Menu4CandidateSet,
-  ComposeSlotArgs,
-  ShouldSubstituteWeekdayArgs,
-  WeekdaySubstitutionDay,
-  WeekdaySubstitutionForm,
-  WeekdaySubstitutionDecision,
-} from "./composition.js";
-export {
-  rankCandidates,
-  byLongestUnused,
-  byNoSameDayPrimaryIngredient,
-  byIngredientConsolidation,
-} from "./priority.js";
-export type { RankCandidatesArgs, ConsolidationContext } from "./priority.js";
-export {
-  emptyLedger,
-  applyPick,
-  rankByConsolidation,
-  DEFAULT_LEFTOVER_THRESHOLD_GRAMS,
-  FRESH_PRODUCE_ITEMS,
-} from "./consolidation.js";
-export type { IngredientLedger, IngredientLedgerEntry } from "./consolidation.js";
 export { applyCap, WEEKDAY_CAP, SATURDAY_CAP } from "./cap.js";
 export type { SlotPick, ApplyCapArgs, ApplyCapResult } from "./cap.js";
-export { generateWeek, rankCandidatesForSlot } from "./generateWeek.js";
-export type {
-  GenerateWeekArgs,
-  GeneratedWeek,
-  GeneratedWeekDay,
-  GeneratedWeekSlot,
-  RankCandidatesForSlotArgs,
-} from "./generateWeek.js";
+export type { GeneratedWeek, GeneratedWeekDay, GeneratedWeekSlot } from "./generateWeek.js";
 export { aggregateGroceryList } from "./groceryList.js";
 export type { GroceryItem, GroceryList, GroceryDayPicks } from "./groceryList.js";
 export {
@@ -103,11 +55,18 @@ export {
 export type { DishMacros } from "./nutrition.js";
 export { rankPickerAlternatives } from "./pickerRanking.js";
 export type { PickerRankingArgs } from "./pickerRanking.js";
-export { planRequests, slotKey, slotAcceptsDish } from "./requests.js";
-export type { PlanRequestsArgs, PlanRequestsResult, RequestPlacement } from "./requests.js";
-export { planFavorites } from "./favorites.js";
-export type { PlanFavoritesArgs, PlanFavoritesResult, FavoritePlacement } from "./favorites.js";
-export { rankExplore } from "./explore.js";
-export type { ExploreRankedDish, ExploreAffinityKey, RankExploreArgs } from "./explore.js";
-export { deriveHistoryRows } from "./historyRows.js";
-export type { DeriveHistoryRowsArgs } from "./historyRows.js";
+export { toLongDay } from "./historyRows.js";
+
+/**
+ * The v6 engine (`features/engine-v6.md`), the only selection engine now that
+ * the v3 modules are gone (§12, §13).
+ *
+ * Re-exported wholesale from `./v6/index.ts`, which is the curated surface; this
+ * file adds no v6 name of its own. Three names leave v6 aliased there rather than
+ * here, because the v3 engine held those names when the alias was written: `Day`
+ * and `Pick` leave as `V6Day` and `V6Pick`, and `ExploreAffinityKey` leaves as
+ * `ExploreAffinityKeyV6`. The aliases stay as they are: renaming a v6 export is
+ * `engine/src/v6/index.ts`'s call, not this file's, and every caller already
+ * reads the aliased names.
+ */
+export * from "./v6/index.js";

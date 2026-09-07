@@ -1,0 +1,609 @@
+/**
+ * §6 the orchestrator, tested on the household's own eight served weeks.
+ *
+ * Every case here is an observation the composition would fail without the step
+ * it guards, not a restatement of the implementation: §10's determinism under
+ * both input orders, each of §6's six steps visible in one generated week, the
+ * generated plan matching the placed picks exactly (which is what lets §3.1's
+ * replay reproduce a generation), the §6 step 6 refund-and-charge rule, and §12's
+ * derived cutover week.
+ */
+
+import { describe, expect, it } from "vitest";
+import type { Dish } from "../../src/data/schemas.js";
+import {
+  applyRepairsToLedger,
+  deriveCutoverWeek,
+  generateWeekV6,
+  presenceOccasionsOf,
+} from "../../src/v6/generateWeekV6.js";
+import { charge, deficitIn, emptyLedger } from "../../src/v6/ledger.js";
+import { deriveRecordStats, presenceDaysOf, seasonOfWeek } from "../../src/v6/record.js";
+import { proteinFamily } from "../../src/v6/compose.js";
+import {
+  isCarbForwardInternational as isCarbForward,
+  isEverydayBase as isBase,
+} from "../../src/v6/pools.js";
+import type { Repair } from "../../src/v6/place.js";
+import type {
+  GenerateWeekV6Args,
+  PickRole,
+  PlanPick,
+  RecordWeek,
+  Scope,
+} from "../../src/v6/types.js";
+import { loadRecordFixture } from "./loadRecordFixture.js";
+import { loadLiveData } from "../loadLive.js";
+
+const live = loadLiveData();
+const library: Dish[] = live.library;
+const record = loadRecordFixture("record-8weeks", library);
+
+/** The Monday after the last served week of the fixture. */
+const WEEK_START = "2026-08-17";
+
+function baseArgs(overrides: Partial<GenerateWeekV6Args> = {}): GenerateWeekV6Args {
+  return {
+    weekStart: WEEK_START,
+    season: "Monsoon",
+    library,
+    record,
+    favoriteDishIds: [],
+    nutrition: { ingredients: live.ingredients, catalog: live.catalog },
+    ...overrides,
+  };
+}
+
+function dishById(id: number): Dish | undefined {
+  return library.find((dish) => dish.id === id);
+}
+
+function idOf(name: string): number {
+  const dish = library.find((candidate) => candidate.name.toLowerCase() === name.toLowerCase());
+  if (!dish) throw new Error(`fixture dish not found: ${name}`);
+  return dish.id;
+}
+
+/** A stable serialization of everything a generated week promises to be. */
+function fingerprint(week: ReturnType<typeof generateWeekV6>): string {
+  return JSON.stringify({
+    weekStart: week.weekStart,
+    days: week.days.map((day) => ({
+      day: day.day,
+      slots: day.slots.map((slot) => ({
+        meal: slot.meal,
+        dishes: slot.dishes.map((dish) => dish.id),
+      })),
+      fruit: day.fruit?.id ?? null,
+    })),
+    droppedDishIds: week.droppedDishIds,
+    incidents: week.incidents,
+    unplacedFavorites: week.unplacedFavorites,
+    generatedPlan: week.generatedPlan,
+    diagnostics: week.diagnostics,
+  });
+}
+
+describe("generateWeekV6 determinism (§10)", () => {
+  it("returns a byte-identical week for two calls with the same inputs", () => {
+    expect(fingerprint(generateWeekV6(baseArgs()))).toBe(fingerprint(generateWeekV6(baseArgs())));
+  });
+
+  it("is unchanged when the library array is reversed", () => {
+    const forward = fingerprint(generateWeekV6(baseArgs()));
+    const reversed = fingerprint(generateWeekV6(baseArgs({ library: [...library].reverse() })));
+    expect(reversed).toBe(forward);
+  });
+
+  it("is unchanged when the record array is reversed", () => {
+    const forward = fingerprint(generateWeekV6(baseArgs()));
+    const reversed = fingerprint(generateWeekV6(baseArgs({ record: [...record].reverse() })));
+    expect(reversed).toBe(forward);
+  });
+
+  it("stays deterministic under §11's frozen run, whose stats are two derivations merged", () => {
+    // The frozen run reads a merged `RecordStats` (cutover rates, live memories),
+    // so it has a map built from the union of two key sets. Union order is exactly
+    // where a merge leaks input order into output, which §10 forbids.
+    const args = baseArgs({ variant: { frozenRates: true } });
+    expect(fingerprint(generateWeekV6(args))).toBe(fingerprint(generateWeekV6(args)));
+    const reversed = baseArgs({
+      variant: { frozenRates: true },
+      library: [...library].reverse(),
+      record: [...record].reverse(),
+    });
+    expect(fingerprint(generateWeekV6(reversed))).toBe(fingerprint(generateWeekV6(args)));
+  });
+});
+
+describe("generateWeekV6 output shape (§6, §12)", () => {
+  const week = generateWeekV6(baseArgs());
+
+  it("schedules Monday to Saturday and never Sunday (§4)", () => {
+    expect(week.days.map((day) => day.day)).toEqual(["Mon", "Tue", "Wed", "Thu", "Fri", "Sat"]);
+  });
+
+  it("gives every weekday a breakfast and a lunch, and Saturday a lunch only", () => {
+    for (const day of week.days) {
+      const meals = day.slots.map((slot) => slot.meal).sort();
+      expect(meals).toEqual(day.day === "Sat" ? ["Lunch"] : ["Breakfast", "Lunch"]);
+    }
+  });
+
+  it("carries one fruit a day, six in the week (§9)", () => {
+    expect(week.days.filter((day) => day.fruit !== undefined)).toHaveLength(6);
+  });
+
+  it("returns a generated plan equal to the picks it placed (§12)", () => {
+    const placed = week.days
+      .flatMap((day) => [
+        ...day.slots.flatMap((slot) =>
+          slot.dishes.map((dish) => ({
+            day: day.day,
+            meal: slot.meal === "Breakfast" ? "breakfast" : "lunch",
+            dishId: dish.id,
+          })),
+        ),
+        ...(day.fruit ? [{ day: day.day, meal: "fruit", dishId: day.fruit.id }] : []),
+      ])
+      .map((pick) => `${pick.day}:${pick.meal}:${pick.dishId}`)
+      .sort();
+    const planned = week.generatedPlan
+      .map((pick) => `${pick.day}:${pick.meal}:${pick.dishId}`)
+      .sort();
+    expect(planned).toEqual(placed);
+  });
+});
+
+describe("generateWeekV6 composes every §6 step", () => {
+  it("step 2 pins a favorite into exactly one slot", () => {
+    // Fish tikka is a weekday lunch star in the record (7 rows over 36 weekday
+    // lunch occasions), so it has a pool to be pinned into and a rate low enough
+    // that §3's charge keeps it from earning a second placement in the same week.
+    const favorite = idOf("Fish tikka");
+    const week = generateWeekV6(baseArgs({ favoriteDishIds: [favorite] }));
+    const placements = week.generatedPlan.filter((pick) => pick.dishId === favorite);
+    expect(week.unplacedFavorites).not.toContain(favorite);
+    expect(placements).toHaveLength(1);
+  });
+
+  it("step 3 places exactly one exploration pick, at a weekday lunch (§7)", () => {
+    const week = generateWeekV6(baseArgs());
+    const exploration = week.diagnostics.exploration;
+    expect(exploration).not.toBeNull();
+    const placements = week.generatedPlan.filter(
+      (pick) => pick.dishId === (exploration?.dishId ?? -1),
+    );
+    expect(placements).toHaveLength(1);
+    expect(placements[0].meal).toBe("lunch");
+    expect(placements[0].day).not.toBe("Sat");
+  });
+
+  it("step 4 builds a Saturday plate of treat plus dessert (§5.4)", () => {
+    const week = generateWeekV6(baseArgs());
+    const saturday = week.days.find((day) => day.day === "Sat");
+    const lunch = saturday?.slots.find((slot) => slot.meal === "Lunch");
+    expect(lunch).toBeDefined();
+    expect(lunch?.dishes.length).toBeGreaterThanOrEqual(2);
+    expect(lunch?.dishes.length).toBeLessThanOrEqual(3);
+    expect(lunch?.dishes.some((dish) => dish.category === "Dessert")).toBe(true);
+    // The treat leads the plate: §6 step 6's anchor repair guarantees it.
+    expect(lunch?.dishes[0].category).not.toBe("Dessert");
+  });
+
+  it("step 4 anchors Thursday breakfast on eggs (§4 anchor 2)", () => {
+    const week = generateWeekV6(baseArgs());
+    const thursday = week.days.find((day) => day.day === "Thu");
+    const breakfast = thursday?.slots.find((slot) => slot.meal === "Breakfast");
+    expect(breakfast).toBeDefined();
+    expect(breakfast?.dishes.some((dish) => proteinFamily(dish.primaryIngredient) === "Egg")).toBe(
+      true,
+    );
+  });
+
+  it("step 4 keeps weekday lunches inside the §5.3 international ceiling", () => {
+    const week = generateWeekV6(baseArgs());
+    const stars = week.days
+      .filter((day) => day.day !== "Sat")
+      .map((day) => day.slots.find((slot) => slot.meal === "Lunch")?.dishes[0])
+      .filter((dish): dish is Dish => dish !== undefined);
+    expect(stars.filter((dish) => dish.cuisine !== "Indian").length).toBeLessThanOrEqual(2);
+    expect(week.diagnostics.weekdayInternationalStars).toBeLessThanOrEqual(2);
+  });
+
+  it("step 6 never leaves two gravies on one lunch (§5.1, hard rule)", () => {
+    const week = generateWeekV6(baseArgs());
+    for (const day of week.days) {
+      const lunch = day.slots.find((slot) => slot.meal === "Lunch");
+      if (!lunch) continue;
+      const gravies = lunch.dishes.filter((dish) => dish.category === "Gravy dish");
+      expect(gravies.length).toBeLessThanOrEqual(1);
+    }
+  });
+});
+
+describe("§6 step 6 repairs refund the replaced dish and charge the replacement", () => {
+  it("refunds the removed dish and charges the one that took its place", () => {
+    const replacedId = idOf("Fish tikka");
+    const replacementId = idOf("Chicken tikka");
+    // Both dishes start one serving into the red, so a repair that swaps one for
+    // the other must leave the replaced dish at 0 and the replacement at -2.
+    let ledger = charge(
+      charge(emptyLedger(), replacedId, "weekdayLunch"),
+      replacementId,
+      "weekdayLunch",
+    );
+    expect(deficitIn(ledger, replacedId, "weekdayLunch")).toBe(-1);
+    expect(deficitIn(ledger, replacementId, "weekdayLunch")).toBe(-1);
+
+    const repairs: Repair[] = [
+      {
+        day: "Tue",
+        meal: "lunch",
+        replaced: {
+          meal: "lunch",
+          dishId: replacedId,
+          role: "companion",
+          scope: "weekdayLunch",
+          origin: "deficit",
+        },
+        replacement: {
+          meal: "lunch",
+          dishId: replacementId,
+          role: "companion",
+          scope: "weekdayLunch",
+          origin: "deficit",
+        },
+        reason: "prep-ceiling",
+        swappedWithDay: null,
+      },
+    ];
+    ledger = applyRepairsToLedger(ledger, repairs);
+    expect(deficitIn(ledger, replacedId, "weekdayLunch")).toBe(0);
+    expect(deficitIn(ledger, replacementId, "weekdayLunch")).toBe(-2);
+  });
+
+  it("leaves the ledger untouched for a whole-plate swap", () => {
+    const dish = idOf("Fish tikka");
+    const ledger = charge(emptyLedger(), dish, "weekdayLunch");
+    const swap: Repair[] = [
+      {
+        day: "Mon",
+        meal: "lunch",
+        replaced: null,
+        replacement: null,
+        reason: "consecutive-rice",
+        swappedWithDay: "Wed",
+      },
+    ];
+    expect(deficitIn(applyRepairsToLedger(ledger, swap), dish, "weekdayLunch")).toBe(-1);
+  });
+
+  it("keeps a dish a repair removed out of the generated plan", () => {
+    const week = generateWeekV6(baseArgs());
+    for (const repair of week.diagnostics.repairs) {
+      if (repair.removedDishId === null || repair.addedDishId === null) continue;
+      const stillOnThatSlot = week.generatedPlan.some(
+        (pick) =>
+          pick.day === repair.day &&
+          pick.meal === repair.meal &&
+          pick.dishId === repair.removedDishId,
+      );
+      expect(stillOnThatSlot).toBe(false);
+    }
+  });
+});
+
+describe("§12 the cutover week is derived, never configured", () => {
+  const plan = [{ day: "Mon" as const, meal: "lunch" as const, dishId: 1 }];
+
+  it("is the generating week when no record week carries a generated plan", () => {
+    expect(deriveCutoverWeek(record, WEEK_START)).toBe(WEEK_START);
+  });
+
+  it("is the earliest record week that carries a generated plan", () => {
+    const withPlans: RecordWeek[] = record.map((week, index) => ({
+      ...week,
+      generatedPlan: index >= 5 ? plan : null,
+    }));
+    expect(deriveCutoverWeek(withPlans, WEEK_START)).toBe(withPlans[5].weekStart);
+  });
+
+  it("ignores record rows at or after the generating week", () => {
+    const later: RecordWeek[] = [
+      { weekStart: WEEK_START, picks: [], skippedDays: [], generatedPlan: plan },
+    ];
+    expect(deriveCutoverWeek(later, WEEK_START)).toBe(WEEK_START);
+  });
+
+  it("replays from the derived cutover, so a self-fed week is stable", () => {
+    // The engine's own first week becomes the cutover for every week after it,
+    // which is what stops the cold start from moving each time a week is written.
+    const first = generateWeekV6(baseArgs());
+    const withFirst: RecordWeek[] = [
+      ...record,
+      {
+        weekStart: WEEK_START,
+        picks: first.generatedPlan,
+        skippedDays: [],
+        generatedPlan: first.generatedPlan,
+      },
+    ];
+    const second = generateWeekV6(baseArgs({ weekStart: "2026-08-24", record: withFirst }));
+    expect(second.diagnostics.cutoverWeek).toBe(WEEK_START);
+  });
+});
+
+describe("§9 the item cap is the safety net behind the ceilings", () => {
+  it("never leaves a weekday over 5 items or a Saturday over 3", () => {
+    const week = generateWeekV6(baseArgs());
+    for (const day of week.days) {
+      const items = day.slots.reduce((sum, slot) => sum + slot.dishes.length, 0);
+      expect(items).toBeLessThanOrEqual(day.day === "Sat" ? 3 : 5);
+    }
+  });
+
+  it("resolves every placed dish against the library", () => {
+    const week = generateWeekV6(baseArgs());
+    for (const pick of week.generatedPlan) {
+      expect(dishById(pick.dishId), `dish ${pick.dishId} is not in the library`).toBeDefined();
+    }
+  });
+});
+
+// ---------------------------------------------------------------------------
+// §9 within-week fruit repeats, end to end
+// ---------------------------------------------------------------------------
+
+describe("§9 within-week fruit repeats", () => {
+  /** The library with every Category Fruit dish inactive except the named ones. */
+  function libraryWithFruits(names: string[]): Dish[] {
+    const keep = new Set(names.map((name) => name.toLowerCase()));
+    return library.map((dish) =>
+      dish.category === "Fruit" && !keep.has(dish.name.toLowerCase())
+        ? { ...dish, active: "No" as const }
+        : dish,
+    );
+  }
+
+  const bowlsOf = (week: ReturnType<typeof generateWeekV6>): string[] =>
+    week.days.filter((day) => day.fruit !== undefined).map((day) => (day.fruit as Dish).name);
+
+  it("gives a six-fruit season six distinct bowls", () => {
+    // The eligible in-season set holds exactly six, so §9's "repeats only under a
+    // set smaller than six" leaves no room for one.
+    const names = [
+      "Mango bowl",
+      "Banana bowl",
+      "Papaya bowl",
+      "Jamun bowl",
+      "Litchi bowl",
+      "Pomegranate bowl",
+    ];
+    const week = generateWeekV6(baseArgs({ library: libraryWithFruits(names) }));
+    const bowls = bowlsOf(week);
+    expect(bowls).toHaveLength(6);
+    expect(new Set(bowls).size).toBe(6);
+  });
+
+  it("repeats under a three-fruit season, but never on consecutive days", () => {
+    const week = generateWeekV6(
+      baseArgs({ library: libraryWithFruits(["Mango bowl", "Banana bowl", "Papaya bowl"]) }),
+    );
+    const bowls = bowlsOf(week);
+    expect(bowls).toHaveLength(6);
+    // Three bowls over six days must repeat; §9 only asks that a repeat is spread.
+    expect(new Set(bowls).size).toBe(3);
+    for (let index = 0; index + 1 < bowls.length; index += 1) {
+      expect(bowls[index], `bowls: ${bowls.join(", ")}`).not.toBe(bowls[index + 1]);
+    }
+    // Evenly, two each: the least-placed tier is what stops one bowl taking four.
+    for (const name of new Set(bowls)) {
+      expect(bowls.filter((bowl) => bowl === name)).toHaveLength(2);
+    }
+  });
+
+  it("is deterministic under both fruit seasons (§10)", () => {
+    for (const names of [
+      ["Mango bowl", "Banana bowl", "Papaya bowl"],
+      ["Mango bowl", "Banana bowl", "Papaya bowl", "Jamun bowl", "Litchi bowl", "Pomegranate bowl"],
+    ]) {
+      const args = baseArgs({ library: libraryWithFruits(names) });
+      expect(fingerprint(generateWeekV6(args))).toBe(fingerprint(generateWeekV6(args)));
+    }
+  });
+});
+
+// ---------------------------------------------------------------------------
+// §3.2 presence ledgers, end to end
+// ---------------------------------------------------------------------------
+
+describe("§3.2 presence ledgers, over a self-fed horizon", () => {
+  /** Generate `weeks` weeks self-feeding from the fixture, as the §11 harness does. */
+  function selfFeed(weeks: number, seed: RecordWeek[] = record) {
+    const rolling: RecordWeek[] = [...seed];
+    const generated: Array<ReturnType<typeof generateWeekV6>> = [];
+    let weekStart = WEEK_START;
+    for (let index = 0; index < weeks; index += 1) {
+      const week = generateWeekV6(
+        baseArgs({ weekStart, record: rolling, season: seasonOfWeek(weekStart) }),
+      );
+      generated.push(week);
+      rolling.push({
+        weekStart,
+        picks: week.generatedPlan,
+        skippedDays: [],
+        generatedPlan: week.generatedPlan,
+      });
+      const next = new Date(`${weekStart}T00:00:00Z`);
+      next.setUTCDate(next.getUTCDate() + 7);
+      weekStart = next.toISOString().slice(0, 10);
+    }
+    return generated;
+  }
+
+  /**
+   * The served presence rate of a scope, metered by role off the engine's own
+   * diagnostics: the §3.2 quantity the presence ledger charges, and the one §11
+   * threshold 11 compares against `RecordStats.presenceRate`.
+   */
+  const presenceOf = (
+    weeks: Array<ReturnType<typeof generateWeekV6>>,
+    scope: "weekdayLunch" | "saturday",
+  ): number => {
+    const slots = scope === "saturday" ? 1 : 5;
+    let carried = 0;
+    for (const week of weeks) carried += week.diagnostics.presenceOccasions[scope] ?? 0;
+    const occasions = weeks.length * slots;
+    return occasions > 0 ? carried / occasions : 0;
+  };
+
+  it("holds the weekday companion slot inside §3.2's own bar over 20 weeks", () => {
+    const weeks = selfFeed(20);
+    const served = presenceOf(weeks, "weekdayLunch");
+    const target =
+      deriveRecordStats(record, library, seasonOfWeek(WEEK_START)).presenceRate.weekdayLunch ?? 0;
+    expect(target).toBeGreaterThan(0);
+    // §3.2's reopening trigger is 25 percent over the record's own rate, and it is
+    // the bar this ledger exists to hold. Without the ledger this ran at 0.71
+    // against a record rate near 0.58, which is what armed the trigger.
+    expect(served).toBeGreaterThan(target * 0.75);
+    expect(served).toBeLessThan(target * 1.25);
+  });
+
+  it("keeps Saturday's third item off every Saturday, structural forms included", () => {
+    const weeks = selfFeed(20);
+    const served = presenceOf(weeks, "saturday");
+    // The record's Saturday third-item presence is 0.75. The structural
+    // dry-protein partner and the special protein beside an everyday base charge
+    // the slot as an accompaniment does, so they cannot hold it at 1.00.
+    expect(served).toBeLessThan(1);
+    expect(served).toBeGreaterThan(0.4);
+  });
+
+  it("charges Saturday presence for a structural partner or special protein", () => {
+    const weeks = selfFeed(12);
+    const structuralThirds = weeks.filter((week) => {
+      const saturday = week.generatedPlan.filter(
+        (pick) => pick.day === "Sat" && pick.meal === "lunch",
+      );
+      if (saturday.length < 3) return false;
+      const lead = dishById(saturday[0].dishId);
+      return lead !== undefined && (isCarbForward(lead) || isBase(lead));
+    });
+    // The horizon has to contain at least one, or the assertion below is vacuous.
+    expect(structuralThirds.length).toBeGreaterThan(0);
+    // And a Saturday with no third item has to exist too, which is only possible
+    // if those structural forms spent the slot's presence.
+    expect(
+      weeks.some(
+        (week) =>
+          week.generatedPlan.filter((pick) => pick.day === "Sat" && pick.meal === "lunch").length <
+          3,
+      ),
+    ).toBe(true);
+  });
+
+  it("is deterministic across a replayed horizon (§10)", () => {
+    expect(selfFeed(6).map(fingerprint)).toEqual(selfFeed(6).map(fingerprint));
+  });
+
+  /**
+   * The §5.1 protein-floor append is a safety net, not a companion, so it must not
+   * spend the weekday companion slot's presence budget. These are the plates that
+   * would have been charged under the plate-size reading.
+   */
+  it("never charges the weekday slot for a protein-floor append", () => {
+    const pick = (dishId: number, role: PickRole): Omit<PlanPick, "day"> => ({
+      meal: "lunch",
+      dishId,
+      role,
+      scope: "weekdayLunch",
+      origin: role === "floor" ? "structural" : "deficit",
+    });
+    const plate = (picks: Array<Omit<PlanPick, "day">>, scope: Scope = "weekdayLunch") => ({
+      meal: "lunch" as const,
+      scope,
+      day: "Mon" as const,
+      picks,
+    });
+
+    // Three picks, no companion: the floor took a two-item plate to three.
+    expect(
+      presenceOccasionsOf([
+        plate([
+          pick(idOf("Aloo matar"), "star"),
+          pick(idOf("Roti"), "carb"),
+          pick(idOf("Grilled chicken breast"), "floor"),
+        ]),
+      ]).weekdayLunch,
+    ).toBe(0);
+
+    // Four picks, and one of them is a companion: the floor comes off, the
+    // companion stays, and the slot is charged once.
+    expect(
+      presenceOccasionsOf([
+        plate([
+          pick(idOf("Aloo matar"), "star"),
+          pick(idOf("Roti"), "carb"),
+          pick(idOf("Cucumber raita"), "companion"),
+          pick(idOf("Grilled chicken breast"), "floor"),
+        ]),
+      ]).weekdayLunch,
+    ).toBe(1);
+
+    // Two picks, one of them a companion: §5.1's complete plate takes one small
+    // companion, which plate size cannot see and the role can.
+    expect(
+      presenceOccasionsOf([
+        plate([pick(idOf("Khichdi"), "star"), pick(idOf("Onion tomato salad"), "companion")]),
+      ]).weekdayLunch,
+    ).toBe(1);
+
+    // Saturday counts any third item, structural roles included (§3.2).
+    expect(
+      presenceOccasionsOf([
+        plate(
+          [
+            pick(idOf("Khichdi"), "treat"),
+            pick(idOf("Kheer"), "dessert"),
+            pick(idOf("Grilled chicken breast"), "special-protein"),
+          ],
+          "saturday",
+        ),
+      ]).saturday,
+    ).toBe(1);
+  });
+
+  it("keeps the served and record readings of presence within the record's own ambiguity", () => {
+    const weeks = selfFeed(20);
+    let byRole = 0;
+    let byClassification = 0;
+    let plateSize = 0;
+    let floorRepairs = 0;
+    for (const week of weeks) {
+      byRole += week.diagnostics.presenceOccasions.weekdayLunch ?? 0;
+      byClassification += presenceDaysOf(week.generatedPlan, "weekdayLunch", library).size;
+      for (const day of ["Mon", "Tue", "Wed", "Thu", "Fri"]) {
+        const items = week.generatedPlan.filter(
+          (entry) => entry.day === day && entry.meal === "lunch",
+        ).length;
+        if (items >= 3) plateSize += 1;
+      }
+      floorRepairs += week.diagnostics.repairs.filter(
+        (repair) => repair.constraint === "protein-floor",
+      ).length;
+    }
+    // The horizon has to exercise the floor, or the first assertion is vacuous.
+    expect(floorRepairs).toBeGreaterThan(0);
+    // Plate size counts floor appends as companions; neither of the two real
+    // measures does, so both sit below it.
+    expect(byRole).toBeLessThan(plateSize);
+    // The two readings of the one quantity: the record carries no roles, so a
+    // plate of a dry-protein star, a carb and a gravy companion is indistinguishable
+    // from a gravy star, a carb and a floor append, and the classification reads
+    // some of those the other way. The residual is small and bounded; a wide gap
+    // would put every §11 threshold 11 number out by that much.
+    expect(Math.abs(byRole - byClassification) / byRole).toBeLessThan(0.15);
+  });
+});

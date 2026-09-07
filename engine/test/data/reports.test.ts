@@ -1,7 +1,6 @@
 import { describe, it, expect } from "vitest";
 import {
   coverageReport,
-  poolCoverageReport,
   hpProteinConsistencyReport,
   specialSourcingReport,
   HP_PROTEIN_THRESHOLD_PER_PERSON,
@@ -108,37 +107,6 @@ describe("coverageReport", () => {
     // desync). If a future active dish legitimately ships on the no-photo
     // fallback, relax this to a tracked count with the bake printing the expected.
     expect(cov.withPhoto).toBe(cov.activeDishCount);
-  });
-});
-
-describe("poolCoverageReport", () => {
-  it("emits one row per slot per season and never throws on live data", () => {
-    const { library } = loadLiveData();
-    const pools = poolCoverageReport(library);
-    const seasons = new Set(pools.map((p) => p.season));
-    expect(seasons).toEqual(new Set(["Summer", "Monsoon", "Winter"]));
-    // 18 slot rows per season (see the report's slot table). Engine v3 folded the
-    // Menu 1/2 dal + dry-sabzi rows into one weekday-companion row and added a
-    // protein-floor row, and split the single lunch-carb row into Rice + Chapati
-    // (§3.4). Net: 19 -> 18.
-    expect(pools.filter((p) => p.season === "Summer").length).toBe(18);
-    // Counts are non-negative integers.
-    for (const p of pools) expect(p.count).toBeGreaterThanOrEqual(0);
-  });
-
-  it("surfaces the Fruit pool from live data", () => {
-    // The expansion-0 batch deepened this slot from 1 to 3 candidates
-    // (Seasonal fruit, Banana bowl, Papaya bowl). The seasonal-fruits-7 batch
-    // then added 7 dishes; for Summer it adds Mango bowl and Litchi bowl (both
-    // [Summer, Monsoon]). The generic Seasonal fruit dish (id 123, seasons All)
-    // was later deactivated (active: No), so it leaves every in-season pool: the
-    // Summer Fruit pool is now 4. The report tracks live (active-filtered) data;
-    // the assertion is the current floor, not the old thin baseline.
-    const { library } = loadLiveData();
-    const pools = poolCoverageReport(library);
-    const fruit = pools.find((p) => p.season === "Summer" && p.slot.includes("Fruit"));
-    expect(fruit).toBeDefined();
-    expect(fruit!.count).toBe(4);
   });
 });
 

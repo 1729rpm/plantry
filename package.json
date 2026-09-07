@@ -11,6 +11,7 @@
   "scripts": {
     "bake": "npm run bake --workspace @plantry/engine",
     "reports": "npm run reports --workspace @plantry/engine",
+    "gate": "npm run gate --workspace @plantry/engine",
     "typecheck": "tsc -b",
     "lint": "eslint .",
     "lint:css": "stylelint \"app/web/src/**/*.css\"",

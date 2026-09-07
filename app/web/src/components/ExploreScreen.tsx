@@ -12,7 +12,7 @@
 import { useMemo, useState } from "react";
 import { useMutation, useQuery } from "convex/react";
 import { anyApi } from "convex/server";
-import type { ExploreAffinityKey } from "@plantry/engine";
+import type { ExploreAffinityKeyV6 as ExploreAffinityKey } from "@plantry/engine";
 import type { CurrentWeek, Identity, Meal, ShortDay } from "../lib/types.js";
 import type { Dish } from "@plantry/engine";
 import { dishById, dishPhotoUrl, exploreCardTags } from "../lib/library.js";

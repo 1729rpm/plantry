@@ -1,9 +1,8 @@
 import { query, mutation } from "./_generated/server.js";
 import { v, ConvexError } from "convex/values";
-import { dishes, ingredients, catalog } from "@plantry/engine/library";
-import { history } from "@plantry/engine/history";
+import { dishes } from "@plantry/engine/library";
 import { rankPickerAlternatives } from "@plantry/engine";
-import type { Dish, Season, MenuHistoryRow } from "@plantry/engine";
+import type { Dish, Season } from "@plantry/engine";
 import { assertAuthor } from "./lib/author.js";
 import type { SlotMeal } from "./lib/meals.js";
 
@@ -39,28 +38,20 @@ function seasonOf(isoDate: string): Season {
   return "Winter";
 }
 
-const LONG_DAY: Record<ShortDay, MenuHistoryRow["day"]> = {
-  Mon: "Monday",
-  Tue: "Tuesday",
-  Wed: "Wednesday",
-  Thu: "Thursday",
-  Fri: "Friday",
-  Sat: "Saturday",
-};
-
 /**
- * Collects the picks already on the live week, optionally excluding one
- * (day, meal, position). Used to seed the §6 consolidation ledger and the
- * within-week synthetic history that drives §4 step 1 longest-unused. The
- * caller passes `exclude` so the slot/position being ranked does not
- * double-count its own current pick.
+ * The library dish ids already placed on the live week, optionally excluding one
+ * (day, meal, position). This is the week's own as-eaten state, the record's
+ * present tense (`features/engine-v6.md` §2.1), and it is the whole recency input
+ * the picker takes: a dish is "recent" exactly when it is already on this week's
+ * plate (§12). The caller passes `exclude` so the slot and position being ranked
+ * does not count its own current pick against itself. Custom one-offs carry no
+ * library id, so they contribute nothing.
  */
-function collectCurrentWeekPicks(
+function dishIdsPlacedThisWeek(
   slots: ReadonlyArray<SlotShape>,
   exclude: { day: ShortDay; meal: SlotMeal; position: number } | null,
-): Dish[] {
-  const libraryById = new Map<number, Dish>(dishes.map((d) => [d.id, d]));
-  const picks: Dish[] = [];
+): Set<number> {
+  const placed = new Set<number>();
   for (const slot of slots) {
     for (let position = 0; position < slot.dishes.length; position += 1) {
       if (
@@ -73,11 +64,10 @@ function collectCurrentWeekPicks(
       }
       const dishId = slot.dishes[position].dishId;
       if (dishId === null) continue;
-      const dish = libraryById.get(dishId);
-      if (dish) picks.push(dish);
+      placed.add(dishId);
     }
   }
-  return picks;
+  return placed;
 }
 
 /**
@@ -115,34 +105,6 @@ function broadPool(meal: SlotMeal, season: Season): Dish[] {
     if (d.seasons === "All") return true;
     return d.seasons.includes(season);
   });
-}
-
-/**
- * Builds the synthetic within-week history the picker ranking reads for its
- * recency term (docs/engine.md §5). Picks already on the plate (other slots,
- * other positions) record a virtual cooking on `weekStart`, so the picker
- * treats them as recently cooked and pushes them down the ranked list. The day
- * tag is cosmetic for recency (the ranking keys on dishId + weekStart), so we
- * tag every synthetic row with the slot's day uniformly.
- */
-function buildSyntheticHistory(
-  weekStart: string,
-  day: ShortDay,
-  meal: SlotMeal,
-  currentWeekPicks: Dish[],
-): MenuHistoryRow[] {
-  // The history row's `meal` field is cosmetic for the recency term (the ranking
-  // keys on dishId + weekStart, not meal), and MenuHistoryRow.meal only admits
-  // Breakfast | Lunch. The fruit slot has no meal-time, so its synthetic rows are
-  // tagged "Breakfast" uniformly; this never affects ordering.
-  const historyMeal = meal === "lunch" ? "Lunch" : "Breakfast";
-  return currentWeekPicks.map((d) => ({
-    weekStart,
-    day: LONG_DAY[day],
-    meal: historyMeal,
-    dishName: d.name,
-    dishId: d.id,
-  }));
 }
 
 /** The dishes already placed on `day` (any meal, any position), library only. */
@@ -185,19 +147,22 @@ function dishesOnDay(slots: ReadonlyArray<SlotShape>, day: ShortDay): Dish[] {
  *     land on any dish; §3 violations (including the meal-time mismatch a
  *     cross-meal pick creates) are signal for the slow loop, not errors the
  *     fast loop blocks. See `docs/product.md` §4 Principle 4.
- *   - Ranks via the engine's picker ranking (`rankPickerAlternatives`,
- *     docs/engine.md §5), NOT §4 selection priority. The head ("fits this day")
- *     is the not-already-on-the-day dishes ranked by recency plus protein-band
- *     similarity to the dish being replaced; the tail is the same-day repeats.
+ *   - Ranks via the engine's picker ranking (`rankPickerAlternatives`), NOT the
+ *     engine's own selection. The head ("fits this day") is the
+ *     not-already-on-the-day dishes; the tail is the same-day repeats.
  *   - Stable-partitions the ranked result so dishes whose own meal-time matches
  *     the slot lead and cross-meal dishes follow, each group keeping its ranked
  *     order. This is caller-side, after the engine ranking (the engine ignores
  *     its `meal` arg). The full partitioned array is returned (search and pills
  *     still reach every dish); only the default suggested head order changes.
  *     The fruit slot needs no partition (its pool is single-purpose).
- *   - Synthetic within-week history from the live week's other picks (the
- *     slot/position being ranked is excluded so its current pick does not count
- *     against itself) feeds the recency term.
+ *   - The recency tier is record-derived and binary (`features/engine-v6.md` §12):
+ *     a dish is recent when it is already on this week's live plate, and the head
+ *     is "not placed this week first, then dish id". The tier is passed to the
+ *     picker as a set of dish ids; the slot and position being ranked is excluded,
+ *     so its current pick does not count against itself. Nothing here reads the
+ *     baked seed history or `weekArchive` any more, and the protein-band
+ *     similarity term §12 removes is gone with them.
  *   - Filters out the currently-picked dish at this position so the user is
  *     not offered the same dish.
  *   - Returns at most `limit` (default 10) Dish objects.
@@ -235,39 +200,27 @@ export const getSlotAlternatives = query({
       currentSlot && currentSlot.dishes[args.position]
         ? currentSlot.dishes[args.position].dishId
         : null;
-    // The dish being replaced: drives the picker's protein-band similarity term
-    // (docs/engine.md §5). Null when the position is a custom one-off (no
-    // library id) — the picker then ranks by recency only.
-    const outgoingDish =
-      currentDishId === null ? undefined : dishes.find((d) => d.id === currentDishId);
-
-    const currentWeekPicks = collectCurrentWeekPicks(slots, {
+    // §12: the recency tier, and nothing else. The set carries only this week's
+    // live picks, so the picker's tiering is binary, "placed this week" versus
+    // "not placed this week". The seed history is not merged in; it is no longer
+    // the record.
+    const placedThisWeek = dishIdsPlacedThisWeek(slots, {
       day: args.day,
       meal: args.meal,
       position: args.position,
     });
-
-    const syntheticHistory = buildSyntheticHistory(
-      args.weekStart,
-      args.day,
-      args.meal,
-      currentWeekPicks,
-    );
 
     const pool = broadPool(args.meal, season);
 
     const ranked = rankPickerAlternatives({
       pool,
       // The engine Meal type is Breakfast | Lunch and the ranking ignores it
-      // (it only orders the pre-filtered pool by recency + protein band; the
-      // pool is already category-filtered for fruit). "Breakfast" is a harmless
-      // placeholder for the fruit slot.
+      // (it only orders the pre-filtered pool by the recency tier then dish id;
+      // the pool is already category-filtered for fruit). "Breakfast" is a
+      // harmless placeholder for the fruit slot.
       meal: args.meal === "lunch" ? "Lunch" : "Breakfast",
       dishesOnDay: dishesOnDay(slots, args.day),
-      history: [...history, ...syntheticHistory],
-      outgoingDish,
-      ingredients,
-      catalog,
+      placedThisWeek,
     });
 
     const filtered = currentDishId === null ? ranked : ranked.filter((d) => d.id !== currentDishId);

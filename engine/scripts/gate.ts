@@ -1,0 +1,1861 @@
+/**
+ * The §11 verification gate (`features/engine-v6.md` §11).
+ *
+ * The gate is part of the v6 spec, not a convenience: "a rule correct in
+ * isolation can be wrong in interaction, and only a long self-feeding simulation
+ * shows it". This harness runs the built engine self-feeding for 60 weeks from a
+ * record fixture, measures every §11 threshold on weeks 20 to 60, and writes
+ * `features/engine-v6-gate-report.md`.
+ *
+ * Three runs, per §11:
+ *
+ * - **Frozen.** Rates fixed at the cutover record for the whole horizon, so a
+ *   family that fails here needs an engine fix rather than a drift fix.
+ * - **Self-feeding.** The production path: every generated week becomes a record
+ *   week with its `generatedPlan` set and its picks eaten, unedited.
+ * - **Corrected.** The self-feeding run with the record's own swap-away list
+ *   replayed, so §3's reconciliation branch executes at least once.
+ *
+ * Four measurement variants run alongside: the cold-start cap at 0.5 and at pool
+ * level, the family governor off, and the §14 rate-formula variant. A fifth,
+ * `starRoleShare`, was measured in gate fix cycle 3 and removed with its numbers
+ * (`types.ts`, `GenerateWeekV6Variant`).
+ *
+ * **The harness streams a line per simulated week.** A 60-week run is slow enough
+ * that a silent process looks hung, and the agent watchdog kills a command that
+ * says nothing for ten minutes.
+ *
+ * Everything here is measurement. It never writes to production, never touches
+ * `data/`, and the report it writes is a working artifact, not a committed one.
+ *
+ * Usage: `npm run gate [record-fixture] [weeks]`, where the fixture is a bare
+ * name under `engine/test/v6/fixtures` or a path to a `RecordWeek[]` JSON file
+ * (which is what stream E1's `recordExport:exportRecord` produces from prod).
+ */
+
+import { readFileSync, mkdirSync, writeFileSync } from "node:fs";
+import { dirname, resolve } from "node:path";
+import { fileURLToPath } from "node:url";
+import type { CatalogIngredient, Dish, Ingredient, Season } from "../src/data/schemas.js";
+import {
+  catalogToPackSizes,
+  dishFilesToLibrary,
+  parseIngredientCatalog,
+} from "../src/data/parse.js";
+import { loadDishFiles } from "./bake.js";
+import { generateWeekV6 } from "../src/v6/generateWeekV6.js";
+import { deriveRecordStats, presenceDaysOf, seasonOfWeek } from "../src/v6/record.js";
+import { addWeeks, isEligibleDish } from "../src/v6/ledger.js";
+import { isEverydayBase, isLunchStar, isStandaloneEggMain } from "../src/v6/pools.js";
+import { proteinFamily, saturdayFormFor } from "../src/v6/compose.js";
+import type {
+  Day,
+  GeneratedWeekV6,
+  GenerateWeekV6Variant,
+  Pick,
+  PickRole,
+  RecordWeek,
+} from "../src/v6/types.js";
+import { loadRecordFixture } from "../test/v6/loadRecordFixture.js";
+
+// ---------------------------------------------------------------------------
+// Shape of a simulation
+// ---------------------------------------------------------------------------
+
+const WEEKDAYS: readonly Day[] = ["Mon", "Tue", "Wed", "Thu", "Fri"];
+const ALL_DAYS: readonly Day[] = [...WEEKDAYS, "Sat"];
+
+/** §11: the horizon is weeks 20 to 60, the steady state. The warm-up is not measured. */
+export const HORIZON_FROM = 20;
+export const DEFAULT_WEEKS = 60;
+
+export interface GateData {
+  library: Dish[];
+  ingredients: Ingredient[];
+  catalog: CatalogIngredient[];
+}
+
+export interface SimulateArgs {
+  data: GateData;
+  /** The seed record: the household's served weeks. */
+  record: RecordWeek[];
+  weeks: number;
+  variant?: GenerateWeekV6Variant;
+  /**
+   * The corrected run's swap-away dish ids (§11): every dish the household
+   * removed after generation in the served weeks. A generated week that proposes
+   * one of these has that pick removed from its **eaten** picks; the plan keeps
+   * it, which is exactly the §3 no-refund case.
+   */
+  swapAway?: ReadonlySet<number>;
+  /** Called once per simulated week so a long run is never silent. */
+  onWeek?: (index: number, weekStart: string, week: GeneratedWeekV6) => void;
+}
+
+export interface SimulatedWeek {
+  /** 1-based index within the run. */
+  index: number;
+  weekStart: string;
+  season: Season;
+  week: GeneratedWeekV6;
+  /** The picks the household is modelled as having eaten (the plan, minus swap-aways). */
+  eaten: Pick[];
+}
+
+/**
+ * Run the engine self-feeding for `weeks` weeks from the seed record.
+ *
+ * Each generated week becomes a record week: its `generatedPlan` is what the
+ * engine placed and its `picks` are what the household ate, which in the frozen
+ * and self-feeding runs is the same list and in the corrected run is that list
+ * minus the household's swap-aways.
+ */
+export function simulate(args: SimulateArgs): SimulatedWeek[] {
+  const { data, weeks, variant, swapAway, onWeek } = args;
+  const seed = [...args.record].sort((a, b) => (a.weekStart < b.weekStart ? -1 : 1));
+  const first =
+    seed.length > 0 ? addWeeks(seed[seed.length - 1].weekStart, 1) : addWeeks("2026-01-05", 0);
+
+  const record: RecordWeek[] = [...seed];
+  const out: SimulatedWeek[] = [];
+  for (let index = 0; index < weeks; index += 1) {
+    const weekStart = addWeeks(first, index);
+    const season = seasonOfWeek(weekStart);
+    const week = generateWeekV6({
+      weekStart,
+      season,
+      library: data.library,
+      record,
+      favoriteDishIds: [],
+      variant,
+      nutrition: { ingredients: data.ingredients, catalog: data.catalog },
+    });
+    const eaten =
+      swapAway && swapAway.size > 0
+        ? week.generatedPlan.filter((pick) => !swapAway.has(pick.dishId))
+        : week.generatedPlan;
+    record.push({
+      weekStart,
+      picks: eaten,
+      skippedDays: [],
+      generatedPlan: week.generatedPlan,
+    });
+    out.push({ index: index + 1, weekStart, season, week, eaten });
+    onWeek?.(index + 1, weekStart, week);
+  }
+  return out;
+}
+
+// ---------------------------------------------------------------------------
+// Families (§11 threshold 1), keyed on library fields and never on dish names
+// ---------------------------------------------------------------------------
+
+export const FAMILIES = [
+  "chicken",
+  "paneer",
+  "egg",
+  "fish",
+  "prawn",
+  "mutton",
+  "dal-family",
+  "international",
+  "plain roti",
+  "specialty roti",
+  "salad",
+  "raita/curd",
+] as const;
+export type FamilyKey = (typeof FAMILIES)[number];
+
+/**
+ * The pulses that make a star a dal-family lunch (§5.1: dal, kadhi, chole, rajma,
+ * sambar). The star test is what keeps missi roti (a Chapati) and hummus (an
+ * Accompaniment) out, both of which share a pulse primary ingredient.
+ */
+const PULSES = new Set([
+  "Toor Dal",
+  "Moong Dal",
+  "Masoor Dal",
+  "Chana Dal",
+  "Black Urad",
+  "Kidney Bean",
+  "Chickpea",
+  "Sprout",
+]);
+
+/** The animal proteins §11 threshold 13 counts a weekday lunch as carrying. */
+const ANIMAL_PRIMARIES = new Set([
+  "Chicken",
+  "Chicken Breast",
+  "Chicken Keema",
+  "Fish",
+  "Prawn",
+  "Mutton",
+  "Egg",
+]);
+
+/**
+ * §11 as amended after the first gate run: a family with fewer than four as-eaten
+ * rows in the record at simulation start is **reported, not gated** on thresholds 1
+ * and 12. "A 25 percent bar on two rows is half a serving over the horizon, which no
+ * schedule can meet or miss meaningfully."
+ */
+export const MIN_GATED_FAMILY_ROWS = 4;
+
+/**
+ * §11 threshold 12's **aspiration**: the shift the EM wants a family's rate to sit
+ * inside once the record is long enough to measure it.
+ *
+ * It is not the gate. Gate fix cycle 3 measured every tracked family's counting
+ * noise at a 41-week horizon and the quietest of them (egg, on 55 then 57
+ * placements) carries 18.9 percent, so a 10 percent bound was inside the noise for
+ * all twelve families and could be passed or failed by chance alone. §11 as amended
+ * gates each family against its own noise (`driftNoisePercent`) and prints this
+ * figure beside the verdict, so the aspiration stays visible and a longer horizon
+ * can be held to it.
+ */
+export const DRIFT_ASPIRATION_PERCENT = 10;
+
+/** As-eaten rows of each tracked family in the seed record, the amendment's counter. */
+function familyRowCounts(
+  weeks: ReadonlyArray<{ picks: readonly Pick[]; skippedDays: readonly Day[] }>,
+  dishById: ReadonlyMap<number, Dish>,
+): Map<FamilyKey, number> {
+  const counts = new Map<FamilyKey, number>();
+  for (const family of FAMILIES) counts.set(family, 0);
+  for (const week of weeks) {
+    const skipped = new Set<Day>(week.skippedDays);
+    for (const pick of week.picks) {
+      if (pick.meal === "fruit" || skipped.has(pick.day)) continue;
+      const dish = dishById.get(pick.dishId);
+      if (!dish) continue;
+      for (const family of familiesOf(dish)) counts.set(family, (counts.get(family) ?? 0) + 1);
+    }
+  }
+  return counts;
+}
+
+/** Every tracked family a dish belongs to. A dish may belong to more than one. */
+export function familiesOf(dish: Dish): FamilyKey[] {
+  const out: FamilyKey[] = [];
+  const primary = dish.primaryIngredient;
+  if (proteinFamily(primary) === "Chicken") out.push("chicken");
+  if (primary === "Paneer") out.push("paneer");
+  if (primary === "Egg") out.push("egg");
+  if (primary === "Fish") out.push("fish");
+  if (primary === "Prawn") out.push("prawn");
+  if (primary === "Mutton") out.push("mutton");
+  if (PULSES.has(primary) && isLunchStar(dish)) out.push("dal-family");
+  if (dish.cuisine !== "Indian") out.push("international");
+  if (dish.category === "Chapati") {
+    out.push(primary === "Wheat Flour" ? "plain roti" : "specialty roti");
+  }
+  if (dish.category === "Accompaniment" && dish.time === "Lunch") {
+    out.push(primary === "Curd" ? "raita/curd" : "salad");
+  }
+  return out;
+}
+
+/** One week reduced to what the thresholds read. */
+interface WeekView {
+  index: number;
+  weekStart: string;
+  season: Season;
+  /** Every breakfast and lunch pick, in day and pick order. */
+  meals: Array<{ day: Day; meal: "breakfast" | "lunch"; dishes: Dish[] }>;
+  fruits: Array<{ day: Day; dish: Dish }>;
+  week: GeneratedWeekV6;
+}
+
+function viewOf(simulated: SimulatedWeek, dishById: ReadonlyMap<number, Dish>): WeekView {
+  const meals: WeekView["meals"] = [];
+  const fruits: WeekView["fruits"] = [];
+  for (const day of simulated.week.days) {
+    for (const slot of day.slots) {
+      meals.push({
+        day: day.day as Day,
+        meal: slot.meal === "Breakfast" ? "breakfast" : "lunch",
+        dishes: slot.dishes,
+      });
+    }
+    if (day.fruit) fruits.push({ day: day.day as Day, dish: day.fruit });
+  }
+  void dishById;
+  return {
+    index: simulated.index,
+    weekStart: simulated.weekStart,
+    season: simulated.season,
+    meals,
+    fruits,
+    week: simulated.week,
+  };
+}
+
+// ---------------------------------------------------------------------------
+// Measurement helpers
+// ---------------------------------------------------------------------------
+
+/**
+ * Family rates per occasion, the one comparison §11 makes ("every rate is
+ * compared per occasion served against per occasion eaten").
+ *
+ * The denominator is every non-skipped breakfast, lunch and Saturday occasion in
+ * the weeks measured (eleven in a full week); the fruit scope is left out because
+ * no tracked family is a fruit. The same function measures the record and the
+ * simulation, which is what makes the two numbers comparable.
+ */
+function familyRates(
+  weeks: ReadonlyArray<{ picks: readonly Pick[]; skippedDays: readonly Day[] }>,
+  dishById: ReadonlyMap<number, Dish>,
+): { rates: Map<FamilyKey, number>; counts: Map<FamilyKey, number>; occasions: number } {
+  let occasions = 0;
+  const counts = new Map<FamilyKey, number>();
+  for (const week of weeks) {
+    const skipped = new Set<Day>(week.skippedDays);
+    const weekdays = WEEKDAYS.filter((day) => !skipped.has(day)).length;
+    occasions += weekdays * 2 + (skipped.has("Sat") ? 0 : 1);
+    for (const pick of week.picks) {
+      if (pick.meal === "fruit") continue;
+      if (skipped.has(pick.day)) continue;
+      const dish = dishById.get(pick.dishId);
+      if (!dish) continue;
+      for (const family of familiesOf(dish)) counts.set(family, (counts.get(family) ?? 0) + 1);
+    }
+  }
+  const rates = new Map<FamilyKey, number>();
+  for (const family of FAMILIES) {
+    rates.set(family, occasions > 0 ? (counts.get(family) ?? 0) / occasions : 0);
+    if (!counts.has(family)) counts.set(family, 0);
+  }
+  return { rates, counts, occasions };
+}
+
+/**
+ * The sampling noise of threshold 12's own comparison, as a percentage of the first
+ * window's rate.
+ *
+ * Threshold 12 divides the horizon in half and compares a family's rate between the
+ * halves. Both halves are counts of servings, so both carry counting noise even when
+ * nothing drifts: a family placed `n` times in a window has a relative standard error
+ * of about `1 / sqrt(n)` on its rate, and the difference of two independent windows
+ * carries `sqrt(1/n1 + 1/n2)`.
+ *
+ * §11 as amended after gate fix cycle 3 makes this number **the bound itself**: a
+ * family drifts when its shift is larger than its own counting noise, because a
+ * shift smaller than that is not distinguishable from the coarseness of the counts.
+ * A fixed percentage cannot do this job at a 41-week horizon, where the quietest
+ * tracked family still carries 18.9 percent of noise.
+ *
+ * Poisson counting noise is the right model because the placements of one family
+ * over twenty weeks are close to independent draws, not a fixed quota being filled.
+ */
+export function driftNoisePercent(first: number, second: number): number {
+  if (first <= 0 || second <= 0) return Number.POSITIVE_INFINITY;
+  return 100 * Math.sqrt(1 / first + 1 / second);
+}
+
+/**
+ * §11 threshold 12's verdict for one family: is the window-to-window shift inside
+ * the family's own counting noise?
+ *
+ * A family that vanished from one of the windows carries infinite noise and an
+ * infinite shift, and neither number can excuse the other: a rate that went to zero
+ * is the drift the threshold exists to catch, so an unmeasurable shift fails.
+ */
+export function withinDriftNoise(deltaPercent: number, noisePercent: number): boolean {
+  if (!Number.isFinite(deltaPercent)) return false;
+  if (!Number.isFinite(noisePercent)) return false;
+  return Math.abs(deltaPercent) <= noisePercent;
+}
+
+/** Week-over-week dish-set Jaccard, averaged: |A n B| / |A u B| over consecutive weeks. */
+function averageJaccard(weeks: ReadonlyArray<ReadonlySet<number>>): number {
+  if (weeks.length < 2) return 0;
+  let total = 0;
+  for (let index = 0; index + 1 < weeks.length; index += 1) {
+    const a = weeks[index];
+    const b = weeks[index + 1];
+    let shared = 0;
+    for (const id of a) if (b.has(id)) shared += 1;
+    const union = a.size + b.size - shared;
+    total += union > 0 ? shared / union : 0;
+  }
+  return total / (weeks.length - 1);
+}
+
+function percentDelta(served: number, reference: number): number {
+  if (reference === 0) return served === 0 ? 0 : Number.POSITIVE_INFINITY;
+  return ((served - reference) / reference) * 100;
+}
+
+function fmt(value: number, digits = 3): string {
+  if (!Number.isFinite(value)) return "n/a";
+  return value.toFixed(digits);
+}
+
+function signed(value: number): string {
+  if (!Number.isFinite(value)) return "n/a";
+  return `${value >= 0 ? "+" : ""}${value.toFixed(1)}%`;
+}
+
+/**
+ * The standard normal cumulative distribution, by the Abramowitz and Stegun 7.1.26
+ * rational approximation of the error function (absolute error below 1.5e-7).
+ *
+ * Threshold 4's diagnosis needs to say how often a dish placed on a given share of
+ * a role's occasions puts one weekday over half the horizon when nothing about the
+ * assignment prefers a weekday. That is a binomial tail, and the normal
+ * approximation is exact enough at a horizon of forty weeks. It is arithmetic and
+ * not sampling, so the report stays deterministic (§10).
+ */
+export function normalCdf(z: number): number {
+  const sign = z < 0 ? -1 : 1;
+  const x = Math.abs(z) / Math.SQRT2;
+  const t = 1 / (1 + 0.3275911 * x);
+  const y =
+    1 -
+    ((((1.061405429 * t - 1.453152027) * t + 1.421413741) * t - 0.284496736) * t + 0.254829592) *
+      t *
+      Math.exp(-x * x);
+  return 0.5 * (1 + sign * y);
+}
+
+/**
+ * What a schedule with no weekday preference at all would do with `placements` of
+ * one dish spread over `days` named days of `weeks` weeks: how often one named day,
+ * and how often at least one of the days, ends up holding the dish more than `bar`
+ * times.
+ *
+ * Each named day holds the dish `Binomial(weeks, rate)` times, and the normal
+ * approximation is exact enough at a horizon of forty weeks. `weeks` is the weeks
+ * the dish was **eligible** in, not the whole horizon, because §2.2 freezes a dish
+ * out of season and it cannot be placed on a day of a week it was not eligible in;
+ * `bar` stays half the whole horizon, which is what §11 threshold 4 measures against.
+ *
+ * Arithmetic, not sampling, so the report stays deterministic (§10).
+ */
+export interface UnbiasedSpread {
+  rate: number;
+  weeks: number;
+  expected: number;
+  sd: number;
+  /** The chance one named day goes over the bar. */
+  perDay: number;
+  /** The chance at least one of the `days` named days does. */
+  anyDay: number;
+}
+
+export function unbiasedSpread(args: {
+  placements: number;
+  weeks: number;
+  days: number;
+  bar: number;
+}): UnbiasedSpread {
+  const { placements, weeks, days, bar } = args;
+  const occasions = Math.max(1, weeks * days);
+  const rate = placements / occasions;
+  const expected = rate * weeks;
+  const sd = Math.sqrt(Math.max(0, weeks * rate * (1 - rate)));
+  const perDay = sd > 0 ? 1 - normalCdf((bar - expected) / sd) : expected > bar ? 1 : 0;
+  const anyDay = 1 - Math.pow(1 - perDay, days);
+  return { rate, weeks, expected, sd, perDay, anyDay };
+}
+
+/**
+ * §11 threshold 4's arithmetic exemption, as the EM amended it after gate fix
+ * cycle 2 (PR #253's `EM check needed` block).
+ *
+ * It used to read "a rate above half its role's weekly slots", which the harness
+ * reduced to a per-occasion rate above 0.5. Cycle 2 measured that the bar is not
+ * reachable well below that: plain roti sits at 0.473 of the carb role's occasions
+ * and an assignment with no weekday preference at all puts one of the five weekdays
+ * over half the horizon 89.7 percent of the time, while the engine's own worst
+ * weekday (23 of 41) sits at the random mean (23.4). The amended exemption is a
+ * conjunction: a rate **at or above 0.4** of the role's weekly slots, **and** a
+ * preference-free spread that already puts one of the role's days over half the
+ * horizon more often than not.
+ *
+ * The probability half is what does the work; the 0.4 is a floor under it, so a
+ * short horizon can never exempt a genuinely locked dish on a thin rate. Over a
+ * 41-week horizon the two conditions bind at about 0.415 for a five-weekday role
+ * and about 0.407 for the six-day fruit role.
+ */
+export const LOCK_EXEMPTION_RATE = 0.4;
+
+export function lockExempt(spread: UnbiasedSpread): boolean {
+  return spread.rate >= LOCK_EXEMPTION_RATE && spread.anyDay > 0.5;
+}
+
+// ---------------------------------------------------------------------------
+// The thresholds
+// ---------------------------------------------------------------------------
+
+export interface ThresholdResult {
+  id: number;
+  name: string;
+  /** null for a threshold this run cannot measure (too short a horizon, say). */
+  pass: boolean | null;
+  lines: string[];
+  /** One line naming the cause, present only when the threshold failed. */
+  diagnosis?: string;
+  /**
+   * The threshold reduced to one comparable number, so a caller (the CI-sized
+   * gate test) can guard against a collapse rather than only against a flipped
+   * boolean. `worseWhen` says which direction is worse.
+   */
+  metric?: { value: number; bound: number; worseWhen: "above" | "below" };
+}
+
+export interface RunReport {
+  label: string;
+  weeks: number;
+  thresholds: ThresholdResult[];
+  /** §11 threshold 13: reported, never gated. */
+  reported: string[];
+  /**
+   * Standing diagnosis instruments for the two thresholds §11's order of work is
+   * still deciding: the Saturday treat sequence (threshold 5) and the worst
+   * lunch-uniqueness window (threshold 2). Rendered after the thresholds, and only
+   * for the runs the report asks for them on.
+   */
+  diagnostics: Array<{ title: string; lines: string[] }>;
+}
+
+export interface MeasureArgs {
+  label: string;
+  data: GateData;
+  /** The seed record the run started from, for the record-side baselines. */
+  seed: RecordWeek[];
+  simulated: SimulatedWeek[];
+  /**
+   * Render the standing diagnoses (thresholds 5 and 2). On for the three §11
+   * headline runs and off for the measurement variants, whose diagnoses would be
+   * seven near-identical week-by-week listings.
+   */
+  withDiagnostics?: boolean;
+}
+
+export function measureRun(args: MeasureArgs): RunReport {
+  const { label, data, seed, simulated } = args;
+  const dishById = new Map<number, Dish>();
+  for (const dish of data.library) dishById.set(dish.id, dish);
+
+  const views = simulated.map((entry) => viewOf(entry, dishById));
+  const horizon = views.filter((view) => view.index >= HORIZON_FROM);
+  const horizonWeeks = horizon.length;
+  const thresholds: ThresholdResult[] = [];
+  const reported: string[] = [];
+
+  const weekdayLunches = (view: WeekView) =>
+    view.meals.filter((meal) => meal.meal === "lunch" && meal.day !== "Sat");
+  const saturdayLunch = (view: WeekView) =>
+    view.meals.find((meal) => meal.meal === "lunch" && meal.day === "Sat");
+  const breakfasts = (view: WeekView) => view.meals.filter((meal) => meal.meal === "breakfast");
+
+  // -- 1. Distribution fidelity ---------------------------------------------
+
+  const recordRates = familyRates(seed, dishById).rates;
+  const servedRates = familyRates(
+    horizon.map((view) => ({
+      picks: view.week.generatedPlan,
+      skippedDays: [] as Day[],
+    })),
+    dishById,
+  ).rates;
+
+  const recordRowCounts = familyRowCounts(seed, dishById);
+  const gatedFamily = (family: FamilyKey): boolean =>
+    (recordRowCounts.get(family) ?? 0) >= MIN_GATED_FAMILY_ROWS;
+
+  {
+    const lines: string[] = [];
+    let failures = 0;
+    let measured = 0;
+    for (const family of FAMILIES) {
+      const record = recordRates.get(family) ?? 0;
+      const served = servedRates.get(family) ?? 0;
+      const rows = recordRowCounts.get(family) ?? 0;
+      if (record === 0) {
+        lines.push(`${family}: no record rows, served ${fmt(served)} per occasion, not gated`);
+        continue;
+      }
+      const delta = percentDelta(served, record);
+      // §11 as amended: a family with fewer than four record rows is reported, not
+      // gated. The row count is printed so the exemption is never invisible.
+      if (!gatedFamily(family)) {
+        lines.push(
+          `${family}: served ${fmt(served)} vs record ${fmt(record)} (${signed(delta)}) ${rows} record ${rows === 1 ? "row" : "rows"}, reported not gated`,
+        );
+        continue;
+      }
+      measured += 1;
+      const ok = Math.abs(delta) <= 25;
+      if (!ok) failures += 1;
+      lines.push(
+        `${family}: served ${fmt(served)} vs record ${fmt(record)} (${signed(delta)}) ${rows} rows ${ok ? "PASS" : "FAIL"}`,
+      );
+    }
+    thresholds.push({
+      id: 1,
+      name: "Distribution fidelity (within 25 percent of the record rate, per occasion)",
+      pass: failures === 0,
+      metric: { value: failures, bound: 0, worseWhen: "above" },
+      lines: [`${measured - failures} of ${measured} tracked families inside the bar`, ...lines],
+      diagnosis:
+        failures > 0
+          ? `${failures} tracked ${failures === 1 ? "family is" : "families are"} outside the 25 percent bar; the summed dish rates of those pools do not reproduce the record.`
+          : undefined,
+    });
+  }
+
+  // -- 2. Lunch-main uniqueness ---------------------------------------------
+
+  {
+    const mains = horizon.map((view) =>
+      weekdayLunches(view)
+        .map((meal) => meal.dishes[0]?.id)
+        .filter((id): id is number => id !== undefined),
+    );
+    let worst = 1;
+    let windows = 0;
+    for (let start = 0; start + 8 <= mains.length; start += 1) {
+      const window = mains.slice(start, start + 8).flat();
+      if (window.length === 0) continue;
+      windows += 1;
+      const ratio = new Set(window).size / window.length;
+      if (ratio < worst) worst = ratio;
+    }
+    const pass = windows === 0 ? null : worst >= 0.65;
+    thresholds.push({
+      id: 2,
+      name: "Lunch-main uniqueness (65 percent distinct over any rolling 8 weeks)",
+      pass,
+      metric: { value: worst, bound: 0.65, worseWhen: "below" },
+      lines: [
+        windows === 0
+          ? "horizon shorter than one 8-week window, not measurable"
+          : `worst rolling window ${(worst * 100).toFixed(1)} percent distinct across ${windows} windows (household baseline 77)`,
+      ],
+      diagnosis:
+        pass === false
+          ? `Weekday lunch stars repeat inside an 8-week window: ${(worst * 100).toFixed(1)} percent distinct against a 65 percent floor.`
+          : undefined,
+    });
+  }
+
+  // -- 3. Overlap band -------------------------------------------------------
+
+  {
+    const baseline = averageJaccard(
+      seed.map((week) => new Set(week.picks.map((pick) => pick.dishId))),
+    );
+    const served = averageJaccard(
+      horizon.map((view) => new Set(view.week.generatedPlan.map((pick) => pick.dishId))),
+    );
+    const pass = Math.abs(served - baseline) <= 0.05;
+    thresholds.push({
+      id: 3,
+      name: "Overlap band (week-over-week Jaccard within 0.05 of the record baseline)",
+      pass,
+      metric: { value: Math.abs(served - baseline), bound: 0.05, worseWhen: "above" },
+      lines: [
+        `served ${fmt(served)} against the record's own ${fmt(baseline)} by the same method, delta ${fmt(served - baseline)}`,
+      ],
+      diagnosis: !pass
+        ? served > baseline
+          ? `Consecutive weeks share more dishes than the household's own weeks do (${fmt(served)} against ${fmt(baseline)}): the rotation is tighter than the record.`
+          : `Consecutive weeks share fewer dishes than the household's own weeks do (${fmt(served)} against ${fmt(baseline)}): the rotation is looser than the record.`
+        : undefined,
+    });
+  }
+
+  // -- 4. Slot anti-lock -----------------------------------------------------
+
+  {
+    const half = horizonWeeks / 2;
+    const slotCounts = new Map<string, number>();
+    const categoryCounts = new Map<string, number>();
+    const scopeRows = new Map<string, number>();
+    /** Horizon weeks each dish was Active and in season, the denominator §2.2 allows. */
+    const eligibleWeeks = new Map<number, number>();
+
+    for (const view of horizon) {
+      for (const dish of data.library) {
+        if (!isEligibleDish(dish, view.season)) continue;
+        eligibleWeeks.set(dish.id, (eligibleWeeks.get(dish.id) ?? 0) + 1);
+      }
+      const seenSlots = new Set<string>();
+      const seenCategories = new Set<string>();
+      for (const pick of view.week.generatedPlan) {
+        const dish = dishById.get(pick.dishId);
+        if (!dish) continue;
+        const scope =
+          pick.meal === "fruit"
+            ? "fruit"
+            : pick.day === "Sat"
+              ? "saturday"
+              : pick.meal === "breakfast"
+                ? "weekdayBreakfast"
+                : "weekdayLunch";
+        scopeRows.set(`${dish.id}:${scope}`, (scopeRows.get(`${dish.id}:${scope}`) ?? 0) + 1);
+        seenSlots.add(`${dish.id}|${pick.day}|${pick.meal}`);
+        if (pick.day === "Sat") continue; // §11: Saturday's own scope is excepted here
+        for (const label of ["international", "specialty roti"] as const) {
+          if (familiesOf(dish).includes(label))
+            seenCategories.add(`${label}|${pick.day}|${pick.meal}`);
+        }
+        // §11 as amended after the first gate run: the chutney category as a whole
+        // sat at 22 of 41 Mondays by construction, because every paratha and chilla
+        // morning carries one. The lock the rule guards against is ONE chutney on
+        // one weekday, so the count is keyed per individual chutney dish.
+        if (dish.category === "Accompaniment" && dish.time === "Breakfast") {
+          seenCategories.add(`chutney ${dish.name}|${pick.day}|${pick.meal}`);
+        }
+      }
+      for (const key of seenSlots) slotCounts.set(key, (slotCounts.get(key) ?? 0) + 1);
+      for (const key of seenCategories) {
+        categoryCounts.set(key, (categoryCounts.get(key) ?? 0) + 1);
+      }
+    }
+
+    /** The named days a scope's role spreads over: six for fruit, five weekdays, one Saturday. */
+    const daysOf = (scope: string): number =>
+      scope === "fruit" ? 6 : scope === "saturday" ? 1 : 5;
+
+    const dishLocks: string[] = [];
+    const exemptLocks: string[] = [];
+    for (const [key, count] of slotCounts) {
+      if (count <= half) continue;
+      const [idText, day, meal] = key.split("|");
+      const dish = dishById.get(Number(idText));
+      if (!dish) continue;
+      // §4 anchor 2: the Thursday egg is meant to hold that slot.
+      if (
+        day === "Thu" &&
+        meal === "breakfast" &&
+        proteinFamily(dish.primaryIngredient) === "Egg"
+      ) {
+        continue;
+      }
+      const scope =
+        meal === "fruit"
+          ? "fruit"
+          : day === "Sat"
+            ? "saturday"
+            : meal === "breakfast"
+              ? "weekdayBreakfast"
+              : "weekdayLunch";
+      // §11's arithmetic exemption as the EM amended it after gate fix cycle 2: a
+      // rate at or above 0.4 of the role's weekly slots, where a preference-free
+      // spread already puts one of the role's days over half the horizon more often
+      // than not. The rate is measured over the weeks the dish was eligible, which
+      // for a seasonal fruit is not the whole horizon.
+      const spread = unbiasedSpread({
+        placements: scopeRows.get(`${dish.id}:${scope}`) ?? 0,
+        weeks: eligibleWeeks.get(dish.id) ?? horizonWeeks,
+        days: daysOf(scope),
+        bar: half,
+      });
+      const held = `${dish.name} holds ${day} ${meal} in ${count} of ${horizonWeeks} weeks`;
+      const rated =
+        `${held}, at ${fmt(spread.rate)} of the role's occasions over ${spread.weeks} eligible weeks ` +
+        `(a preference-free spread of ${scopeRows.get(`${dish.id}:${scope}`) ?? 0} placements over ${daysOf(scope)} days ` +
+        `puts one day over ${fmt(half, 1)} weeks ${(spread.anyDay * 100).toFixed(1)} percent of the time)`;
+      if (lockExempt(spread)) {
+        exemptLocks.push(`${rated}: exempt, §11's arithmetic exemption`);
+        continue;
+      }
+      dishLocks.push(rated);
+    }
+
+    const categoryLocks: string[] = [];
+    let worstCategory = 0;
+    for (const [key, count] of categoryCounts) {
+      if (count > worstCategory) worstCategory = count;
+      if (count <= half) continue;
+      const [label, day, meal] = key.split("|");
+      categoryLocks.push(
+        `${label} is day-locked to ${day} ${meal} in ${count} of ${horizonWeeks} weeks`,
+      );
+    }
+
+    const pass = dishLocks.length === 0 && categoryLocks.length === 0;
+    thresholds.push({
+      id: 4,
+      name: "Slot anti-lock (no dish or category holds one weekday-meal slot in over half the horizon)",
+      pass,
+      metric: { value: dishLocks.length + categoryLocks.length, bound: 0, worseWhen: "above" },
+      lines: pass
+        ? [
+            `no non-exempt dish lock; worst category run ${worstCategory} of ${horizonWeeks} weeks`,
+            ...exemptLocks,
+          ]
+        : [...dishLocks, ...categoryLocks, ...exemptLocks],
+      diagnosis: !pass
+        ? `${dishLocks.length} dish and ${categoryLocks.length} category slot locks: least-recently-used day assignment is not moving these picks off their weekday.`
+        : undefined,
+    });
+  }
+
+  // -- 5. Saturday -----------------------------------------------------------
+
+  {
+    const finalRecord: RecordWeek[] = [
+      ...seed,
+      ...simulated.map((entry) => ({
+        weekStart: entry.weekStart,
+        picks: entry.eaten,
+        skippedDays: [] as Day[],
+        generatedPlan: entry.week.generatedPlan,
+      })),
+    ];
+    const finalSeason = simulated.length > 0 ? simulated[simulated.length - 1].season : "Monsoon";
+    const finalStats = deriveRecordStats(finalRecord, data.library, finalSeason);
+    let treatPoolSize = 0;
+    for (const [dishId, dishStats] of finalStats.perDish) {
+      const dish = dishById.get(dishId);
+      if (!dish || !isLunchStar(dish)) continue;
+      if ((dishStats.eatenCount.saturday ?? 0) > 0) treatPoolSize += 1;
+    }
+    const window = Math.min(8, Math.max(1, treatPoolSize));
+
+    const treats = horizon.map((view) => saturdayLunch(view)?.dishes[0]?.id ?? null);
+    const repeats: string[] = [];
+    for (let start = 0; start + window <= treats.length; start += 1) {
+      const slice = treats.slice(start, start + window).filter((id): id is number => id !== null);
+      if (new Set(slice).size !== slice.length) {
+        repeats.push(`weeks ${HORIZON_FROM + start} to ${HORIZON_FROM + start + window - 1}`);
+      }
+    }
+    const dessertWeeks = horizon.filter((view) =>
+      (saturdayLunch(view)?.dishes ?? []).some((dish) => dish.category === "Dessert"),
+    ).length;
+    const pass = repeats.length === 0 && dessertWeeks === horizonWeeks;
+    thresholds.push({
+      id: 5,
+      name: "Saturday (no treat repeat inside a rolling window, dessert on every Saturday)",
+      pass,
+      metric: {
+        value: repeats.length + (horizonWeeks - dessertWeeks),
+        bound: 0,
+        worseWhen: "above",
+      },
+      lines: [
+        `treat pool ${treatPoolSize} dishes, rolling window ${window}; ${repeats.length === 0 ? "no repeat" : `repeats in ${repeats.length} windows (${repeats.slice(0, 3).join(", ")})`}`,
+        `dessert on ${dessertWeeks} of ${horizonWeeks} Saturdays`,
+      ],
+      diagnosis: !pass
+        ? repeats.length > 0
+          ? `A treat main repeats inside a ${window}-Saturday window; the Saturday-scoped deficits are not spreading the pool.`
+          : `${horizonWeeks - dessertWeeks} Saturdays carry no dessert, which §5.4 makes structural.`
+        : undefined,
+    });
+  }
+
+  // -- 6. Fruit --------------------------------------------------------------
+
+  {
+    const problems: string[] = [];
+    let measured = 0;
+    let thin = 0;
+    for (const view of horizon) {
+      const eligible = data.library.filter(
+        (dish) => dish.category === "Fruit" && isEligibleDish(dish, view.season),
+      ).length;
+      const ids = view.fruits.map((entry) => entry.dish.id);
+      if (eligible < 4) {
+        thin += 1;
+      } else {
+        measured += 1;
+        const distinct = new Set(ids).size;
+        if (distinct < 4) problems.push(`week ${view.index}: only ${distinct} distinct fruits`);
+        const counts = new Map<number, number>();
+        for (const id of ids) counts.set(id, (counts.get(id) ?? 0) + 1);
+        for (const [id, count] of counts) {
+          if (count > 2) {
+            problems.push(`week ${view.index}: ${dishById.get(id)?.name} appears ${count} times`);
+          }
+        }
+      }
+      if (eligible >= 6) {
+        for (let day = 0; day + 1 < view.fruits.length; day += 1) {
+          if (view.fruits[day].dish.id === view.fruits[day + 1].dish.id) {
+            problems.push(
+              `week ${view.index}: ${view.fruits[day].dish.name} on consecutive days ${view.fruits[day].day} and ${view.fruits[day + 1].day}`,
+            );
+          }
+        }
+      }
+    }
+    const pass = problems.length === 0;
+    thresholds.push({
+      id: 6,
+      name: "Fruit (4 distinct a week, none more than twice, no consecutive repeat)",
+      pass,
+      metric: { value: problems.length, bound: 0, worseWhen: "above" },
+      lines: [
+        `${measured} weeks measured, ${thin} weeks under a thin in-season pool and exempt`,
+        ...(pass ? ["no violations"] : problems.slice(0, 8)),
+      ],
+      diagnosis: !pass
+        ? `${problems.length} fruit violations; §9's season pool is not carrying six distinct bowls a week.`
+        : undefined,
+    });
+  }
+
+  // -- 7. Coverage -----------------------------------------------------------
+
+  {
+    const startStats = deriveRecordStats(
+      seed,
+      data.library,
+      simulated.length > 0 ? simulated[0].season : "Monsoon",
+    );
+    const tracked: number[] = [];
+    for (const [dishId, dishStats] of startStats.perDish) {
+      const total = Object.values(dishStats.eatenCount).reduce(
+        (sum, count) => sum + (count ?? 0),
+        0,
+      );
+      if (total >= 2) tracked.push(dishId);
+    }
+    const servedIn = views.map((view) => new Set(view.week.generatedPlan.map((p) => p.dishId)));
+    const misses: string[] = [];
+    for (const dishId of tracked) {
+      const dish = dishById.get(dishId);
+      if (!dish) continue;
+      for (let start = 0; start + 20 <= views.length; start += 1) {
+        const window = views.slice(start, start + 20);
+        if (!window.every((view) => isEligibleDish(dish, view.season))) continue;
+        const served = window.some((_, offset) => servedIn[start + offset].has(dishId));
+        if (!served) {
+          misses.push(`${dish.name} unserved across weeks ${start + 1} to ${start + 20}`);
+          break;
+        }
+      }
+    }
+    const pass = views.length >= 20 ? misses.length === 0 : null;
+    thresholds.push({
+      id: 7,
+      name: "Coverage (every dish eaten twice or more at start is served in any eligible 20-week window)",
+      pass,
+      lines: [
+        `${tracked.length} dishes tracked; ${misses.length} with an unserved 20-week window`,
+        ...misses.slice(0, 8),
+      ],
+      diagnosis:
+        pass === false
+          ? `${misses.length} record dishes go 20 eligible weeks unserved; their deficits are not accruing past the pool leaders.`
+          : undefined,
+    });
+  }
+
+  // -- 8. International persistence -----------------------------------------
+
+  {
+    const perWeek = horizon.map(
+      (view) =>
+        weekdayLunches(view).filter(
+          (meal) => meal.dishes[0] !== undefined && meal.dishes[0].cuisine !== "Indian",
+        ).length,
+    );
+    const windows: number[] = [];
+    for (let start = 0; start + 10 <= perWeek.length; start += 1) {
+      windows.push(perWeek.slice(start, start + 10).reduce((a, b) => a + b, 0) / 10);
+    }
+    const low = windows.length > 0 ? Math.min(...windows) : 0;
+    const high = windows.length > 0 ? Math.max(...windows) : 0;
+    const zeroWindows = windows.filter((value) => value === 0).length;
+    const pass = windows.length === 0 ? null : low >= 0.75 && high <= 1.75 && zeroWindows === 0;
+    thresholds.push({
+      id: 8,
+      name: "International persistence (0.75 to 1.75 weekday stars per week in every 10-week window)",
+      pass,
+      lines: [
+        windows.length === 0
+          ? "horizon shorter than one 10-week window, not measurable"
+          : `${windows.length} windows, ${fmt(low, 2)} to ${fmt(high, 2)} per week, ${zeroWindows} at zero`,
+      ],
+      diagnosis:
+        pass === false
+          ? `Weekday international stars run ${fmt(low, 2)} to ${fmt(high, 2)} a week against the 0.75 to 1.75 band.`
+          : undefined,
+    });
+  }
+
+  // -- 9. Breakfast and forms ------------------------------------------------
+
+  {
+    const mains = views.map((view) =>
+      breakfasts(view)
+        .map((meal) => meal.dishes[0]?.id)
+        .filter((id): id is number => id !== undefined),
+    );
+    let worstDistinct = Number.POSITIVE_INFINITY;
+    let windows = 0;
+    for (let start = 0; start + 25 <= mains.length; start += 1) {
+      windows += 1;
+      const distinct = new Set(mains.slice(start, start + 25).flat()).size;
+      if (distinct < worstDistinct) worstDistinct = distinct;
+    }
+    const eggMornings = horizon.filter((view) =>
+      breakfasts(view).some((meal) => meal.dishes[0] && isStandaloneEggMain(meal.dishes[0])),
+    ).length;
+    const dalLunches = horizon.reduce(
+      (sum, view) =>
+        sum +
+        weekdayLunches(view).filter(
+          (meal) => meal.dishes[0] && familiesOf(meal.dishes[0]).includes("dal-family"),
+        ).length,
+      0,
+    );
+    const pass = windows === 0 ? null : worstDistinct >= 10 && eggMornings > 0 && dalLunches > 0;
+    thresholds.push({
+      id: 9,
+      name: "Breakfast and forms (10 distinct mains per 25 weeks, boiled-egg mornings, dal-led lunches)",
+      pass,
+      lines: [
+        windows === 0
+          ? "horizon shorter than one 25-week window, not measurable"
+          : `worst 25-week window ${worstDistinct} distinct breakfast mains`,
+        `${eggMornings} weeks with a standalone boiled-egg breakfast, ${dalLunches} dal-led weekday lunches in the horizon`,
+      ],
+      diagnosis:
+        pass === false
+          ? `Breakfast variety or a named form is missing: ${worstDistinct} distinct mains, ${eggMornings} egg mornings, ${dalLunches} dal lunches.`
+          : undefined,
+    });
+  }
+
+  // -- 10. Plate size and effort --------------------------------------------
+
+  {
+    let lunchDays = 0;
+    let four = 0;
+    let five = 0;
+    const over120: string[] = [];
+    let over150 = 0;
+    for (const view of horizon) {
+      for (const meal of weekdayLunches(view)) {
+        lunchDays += 1;
+        if (meal.dishes.length === 4) four += 1;
+        if (meal.dishes.length >= 5) five += 1;
+      }
+      for (const day of ALL_DAYS) {
+        const minutes = view.meals
+          .filter((meal) => meal.day === day)
+          .flatMap((meal) => meal.dishes)
+          .reduce((sum, dish) => sum + dish.prepMinutes, 0);
+        if (minutes > 150) over150 += 1;
+        if (minutes > 120) over120.push(`${view.weekStart} ${day} ${minutes} minutes`);
+      }
+    }
+    const fourPct = lunchDays > 0 ? (four / lunchDays) * 100 : 0;
+    const pass = fourPct < 10 && five === 0 && over150 === 0;
+    thresholds.push({
+      id: 10,
+      name: "Plate size and effort (4-item lunches under 10 percent, no 5-item lunch, no day over 150 minutes)",
+      pass,
+      metric: { value: fourPct + five * 100 + over150 * 100, bound: 10, worseWhen: "above" },
+      lines: [
+        `4-item lunches ${fourPct.toFixed(1)} percent of ${lunchDays} weekday lunches, 5-item ${five}`,
+        `${over120.length} days over the 120-minute prep ceiling (reported), ${over150} over 150`,
+        ...over120.slice(0, 5),
+      ],
+      diagnosis: !pass
+        ? `Plates run large or long: ${fourPct.toFixed(1)} percent 4-item lunches, ${five} 5-item lunches, ${over150} days over 150 minutes.`
+        : undefined,
+    });
+  }
+
+  // -- 11. Presence rates ----------------------------------------------------
+
+  {
+    /**
+     * The breakfast small item has no presence ledger (§3.2 leaves it on the dish
+     * rule), so it has no role-metered counterpart and stays a plate-size count on
+     * both sides: a breakfast of two or more picks carried one.
+     */
+    const smallItemRate = (
+      weeks: ReadonlyArray<{ picks: readonly Pick[]; skippedDays: readonly Day[] }>,
+    ): number => {
+      let slots = 0;
+      let withSmall = 0;
+      for (const week of weeks) {
+        const skipped = new Set<Day>(week.skippedDays);
+        const bySlot = new Map<Day, number>();
+        for (const pick of week.picks) {
+          if (pick.meal !== "breakfast" || skipped.has(pick.day)) continue;
+          bySlot.set(pick.day, (bySlot.get(pick.day) ?? 0) + 1);
+        }
+        for (const day of WEEKDAYS) {
+          if (skipped.has(day)) continue;
+          slots += 1;
+          if ((bySlot.get(day) ?? 0) >= 2) withSmall += 1;
+        }
+      }
+      return slots > 0 ? withSmall / slots : 0;
+    };
+
+    /**
+     * The record side of the two metered slots (§3.2), by the one classification
+     * `record.ts` owns: any third item on a Saturday, and on a weekday lunch a
+     * third item that is not the §5.1 protein-floor append.
+     */
+    const recordSide = (
+      weeks: ReadonlyArray<{ picks: readonly Pick[]; skippedDays: readonly Day[] }>,
+    ): { companion: number; accompaniment: number; lunchSlots: number; saturdays: number } => {
+      let lunchSlots = 0;
+      let companions = 0;
+      let saturdays = 0;
+      let accompaniments = 0;
+      for (const week of weeks) {
+        const skipped = new Set<Day>(week.skippedDays);
+        lunchSlots += WEEKDAYS.filter((day) => !skipped.has(day)).length;
+        companions += presenceDaysOf(
+          week.picks,
+          "weekdayLunch",
+          data.library,
+          week.skippedDays,
+        ).size;
+        if (!skipped.has("Sat")) saturdays += 1;
+        accompaniments += presenceDaysOf(
+          week.picks,
+          "saturday",
+          data.library,
+          week.skippedDays,
+        ).size;
+      }
+      return { companion: companions, accompaniment: accompaniments, lunchSlots, saturdays };
+    };
+
+    const record = recordSide(seed);
+    const recordCompanion = record.lunchSlots > 0 ? record.companion / record.lunchSlots : 0;
+    const recordAccompaniment = record.saturdays > 0 ? record.accompaniment / record.saturdays : 0;
+
+    // The served side is metered by role, off the engine's own finished plates: a
+    // weekday lunch that carries a `companion` pick, and a Saturday plate with a
+    // third item. The engine charges the presence ledger by exactly this count.
+    let servedCompanions = 0;
+    let servedAccompaniments = 0;
+    for (const view of horizon) {
+      servedCompanions += view.week.diagnostics.presenceOccasions.weekdayLunch ?? 0;
+      servedAccompaniments += view.week.diagnostics.presenceOccasions.saturday ?? 0;
+    }
+    const servedLunchSlots = horizon.length * WEEKDAYS.length;
+    const servedCompanion = servedLunchSlots > 0 ? servedCompanions / servedLunchSlots : 0;
+    const servedAccompaniment = horizon.length > 0 ? servedAccompaniments / horizon.length : 0;
+
+    // Harness honesty: the two sides are two readings of one quantity, so the
+    // report says how far apart they are on the very same weeks. A large gap means
+    // the record-side classification is misreading roles it cannot see, and every
+    // number on this threshold would be that much out.
+    const replayed = recordSide(
+      horizon.map((view) => ({ picks: view.week.generatedPlan, skippedDays: [] as Day[] })),
+    );
+    const classificationGap = replayed.companion - servedCompanions;
+
+    const rows: Array<[string, number, number]> = [
+      [
+        "breakfast small item",
+        smallItemRate(
+          horizon.map((view) => ({ picks: view.week.generatedPlan, skippedDays: [] as Day[] })),
+        ),
+        smallItemRate(seed),
+      ],
+      ["weekday companion", servedCompanion, recordCompanion],
+      ["Saturday accompaniment", servedAccompaniment, recordAccompaniment],
+    ];
+    const lines: string[] = [];
+    let failures = 0;
+    for (const [name, served, recordRate] of rows) {
+      const delta = percentDelta(served, recordRate);
+      const ok = recordRate === 0 ? true : Math.abs(delta) <= 25;
+      if (!ok) failures += 1;
+      lines.push(
+        `${name}: served ${fmt(served)} vs record ${fmt(recordRate)} (${signed(delta)}) ${ok ? "PASS" : "FAIL"}`,
+      );
+    }
+    lines.push(
+      `served weekday companions ${servedCompanions} of ${servedLunchSlots} occasions, counted by role; the same plans read back by the record-side classification give ${replayed.companion} (gap ${classificationGap >= 0 ? "+" : ""}${classificationGap}, ${servedCompanions > 0 ? ((Math.abs(classificationGap) / servedCompanions) * 100).toFixed(1) : "0.0"} percent), which is how far the two readings of one quantity sit apart`,
+    );
+    thresholds.push({
+      id: 11,
+      name: "Presence rates (each optional slot within 25 percent of the record's presence rate)",
+      pass: failures === 0,
+      metric: { value: failures, bound: 0, worseWhen: "above" },
+      lines,
+      diagnosis:
+        failures > 0
+          ? `${failures} optional slots sit outside the 25 percent bar, which is what arms §3.2's reopening trigger.`
+          : undefined,
+    });
+  }
+
+  // -- 12. Drift bound -------------------------------------------------------
+
+  {
+    const early = horizon.filter((view) => view.index < 40);
+    const late = horizon.filter((view) => view.index >= 40);
+    const asWeeks = (list: WeekView[]) =>
+      list.map((view) => ({ picks: view.week.generatedPlan, skippedDays: [] as Day[] }));
+    const earlyMeasure = familyRates(asWeeks(early), dishById);
+    const lateMeasure = familyRates(asWeeks(late), dishById);
+    const earlyRates = earlyMeasure.rates;
+    const lateRates = lateMeasure.rates;
+    const lines: string[] = [];
+    let failures = 0;
+    let measured = 0;
+    if (early.length === 0 || late.length === 0) {
+      thresholds.push({
+        id: 12,
+        name: "Drift bound (weeks 40 to 60 within each family's own counting noise of weeks 20 to 40)",
+        pass: null,
+        lines: ["horizon does not span both windows, not measurable"],
+      });
+    } else {
+      // §11 as amended after gate fix cycle 3: a family is drifting when its shift
+      // between the two windows is larger than the counting noise of the comparison
+      // itself. Every family's line carries the placements each window rests on, the
+      // record rows the gating exemption reads, its own noise, and the 10 percent
+      // aspiration read beside the verdict rather than as the verdict.
+      let aspirationMet = 0;
+      for (const family of FAMILIES) {
+        const first = earlyRates.get(family) ?? 0;
+        const second = lateRates.get(family) ?? 0;
+        if (first === 0 && second === 0) continue;
+        const delta = percentDelta(second, first);
+        const rows = recordRowCounts.get(family) ?? 0;
+        const firstCount = earlyMeasure.counts.get(family) ?? 0;
+        const lateCount = lateMeasure.counts.get(family) ?? 0;
+        const noise = driftNoisePercent(firstCount, lateCount);
+        const aspiration = Number.isFinite(delta) && Math.abs(delta) <= DRIFT_ASPIRATION_PERCENT;
+        if (aspiration) aspirationMet += 1;
+        const detail =
+          `${family}: ${fmt(first)} (${firstCount} placements) then ${fmt(second)} (${lateCount}) ` +
+          `(${signed(delta)}) ${rows} record ${rows === 1 ? "row" : "rows"}, ` +
+          `counting noise ${Number.isFinite(noise) ? `${signed(noise)}` : "n/a"}` +
+          `, ${DRIFT_ASPIRATION_PERCENT} percent aspiration ${aspiration ? "met" : "not met"}`;
+        // §11 as amended: the same fewer-than-four-rows exemption threshold 1 carries.
+        if (!gatedFamily(family)) {
+          lines.push(`${detail}, reported not gated`);
+          continue;
+        }
+        measured += 1;
+        const ok = withinDriftNoise(delta, noise);
+        if (!ok) failures += 1;
+        lines.push(`${detail} ${ok ? "PASS" : "FAIL"}`);
+      }
+      thresholds.push({
+        id: 12,
+        name: "Drift bound (weeks 40 to 60 within each family's own counting noise of weeks 20 to 40)",
+        pass: failures === 0,
+        lines: [
+          `${measured - failures} of ${measured} families inside their own counting noise`,
+          `${aspirationMet} of ${measured} would also sit inside the ${DRIFT_ASPIRATION_PERCENT} percent aspiration, which needs about 200 placements a window to be a bound at all`,
+          ...lines,
+        ],
+        metric: { value: failures, bound: 0, worseWhen: "above" },
+        diagnosis:
+          failures > 0
+            ? `${failures} families move further between the two halves of the horizon than the counting noise of the comparison: the self-feed is ratcheting on those families.`
+            : undefined,
+      });
+    }
+  }
+
+  // -- 13. Reported, not gated ----------------------------------------------
+
+  {
+    const novelty = horizon.filter((view) => view.week.diagnostics.exploration !== null).length;
+    reported.push(
+      `Novelty placements: ${novelty} in ${horizonWeeks} weeks (${fmt(novelty / Math.max(1, horizonWeeks), 2)} a week)`,
+    );
+
+    let noAnimal = 0;
+    let lunches = 0;
+    for (const view of horizon) {
+      for (const meal of weekdayLunches(view)) {
+        lunches += 1;
+        if (!meal.dishes.some((dish) => ANIMAL_PRIMARIES.has(dish.primaryIngredient)))
+          noAnimal += 1;
+      }
+    }
+    reported.push(
+      `Weekday lunches with no animal protein: ${noAnimal} of ${lunches} (${((noAnimal / Math.max(1, lunches)) * 100).toFixed(1)} percent)`,
+    );
+
+    const shapes = new Map<number, number>();
+    for (const view of horizon) {
+      const size = saturdayLunch(view)?.dishes.length ?? 0;
+      shapes.set(size, (shapes.get(size) ?? 0) + 1);
+    }
+    reported.push(
+      `Saturday plate shape: ${[...shapes.entries()]
+        .sort((a, b) => a[0] - b[0])
+        .map(([size, count]) => `${size} items x ${count}`)
+        .join(", ")}`,
+    );
+
+    const fills = new Map<PickRole, number>();
+    for (const view of horizon) {
+      for (const [role, count] of Object.entries(view.week.diagnostics.negativeDeficitFills)) {
+        fills.set(role as PickRole, (fills.get(role as PickRole) ?? 0) + (count ?? 0));
+      }
+    }
+    reported.push(
+      `Negative-deficit fills per week: ${
+        fills.size === 0
+          ? "none"
+          : [...fills.entries()]
+              .sort((a, b) => b[1] - a[1])
+              .map(([role, count]) => `${role} ${fmt(count / Math.max(1, horizonWeeks), 2)}`)
+              .join(", ")
+      }`,
+    );
+
+    const byFamily = new Map<string, number>();
+    for (const view of horizon) {
+      for (const pick of view.week.generatedPlan) {
+        const dish = dishById.get(pick.dishId);
+        if (!dish) continue;
+        const family = proteinFamily(dish.primaryIngredient);
+        byFamily.set(family, (byFamily.get(family) ?? 0) + 1);
+      }
+    }
+    reported.push(
+      `Picks by protein family (top 10): ${[...byFamily.entries()]
+        .sort((a, b) => b[1] - a[1] || (a[0] < b[0] ? -1 : 1))
+        .slice(0, 10)
+        .map(([family, count]) => `${family} ${count}`)
+        .join(", ")}`,
+    );
+
+    const repairCounts = new Map<string, number>();
+    for (const view of horizon) {
+      for (const repair of view.week.diagnostics.repairs) {
+        repairCounts.set(repair.constraint, (repairCounts.get(repair.constraint) ?? 0) + 1);
+      }
+    }
+    reported.push(
+      `Constraint repairs: ${
+        repairCounts.size === 0
+          ? "none"
+          : [...repairCounts.entries()]
+              .sort((a, b) => b[1] - a[1] || (a[0] < b[0] ? -1 : 1))
+              .map(([reason, count]) => `${reason} ${count}`)
+              .join(", ")
+      }`,
+    );
+  }
+
+  // ---------------------------------------------------------------------------
+  // Standing diagnoses (§11's order of work, thresholds 5 and 2)
+  // ---------------------------------------------------------------------------
+
+  const diagnostics: RunReport["diagnostics"] = [];
+  const wantDiagnostics = args.withDiagnostics ?? false;
+
+  // -- Threshold 5: the Saturday treat sequence and the treat pool's composition --
+
+  if (wantDiagnostics) {
+    const lines: string[] = [];
+    for (const view of horizon) {
+      const lead = view.week.diagnostics.lunchLeads.find((entry) => entry.scope === "saturday");
+      if (!lead) {
+        lines.push(`week ${view.index}: no Saturday plate`);
+        continue;
+      }
+      const dish = dishById.get(lead.dishId);
+      lines.push(
+        `week ${view.index}: ${dish?.name ?? lead.dishId} (${dish ? saturdayFormFor(dish) : "unknown"} form, ${lead.origin}, Saturday deficit ${fmt(lead.deficit)} at pick time)`,
+      );
+    }
+
+    const finalRecord: RecordWeek[] = [
+      ...seed,
+      ...simulated.map((entry) => ({
+        weekStart: entry.weekStart,
+        picks: entry.eaten,
+        skippedDays: [] as Day[],
+        generatedPlan: entry.week.generatedPlan,
+      })),
+    ];
+    const finalSeason = simulated.length > 0 ? simulated[simulated.length - 1].season : "Monsoon";
+    const finalStats = deriveRecordStats(finalRecord, data.library, finalSeason);
+    const seedStats = deriveRecordStats(seed, data.library, finalSeason);
+    const leadCounts = new Map<number, number>();
+    for (const view of horizon) {
+      const lead = view.week.diagnostics.lunchLeads.find((entry) => entry.scope === "saturday");
+      if (lead) leadCounts.set(lead.dishId, (leadCounts.get(lead.dishId) ?? 0) + 1);
+    }
+    const withRows: string[] = [];
+    const throughBaseDoor: string[] = [];
+    let neverLed = 0;
+    for (const dish of data.library) {
+      if (!isLunchStar(dish)) continue;
+      const rows = finalStats.perDish.get(dish.id)?.eatenCount.saturday ?? 0;
+      if (rows > 0) {
+        const rate = finalStats.perDish.get(dish.id)?.rate.saturday ?? 0;
+        const seedRows = seedStats.perDish.get(dish.id)?.eatenCount.saturday ?? 0;
+        const seedRate = seedStats.perDish.get(dish.id)?.rate.saturday ?? 0;
+        const led = leadCounts.get(dish.id) ?? 0;
+        if (led === 0) neverLed += 1;
+        withRows.push(
+          `${dish.name}: seed ${seedRows} rows rate ${fmt(seedRate)}, final ${rows} rows rate ${fmt(rate)}, led ${led} of ${horizonWeeks} Saturdays${rate > 1 / 8 ? " (final rate above 1/8, so it returns inside a rolling 8 by arithmetic)" : ""}`,
+        );
+      } else if (isEverydayBase(dish) && isEligibleDish(dish, finalSeason)) {
+        throughBaseDoor.push(dish.name);
+      }
+    }
+    // The window counts a base-plus-protein Saturday by its lead dish, the everyday
+    // base, exactly as it counts a treat: the treat slot holds one dish either way.
+    const baseLedWeeks = horizon.filter((view) => {
+      const lead = view.week.diagnostics.lunchLeads.find((entry) => entry.scope === "saturday");
+      const dish = lead ? dishById.get(lead.dishId) : undefined;
+      return dish !== undefined && saturdayFormFor(dish) === "everyday-base";
+    }).length;
+
+    diagnostics.push({
+      title: "Diagnosis, threshold 5: the Saturday sequence and the treat pool",
+      lines: [
+        `Treat pool by Saturday rows (${withRows.length} dishes), of which ${leadCounts.size} actually led a Saturday in the horizon and ${neverLed} never did (they carry Saturday rows only as the special protein beside an everyday base, so they inflate the pool the window is sized against without ever filling the slot):`,
+        ...withRows.map((row) => `  ${row}`),
+        `Everyday-base door, eligible and with no Saturday rows (${throughBaseDoor.length} dishes): ${throughBaseDoor.join(", ") || "none"}`,
+        `Base-led Saturdays in the horizon: ${baseLedWeeks} of ${horizonWeeks}. The rolling window counts a base-plus-special-protein Saturday as its base dish, not as a treat, because the treat slot holds exactly one lead.`,
+        "Saturday sequence, weeks 20 to 60:",
+        ...lines.map((row) => `  ${row}`),
+      ],
+    });
+  }
+
+  // -- Threshold 2: the worst rolling window's stars, by origin -----------------
+
+  if (wantDiagnostics) {
+    const starsPerWeek = horizon.map((view) =>
+      view.week.diagnostics.lunchLeads.filter((entry) => entry.scope === "weekdayLunch"),
+    );
+    let worstStart = 0;
+    let worstRatio = Number.POSITIVE_INFINITY;
+    for (let start = 0; start + 8 <= starsPerWeek.length; start += 1) {
+      const window = starsPerWeek.slice(start, start + 8).flat();
+      if (window.length === 0) continue;
+      const ratio = new Set(window.map((entry) => entry.dishId)).size / window.length;
+      if (ratio < worstRatio) {
+        worstRatio = ratio;
+        worstStart = start;
+      }
+    }
+    const window = starsPerWeek.slice(worstStart, worstStart + 8);
+    const flat = window.flat();
+    const byOrigin = new Map<string, number>();
+    for (const entry of flat) byOrigin.set(entry.origin, (byOrigin.get(entry.origin) ?? 0) + 1);
+    const repeats = new Map<number, number>();
+    for (const entry of flat) repeats.set(entry.dishId, (repeats.get(entry.dishId) ?? 0) + 1);
+    const starRepairs = horizon.reduce(
+      (sum, view) =>
+        sum + view.week.diagnostics.repairs.filter((repair) => repair.role === "star").length,
+      0,
+    );
+    const repairsByRole = new Map<string, number>();
+    for (const view of horizon) {
+      for (const repair of view.week.diagnostics.repairs) {
+        const key = repair.role ?? "plate swap";
+        repairsByRole.set(key, (repairsByRole.get(key) ?? 0) + 1);
+      }
+    }
+
+    // Where the tail loses its turns: the star pool's summed weekday-lunch rate
+    // against the five star slots, and, for each dish that repeated in the worst
+    // window, the rate it accrues on and every weekday-lunch placement it took in
+    // the horizon (a companion or carb placement spends the SAME scope ledger, so
+    // it is the tail's turns that pay for it).
+    const startStats = deriveRecordStats(
+      seed,
+      data.library,
+      simulated.length > 0 ? simulated[0].season : "Monsoon",
+    );
+    let starPoolRate = 0;
+    let starPoolSize = 0;
+    let scopeRate = 0;
+    for (const [dishId, dishStats] of startStats.perDish) {
+      const rate = dishStats.rate.weekdayLunch ?? 0;
+      scopeRate += rate;
+      const dish = dishById.get(dishId);
+      if (!dish || !isLunchStar(dish)) continue;
+      starPoolRate += rate;
+      starPoolSize += 1;
+    }
+    /**
+     * The arithmetic ceiling on distinctness in a rolling 8-week window, given the
+     * record's own rates.
+     *
+     * A star-pool dish takes a share of the window's 40 star slots proportional to
+     * its weekday-lunch rate WITHIN the pool: the rate itself is measured across
+     * every role a weekday lunch has, and the star pool's rates sum to more than
+     * one per occasion, so the raw rate over-predicts star turns by that factor.
+     * A dish predicted to take k of the 40 stars contributes k - 1 repeats however
+     * evenly the schedule spreads it. If this ceiling is below the 65 percent bar,
+     * thresholds 1 and 2 are asking for different things on this record and only
+     * one of them can be met.
+     */
+    const windowStars = 8 * 5;
+    let forcedRepeats = 0;
+    let forcedBy = "";
+    if (starPoolRate > 0) {
+      const forced: Array<[string, number]> = [];
+      for (const [dishId, dishStats] of startStats.perDish) {
+        const dish = dishById.get(dishId);
+        if (!dish || !isLunchStar(dish)) continue;
+        const predicted = ((dishStats.rate.weekdayLunch ?? 0) / starPoolRate) * windowStars;
+        if (predicted > 1) {
+          forcedRepeats += predicted - 1;
+          forced.push([dish.name, predicted]);
+        }
+      }
+      forcedBy = forced
+        .sort((a, b) => b[1] - a[1] || (a[0] < b[0] ? -1 : 1))
+        .slice(0, 6)
+        .map(([name, predicted]) => `${name} ${fmt(predicted, 1)}`)
+        .join(", ");
+    }
+    const arithmeticCeiling = (windowStars - forcedRepeats) / windowStars;
+
+    const placementsByDish = new Map<number, number>();
+    const starsByDish = new Map<number, number>();
+    for (const view of horizon) {
+      for (const pick of view.week.generatedPlan) {
+        if (pick.meal !== "lunch" || pick.day === "Sat") continue;
+        placementsByDish.set(pick.dishId, (placementsByDish.get(pick.dishId) ?? 0) + 1);
+      }
+      for (const lead of view.week.diagnostics.lunchLeads) {
+        if (lead.scope !== "weekdayLunch") continue;
+        starsByDish.set(lead.dishId, (starsByDish.get(lead.dishId) ?? 0) + 1);
+      }
+    }
+    const repeatLines = [...repeats.entries()]
+      .filter(([, count]) => count > 1)
+      .sort((a, b) => b[1] - a[1] || a[0] - b[0])
+      .map(([id, count]) => {
+        const rate = startStats.perDish.get(id)?.rate.weekdayLunch ?? 0;
+        const expected = rate * 5 * horizonWeeks;
+        return `  ${dishById.get(id)?.name ?? id}: x${count} in the window, weekday-lunch rate ${fmt(rate)} at start (one turn every ${rate > 0 ? fmt(1 / (rate * 5), 1) : "n/a"} weeks), ${starsByDish.get(id) ?? 0} stars and ${placementsByDish.get(id) ?? 0} weekday-lunch placements in the horizon against ${fmt(expected, 1)} the rate predicts`;
+      });
+
+    diagnostics.push({
+      title: "Diagnosis, threshold 2: the worst rolling 8-week window's stars",
+      lines: [
+        `Worst window: weeks ${HORIZON_FROM + worstStart} to ${HORIZON_FROM + worstStart + 7}, ${(worstRatio * 100).toFixed(1)} percent distinct over ${flat.length} stars.`,
+        `Origins in that window: ${[...byOrigin.entries()]
+          .sort((a, b) => b[1] - a[1] || (a[0] < b[0] ? -1 : 1))
+          .map(([origin, count]) => `${origin} ${count}`)
+          .join(", ")}`,
+        `Arithmetic ceiling on distinctness from the record's own rates: ${(arithmeticCeiling * 100).toFixed(1)} percent over a rolling 8-week window (${fmt(forcedRepeats, 1)} of ${windowStars} stars are repeats no schedule that matches those rates can avoid), against the 65 percent bar. Star turns each dish's own rate forces (top 6): ${forcedBy || "none"}.`,
+        `Star pool at simulation start: ${starPoolSize} dishes summing to ${fmt(starPoolRate)} per weekday-lunch occasion against 1 star slot per occasion; the whole weekday-lunch scope sums to ${fmt(scopeRate)} per occasion against about ${fmt(scopeRate, 2)} picks a lunch. A summed star rate above 1 means the star pool accrues faster than the five star slots can charge it, so every deficit floats up together and the ranking is decided by rate alone rather than by turn-taking.`,
+        "Repeated in that window:",
+        ...repeatLines,
+        `Repairs that replaced a star across the horizon: ${starRepairs}. By role: ${[
+          ...repairsByRole.entries(),
+        ]
+          .sort((a, b) => b[1] - a[1] || (a[0] < b[0] ? -1 : 1))
+          .map(([role, count]) => `${role} ${count}`)
+          .join(", ")}`,
+        "The window's stars, week by week:",
+        ...window.map((weekStars, offset) => {
+          const label = `  week ${HORIZON_FROM + worstStart + offset}: `;
+          return (
+            label +
+            weekStars
+              .map(
+                (entry) =>
+                  `${dishById.get(entry.dishId)?.name ?? entry.dishId} (${entry.origin}, deficit ${fmt(entry.deficit, 2)})`,
+              )
+              .join("; ")
+          );
+        }),
+      ],
+    });
+  }
+
+  // -- Threshold 4: where a locked dish's weekday actually comes from -----------
+
+  if (wantDiagnostics) {
+    const locked = (thresholds.find((entry) => entry.id === 4)?.lines ?? []).length > 0;
+    const lines: string[] = [];
+
+    // Every (dish, meal) that holds any weekday in more than a third of the
+    // horizon, with its whole weekday spread. A lock is a tail of this spread, so
+    // the spread is what says whether one weekday is being chosen or whether the
+    // dish simply appears too often for five days to share it evenly.
+    const spread = new Map<string, Map<Day, number>>();
+    const roleOccasions = new Map<string, number>();
+    const roleWeeks = new Map<string, number>();
+    for (const view of horizon) {
+      for (const pick of view.week.generatedPlan) {
+        if (pick.day === "Sat") continue;
+        const key = `${pick.dishId}|${pick.meal}`;
+        const row = spread.get(key) ?? new Map<Day, number>();
+        row.set(pick.day, (row.get(pick.day) ?? 0) + 1);
+        spread.set(key, row);
+        roleOccasions.set(key, (roleOccasions.get(key) ?? 0) + 1);
+      }
+    }
+    // The weeks each (dish, meal) role was eligible in, which for a seasonal fruit
+    // is a fraction of the horizon and is the denominator its rate is read against.
+    for (const key of spread.keys()) {
+      const dish = dishById.get(Number(key.split("|")[0]));
+      if (!dish) continue;
+      roleWeeks.set(key, horizon.filter((view) => isEligibleDish(dish, view.season)).length);
+    }
+    const busiest = [...spread.entries()]
+      .filter(([, row]) => Math.max(...row.values()) > horizonWeeks / 3)
+      .sort((a, b) => Math.max(...b[1].values()) - Math.max(...a[1].values()));
+    for (const [key, row] of busiest.slice(0, 8)) {
+      const [idText, meal] = key.split("|");
+      const dish = dishById.get(Number(idText));
+      const placements = roleOccasions.get(key) ?? 0;
+      // The fruit role runs Monday to Saturday, every other role Monday to Friday.
+      const days = meal === "fruit" ? 6 : 5;
+      const named = meal === "fruit" ? ALL_DAYS : WEEKDAYS;
+      const stat = unbiasedSpread({
+        placements,
+        weeks: roleWeeks.get(key) ?? horizonWeeks,
+        days,
+        bar: horizonWeeks / 2,
+      });
+      lines.push(
+        `${dish?.name ?? idText} ${meal}: ${named.map((day) => `${day} ${row.get(day) ?? 0}`).join("  ")} over ${horizonWeeks} weeks`,
+      );
+      lines.push(
+        `  ${placements} placements over ${stat.weeks} eligible weeks, ${fmt(stat.rate)} of the role's occasions, so an unbiased assignment expects ${fmt(stat.expected, 1)} of ${horizonWeeks} on each of its ${days} days with a spread of ${fmt(stat.sd, 1)}: one named day goes over half the horizon ${(stat.perDay * 100).toFixed(1)} percent of the time and at least one of the ${days} does ${(stat.anyDay * 100).toFixed(1)} percent of the time. §11's exemption asks for a rate at or above ${fmt(LOCK_EXEMPTION_RATE, 2)} with that last figure over 50 percent, so this role is ${lockExempt(stat) ? "exempt" : "not exempt"}.`,
+      );
+    }
+
+    // The two mechanisms the day assignment could be adding on top of that: the
+    // §6 step 5 exploration reserve, which takes its weekday before the repertoire
+    // plates choose, and the §6 step 6 whole-plate swaps, which are the only thing
+    // that moves a plate after its day is set.
+    const explorationDays = new Map<Day, number>();
+    for (const view of horizon) {
+      const lead = view.week.diagnostics.lunchLeads.find(
+        (entry) => entry.scope === "weekdayLunch" && entry.origin === "exploration",
+      );
+      if (lead?.day) explorationDays.set(lead.day, (explorationDays.get(lead.day) ?? 0) + 1);
+    }
+    lines.push(
+      `Exploration plates that led their lunch, by weekday: ${WEEKDAYS.map((day) => `${day} ${explorationDays.get(day) ?? 0}`).join("  ")}. §6 step 5 reserves this weekday out of the supply before the repertoire plates choose, so a skew here would push every other plate onto the leftovers.`,
+    );
+    const swaps: string[] = [];
+    for (const view of horizon) {
+      for (const repair of view.week.diagnostics.repairs) {
+        if (repair.meal !== "lunch" || repair.swappedWithDay === null) continue;
+        swaps.push(
+          `week ${view.index} ${repair.constraint} ${repair.day} for ${repair.swappedWithDay}`,
+        );
+      }
+    }
+    lines.push(
+      `Whole-plate lunch swaps in the §6 step 6 pass: ${swaps.length}${swaps.length > 0 ? ` (${swaps.join("; ")})` : ""}. A swap exchanges two days' plates, so it moves a carb only with the plate it rides on.`,
+    );
+
+    diagnostics.push({
+      title: locked
+        ? "Diagnosis, threshold 4: where the locked weekdays come from"
+        : "Diagnosis, threshold 4: the weekday spread of the busiest slots",
+      lines,
+    });
+  }
+
+  return {
+    label,
+    weeks: simulated.length,
+    thresholds,
+    reported,
+    diagnostics,
+  };
+}
+
+// ---------------------------------------------------------------------------
+// The report
+// ---------------------------------------------------------------------------
+
+function verdict(pass: boolean | null): string {
+  if (pass === null) return "NOT MEASURED";
+  return pass ? "PASS" : "FAIL";
+}
+
+export function renderReport(reports: RunReport[], preamble: string[]): string {
+  const lines: string[] = ["# Engine v6 gate report", ""];
+  lines.push(...preamble, "");
+  lines.push("## Summary", "");
+  lines.push("| Run | Thresholds passed | Failed | Not measured |");
+  lines.push("| --- | --- | --- | --- |");
+  for (const report of reports) {
+    const passed = report.thresholds.filter((entry) => entry.pass === true).length;
+    const failed = report.thresholds.filter((entry) => entry.pass === false).length;
+    const skipped = report.thresholds.filter((entry) => entry.pass === null).length;
+    lines.push(`| ${report.label} | ${passed} | ${failed} | ${skipped} |`);
+  }
+  lines.push("");
+
+  for (const report of reports) {
+    lines.push(`## ${report.label} (${report.weeks} weeks)`, "");
+    for (const threshold of report.thresholds) {
+      lines.push(`**${threshold.id}. ${threshold.name}: ${verdict(threshold.pass)}**`, "");
+      for (const line of threshold.lines) lines.push(`- ${line}`);
+      if (threshold.diagnosis) lines.push("", `Diagnosis: ${threshold.diagnosis}`);
+      lines.push("");
+    }
+    lines.push("**13. Reported, not gated**", "");
+    for (const line of report.reported) lines.push(`- ${line}`);
+    lines.push("");
+    for (const diagnosis of report.diagnostics) {
+      lines.push(`### ${diagnosis.title}`, "");
+      for (const line of diagnosis.lines) lines.push(`- ${line}`);
+      lines.push("");
+    }
+  }
+  return lines.join("\n");
+}
+
+/** One line of the PASS or FAIL summary the PR body quotes. */
+export function summaryLines(reports: RunReport[]): string[] {
+  const out: string[] = [];
+  for (const report of reports) {
+    for (const threshold of report.thresholds) {
+      out.push(`${report.label} | ${threshold.id}. ${threshold.name}: ${verdict(threshold.pass)}`);
+    }
+  }
+  return out;
+}
+
+// ---------------------------------------------------------------------------
+// Entry point
+// ---------------------------------------------------------------------------
+
+// Compiled, this file lives at engine/dist/scripts/gate.js, so the repo root is
+// three levels up. It is only ever run from there (`npm run gate` builds first).
+const repoRoot = resolve(dirname(fileURLToPath(import.meta.url)), "../../..");
+
+export function loadGateData(dataDir: string): GateData {
+  const dishFiles = loadDishFiles(resolve(dataDir, "dishes"));
+  const { dishes, ingredients } = dishFilesToLibrary(dishFiles);
+  const catalog = parseIngredientCatalog(readFileSync(resolve(dataDir, "ingredients.md"), "utf8"));
+  // Parsed for parity with the bake load path; the gate does not read pack sizes.
+  catalogToPackSizes(catalog);
+  return { library: dishes, ingredients, catalog };
+}
+
+interface RunSpec {
+  label: string;
+  variant?: GenerateWeekV6Variant;
+  corrected?: boolean;
+}
+
+/** The self-feeding run every other run in the report is read against. */
+export const BASELINE_RUN = "2. Self-feeding";
+
+/** The three §11 runs, then the four measurement variants, in the spec's order. */
+const RUN_SPECS: RunSpec[] = [
+  { label: "1. Frozen", variant: { frozenRates: true } },
+  { label: BASELINE_RUN },
+  { label: "3. Corrected", corrected: true },
+  { label: "Variant: cold-start cap 0.5", variant: { coldStartCap: 0.5 } },
+  { label: "Variant: cold-start cap pool-level", variant: { coldStartCap: "pool" } },
+  { label: "Variant: family governor off", variant: { familyGovernor: false } },
+  { label: "Variant: rate formula sinceFirstEaten", variant: { rateFormula: "sinceFirstEaten" } },
+];
+
+export function runGate(options: { fixture: string; weeks: number; dataDir: string }): {
+  markdown: string;
+  reports: RunReport[];
+} {
+  const data = loadGateData(options.dataDir);
+  const seed = loadRecordFixture(options.fixture, data.library);
+  const seedStats = deriveRecordStats(
+    seed,
+    data.library,
+    seasonOfWeek(seed.length > 0 ? seed[seed.length - 1].weekStart : "2026-06-15"),
+  );
+  const swapAway = new Set(seedStats.swappedOut.map((pick) => pick.dishId));
+
+  const preamble = [
+    `Generated by \`npm run gate\` against the built engine, ${options.weeks} weeks self-feeding from \`${options.fixture}\` (${seed.length} record weeks).`,
+    "",
+    `All thresholds are measured on weeks ${HORIZON_FROM} to ${options.weeks}, the steady state (§11). Rates are per occasion.`,
+    "",
+    "Counting definitions the spec leaves to the harness, stated so the numbers are reproducible:",
+    "",
+    "- A family's rate is its as-eaten (or as-served) rows divided by the breakfast, lunch and Saturday occasions of the weeks measured. Fruit rows are excluded; no tracked family is a fruit.",
+    "- Families are keyed on library fields, never on dish names: chicken is the §4.6 chicken family, dal-family is a lunch star whose primary ingredient is a pulse, international is a non-Indian cuisine, plain roti is Category Chapati with a Wheat Flour primary and specialty roti is every other Chapati, raita/curd is a Lunch-time Accompaniment with a Curd primary and salad is every other Lunch-time Accompaniment.",
+    "- Lunch-main uniqueness counts weekday lunch stars only; Saturday is its own register (§2.2).",
+    "- The Jaccard baseline is re-measured by this harness's own method on the record weeks (§11 threshold 3's amendment), over the whole dish set of each week, fruit included.",
+    "- Threshold 4's arithmetic exemption, as the EM amended it after gate fix cycle 2, is a conjunction: a rate **at or above 0.4** of the role's weekly slots, **and** a preference-free spread that already puts one of the role's days over half the horizon more often than not. The role's days are the five weekdays for a breakfast or lunch slot and the six fruit days for the fruit slot; the rate is measured over the weeks the dish was Active and in season, which for a seasonal fruit is not the whole horizon. Every lock the exemption clears is still printed, with its rate and its preference-free chance, so an exemption is never invisible.",
+    "- Presence (threshold 11) is measured **by role on the served side and by the record-side classification on the record side**, which is what §3.2's two presence ledgers accrue and charge against. Served: a weekday lunch counts when the engine's finished plate carries a `companion` pick, a Saturday when its plate holds a third item of any role. Record: a Saturday counts on any third item, and a weekday lunch on a third item that is not the §5.1 protein-floor append (the floor is a safety net that fires only when neither meal of the day carries protein, so it is not a companion; `record.ts` states the classification in full). The breakfast small item has no presence ledger and stays a pick count on both sides: a breakfast of two or more picks carried one. The threshold's own lines print how far the two readings of the weekday companion sit apart on the same plans, because they are two measures of one quantity and a wide gap would put every number here out by that much.",
+    "- Thresholds 1 and 12 report, and do not gate, any tracked family with fewer than four as-eaten rows in the record at simulation start (§11 as amended after the first gate run). Each family's row count is printed on its line so the exemption is never invisible.",
+    "- Threshold 12 gates each family on **its own counting noise** (§11 as amended after gate fix cycle 3), not on a fixed percentage: a family placed n times in a window carries a relative standard error of about 1 / sqrt(n) on its rate, the difference of two windows carries sqrt(1/n1 + 1/n2), and a shift smaller than that is not distinguishable from the coarseness of the counts. Every family's line carries the placements each of its two windows rests on, its noise, and whether the 10 percent figure the spec aspires to was met, which is reported beside the verdict and is not the verdict. At a 41-week horizon the quietest tracked family carries 18.9 percent of noise, so 10 percent is out of reach for all twelve families; it needs about 200 placements a window, which at the record's own family rates is roughly 140 weeks of horizon.",
+    "- Threshold 4 counts a chutney day-lock per individual chutney dish, not for the chutney category as a whole (§11 as amended after the first gate run): every paratha and chilla morning carries a chutney, so the category is locked to the paratha mornings by construction and the lock the rule guards against is one chutney on one weekday.",
+    "",
+    swapAway.size === 0
+      ? "The corrected run has **no swap-away rows to replay**: every week of this fixture predates cutover and carries no `generatedPlan`, so §2's swap-away list is empty and run 3 is identical to run 2. It becomes a distinct run as soon as the fixture is a prod export that carries generated plans."
+      : `The corrected run replays ${swapAway.size} swap-away dish ids from the record.`,
+  ];
+
+  const reports: RunReport[] = [];
+  for (const spec of RUN_SPECS) {
+    process.stdout.write(`gate: ${spec.label}\n`);
+    const simulated = simulate({
+      data,
+      record: seed,
+      weeks: options.weeks,
+      variant: spec.variant,
+      swapAway: spec.corrected ? swapAway : undefined,
+      onWeek: (index, weekStart, week) => {
+        process.stdout.write(
+          `gate:   week ${String(index).padStart(2, " ")}/${options.weeks} ${weekStart} ` +
+            `${week.generatedPlan.length} picks, ` +
+            `${week.diagnostics.exploration ? "1" : "0"} novelty, ` +
+            `${week.diagnostics.repairs.length} repairs\n`,
+        );
+      },
+    });
+    reports.push(
+      measureRun({
+        label: spec.label,
+        data,
+        seed,
+        simulated,
+        withDiagnostics: !spec.label.startsWith("Variant"),
+      }),
+    );
+  }
+
+  return { markdown: renderReport(reports, preamble), reports };
+}
+
+function isEntrypoint(): boolean {
+  if (!process.argv[1]) return false;
+  try {
+    return resolve(process.argv[1]) === fileURLToPath(import.meta.url);
+  } catch {
+    return false;
+  }
+}
+
+if (isEntrypoint()) {
+  const fixture = process.argv[2] ?? "record-8weeks";
+  const weeks = Number(process.argv[3] ?? DEFAULT_WEEKS);
+  const started = Date.now();
+  const { markdown, reports } = runGate({
+    fixture,
+    weeks,
+    dataDir: resolve(repoRoot, "data"),
+  });
+  const outPath = resolve(repoRoot, "features/engine-v6-gate-report.md");
+  mkdirSync(dirname(outPath), { recursive: true });
+  writeFileSync(outPath, `${markdown}\n`, "utf8");
+  process.stdout.write("\n");
+  for (const line of summaryLines(reports)) process.stdout.write(`${line}\n`);
+  process.stdout.write(
+    `\ngate: wrote ${outPath} in ${((Date.now() - started) / 1000).toFixed(1)}s\n`,
+  );
+}

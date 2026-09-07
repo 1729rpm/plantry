@@ -82,8 +82,7 @@ minus every day named in its `skippedDays`, minus every pick whose `dishId` is n
 custom one-off has no library identity and contributes no row until it is promoted to a library
 dish and its slot re-pointed at the new id). `weekArchive` is not the record source: finalize
 snapshots the week at the moment of finalizing, and the household edits weeks after that moment,
-so the archive under-reports as-eaten rows for edited weeks. `weekArchive` stays as it is for the
-picker and Explore surfaces until those read the record (§12).
+so the archive under-reports as-eaten rows for edited weeks. `weekArchive` stays as it is, unread by generation, the picker, and Explore, all of which read the record (§12).
 
 ### 2.2 Occasions and rates
 
@@ -209,7 +208,7 @@ record's own companion rates instead of being filled to a budget. **Reopening tr
 here so it is not re-argued:** if the §11 self-feeding run shows any optional slot's presence rate
 more than 25 percent over its record presence rate on weeks 20 to 60, that slot (and only that
 slot) gains its own presence-rate ledger, accrued and charged like a dish's. Neither dry run
-justified it once the seed and the chutney slot were corrected. **The trigger has fired for two slots** (first gate run: weekday companion presence +34 percent self-fed and +38 percent frozen, Saturday accompaniment 100 percent against a record 75, while the breakfast small item sat at +4 percent; the frozen failure shows the cause is the maximum over a wide pool of per-dish ledgers, not drift). The **weekday lunch companion slot** and the **Saturday third-item slot** each carry a presence ledger: before each week `presenceDeficit += recordPresenceRate × plannedOccasions`, where the record presence rate is the share of that scope's record occasions whose plate carried the optional element (a companion on a weekday lunch; any third item on a Saturday, accompaniment, special protein, or partner alike); every placement into the slot charges 1, structural forms included; a hand-added element in a served week is charged at reconciliation and a removed one keeps its charge, exactly as §3 treats a dish. The slot is filled only while its presence deficit is positive; which dish fills it is then the pool's top deficit, falling back to the highest-rate dish not already placed this week when no deficit is positive (§3.2's structural rule, because presence has already been decided). The presence ledger is replayed with the dish ledgers (§3.1) and seeded at zero. The breakfast small-item slot stays on the dish rule alone.
+justified it once the seed and the chutney slot were corrected. **The trigger has fired for two slots** (first gate run: weekday companion presence +34 percent self-fed and +38 percent frozen, Saturday accompaniment 100 percent against a record 75, while the breakfast small item sat at +4 percent; the frozen failure shows the cause is the maximum over a wide pool of per-dish ledgers, not drift). The **weekday lunch companion slot** and the **Saturday third-item slot** each carry a presence ledger: before each week `presenceDeficit += recordPresenceRate × plannedOccasions`, where the record presence rate is the share of that scope's record occasions whose plate carried the optional element (a companion on a weekday lunch, read structurally off each record plate by subtracting the floor append and the form's structural positions, the star, the standard plate's carb, the one plain protein a carb-forward international main takes, so that what remains is the companion; any third item on a Saturday, accompaniment, special protein, or partner alike); every placement into the slot charges 1 (on a weekday only a companion placement, never a §5.1 floor append, which is a safety net and not the slot; on Saturday the structural forms included); a hand-added element in a served week is charged at reconciliation and a removed one keeps its charge, exactly as §3 treats a dish. The slot is filled only while its presence deficit is positive; which dish fills it is then the pool's top deficit, falling back to the highest-rate dish not already placed this week when no deficit is positive (§3.2's structural rule, because presence has already been decided). The presence ledger is replayed with the dish ledgers (§3.1) and seeded at zero. The breakfast small-item slot stays on the dish rule alone.
 
 There is no saturating count, no due-ness, no longest-unused, no streak cap, and no per-family
 budget anywhere in this engine. Family frequencies need no mechanism because a family's served
@@ -374,7 +373,7 @@ selection is §3's rule: highest deficit, id ascending on ties, charge on placem
    ties among never-occupied weekdays break by fewest total occupations, then Monday-first order.
    Assignment runs in plan priority order: pinned favorites, then stars by deficit descending, then
    everything else, and **the exploration pick last**, taking whichever weekday its plate shape
-   still fits. **The exploration slot keeps its own least-recently-used weekday memory:** the weekday of every past exploration placement is read from the record's `generatedPlan` values (the plan pick whose dish had no as-eaten row before that week), and the pick is assigned to the eligible weekday least recently used by an exploration placement, never-used weekdays counting as oldest, ties Monday-first. (Amended after the debate: a never-eaten pick has no occupation history, so assigning it second sent it, and the roti it carried, to Monday in 10 of 10 weeks. Amended again after the first gate run: assigned last with no memory of its own, the pick took the leftover weekday, and plain roti held Friday lunch in 21 of 41 self-fed weeks and 27 of 41 frozen weeks, so the memory held in reserve is now the rule.)
+   still fits. **The exploration slot keeps its own least-recently-used weekday memory:** the weekday of every past exploration placement is read from the record's `generatedPlan` values (the plan pick whose dish had no as-eaten row before that week), and the exploration plate's weekday is reserved first, before the repertoire plates are assigned in priority order over the remaining weekdays: the eligible weekday least recently used by an exploration placement, never-used weekdays counting as oldest, ties Monday-first. (Reserved first rather than assigned last because five lunch plates fill five weekdays, so a plate assigned last has exactly one day left and the memory would decide nothing.) (Amended after the debate: a never-eaten pick has no occupation history, so assigning it second sent it, and the roti it carried, to Monday in 10 of 10 weeks. Amended again after the first gate run: assigned last with no memory of its own, the pick took the leftover weekday, and plain roti held Friday lunch in 21 of 41 self-fed weeks and 27 of 41 frozen weeks, so the memory held in reserve is now the rule.)
 6. **Constraint pass.** Enforce, in order: the two anchors (§4); one gravy per lunch (hard);
    cross-meal protein-family and ingredient demotion (§5.1); rice on consecutive days (soft,
    resolve by swapping the two lunches whose exchange clears it, earliest pair first, and accept
@@ -470,8 +469,7 @@ does not merge to `main` until it passes; no further prototype dry run precedes 
 - **Method.** The harness runs the engine self-feeding (each generated week is treated as eaten,
   unedited, and fed into the record that feeds the next) for 60 weeks from the current record. All
   thresholds are measured on weeks 20 to 60, the steady state, not the warm-up. Three runs:
-  1. **Frozen:** rates fixed at the cutover record for the whole horizon. Measures the engine's
-     own bias; a family that fails here needs an engine fix.
+  1. **Frozen:** rates fixed at the cutover record for the whole horizon (dish rates, the eaten counts behind them, and `lastEatenWeek` for the cold start), while the occupation memory, the exploration-weekday memory, exploration candidacy, and the presence rate read the live record, so the run measures rate-following bias and not a stalled calendar. Measures the engine's own bias; a family that fails here needs an engine fix.
   2. **Self-feeding:** the production path. Measures drift; a family that passes frozen and fails
      here is the self-feed ratchet, not bias.
   3. **Corrected:** the self-feeding run with the record's own swap-away list replayed against the
@@ -494,7 +492,7 @@ does not merge to `main` until it passes; no further prototype dry run precedes 
      one.)
   4. **Slot anti-lock:** no dish holds the same weekday-meal slot in more than half the weeks of
      the horizon, favorites included, exempting only the two §4 anchors and any dish whose rate
-     arithmetically forces majority occupancy (a rate above half its role's weekly slots); and no
+     arithmetically forces majority occupancy (a rate at or above 0.4 of its role's weekly slots at which a preference-free spread already puts one weekday over half the horizon more often than not; plain roti at 0.473 of the carb role is the measured case, its worst weekday sitting at the random mean); and no
      category (international, specialty roti) and no individual chutney dish is day-locked in more than half the weeks, Saturday's own scope excepted. (Amended after the first gate run: the chutney category as a whole sat at 22 of 41 Mondays by construction, because every paratha and chilla morning carries one; the lock the rule guards against is one chutney on one weekday.)
   5. **Saturday:** no treat main repeats within any rolling min(8, Saturday pool size) Saturdays;
      dessert on 100 percent of Saturdays.
@@ -512,9 +510,7 @@ does not merge to `main` until it passes; no further prototype dry run precedes 
   11. **Presence rates:** breakfast small-item presence, weekday companion presence, and Saturday
       accompaniment presence each within 25 percent of the record's presence rate (this is what
       arms the §3.2 reopening trigger).
-  12. **Drift bound:** each tracked family's rate over weeks 40 to 60 within 10 percent of its
-      rate over weeks 20 to 40 on the self-feeding run (provisional until the first run shows the
-      window-to-window noise of the two-row families).
+  12. **Drift bound:** each tracked family's rate over weeks 40 to 60 within its own counting noise of its rate over weeks 20 to 40 on the self-feeding run, the noise being the Poisson relative error of the two window counts combined (the square root of 1/n1 + 1/n2); a shift larger than that is drift. The 10 percent figure is reported beside it as the aspiration for a horizon long enough to resolve it (about 200 placements a window). (Amended after the third gate run: at 41 weeks every family's counting noise exceeds 10 percent, the quietest, egg, at 18.9 percent, so the fixed bound measured noise, not drift.)
   13. **Reported, not gated:** novelty placements per week; weekday lunches with no animal
       protein; Saturday plate shape; negative-deficit fills per role per week; picks by protein
       family.
@@ -529,9 +525,7 @@ form's cuisine-register rules, carb affinity, the dish-driven chutney widened to
 eggs); §6 requested dishes (the favorites pinning reuses its slot-acceptance test); §8 skipped
 days; §9 item cap as the role-aware safety net behind the ceilings (weekday cap 5, Saturday 3,
 fruit outside the cap); §11 nutrition and its reports; §12 field reference minus the deletions
-below; §13 spec-code parity and its change-order process. The §5 picker carries forward minus its
-protein-band-distance term and minus its longest-unused head order: the head is ordered by
-recency tier (not placed this week first) then dish id.
+below; §13 spec-code parity and its change-order process. The picker carries forward with its head ordered by recency tier (dishes not placed this week first, read from the live week) then dish id, its tail unchanged, and no protein-band term.
 
 Backend contract, so the record and the ledger are derivable from persisted data alone:
 

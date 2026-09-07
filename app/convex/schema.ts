@@ -75,6 +75,36 @@ export default defineSchema({
         }),
       ),
     ),
+    // What the engine placed when this row was written: one entry per
+    // (day, meal, dishId) it put on the week (`features/engine-v6.md` §12).
+    // The v6 ledger replay (§3.1) is a pure function of persisted data, and this
+    // is the half that records what was proposed; the live `slots` above record
+    // what the household actually ate. The set difference between the two is how
+    // §3 tells an engine placement from a hand swap-in, so the replay can charge
+    // the dishes that were eaten and refuse to refund the ones that were removed.
+    //
+    // Optional and additive: rows written before the v6 cutover carry no
+    // `generatedPlan` and are read as record-only weeks (§2.1), so every existing
+    // row still validates. (Convex validates every row of every table against the
+    // new schema at deploy time, so a non-additive change would fail the deploy.)
+    // `meal` reuses `slotMealValidator`, the same union the live slots carry, so a
+    // fruit placement is expressible.
+    generatedPlan: v.optional(
+      v.array(
+        v.object({
+          day: v.union(
+            v.literal("Mon"),
+            v.literal("Tue"),
+            v.literal("Wed"),
+            v.literal("Thu"),
+            v.literal("Fri"),
+            v.literal("Sat"),
+          ),
+          meal: slotMealValidator,
+          dishId: v.number(),
+        }),
+      ),
+    ),
     version: v.number(),
   }).index("by_weekStart", ["weekStart"]),
 
@@ -227,10 +257,16 @@ export default defineSchema({
 
   // Structured runtime error log written by the auto-recovery middleware.
   // Also fuel for the slow loop.
+  //
+  // `severity` carries three levels. "error" and "warn" are the two the middleware
+  // has always written. "info" is the routine-trail level: a v6 generation logs one
+  // per §6 step 6 constraint repair (`features/engine-v6.md`), which is expected
+  // behaviour worth reading back, not a problem. Widening the union is additive, so
+  // every existing row still validates at deploy time.
   incidents: defineTable({
     createdAt: v.number(),
     source: v.union(v.literal("engine"), v.literal("backend"), v.literal("frontend")),
-    severity: v.union(v.literal("warn"), v.literal("error")),
+    severity: v.union(v.literal("info"), v.literal("warn"), v.literal("error")),
     context: v.any(),
     message: v.string(),
     resolvedAt: v.union(v.number(), v.null()),

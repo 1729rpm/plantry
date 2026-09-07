@@ -1,36 +1,44 @@
 import { query } from "./_generated/server.js";
 import { v } from "convex/values";
 import { dishes, ingredients, catalog } from "@plantry/engine/library";
-import { history } from "@plantry/engine/history";
 import {
-  rankExplore,
-  type ExploreAffinityKey,
-  type MenuHistoryRow,
+  deriveRecordStats,
+  rankExploreV6,
+  type ExploreAffinityKeyV6,
   type Season,
 } from "@plantry/engine";
-import { archiveToHistoryRows } from "./lib/archiveHistory.js";
+import { loadRecord } from "./lib/record.js";
 
 /**
  * Explore feed for the Explore tab (`features/design-revamp.md` §1.4 item 4,
- * §1.5, §6.12). Returns the eligible (active, in-season), NEVER-COOKED library
- * dishes ranked "familiar but new" by the engine `rankExplore`, each carrying
- * its `dominantAffinity` key. The UI phrases the "why it fits" line from the
- * key; no UI prose leaks out of the engine (Principle 7).
+ * §1.5, §6.12). Returns the eligible (active, in-season), NEVER-EATEN library
+ * dishes ranked "familiar but new" by the engine `rankExploreV6`, each carrying
+ * its `dominantAffinity` key. The UI phrases the "why it fits" line from the key;
+ * no UI prose leaks out of the engine (Principle 7).
  *
- * Last-cooked join. "Never cooked" is the union of two cooking records: the
- * baked `menu_history` (the seed and periodic snapshot, bundled into the engine)
- * and the live Convex `weekArchive` (weeks finalized since the last bake). A
- * dish cooked in either is excluded from Explore. We feed the engine the baked
- * history plus a synthetic history row per `weekArchive` row, so a dish a recent
- * finalize already recorded does not resurface as "new on the plate". The
- * archive rows already mirror the `MenuHistoryRow` shape (day long-form, meal
- * capitalised), so the merge is a direct map.
+ * "Never eaten" comes from the household record (`features/engine-v6.md` §2.1,
+ * §12): every `currentWeek` row before this week, as-eaten, loaded by
+ * `loadRecord` and reduced by `deriveRecordStats`. A dish with an as-eaten row in
+ * any scope is repertoire, not novelty, so it is out of the candidate pool. The
+ * baked seed history and `weekArchive` are NOT read: the archive under-reports
+ * weeks the household edited after finalizing, and the seed carries pre-correction
+ * menu shapes the household has since edited away (§13). `data/menu_history.md`
+ * stays in the repo for provenance only.
  *
- * The ranking is the engine's; this query only supplies inputs (library,
- * merged history, season, ingredient rows + catalog for protein derivation) and
- * projects the result to the wire shape the Explore tab consumes. With an empty
- * `weekArchive` (production today) the merged history equals the baked history,
- * so the feed is exactly what the engine produces from the seed.
+ * The affinity is record-derived too. `rankExploreV6` scores each candidate
+ * against the record rows of its OWN meal type (a breakfast candidate against the
+ * weekday-breakfast scope, a lunch candidate against the weekday-lunch scope), so
+ * the "familiar" half of "familiar but new" is what the household actually ate at
+ * that meal. The record weeks go in as the fourth argument for exactly that
+ * reason: with none, every affinity profile would be empty and the ranking would
+ * collapse to dish id.
+ *
+ * The ranking is the engine's; this query only supplies inputs (the record, the
+ * library, the season, and the ingredient rows plus catalog the protein-band
+ * signal needs) and projects the result to the wire shape the Explore tab
+ * consumes. The §7 spacing window and the family governor are deliberately not
+ * applied here: they govern what the engine proposes, not what the household is
+ * allowed to browse.
  */
 
 /**
@@ -50,33 +58,32 @@ export interface ExploreFeedDish {
   dishId: number;
   name: string;
   /** Structured affinity key; the UI phrases the "why it fits" line from it. */
-  dominantAffinity: ExploreAffinityKey;
+  dominantAffinity: ExploreAffinityKeyV6;
 }
 
 /**
  * Browser-callable query. The PWA subscribes via
- * `useQuery(anyApi.explore.getExploreFeed, { weekStart })`. `weekStart` only
- * fixes the season; the ranking spans both meal-times (Explore is not slot
- * scoped). Returns the full ranked list (the UI decides how many to show).
+ * `useQuery(anyApi.explore.getExploreFeed, { weekStart })`. `weekStart` fixes the
+ * season and bounds the record; the ranking spans both meal-times (Explore is not
+ * slot scoped). Returns the full ranked list (the UI decides how many to show).
  */
 export const getExploreFeed = query({
   args: { weekStart: v.string() },
   handler: async (ctx, args): Promise<ExploreFeedDish[]> => {
-    const archives = await ctx.db.query("weekArchive").collect();
-    const mergedHistory: MenuHistoryRow[] = [...history, ...archiveToHistoryRows(archives)];
+    const season = seasonOf(args.weekStart);
+    const record = await loadRecord(ctx, args.weekStart);
+    const stats = deriveRecordStats(record, dishes, season);
 
-    const ranked = rankExplore({
-      library: dishes,
-      history: mergedHistory,
-      season: seasonOf(args.weekStart),
-      ingredients,
-      catalog,
+    const ranked = rankExploreV6(stats, dishes, season, record, {
+      nutrition: { ingredients, catalog },
     });
 
     // Decision 9: hide dishes already placed in the current week, so the tab keeps
     // its "new on the plate" promise. Placed = any dish id appearing in a
-    // current-week slot for `weekStart`. The read is server-side so the wire payload
-    // is already trimmed. (The retired next-week queue exclusion is gone with the
+    // current-week slot for `weekStart`. This is the week being eaten now, which
+    // the record deliberately excludes (the record is every week BEFORE this one),
+    // so it is read separately. The read is server-side so the wire payload is
+    // already trimmed. (The retired next-week queue exclusion is gone with the
     // queue itself, `features/wishlist-favorites-v2` §5; the wishlist never hides an
     // Explore dish.)
     const week = await ctx.db
