@@ -28,7 +28,7 @@ request filed in the new append-only `data/engine-requests.md`, which `/evolve-e
 and decider read. Signals and health work on `slow-loop/<date>`, whose prefix and PR-body contract
 the mark-applied action still matches and parses; docs, retro, and hygiene work on
 `docs/maintenance-<date>`. `.retro-state` is deleted, with the CI root allowlist and the written
-inventories following it. The structure was decided in `features/maintenance-skill-structure.md`
+inventories following it. The structure was decided in `archive/features/maintenance-skill-structure.md`
 (#266), grounded in the earlier review (#265), an independent clean-room study of every
 maintenance run since June, and the current Claude Code skills layout. (#269)
 Why: the four maintenance jobs were split across three commands and one unbriefed by-hand job, so

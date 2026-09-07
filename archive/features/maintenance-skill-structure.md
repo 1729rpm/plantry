@@ -1,7 +1,7 @@
 # The maintenance skill: final structure
 
 The structure of `/maintain`, the second of Plantry's two slow workflows, decided 2026-09-07 by the
-EM session. It supersedes `features/maintenance-skill-review.md` (PR #265), which it agrees with on
+EM session. It supersedes `archive/features/maintenance-skill-review.md` (PR #265), which it agrees with on
 the shape and overrules on six specifics (§9). It is grounded in three inputs: that review; an
 independent clean-room study of the repo, its ledgers, and the git history of every maintenance run
 since June, done by an agent forbidden from reading the review; and a check of the current Claude
