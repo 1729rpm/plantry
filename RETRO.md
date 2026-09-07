@@ -34,6 +34,14 @@ the `last-run` value on the retro row of `.maintenance-state`.
 
 ---
 
+## 2026-09-07  A sitting's two branches share one artifact folder and one state file, and the skill did not say who moves what
+- Area: coordination
+- What happened: `/maintain` step 3 opens the docs branch off `origin/main` so the docs PR does not depend on the slow-loop PR, and step 8 says to `git mv` the sitting's folder to `archive/maintenance/<date>`. On the first sitting the folder was split across the two branches (signals and health artifacts on `slow-loop/<date>`, the other three on `docs/maintenance-<date>`) and `.maintenance-state` diverged, so a single close-out move would have left two artifacts behind in `features/` and the second PR to merge would have conflicted on the state file.
+- Recurrence: systemic (every sitting has two branches)
+- Impact: one close-out done on both branches by hand, and the docs branch seeded with the slow-loop branch's state file so the shared hunks stay identical.
+- Proposed level: brief-template (SKILL.md step 8 says each branch moves its own half and the docs branch starts from the slow-loop branch's state file)
+- Status: fixed (PR #272): `.claude/skills/maintain/SKILL.md` step 8 carries both rules.
+
 ## 2026-08-18  Agent worktrees living inside the repo break the local gate run
 - Area: tooling
 - What happened: Claude Code puts agent worktrees at `.claude/worktrees/<id>/`, inside the repo. They are git-excluded via `.git/info/exclude`, so git ignores them, but eslint and Prettier are not git-aware and walked straight into them. From the main directory `npm run lint` reported 119 errors and `npm run format:check` failed on 13 files, every one of them belonging to another branch's checkout. CI never sees these paths, so CI stayed green while the documented local self-test was unusable.
@@ -56,7 +64,7 @@ the `last-run` value on the retro row of `.maintenance-state`.
 - Recurrence: systemic (a documented-but-nonexistent gate is trusted indefinitely, since the only way to discover it is to go looking for the file)
 - Impact: spec-code drift shipped and was attributed to a gate that does not exist. Reviewers skip a check they believe CI already runs.
 - Proposed level: ci-test (build the check that 13 describes) plus process-doc (until it exists, no doc may claim it)
-- Status: fixed in part (PR #233) - `CLAUDE.md` and `README.md` now describe the pairing as the review discipline it is. `docs/engine.md` 13 still overstates it and is held for `/reconcile-docs`, since open PR #229 owns that file. Building the check is already required work in `features/engine-v4.md` 15.5; it was deliberately not added in a maintenance pass with three PRs open, because a new blocking gate could red them.
+- Status: triaged (Rajat, D8): the doc half is closed, `docs/product.md` §4 Principle 3 now says the pairing is held by review (PR #272); the parity CI check itself is approved in principle and not built, and as a merge-blocking gate it is Rajat's call.
 
 ## 2026-08-18  A day of spec amendments and two ledger entries lived only in an uncommittable working tree
 - Area: coordination
@@ -64,7 +72,7 @@ the `last-run` value on the retro row of `.maintenance-state`.
 - Recurrence: systemic (every EM-authored spec amendment and ledger append, since the EM works in the main directory by design and the hook makes committing there partial)
 - Impact: an unbacked-up working tree held the phase's blocking verdict and three worktrees held three divergent copies of the same spec. A ledger entry was already lost and only a diff against HEAD recovered it.
 - Proposed level: process-doc (the EM commits ledger and spec amendments the same day they are written, from a short-lived maintenance worktree, rather than accumulating them in the main directory) plus tooling (a session-close check that the main directory has no uncommitted tracked changes)
-- Status: open
+- Status: fixed (PR #272): the process half is the commit-after-every-pass rule in `/maintain` and `/evolve-engine` plus the EM docs-PR cadence (`docs/development.md` §11.4); the tooling half is the `/maintain` sitting's step 0 refusing to start on a dirty main tree and the hygiene pass running `git status` in the main directory as well as the worktree (`.claude/skills/maintain/passes/hygiene.md` check 8).
 
 ## 2026-08-18  A design handoff landed at the repo root and outlived its feature there
 - Area: coordination
@@ -72,7 +80,7 @@ the `last-run` value on the retro row of `.maintenance-state`.
 - Recurrence: recurring (the previous handoff model drifted the same way; see the 2026-06-17 handoff re-commission)
 - Impact: low functional risk, but a stray untracked tree at the root defeats the repo-structure check by construction, since that check only runs in CI against a clean checkout.
 - Proposed level: process-doc (feature close-out explicitly removes the working handoff copy once the archived copy is verified identical) plus no-change on the allowlist itself
-- Status: open (the archived copy is verified byte-identical; removing the root copy needs Rajat's approval and is pending)
+- Status: fixed (PR #272): the root copy is gone (verified absent at this sitting, the archived copy under `archive/features/wishlist-favorites-v2/handoff/` being the only one); `docs/development.md` §3 step 8 now removes a handoff's working copy at close-out once the archived copy is verified byte-identical.
 
 ## 2026-07-15  Green engine tests missed a double-placement bug the guaranteed-favorites pass could produce
 - Area: verification
@@ -208,7 +216,7 @@ the `last-run` value on the retro row of `.maintenance-state`.
 - Recurrence: systemic (every finalized week that gets edited afterward)
 - Impact: recency, Saturday alternation, and fruit rotation rank against partly fictional history; dishes actually cooked can rank as never-cooked and vice versa.
 - Proposed level: process-doc or engine (either finalize at week end as the archive semantics assume, or make the archive follow post-finalize edits to a final week); needs a MAINTENANCE.md §6 triage with Rajat since it touches when he taps Finalize.
-- Status: triaged (PR #221) — surfaced to Rajat; it touches when he taps Finalize, so it needs his call (finalize-at-week-end semantics vs archive-follows-post-finalize-edits). Not actioned autonomously.
+- Status: wont-fix (superseded by engine v6): the record the engine reads is the live `currentWeek` rows, as-eaten state with post-finalize edits applied, and `weekArchive` is provenance read by nothing (`docs/engine.md` §2.1), so when Rajat taps Finalize no longer affects generation.
 
 ## 2026-07-12  Convex dev smoke from a fresh worktree has two traps (stale dist bundle, anonymous .env.local)
 - Area: tooling
@@ -243,9 +251,9 @@ the `last-run` value on the retro row of `.maintenance-state`.
 - **Subagents die on the account session limit or stall after CI.** Two engineers were lost mid-stream (one before any work, one after pushing and marking ready). Mitigation used: commit-and-push-early in the contract, and check the PR state before respawning. Systemic: no automatic resume.
   - Status: wont-fix (platform behaviour); the commit-and-push-early brief line and the check-the-PR-state-before-respawning practice are the mitigations
 - **Docs claim CI checks that do not exist** (spec-code parity, Convex codegen). Found by stream G. Fixed in `docs/engineering.md` §15 and `CLAUDE.md`; consider adding the parity step for real.
-  - Status: fixed on the doc side (PRs #256, #262); the CI parity step is surfaced to Rajat as a CI change, not actioned
+  - Status: triaged (Rajat, D8): the doc side is closed with `docs/product.md` §4 Principle 3 (PR #272); the CI parity step is approved in principle and not built, Rajat's call as a merge-blocking gate.
 - **The plan's stream briefs contradicted each other on one ownership point** (the structural-pool predicate named as A's and B's). Resolved in the briefs by making it a parameter. Fix: a single owner per shared symbol in the plan's hotspot table.
-  - Status: triaged (the next phase plan's hotspot table names one owner per shared symbol; no repo file to change now)
+  - Status: fixed (PR #272): `.claude/commands/new-stream.md` step 1 names one owner per shared symbol in the Hotspot ledger row, the other stream taking it as a parameter or an import.
 - **`engine/test/data/bake.test.ts` deletes the baked library in `afterAll`,** so local gates out of CI order fail typecheck with a misleading error. Fix: document in `docs/development.md` or make the test restore what it deletes.
   - Status: fixed (PR #263: new-stream.md brief line, run the gates in CI order and re-bake after tests); making the test restore the file is left for a chore
 
