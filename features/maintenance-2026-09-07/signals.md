@@ -75,7 +75,7 @@ Pass 1 of 5 of the first `/maintain` sitting. Brief: `.claude/skills/maintain/pa
 
 ## 3. Edits made
 
-- `data/changelog.md`: one appended entry, `## 2026-09-07  maintenance signals: pre-v6 backlog consumed at the cutover, first v6 week read, no change warranted  (slow-loop PR pending)`. Level: none (the entry records the two no-change clusters, the counts, and the empty dislikes table). The heading's `(slow-loop PR pending)` follows the 2026-06-09 entry's convention; the EM may substitute the PR number before committing, since the entry is not history until it lands.
+- `data/changelog.md`: one appended entry, `## 2026-09-07  maintenance signals: pre-v6 backlog consumed at the cutover, first v6 week read, no change warranted  (slow-loop PR pending)`. Level: none (the entry records the two no-change clusters, the counts, and the empty dislikes table). The heading's `(#271)` follows the 2026-06-09 entry's convention; the EM may substitute the PR number before committing, since the entry is not history until it lands.
 - `features/maintenance-2026-09-07/signals.md`: this artifact.
 - No `data/dishes/*.md`, `data/ingredients.md`, `docs/engine.md`, `engine/`, or `app/` file changed.
 
@@ -149,7 +149,7 @@ Consumed dislike IDs: -
 
 1. **A `dishDislikes` listing query is still owed as a chore** (`queries/dishDislikes:listQueuedDislikes`, mirroring `listQueuedManualChanges` on the existing `by_status` index), so the next sitting reads the table through a query function instead of the sanctioned CLI read. The table was empty this sitting, so nothing was left unread.
 2. **A protein added beside a solo complete-meal lunch.** One instance (`js712gb3zmhbd3m834yrm38mk58dyk94`, Fish tikka beside Curd rice, Thu of week 2026-09-07, rajat), one short of any threshold. If it recurs across weeks or by both members, the honest answer is an evolution request stated as a household count (adds of a plain protein beside a solo complete-meal lunch, over the complete-meal lunches served, split by whether the day's breakfast carried eggs or paneer); the data-level candidate to examine meanwhile is Curd rice's category against its own record plates (1 record row, beside a chicken gravy).
-3. **The `data/changelog.md` heading reads `(slow-loop PR pending)`.** Not a signal; a note for the EM to substitute the PR number before the commit if wanted, matching the 2026-07-14 entry's `(#219)` form.
+3. **The `data/changelog.md` heading reads `(#271)`.** Not a signal; a note for the EM to substitute the PR number before the commit if wanted, matching the 2026-07-14 entry's `(#219)` form.
 
 ## 7. Gates run
 

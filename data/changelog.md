@@ -14,7 +14,7 @@ Format:
 
 ---
 
-## 2026-06-09  First fixture-driven slow-loop run (slow-loop PR pending)
+## 2026-06-09  First fixture-driven slow-loop run (#271)
 
 The test-fixture dry-run that proves the slow-loop pipeline end-to-end. All five queued comments in `data/test-fixtures/slow-loop/queued-comments.example.json` and both incidents in `data/test-fixtures/slow-loop/incidents.example.json` were considered under the right-size discipline (`docs/product.md` §4 Principle 1). Every cluster resolved to no change warranted. The pipeline (`/slow-loop` slash command + structural-changelog write + GitHub Action for marking consumed Convex rows) is validated end-to-end; the lack of code changes is the honest output for one synthetic week, not a failure of the discipline.
 
@@ -169,7 +169,7 @@ Same stream and PR. Two Active dishes carry the name Paneer bhurji. They were co
 - Neither id appears in the eight served weeks (`engine/test/v6/fixtures/record-8weeks.json`), so record-row count could not break the tie in either direction.
 - Open for review, deliberately not fixed here: id 106's ingredient table is empty, so an active breakfast main contributes nothing to the grocery list. Authoring those rows is a separate content decision, not a duplicate resolution.
 
-## 2026-09-07  maintenance signals: pre-v6 backlog consumed at the cutover, first v6 week read, no change warranted  (slow-loop PR pending)
+## 2026-09-07  maintenance signals: pre-v6 backlog consumed at the cutover, first v6 week read, no change warranted  (#271)
 
 First `/maintain` sitting (`MAINTENANCE.md` §8), signals pass. Window 2026-07-14 to 2026-09-07 against production (`disciplined-chameleon-263`, read-only). Read: 67 queued `manualChanges` rows, 0 open `incidents`, 0 `dishDislikes` rows (the table is empty). Engine v6 replaced the chooser on 2026-09-07 (#256), so the window splits at the first v6-generated week: rows in weeks before 2026-09-07 are the pre-cutover backlog, rows in the 2026-09-07 week are the real window.
 
