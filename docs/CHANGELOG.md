@@ -15,6 +15,23 @@ work queue for /reconcile-docs and /reconcile-ops; or "none".
 
 ---
 
+## 2026-09-07  The engine-evolution process is a skill: /evolve-engine
+
+`EVOLVING-THE-ENGINE.md` at the root specifies the process that rederives the engine from what
+the household ate (the truth, the rulebook written from the food alone, a simple spec, a
+long-horizon dry run, three clean-room review rounds each with a differ, a first-principles
+critic, a simplicity-versus-coverage debate, and a decider acting as the household's proxy,
+then one household round for Rajat, then build and gate); `.claude/commands/evolve-engine.md`
+runs it, one brief per role sits under `.claude/evolve/roles/`, and a run folder
+`features/engine-<version>/` with a `RUN.md` manifest makes it resumable across usage limits
+and session deaths (the session schedules its own wakeup for the reset time). Rajat is asked
+only the parked taste questions at step 6 and the cutover approvals. Root allowlist, Prettier
+and eslint ignores for `features/engine-*/sim/`, and `CLAUDE.md` pointers updated. (#264)
+Why: engine v5 and v6 were both reached by this process; writing it down keeps it reproducible
+and removes Rajat from the rounds.
+Updated: `docs/development.md` §2 gains the `evolve/engine-<version>` branch name (queued for
+`/reconcile-docs`); `docs/engineering.md` §14 for the new root doc and `.claude/evolve/`.
+
 ## 2026-09-07  Hummus is a lunch main; the 8-week fixture's threshold 1 artifact recorded
 
 Hummus (id 174) moves from Category Accompaniment to Dry dish, one field, so it enters the
