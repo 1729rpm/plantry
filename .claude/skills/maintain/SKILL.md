@@ -187,7 +187,9 @@ sitting that dies is resumed at the next one rather than waiting on a timer. Tha
   not an over-generation finding; one dislike is not a deactivation.
 - **Writing anything to production**, including a "harmless" test generation.
 - **Rewriting an append-only ledger** (`DECISIONS.md`, `RETRO.md`, `docs/CHANGELOG.md`,
-  `data/changelog.md`). The retro pass edits `Status:` lines in place and nothing else.
+  `data/changelog.md`). The retro pass edits `Status:` lines in place and nothing else. An entry is
+  history and is never rewritten; a ledger's instructional header is spec and the docs pass may
+  correct it.
 - **Editing a file a live stream owns.** Skip it and record it.
 - **Doing a pass's work yourself** because it would be quicker, or summarising one pass's artifact
   into the next pass's prompt instead of handing over the file.

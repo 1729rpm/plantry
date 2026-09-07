@@ -440,7 +440,9 @@ one. That is the one `/evolve-engine` mechanism deliberately not imported.
   queued tables and the health pass's record export. The write-back happens on merge, through the
   action (§3).
 - **Rewriting an append-only ledger** (`DECISIONS.md`, `RETRO.md`, `docs/CHANGELOG.md`,
-  `data/changelog.md`). The retro pass edits `Status:` lines in place and nothing else.
+  `data/changelog.md`). The retro pass edits `Status:` lines in place and nothing else. An entry is
+  history and is never rewritten; a ledger's instructional header is spec and the docs pass may
+  correct it.
 - **Editing a file a live stream owns** (`docs/development.md` §11.2). Skip it and record it.
 - **Reporting a pass `done` with an unrecorded deferral.**
 - **Running at all when the engine's shape is wrong.** That is `/evolve-engine`. This skill is for

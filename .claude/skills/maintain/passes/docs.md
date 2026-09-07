@@ -15,8 +15,9 @@ historical seams. One pass, two lanes, one PR.
   `docs/development.md`.
 - **Lane B: the operational layer.** `README.md`, `CLAUDE.md`, `MAINTENANCE.md`,
   `ADDING-DISHES.md`, `EVOLVING-THE-ENGINE.md`, `claude-design.md`, the skill and command briefs
-  under `.claude/`, and `app/web/e2e/*.mjs` (the UI crawl harnesses: their tab lists, selectors, and
-  sheet flows are checked against the live app's surfaces, so a surface change never leaves the
+  under `.claude/`, `RETRO.md`'s instructional header (its entries are history and stay untouched;
+  its header is spec), and `app/web/e2e/*.mjs` (the UI crawl harnesses: their tab lists, selectors,
+  and sheet flows are checked against the live app's surfaces, so a surface change never leaves the
   crawl asserting a retired tab).
 
 Where an operational doc restates a canonical fact, the canonical doc wins. Keeping the pointer
@@ -49,7 +50,8 @@ pass does not wait for a new CHANGELOG entry to justify a second look.
 
 - **Rewriting an append-only ledger.** `DECISIONS.md`, `RETRO.md`, `docs/CHANGELOG.md`, and
   `data/changelog.md` are never rewritten by this pass. The retro pass edits `RETRO.md` `Status:`
-  lines in place and nothing else.
+  lines in place and nothing else. The one carve-out is `RETRO.md`'s instructional header, which is
+  spec rather than history and is this pass's to correct.
 - **Editing `docs/engine.md` for anything but wording that describes shipped code.** If shipped
   reality changed the engine's rules, that is `/evolve-engine`'s (`MAINTENANCE.md` §1), and this
   pass records the divergence rather than resolving it in the spec's favour.

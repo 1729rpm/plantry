@@ -3,8 +3,8 @@
 Append-only log of process and system friction the EM hits while running streams. This
 is the slow loop pointed at our own process: the maintenance job reads open entries,
 clusters them, right-sizes each, and converts recurring friction into process or system
-improvements (see `MAINTENANCE.md` §6). Newest first. Append, never rewrite an entry;
-the maintenance pass edits only the `Status` line of an existing entry.
+improvements (the `/maintain` retro pass, `MAINTENANCE.md` §4.4). Newest first. Append,
+never rewrite an entry; the retro pass edits only the `Status` line of an existing entry.
 
 ## What to log
 
@@ -28,8 +28,9 @@ entry format forces honest sizing, the same way the diagnosis card does for PRs.
 ```
 
 The maintenance pass sets `Status` to `triaged`, then `fixed (PR #NNN)` or
-`wont-fix (reason)`. The `.retro-state` marker at root records the last pass date so a
-run only reads entries appended since.
+`wont-fix (reason)`. Its window is a status rather than a date: it reads every entry
+whose status is not closed, whatever the entry's date, plus every entry appended since
+the `last-run` value on the retro row of `.maintenance-state`.
 
 ---
 

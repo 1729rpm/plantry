@@ -53,8 +53,10 @@ who clones.
   marker: the signals pass reads queued rows since it, the docs pass reads CHANGELOG entries since
   it, the health pass measures the monitor's 28-day gate from it. The retro pass's main window is a
   status rather than a date, so its `last-run` bounds only the "appended since" half.
-- **status**: `done`, `pending`, or `running`. A row left `running` by a dead session is treated as
-  not done and re-run from scratch.
+- **status**: `done`, `pending`, or `running`. A row reads `done` between sittings, `running` during
+  one, and `pending` only for a pass that has never run or whose last run is superseded. That
+  matters because `/maintain resume` restarts from the first row that is not `done`. A row left
+  `running` by a dead session is treated as not done and re-run from scratch.
 - **deferred**: the number of items this pass has open in the Deferred section, or `-` for a pass
   that has never run. The count and the section must agree.
 - **note**: the shortest sentence that identifies the oldest or most significant deferral, or `-`.
