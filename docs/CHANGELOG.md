@@ -15,6 +15,18 @@ work queue for /reconcile-docs and /reconcile-ops; or "none".
 
 ---
 
+## 2026-09-07  Hummus is a lunch main; the 8-week fixture's threshold 1 artifact recorded
+
+Hummus (id 174) moves from Category Accompaniment to Dry dish, one field, so it enters the
+weekday lunch star pool through its two record rows (Rajat's decision). The two Active dishes
+named Paneer bhurji (ids 13 and 106) are a deliberate Lunch and Breakfast pair and both stay.
+The reclassification moves three thresholds on the 8-week CI fixture past their bars while the
+prod-record gate passes threshold 1 both before and after, so `gate.test.ts` records threshold
+1 as a fixture artifact (with the deletion condition) and the presence-ambiguity test asserts a
+measured 15 percent band instead of an ordering. (#259)
+Why: `archive/features/engine-v6-plan.md` §6 stream F4; spec §14 item 3.
+Updated: none.
+
 ## 2026-09-07  Phase 9 closes: engine v6 shipped, docs reconciled, harness and cleanup PRs landed
 
 Phase 9's last content batch (hummus a lunch main, #259) lands and the phase closes: the
