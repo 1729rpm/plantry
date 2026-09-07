@@ -232,3 +232,13 @@ run only reads entries appended since.
 - Impact: verification is ad hoc and non-reproducible; a documented smoke path that does not exist erodes trust in the ops docs and costs time re-improvising the check per stream.
 - Proposed level: tooling + process-doc (either restore a committed `scripts/smoke.mjs` that the ops docs already assume, or update every reference to point at the real crawl-harness path; flag for the MAINTENANCE.md §6 reconcile-ops pass to reconcile the references against reality)
 - Status: wont-fix (PR #221) — the reconcile-ops 2026-07-14 pass confirmed no live ops `.md` references `scripts/smoke.mjs`; the committed crawl/smoke harness is `app/web/e2e/smoke.mjs` with a `CRAWL_URL` remote mode (#109). Verification standardizes on that path; a committed prod-smoke wrapper is a separate tooling decision surfaced to Rajat.
+
+## 2026-09-07  Phase 9 build (engine v6), EM session close
+
+- **Stale UI smoke harness.** `app/web/e2e/smoke.mjs` still asserts a "Changes" tab that Phase 7 moved into the profile sheet, so every prod smoke pass since then has failed on the harness, not the app. Systemic: the harness is not in any reconcile pass's scope. Fix: put `app/web/e2e/*` in `/reconcile-ops`'s file list.
+- **Shared session scratchpad across sibling subagents.** Two streams wrote `pr-body.md` to the same scratchpad and one PR body was overwritten with another stream's (caught by the engineer). Fix applied in the brief contract (stream-prefixed filenames); a per-stream scratchpad would remove the class.
+- **Subagents die on the account session limit or stall after CI.** Two engineers were lost mid-stream (one before any work, one after pushing and marking ready). Mitigation used: commit-and-push-early in the contract, and check the PR state before respawning. Systemic: no automatic resume.
+- **Docs claim CI checks that do not exist** (spec-code parity, Convex codegen). Found by stream G. Fixed in `docs/engineering.md` §15 and `CLAUDE.md`; consider adding the parity step for real.
+- **The plan's stream briefs contradicted each other on one ownership point** (the structural-pool predicate named as A's and B's). Resolved in the briefs by making it a parameter. Fix: a single owner per shared symbol in the plan's hotspot table.
+- **`engine/test/data/bake.test.ts` deletes the baked library in `afterAll`,** so local gates out of CI order fail typecheck with a misleading error. Fix: document in `docs/development.md` or make the test restore what it deletes.
+
