@@ -29,8 +29,9 @@ Plantry has two stores by design. The split is the load-bearing engineering deci
 | `data/ingredients.md`, the ingredient catalog (one row per ingredient: group, unit, pack size) | `weekArchive`, finalized past weeks, kept as provenance             |
 | `data/menu_history.md`, the pre-app menu record, kept as provenance                            | `manualChanges`, the append-only log of user edits to the week      |
 | `data/changelog.md`, structural changes audit                                                  | `incidents`, runtime errors written by the auto-recovery middleware |
-| `docs/engine.md`, the rules spec                                                               | `userProfiles`, device identity ("I am Rajat" or "I am Tuhina")     |
-| `engine/` source code                                                                          | `swiggyCarts`, future Swiggy MCP integration state                  |
+| `data/engine-requests.md`, the evolution-request ledger (`MAINTENANCE.md` §5)                  | `userProfiles`, device identity ("I am Rajat" or "I am Tuhina")     |
+| `docs/engine.md`, the rules spec                                                               | `swiggyCarts`, future Swiggy MCP integration state                  |
+| `engine/` source code                                                                          |                                                                     |
 
 Principle for the split: anything a human edits by hand stays in git, because git's pull-request/diff/review workflow is what we want. Anything the running app writes stays in Convex, because committing on every swap would be slow, noisy, and turn git history into a transactional log. The audit-trail argument for git is preserved where it matters (library and rules); operational state has author + timestamp inside Convex.
 
@@ -139,12 +140,13 @@ dishDislikes                           # dishes disliked from Explore ("Not for 
   dishId: number                       # library dish id
   reason: string | null                # optional, as on every reason-bearing write
   status: "queued" | "applied" | "dismissed"
-  consumedWeekStart: string | null     # set once the slow loop consumes the row
+  consumedWeekStart: string | null     # the ISO Monday of the sitting that consumed the row
+  resolvedPr?: string                  # the merged slow-loop PR URL, set by the mark-applied action
 
 # A records-only signal: the dislike affordance writes one row and does nothing
-# in-session (no re-rank, no hide). The slow loop clusters dislikes and may
-# deactivate or down-rank a dish under right-size discipline, marking consumed
-# rows `applied` or `dismissed`.
+# in-session (no re-rank, no hide). The signals pass of /maintain clusters
+# dislikes and may deactivate a dish under right-size discipline; the
+# mark-applied action marks every consumed row `applied` on merge.
 
 incidents
   createdAt: number
@@ -165,7 +167,7 @@ userProfiles
   installedAt: number
 ```
 
-`manualChanges`, `incidents`, and `dishDislikes` are the signal channels the slow loop consumes. Manual changes are observed behavior, one row per swap, custom dish, delete, add, day skip, or day restore, carrying the user's reason when one was given. Incidents are runtime violations from the engine or backend. Dislikes record dishes the user does not want, surfaced from Explore. The `status` lifecycle on `manualChanges` and `incidents` is identical so the slow-loop mark-applied action can mark every consumed row uniformly (see `MAINTENANCE.md` §3). `favorites` and `wishlist` are not signal channels: they are live household state the app reads and writes directly.
+`manualChanges`, `incidents`, and `dishDislikes` are the signal channels the signals pass of `/maintain` consumes. Manual changes are observed behavior, one row per swap, custom dish, delete, add, day skip, or day restore, carrying the user's reason when one was given. Incidents are runtime violations from the engine or backend. Dislikes record dishes the user does not want, surfaced from Explore. All three carry a status the mark-applied action moves on merge, so every consumed row leaves the queue the same way (see `MAINTENANCE.md` §3). `favorites` and `wishlist` are not signal channels: they are live household state the app reads and writes directly.
 
 The library + rules are not in Convex. Convex functions load them by importing typed JSON or TS modules emitted at build time from the markdown files (see §4).
 
@@ -300,7 +302,7 @@ Each `currentWeek` document carries a `version` field. The frontend includes the
 
 - **Prod:** `main` branch. Convex deploys to the production project. Frontend deploys to Vercel production. Domain: `plantry.mudgal.xyz`.
 - **Preview:** every PR. Convex preview deployment with an isolated database. Frontend preview deployment on Vercel. Domain: `plantry-dev.mudgal.xyz` (CNAME points to whichever preview URL the current PR produced; deployed via a Vercel domain alias on PR open).
-- **Branch convention:** `main` (production), `feat/<stream>-<short>` for engineer streams, `slow-loop/<date>` for slow-loop PRs, `docs/maintenance-<date>` for canonical-doc reconciliation PRs.
+- **Branch convention:** `main` is production; every other branch follows `docs/development.md` §2 (engineer streams on `feat/*`, the two `/maintain` PRs on `slow-loop/<date>` and `docs/maintenance-<date>`, an evolution run on `evolve/engine-<version>`). Every PR gets a preview whatever its prefix.
 
 ## 10. DNS records (Rajat to add)
 
@@ -359,16 +361,17 @@ When the integration lands:
 
 ## 14. Repository structure
 
-Authoritative root layout. The maintenance job (`MAINTENANCE.md`) verifies it on every run.
+Authoritative root layout. CI enforces the root entries on every PR through the allowlist regex in `.github/workflows/ci.yml`; the hygiene pass of `/maintain` (`MAINTENANCE.md` §4.5) checks the live tree against it every sitting. The regex, the inventory in `MAINTENANCE.md` §4.5, and this layout move together.
 
 ```
 plantry/
   README.md            # repo readme
   CLAUDE.md            # orientation
-  MAINTENANCE.md       # slow loop + reconciliation + retro-intake spec
+  MAINTENANCE.md       # /maintain spec: the boundary against evolution, the five passes, the ledger, the state file, the mark-applied action
+  EVOLVING-THE-ENGINE.md # /evolve-engine spec: the seven steps, the clean-room roles, the measurement rules, the run folder
   ADDING-DISHES.md     # add-a-dish content-batch playbook
   DECISIONS.md         # EM autonomy log
-  RETRO.md             # EM friction ledger (append-only; MAINTENANCE.md §6)
+  RETRO.md             # EM friction ledger (append-only; triaged by the /maintain retro pass, MAINTENANCE.md §4.4)
   claude-design.md     # design contract (lowercase by convention from the file itself)
   .gitignore
   .githooks/           # pre-commit hook (blocks commits from the main directory)
@@ -382,28 +385,30 @@ plantry/
   package.json         # workspace root manifest
   package-lock.json    # locked dependency tree
   vercel.json          # hosting config
-  .github/workflows/
+  .github/workflows/   # CI (the structure check and the gates, §15) and the slow-loop mark-applied action (MAINTENANCE.md §3)
   .claude/skills/      # /maintain (SKILL.md, passes/, templates/)
   .claude/commands/    # /evolve-engine, /new-stream
-  scripts/             # build and bake scripts
+  .claude/evolve/      # /evolve-engine's role briefs (roles/) and templates (RUN.md, CHANGES.md)
+  scripts/             # build and bake scripts, the photo tool, the dev-week seed, the mark-applied script
   docs/                # canonical specs + CHANGELOG + PLAN
     screenshots/       # app screenshots the README embeds
-  data/                # human-edited library, history, structural changelog, slow-loop fixtures
+  data/                # human-edited library, history, structural changelog, the evolution-request ledger, signals-pass fixtures
     dishes/            # one file per dish: data/dishes/<slug>.md (frontmatter + ingredient rows)
     dish-photos/       # web-ready dish photos (data/dish-photos/<slug>.jpg) + STYLE.md photo spec + details.md per-dish detail map
     ingredients.md     # ingredient catalog: one row per ingredient (group, unit, pack size)
     menu_history.md    # the pre-app menu record, provenance; parsed at bake time, read by nothing
-    changelog.md       # structural-change audit (slow-loop rationale entries)
+    changelog.md       # structural-change audit (the signals pass's rationale entries and content-batch entries)
     engine-requests.md # append-only evolution-request ledger (MAINTENANCE.md §5)
-    test-fixtures/     # slow-loop dry-run fixtures (data/test-fixtures/slow-loop/*.example.json)
-  features/            # the active feature's documents (one feature at a time; a phase may carry a spec, a plan, reviews, and dry runs)
+    test-fixtures/     # signals-pass dry-run fixtures (data/test-fixtures/slow-loop/*.example.json)
+  features/            # the active feature's documents (one feature at a time; a phase may carry a spec, a plan, reviews, and dry runs); a maintenance sitting's artifacts and an evolution run's folder while each runs; the gate harness's living report
   engine/              # TS engine module
   app/convex/          # Convex schema + functions
     lib/               # shared server helpers (slot meal-type validators, author assertion)
     queries/           # read-only query modules
     _generated/        # machine-generated Convex client (committed; Prettier-ignored)
   app/web/             # Vite + React + TS PWA
-  archive/             # history (handoffs, retired docs, shipped feature specs, salvaged patches, generated menu images)
+    e2e/               # the Playwright smoke and back-navigation crawls (§16)
+  archive/             # history (handoffs, retired docs, shipped feature specs and evolution runs, maintenance sittings, salvaged patches, generated menu images)
 ```
 
 Gitignored entries the structure check tolerates but the tree omits: `.git`, `.vercel`, `node_modules`, and `coordination/` (the EM's local live-session registry, §11.1 in `docs/development.md`; it lives only in the main dir and never travels onto a branch).
