@@ -743,9 +743,17 @@ describe("§11's frozen run: rates frozen, memories live", () => {
     expect(merged.explorationWeekdays.get("Fri")).toBe("2026-06-22");
   });
 
-  it("does not freeze §3.2's presence rates or the swap-away list", () => {
-    expect(merged.presenceRate).toEqual(live.presenceRate);
-    expect(merged.presenceRate.weekdayLunch).not.toBe(frozen.presenceRate.weekdayLunch);
+  it("freezes §3.2's presence rates, because presence is a rate", () => {
+    // The adversarial half: the two records genuinely disagree here, so a merge
+    // that leaked the live presence rate through would let the engine's own output
+    // move the bar §11 threshold 11 measures it against.
+    expect(live.presenceRate.weekdayLunch).not.toBe(frozen.presenceRate.weekdayLunch);
+    expect(merged.presenceRate).toEqual(frozen.presenceRate);
+    expect(merged.presenceRate.weekdayLunch).toBe(frozen.presenceRate.weekdayLunch);
+    expect(merged.presenceRate.weekdayLunch).not.toBe(live.presenceRate.weekdayLunch);
+  });
+
+  it("does not freeze the swap-away list", () => {
     expect(merged.swappedOut).toEqual(live.swappedOut);
   });
 

@@ -850,10 +850,17 @@ export function eatenCountIn(stats: RecordStats, dishId: number, scope: Scope): 
  *
  * The frozen run is a control. It answers "does the engine hold the household's
  * distribution when the record cannot answer back", so the quantities it must hold
- * fixed are the ones selection competes on: every scope rate, the eaten counts and
- * occasion counts those rates are computed from, the per-season fruit counts, and
- * the `lastEatenWeek` §3's cold start backdates from. Freezing those is the whole
- * point of the run.
+ * fixed are **every rate**, plus what those rates are computed from: each scope
+ * rate, §3.2's two slot presence rates, the eaten counts and occasion counts, the
+ * per-season fruit counts, and the `lastEatenWeek` §3's cold start backdates from.
+ * Freezing those is the whole point of the run.
+ *
+ * §3.2's presence rate is a rate like any other. It is the target the two presence
+ * ledgers accrue against, so a run that let it track the live record would let the
+ * engine's own output move the bar it is measured against, which is the one thing
+ * this control exists to prevent. It read the live record for one cycle, which cost
+ * threshold 11 a measured +10.6 percent on the Saturday accompaniment; it is frozen
+ * with the dish rates now.
  *
  * What must **not** freeze is everything the record carries that is a memory of
  * where things went rather than how often they were eaten. §6 step 5 assigns days
@@ -868,10 +875,11 @@ export function eatenCountIn(stats: RecordStats, dishId: number, scope: Scope): 
  *
  * So, precisely:
  *
- * - **frozen** (from `frozen`): `weeks`, `occasions`, `seasonDayOccasions`, and per
- *   dish `eatenCount`, `rate`, `seasonCount`, `lastEatenWeek`;
- * - **live** (from `live`): per dish `occupations`, plus `explorationWeekdays`,
- *   `presenceRate`, and `swappedOut`.
+ * - **frozen** (from `frozen`, every rate and what a rate is computed from):
+ *   `weeks`, `occasions`, `seasonDayOccasions`, `presenceRate`, and per dish
+ *   `eatenCount`, `rate`, `seasonCount`, `lastEatenWeek`;
+ * - **live** (from `live`, memory of where things went and nothing else): per dish
+ *   `occupations`, plus `explorationWeekdays` and `swappedOut`.
  *
  * A dish the live record has eaten since cutover but the frozen record has not
  * carries no rate and no eaten count, which is exactly what freezing means (§2.2
@@ -904,7 +912,7 @@ export function frozenRatesStats(frozen: RecordStats, live: RecordStats): Record
     seasonDayOccasions: frozen.seasonDayOccasions,
     perDish,
     swappedOut: live.swappedOut,
-    presenceRate: live.presenceRate,
+    presenceRate: frozen.presenceRate,
     explorationWeekdays: live.explorationWeekdays,
   };
 }
