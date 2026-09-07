@@ -14,7 +14,7 @@ How Plantry is built. Stack, data layer split, runtime topology, hosting, deploy
 | Hosting (frontend)     | Vercel (or Cloudflare Pages)      | Static deploy + per-PR preview environments.                                                           |
 | Hosting (backend)      | Convex (managed)                  | Free tier covers this scale indefinitely.                                                              |
 | DNS                    | Cloudflare (under mudgal.xyz)     | `plantry.mudgal.xyz` for prod, `plantry-dev.mudgal.xyz` for preview.                                   |
-| CI                     | GitHub Actions                    | Round-trip parser, engine spec/code parity, simulation harness, type-check, lint.                      |
+| CI                     | GitHub Actions                    | Round-trip parser, unit tests, the gate harness, type-check, lint (§15).                               |
 | Source control         | GitHub (public repo `plantry`)    |                                                                                                        |
 
 TypeScript is the single language across engine, backend, and frontend. Schema validation and typed data are first-class everywhere via Convex's typed schema and the engine's own types.
@@ -317,18 +317,18 @@ Convex prod and preview each have their own `<deployment>.convex.cloud` URLs; th
 
 **Frontend build (`app/web/.env.local` locally, Vercel project env in deploy):**
 
-- `VITE_CONVEX_URL` — the Convex deployment URL.
-- `VITE_PLANTRY_PASSCODE` — the shared passcode the splash gate validates against (§8). Build-time, so it is baked into the bundle; treat it as a private-URL gate, not a secret boundary. Unset means no gate.
+- `VITE_CONVEX_URL`: the Convex deployment URL.
+- `VITE_PLANTRY_PASSCODE`: the shared passcode the splash gate validates against (§8). Build-time, so it is baked into the bundle; treat it as a private-URL gate, not a secret boundary. Unset means no gate.
 
 **Convex deployment (set via `npx convex env set`):**
 
-- `SLOW_LOOP_TOKEN` — token the slow-loop session uses to read its queued signals without exposing the dashboard.
-- `SWIGGY_MCP_URL` (future) — endpoint of the Swiggy MCP server.
+- `SLOW_LOOP_TOKEN`: token the slow-loop session uses to read its queued signals without exposing the dashboard.
+- `SWIGGY_MCP_URL` (future): endpoint of the Swiggy MCP server.
 
 **Offline tooling (local environment):**
 
-- `NVIDIA_API_KEY` — NVIDIA NIM key the dish-photo generation tool (`scripts/generate-dish-photos.mjs`, §4) reads to call the FLUX.1-dev endpoint. Not a runtime variable; it lives only in the environment of whoever runs the tool. (The tool's dormant Hugging Face fallback reads `HF_TOKEN` instead when run with `PROVIDER=hf`.)
-- `VERCEL_AUTOMATION_BYPASS_SECRET` — the Vercel "Protection Bypass for Automation" token the pre-merge crawl reads to reach a deployment-protected preview (§16). Not a runtime variable; it lives only in the environment of whoever runs the crawl. The companion `VERCEL_TOKEN` (Vercel API key) is used only to list deployment URLs, not by the app.
+- `NVIDIA_API_KEY`: NVIDIA NIM key the dish-photo generation tool (`scripts/generate-dish-photos.mjs`, §4) reads to call the FLUX.1-dev endpoint. Not a runtime variable; it lives only in the environment of whoever runs the tool. (The tool's dormant Hugging Face fallback reads `HF_TOKEN` instead when run with `PROVIDER=hf`.)
+- `VERCEL_AUTOMATION_BYPASS_SECRET`: the Vercel "Protection Bypass for Automation" token the pre-merge crawl reads to reach a deployment-protected preview (§16). Not a runtime variable; it lives only in the environment of whoever runs the crawl. The companion `VERCEL_TOKEN` (Vercel API key) is used only to list deployment URLs, not by the app.
 
 ## 12. Share image family
 
@@ -384,9 +384,10 @@ plantry/
   package-lock.json    # locked dependency tree
   vercel.json          # hosting config
   .github/workflows/
-  .claude/commands/    # /slow-loop, /new-stream
+  .claude/commands/    # /slow-loop, /new-stream, /reconcile-docs, /reconcile-ops
   scripts/             # build and bake scripts
-  docs/                # canonical specs + CHANGELOG
+  docs/                # canonical specs + CHANGELOG + PLAN
+    screenshots/       # app screenshots the README embeds
   data/                # human-edited library, history, structural changelog, slow-loop fixtures
     dishes/            # one file per dish: data/dishes/<slug>.md (frontmatter + ingredient rows)
     dish-photos/       # web-ready dish photos (data/dish-photos/<slug>.jpg) + STYLE.md photo spec + details.md per-dish detail map
@@ -394,14 +395,14 @@ plantry/
     menu_history.md    # the pre-app menu record, provenance; parsed at bake time, read by nothing
     changelog.md       # structural-change audit (slow-loop rationale entries)
     test-fixtures/     # slow-loop dry-run fixtures (data/test-fixtures/slow-loop/*.example.json)
-  features/            # active feature spec (one at a time)
+  features/            # the active feature's documents (one feature at a time; a phase may carry a spec, a plan, reviews, and dry runs)
   engine/              # TS engine module
   app/convex/          # Convex schema + functions
     lib/               # shared server helpers (slot meal-type validators, author assertion)
     queries/           # read-only query modules
     _generated/        # machine-generated Convex client (committed; Prettier-ignored)
   app/web/             # Vite + React + TS PWA
-  archive/             # history (handoffs, retired docs, shipped feature specs)
+  archive/             # history (handoffs, retired docs, shipped feature specs, salvaged patches, generated menu images)
 ```
 
 Gitignored entries the structure check tolerates but the tree omits: `.git`, `.vercel`, `node_modules`, and `coordination/` (the EM's local live-session registry, §11.1 in `docs/development.md`; it lives only in the main dir and never travels onto a branch).
@@ -411,7 +412,7 @@ Naming:
 - Folder names under `archive/`, `docs/`, `features/`, `app/web/src/components/`: kebab-case.
 - TypeScript component files: PascalCase.
 - TypeScript non-component files: camelCase.
-- Markdown files in `docs/`: lowercase single-word names.
+- Markdown files in `docs/`: lowercase single-word names for the four canonical specs; the two append-only-or-sequencing documents, `CHANGELOG.md` and `PLAN.md`, are UPPERCASE like the root ledgers.
 - Markdown files at root: UPPERCASE, with one named exception: `claude-design.md` is lowercase by convention from the design contract itself.
 
 ## 15. CI gates
