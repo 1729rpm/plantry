@@ -15,6 +15,58 @@ work queue for /reconcile-docs and /reconcile-ops; or "none".
 
 ---
 
+## 2026-09-07  /maintain, the maintenance machinery as one skill with five passes
+
+Replaces `/slow-loop`, `/reconcile-docs`, `/reconcile-ops`, and the by-hand retro intake with a
+single `/maintain` skill at `.claude/skills/maintain/`: an orchestrator plus one brief per pass
+(signals, health, docs, retro, hygiene), two templates, and a manifest-style `.maintenance-state`
+carrying a status and a deferred list per pass instead of four flat date markers. `MAINTENANCE.md`
+is rewritten in place as the skill's spec, opening with the boundary between maintenance and
+engine evolution: maintenance owns data values, doc truth, defect fixes proved by a failing test,
+and the repository; every rule edit, new tag value, and engine behaviour change is an evolution
+request filed in the new append-only `data/engine-requests.md`, which `/evolve-engine`'s critic
+and decider read. Signals and health work on `slow-loop/<date>`, whose prefix and PR-body contract
+the mark-applied action still matches and parses; docs, retro, and hygiene work on
+`docs/maintenance-<date>`. `.retro-state` is deleted, with the CI root allowlist and the written
+inventories following it. The structure was decided in `features/maintenance-skill-structure.md`
+(#266), grounded in the earlier review (#265), an independent clean-room study of every
+maintenance run since June, and the current Claude Code skills layout. (#269)
+Why: the four maintenance jobs were split across three commands and one unbriefed by-hand job, so
+each pass deferred items the others owned and nobody owned the repository checks at all; and the
+slow loop could change engine rules with no measurement, which is the failure v4 and v4.1 were.
+Updated: `MAINTENANCE.md` (rewritten in this PR); `CLAUDE.md` and `docs/engineering.md` §14 (the
+named lines in this PR; §14's `MAINTENANCE.md` and `RETRO.md` description lines still stale);
+`docs/development.md` §2, §3, §5, §6 (stale, queued in the state file's deferred list);
+`docs/product.md` §4 Principle 3 (stale, pre-existing, queued).
+
+## 2026-09-07  Dislike write-back on slow-loop merge
+
+The slow-loop mark-applied action now closes the third signal type. A merged `slow-loop/*` PR
+marks its consumed `dishDislikes` rows `applied` through the new internal mutation
+`dishDislikesMutations:markDislikesApplied`, which stamps each row with the ISO Monday of the run
+and the merged PR URL; a missing or already-resolved id writes a warn incident and is skipped, and
+the mutation never throws. `dishDislikes` gains an optional `resolvedPr`.
+`scripts/slow-loop-mark-applied.mjs` calls it on the same best-effort path as the manual-change and
+incident mutations, with the parse unchanged, and gains its first test coverage
+(`engine/test/slowLoopMarkApplied.test.ts`). Dev smoke on the dev deployment only. (#268)
+Why: dislikes were parsed and logged but never written back, so every dislike ever tapped stayed
+`queued` and each maintenance run re-read the whole history.
+Updated: `MAINTENANCE.md` §3 (rewritten in #269 to name the third mutation).
+
+## 2026-09-07  /evolve-engine reads the evolution-request ledger
+
+The evolve side of the one-way handoff between the two skills. `EVOLVING-THE-ENGINE.md` §1
+restates the boundary against maintenance (maintenance changes what the engine reads and repairs
+an implementation that disagrees with its spec; evolution changes how the engine decides; a
+misfiring rule is an evolution request). §4.1 adds the step 1 snapshot of the open entries of
+`data/engine-requests.md` into the run folder, §3 and §4.5 place that snapshot inside the clean
+room (the critic and the decider read it; the rulebook author, the spec author, and the differ do
+not), and §4.7 marks each snapshotted entry at cutover. The command brief, the critic and decider
+briefs, and the `RUN.md` template carry the same change. (#267)
+Why: without the snapshot the two skills have no handoff, and reading the live ledger mid-run
+would make a resume non-deterministic.
+Updated: none.
+
 ## 2026-09-07  The engine-evolution process is a skill: /evolve-engine
 
 `EVOLVING-THE-ENGINE.md` at the root specifies the process that rederives the engine from what
