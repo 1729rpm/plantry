@@ -70,7 +70,7 @@ const webRoot = resolve(__dirname, "..");
 const distDir = resolve(webRoot, "dist");
 
 const STRICT = process.env.STRICT === "1";
-const TABS = ["Menu", "Grocery", "Explore", "Changes"];
+const TABS = ["Menu", "Grocery", "Explore", "Yours"];
 // Per-tab readiness signal: an element that only exists once that tab's content
 // has actually hydrated over the Convex websocket. `networkidle` plus a fixed
 // delay fires before the live data arrives, so a tab can read as "not found"
@@ -82,7 +82,7 @@ const TAB_READY = {
   Menu: ".day-card",
   Grocery: ".grocery-list",
   Explore: ".explore-card",
-  Changes: ".screen__list",
+  Yours: ".yours__card",
 };
 const TAB_READY_TIMEOUT = 8000;
 // Two phone widths: 390 (iPhone 12/13/14 class) and 412 (common Android /
@@ -253,6 +253,7 @@ const SCREEN_GUTTER_CANDIDATES = [
   ".explore__grid",
   ".grocery-chooser",
   ".grocery-list",
+  ".yours__body",
 ];
 const SHEET_GUTTER_CANDIDATES = [".sheet__panel", ".sheet__scroll"];
 
@@ -442,6 +443,54 @@ async function runEngine(engineName, launcher, width, failures, coverage) {
       console.log(`[${tag}] swap-picker not reached: ${err.message ?? err}`);
     }
     if (!pickerReached) coverage.pickerMissed.add(tag);
+
+    // ---- Sheet 3: profile sheet, and the Changes log inside it ----
+    // Phase 7 moved the Changes log out of its own tab and into the Profile
+    // sheet, so the crawl reaches it the way a person does: Menu -> the header
+    // avatar -> "Changes to this week". Reload first for a guaranteed-clean
+    // state (no sheet left open from the picker flow). Both steps are reads:
+    // opening the log advances a localStorage seen-marker, never a backend
+    // mutation.
+    let profileReached = false;
+    let changesLogReached = false;
+    try {
+      await page.goto(entryUrl, { waitUntil: "networkidle" });
+      const homeTab = page.locator(`.tab-bar__tab`, { hasText: "Menu" });
+      await homeTab.first().click({ timeout: CLICK_T });
+      // The avatar button renders only once the week (live or cached) resolves.
+      await page.waitForSelector(".menu__switch", { timeout: 8000 }).catch(() => {});
+      const avatar = page.locator(".menu__switch").first();
+      if ((await avatar.count()) > 0) {
+        await avatar.click({ timeout: CLICK_T });
+        await page.waitForSelector(".sheet__panel", { timeout: 3000 });
+        await page.waitForTimeout(300);
+        profileReached = true;
+        coverage.profile.add(tag);
+        await checkOverflow(page, `${tag} profile`, failures);
+        await checkGutter(page, `${tag} profile`, SHEET_GUTTER_CANDIDATES, failures);
+
+        const changesRow = page
+          .locator(".action-sheet__row", { hasText: "Changes to this week" })
+          .first();
+        if ((await changesRow.count()) > 0) {
+          await changesRow.click({ timeout: CLICK_T });
+          // The log is the tall variant of the sheet primitive; waiting on that
+          // modifier proves the profile sheet actually swapped for the log.
+          await page.waitForSelector(".sheet__panel--tall", { timeout: 3000 });
+          await page.waitForTimeout(300);
+          changesLogReached = true;
+          coverage.changesLog.add(tag);
+          await checkOverflow(page, `${tag} changes-log`, failures);
+          await checkGutter(page, `${tag} changes-log`, SHEET_GUTTER_CANDIDATES, failures);
+        }
+      }
+    } catch (err) {
+      // Same posture as the picker: a blocked path is reported as coverage, not
+      // a hard failure, since it depends on a live week being present.
+      console.log(`[${tag}] profile / changes-log not reached: ${err.message ?? err}`);
+    }
+    if (!profileReached) coverage.profileMissed.add(tag);
+    if (!changesLogReached) coverage.changesLogMissed.add(tag);
   } catch (err) {
     failures.push(`[${tag}] runtime error: ${err.message ?? err}`);
   } finally {
@@ -455,6 +504,10 @@ const coverage = {
   detailMissed: new Set(),
   picker: new Set(),
   pickerMissed: new Set(),
+  profile: new Set(),
+  profileMissed: new Set(),
+  changesLog: new Set(),
+  changesLogMissed: new Set(),
 };
 
 try {
@@ -477,6 +530,14 @@ if (coverage.detailMissed.size) {
 console.log(`  swap-picker reached: ${[...coverage.picker].join(", ") || "(none)"}`);
 if (coverage.pickerMissed.size) {
   console.log(`  swap-picker NOT reached: ${[...coverage.pickerMissed].join(", ")}`);
+}
+console.log(`  profile reached: ${[...coverage.profile].join(", ") || "(none)"}`);
+if (coverage.profileMissed.size) {
+  console.log(`  profile NOT reached: ${[...coverage.profileMissed].join(", ")}`);
+}
+console.log(`  changes-log reached: ${[...coverage.changesLog].join(", ") || "(none)"}`);
+if (coverage.changesLogMissed.size) {
+  console.log(`  changes-log NOT reached: ${[...coverage.changesLogMissed].join(", ")}`);
 }
 
 if (failures.length) {
