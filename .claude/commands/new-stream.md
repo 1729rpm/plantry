@@ -11,7 +11,7 @@ You are spawning a new engineer for a Plantry stream. Read `CLAUDE.md`, `docs/de
 
 ## What to do
 
-1. **Read the live-session registry.** Open `coordination/active-streams.md` (`docs/development.md` §11). Decide the new stream's file lanes and confirm no live stream already owns them. If they overlap, do not spawn in parallel: narrow the lane, or sequence the stream and add a Hotspot ledger row with an explicit merge order. Branch off `origin/main`, not stale local main (`git fetch origin` first).
+1. **Read the live-session registry.** Open `coordination/active-streams.md` (`docs/development.md` §11). Decide the new stream's file lanes and confirm no live stream already owns them. If they overlap, do not spawn in parallel: narrow the lane, or sequence the stream and add a Hotspot ledger row with an explicit merge order. When two streams' briefs would both name the same exported symbol or predicate, the Hotspot ledger row names one owner, and the other stream takes it as a parameter or an import, never a second definition. Branch off `origin/main`, not stale local main (`git fetch origin` first).
 2. **Verify clean state.** Confirm the main repo working tree is clean (`git status`). If not, abort and ask Rajat what to commit or stash.
 3. **Create the worktree.** Run (substituting the full branch name chosen above):
    ```

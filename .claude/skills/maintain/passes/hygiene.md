@@ -69,6 +69,9 @@ so none of it was anybody's job.
 8. **Untracked and unformatted files.** Anything `git status` shows untracked that is not gitignored,
    and anything `npm run format:check` would redden. A stray report or scratch file at root is the
    recurring case.
+   Run the same `git status --short` in the main directory too: it cannot commit, so an EM edit left
+   there sits uncommitted until someone notices, and the sitting's step 0 refuses to start on a dirty
+   main tree.
 9. **The state file.** `.maintenance-state` carries a row for all five passes, every row's status is
    `done` or `pending` (never `running`), and every deferral counted in a row appears in the Deferred
    section with an owning pass.
