@@ -4,7 +4,7 @@
 | health  | 2026-09-07 | done    | 6        | exploration pick not persisted          |
 | docs    | 2026-09-07 | done    | 8        | product.md tab list and save action     |
 | retro   | 2026-09-07 | done    | 0        | -                                       |
-| hygiene | 2026-09-07 | running | 2        | branches and worktrees left on the tree |
+| hygiene | 2026-09-07 | done    | 4        | two closed photo branches, Rajat's call |
 
 ## Deferred
 
@@ -55,9 +55,12 @@
 
 ### hygiene
 
-- Three remote branches survive their pull requests: `data/photos-4` (#65, closed), `data/photos-7`
-  (#73, closed), `docs/maintenance-skill-structure` (#266, merged).
-- `/evolve-engine` still lives in the legacy command layout. Moving it to
-  `.claude/skills/evolve-engine/` is a mechanical `git mv` of the command file and `.claude/evolve/`
-  plus the caller grep, deferred because its paths are cited in two specs, eleven briefs, and a
-  template.
+- `data/photos-4` (#65) and `data/photos-7` (#73) survive closed, unmerged PRs with one commit each;
+  closed-but-unmerged is Rajat's call, not the merged case this pass deletes.
+- `comments` and `nextWeekQueue` remain as empty tables on the dev deployment `lovely-curlew-631`,
+  retired from `app/convex/schema.ts`; dropping a table is Rajat's.
+- `archive/features/UI Improvements/` breaks the kebab-case folder rule; a rename touches four name
+  references, and this pass never renames.
+- `/evolve-engine` still lives in the legacy `.claude/commands/` layout; the move to
+  `.claude/skills/evolve-engine/` is a mechanical `git mv` plus a caller grep, deferred because
+  nothing this sitting touched needs it.
