@@ -1,108 +1,214 @@
 # Plantry maintenance
 
-Spec for the four human-triggered jobs that keep the repo healthy: the slow loop (turning accumulated user feedback into structural change, §1), canonical-doc reconciliation (keeping `docs/product.md`, `docs/engine.md`, `docs/engineering.md`, and `docs/development.md` aligned to shipped reality, §2), the process retro intake (turning the EM's own friction into process change, §6), and operational-doc reconciliation (keeping the root operational docs and the command briefs aligned to both, §7).
+Spec for the process that keeps everything the engine and the repo depend on true. It is invoked as
+`/maintain`, it runs as one sitting of five passes, and it ends with at most two pull requests. This
+document owns the process; the passes' briefs live under `.claude/skills/maintain/`.
 
-Every one of them runs from a Claude Code session invoked by Rajat. None is on a cron. The session is the trigger; the output is always a pull request; the merge is the approval.
+Every sitting runs from a Claude Code session Rajat invokes. Nothing here is on a cron. The session
+is the trigger; the output is always a pull request; the merge is the approval.
 
-## 1. The slow loop
+## 1. Purpose and the boundary
 
-### 1.1 Why
+Plantry keeps exactly two slow workflows, each a skill with its own operational document.
 
-User feedback accumulates in Convex during the week as several signal channels: queued `manualChanges` rows (observed behavior, one row per swap, custom dish, delete, add, day skip, or day restore, each with the user's stated reason), queued `dishDislikes` rows (a records-only tap on a dish in Explore), and runtime `incidents` from the auto-recovery middleware. The loop also reads the non-blocking reports from `npm run reports` and the pool health the verification gate measures per occasion (`npm run gate`), so it can act proactively, not only reactively. None of these can be applied directly: each cluster needs right-size diagnosis before becoming a structural change. The slow loop is the only path by which the dish library (`data/dishes/<slug>.md`), the ingredient catalog (`data/ingredients.md`), `docs/engine.md`, `engine/`, or `data/changelog.md` change.
+- **`/evolve-engine`** (`EVOLVING-THE-ENGINE.md`) re-derives the engine from the household record.
+  It changes how the engine decides.
+- **`/maintain`** (this document) keeps everything the engine and the repo depend on true. It
+  changes what the engine reads and what the docs say.
 
-### 1.2 Trigger
+The line between them is stated here, once, and cross-referenced from both documents.
 
-Rajat opens a Claude Code session in the main repo directory and types `/slow-loop`. Convention is Sunday morning around 11am IST, but the cadence is not enforced. The session can also be passed a specific date range (`/slow-loop since:2026-05-01`), a focus theme (`/slow-loop focus:spice`), or a fixture path (`/slow-loop --fixture data/test-fixtures/slow-loop`). The fixture path is for EM dry-runs against the synthetic signals at `data/test-fixtures/slow-loop/`: `manual-changes.example.json`, `incidents.example.json`, and `dish-dislikes.example.json`; when passed, the session reads from those files instead of Convex. Any fixture file that is absent reads as zero queued rows of that signal, so older fixtures (which predate a given channel) still dry-run cleanly.
+| Maintenance owns                                                                                                                                           | Evolution owns                                                                      |
+| ---------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------- |
+| Values of existing fields in `data/dishes/*.md` (`active`, `seasons`, `category`, existing `tags` values, `complexity`) and the promotion of custom dishes | Any new field, any new tag value, any change to `engine/src/data/schemas.ts`        |
+| Rows in `data/ingredients.md`                                                                                                                              | The pools, the chooser, the ledgers, the scheduling arithmetic, the household model |
+| `docs/engine.md` and `engine/src/` only where they disagree with each other (a defect, proved by a failing test)                                           | `docs/engine.md` and `engine/src/` where they agree and the behaviour is wrong      |
+| Gate reporting: recording a known failure, printing a number, the monthly monitor                                                                          | Gate thresholds: any band, bar, or exemption                                        |
+| The four canonical docs, the root operational docs, the skill briefs, CI, tooling, the ledgers' status lines, the repository layout                        | The "deliberately absent" list in the engine spec                                   |
 
-### 1.3 Inputs the session reads
+Three consequences are load-bearing.
 
-Reactive signals (what the user did or said this week):
+- **A new tag value is evolution, not a maintenance level.** Tags are a closed enum, a fixed list of
+  allowed values the schema validates against, so a new value is a schema change plus a rule that
+  reads it, which is engine shape. Applying an existing value to more dishes is data.
+- **A defect is not evolution.** When a test proves the code does not do what `docs/engine.md` says,
+  maintenance fixes the code, with the failing-then-passing test in the PR and `npm run gate`
+  re-run. Without such a test the change is a rule edit and is refused.
+- **There is no escape hatch inside maintenance for a cheap, obviously right rule edit.** An
+  unmeasured rule edit is exactly the failure the v4 and v4.1 engines were. If Rajat wants a rule
+  shipped without a full evolution, the path is the fast loop: a `/new-stream` feature PR with the
+  full gate green, which already exists and needs no exception here. Maintenance files the evolution
+  request either way (§5), so the ledger shows what was asked and what shipped.
 
-- All `queued` rows in Convex `manualChanges` (via `npx convex run queries/manualChanges:listQueuedManualChanges`). These now span swap, custom, delete, add, skip_day, and restore_day kinds; the kind plus `reason` is the signal. A `custom` row may be either a replacement of a position or an append of an extra dish; an appended custom dish carries the null `before` (`{ dishId: null, customLabel: null }`), so do not infer "replaced X" from a `custom` row's `before`. The promote-a-repeated-custom-dish-into-a-library-dish path (§1.7) is unchanged.
-- All `queued` rows in Convex `dishDislikes` (records-only Explore taps). The table is a live signal channel that collects real Explore-tap rows.
-- All open `incidents` from Convex (via `npx convex run queries/incidents:listIncidents`).
+The one-line test for an ambiguous case: **can the change be justified from the current record
+alone, at one file, reversibly?** If yes it is maintenance. If knowing whether it is right needs a
+20-to-60-week simulation, it is evolution. A misfiring rule is an evolution request; a misbehaving
+implementation of a stated rule is maintenance.
 
-Proactive signals (the health of the library itself, independent of any user action):
+## 2. The sitting at a glance
 
-- The three reports from `npm run reports` (`docs/engine.md` §12.1): coverage, which shows enrichment and macro completeness; HP-vs-protein consistency, which flags dishes whose `HP` tag and derived protein disagree; and special sourcing, which lists the active dishes needing a specialty run. None of the three is a CI gate; all three are judgment the slow loop acts on.
-- Pool health, which the gate measures rather than the reports. How healthy a pool is means how often it can meet the rate the record asks of it, a per-occasion question the library alone cannot answer, so it surfaces in `npm run gate` (`docs/engine.md` §16.3) and not in a report over the library.
+| #   | Pass      | Reads                                                                                                                  | Writes                                                                                                | Runs as    |
+| --- | --------- | ---------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------- | ---------- |
+| 1   | `signals` | queued `manualChanges`, `dishDislikes`, open `incidents`; the library; `data/changelog.md`                             | data-row edits; `data/changelog.md`; diagnosis cards; evolution requests                              | subagent   |
+| 2   | `health`  | `npm run reports`; the gate's pool-health lines; the monitor when due (a production record export)                     | the monitor table; proactive proposals; content priorities for `ADDING-DISHES.md`; evolution requests | subagent   |
+| 3   | `docs`    | `docs/CHANGELOG.md` since the marker; the deferred list; the canonical docs, the ops layer, the briefs, `app/web/e2e/` | in-place rewrites, one commit per document                                                            | subagent   |
+| 4   | `retro`   | every `RETRO.md` entry not closed, whatever its date, plus entries since the marker                                    | `Status:` lines in place; brief lines; CI and tooling fixes; items for Rajat                          | EM, inline |
+| 5   | `hygiene` | the root inventory, `git branch -r`, `git worktree list`, the dev deployment's tables, `CLAUDE.md`'s status line       | a report; deletion of branches whose PR merged; a list for Rajat of anything destructive              | EM, inline |
 
-Context (read, not clustered on directly):
+Order is fixed: `signals`, `health`, `docs`, `retro`, `hygiene`. Signals and health run first because
+they are the passes that can change `data/` and, for a defect, the engine, and the docs pass
+reconciles against the result. Docs runs before retro because retro's fixes are brief-and-CI shaped
+and several open entries are blocked on a docs edit. Hygiene runs last, as a check over the finished
+tree. An empty pass writes one line and moves its marker; an empty sitting is healthy.
 
-- Current `data/dishes/` (the per-dish files), `data/ingredients.md` (the ingredient catalog), `data/changelog.md`.
-- Current `docs/engine.md` plus `engine/src/` for the engine state.
-- The household record, the Convex `currentWeek` rows of the served weeks, which is the distribution the engine reproduces (`docs/engine.md` §2.1). `weekArchive` and `data/menu_history.md` are provenance: nothing reads either, and neither is a signal.
+**The sitting.** One maintenance worktree off freshly fetched `origin/main`,
+`../plantry-maintain-<date>`, because the main directory cannot commit. The signals and health
+passes work on branch `slow-loop/<date>`; once that PR is open the worktree moves to
+`docs/maintenance-<date>` for the remaining three. Each pass writes its artifact to
+`features/maintenance-<date>/<pass>.md` before it reports, and the EM reads the artifact before it
+moves the marker. Commit after every pass, push before the next starts, so a dead session loses at
+most one pass. At close-out the sitting's folder moves to `archive/maintenance/<date>/`.
 
-### 1.4 What the session does
+**Two PRs at most.** `slow-loop/<date>` carries the data edits and the health table, and it is the
+PR that carries judgment: Rajat reads it. `docs/maintenance-<date>` carries docs, retro, and hygiene
+as three commit groups; it is mechanical catch-up, and Rajat can merge it on the EM's word.
 
-1. Cluster manual changes + dislikes + incidents by theme (e.g. "spice tolerance varies day to day", "we never cook lauki anymore", "fish pack size feels off", "Tuhina ordered in Thursdays in May", "rajma keeps getting swapped to chole with reason 'bored of rajma'"). A cluster can mix rows from any of the signal tables when they touch the same underlying property. Manual changes and dislikes are observed behavior, not rule violations; the slow loop reads them as signal for what the engine got wrong, then asks whether the rule should change.
+**Subagents for the first three passes**, spawned by the EM with the brief's placeholders filled:
+the date window, the contended-file list from `coordination/active-streams.md` (a file another live
+stream owns is skipped and recorded, not edited), and the pass's deferred list. Retro and hygiene run
+in the EM session, because `RETRO.md` is the EM's own ledger and hygiene is five minutes of
+mechanical checks.
 
-   Signal patterns to look for, each subject to right-size discipline (a single instance is almost always no change; the threshold is a pattern across weeks or across both household members):
-   - **Skips** (`manualChanges` kind `skip_day`). Recurring skips of the same day read as a calendar pattern. Three Friday skips in a month is a structural look (a standing day-override); one Friday skip is one eat-out night, no change.
-   - **Deletes** (`manualChanges` kind `delete`). Repeated deletes from the same slot type read as over-generation: the meal carries more dishes than the household wants. The right-size answer may be an item-cap or composition adjustment for that slot, not a per-dish edit.
-   - **Adds** (`manualChanges` kind `add`). Repeated manual adds of the same category read as under-generation: the engine is leaving a slot too sparse. The fix mirrors deletes in the opposite direction.
-   - **Dislikes** (`dishDislikes` rows). A dish disliked once is no change. A dish disliked repeatedly, or disliked by both household members, is the threshold for a deactivation or an explore down-rank. The optional reason, when present, sharpens which way to go. The fast loop never acts on a dislike; the slow loop is the only path to any consequence.
+**No production writes.** The only production access is the signals pass's read of the three queued
+tables and the health pass's record export. The `slow-loop-applied` action does the write-back on
+merge (§3).
 
-2. For each cluster, apply right-size discipline (`docs/product.md` §4 Principle 1):
-   - Size: one-off, small pattern, structural.
-   - Smallest level that fixes it: data row, new tag, rule wording, engine code, UI affordance, infrastructure.
-   - Generality: does the fix unlock other latent improvements, or is it brittle to this case.
-3. Pick a level. "No change warranted" is a valid output and gets written as an explicit decision, not silence.
-4. Produce concrete edits:
-   - Data fix: edit the dish's `data/dishes/<slug>.md` file or the ingredient catalog row in `data/ingredients.md`.
-   - Tag addition: add the tag to relevant dishes + edit the rule text in `docs/engine.md` + edit the engine module + add tests.
-   - Rule change: edit `docs/engine.md` + the engine module + tests + run `npm run gate` (`docs/engine.md` §16.3, §16.4).
-   - Append the rationale to `data/changelog.md`.
+## 3. Slow-loop mark-applied action
 
-### 1.5 Output
+A GitHub Action at `.github/workflows/slow-loop-applied.yml` closes the feedback cycle: when a
+`slow-loop/*` PR merges into `main`, the action calls internal Convex mutations to mark the consumed
+`manualChanges` rows `applied` or `reviewed_no_change`, the consumed `dishDislikes` rows applied, and
+the consumed `incidents` rows resolved. Without it, the next signals pass would reread the same
+queued signal and reprocess it.
 
-A single PR titled `slow-loop/<date>: <one-line summary of themes>`. PR description includes:
+### 3.1 PR body contract
 
-- A short list of clusters processed.
-- A diagnosis card per cluster (problem size, fix level, generality, rejected alternatives).
-- File diffs across `data/`, `docs/engine.md`, `engine/`, and the appended `data/changelog.md`.
-- The monthly engine monitor table (§1.9) on the run that carries it.
+The signals pass produces a PR body with two sources of truth for the action:
 
-### 1.6 On merge
+1. A `## Consumed signals by cluster` section with one fenced ` ```cluster ` block per cluster. Each
+   block has these keys: `outcome:` (either `applied` or `reviewed_no_change`, derived from that
+   cluster's diagnosis card "Chosen level"), `manual_change_ids:` (comma-separated `manualChanges`
+   row ids consumed by this cluster, or `-` if none), `incident_ids:` (comma-separated, or `-`), and
+   `dislike_ids:` (comma-separated `dishDislikes` row ids, or `-`). The action parses this section
+   to map each id to the correct outcome. The `manual_change_ids` and `dislike_ids` keys are
+   optional in a block; an older PR body that omits them still parses. Dislike ids are
+   outcome-independent: a consumed dislike is resolved regardless of the cluster's manual-change
+   outcome, so the action collects them from every block without outcome gating.
+2. Flat `Consumed manual-change IDs:`, `Consumed incident IDs:`, and `Consumed dislike IDs:` lines
+   for human readability and as a fallback. If the per-cluster section is absent, the action treats
+   every listed manual-change id as `applied` (conservative default for a PR that touched files).
 
-A GitHub Action posts back to Convex:
+### 3.2 Convex mutations called
 
-- Marks the consumed `manualChanges` rows as `applied` with the merged PR URL, or `reviewed_no_change` for clusters with "no change warranted" as the chosen level, one outcome per cluster from the per-cluster fence section.
-- Marks the corresponding `incidents` as resolved.
-- Lists the consumed `dishDislikes` rows in the PR but leaves them `queued`: the dislike write-back mutation is not yet wired (see §3).
+Four `internalMutation` functions (not exposed to the browser), split across
+`app/convex/manualChangesMutations.ts`, `app/convex/incidentsMutations.ts`, and
+`app/convex/dishDislikesMutations.ts`:
 
-The action then triggers a redeploy: the build bakes a new typed library module from the updated markdown, Convex picks up the new functions, Vercel rebuilds the frontend. The next generated week uses the new rules.
+- `incidentsMutations:markIncidentsResolved({ incidentIds, resolvedPr })` sets `resolvedAt: now` on
+  each incident row.
+- `manualChangesMutations:markManualChangesApplied({ manualChangeIds, resolvedPr })` sets each
+  `manualChanges` row `status: "applied"`, `resolvedAt: now`, `resolvedPr: <PR URL>`.
+- `manualChangesMutations:markManualChangesReviewedNoChange({ manualChangeIds, resolvedPr })` same
+  shape, status `reviewed_no_change`.
+- `dishDislikesMutations:markDislikesApplied({ dislikeIds, resolvedPr })` sets each `dishDislikes`
+  row `status: "applied"`, `resolvedAt: now`, `resolvedPr: <PR URL>`, and `consumedWeekStart` to the
+  Monday of the consuming week. The mark-applied script calls it for every `dislike_ids` value it
+  collects, so a consumed dislike leaves the queue and the next signals pass reads only new taps.
 
-### 1.7 Right-size examples
+Each mutation handles missing or already-resolved ids by inserting a `warn`-severity `incidents` row
+noting which id was skipped, then continuing. The mutations never throw; the post-merge step is
+best-effort and must not block a merge.
 
-The fixes name the per-dish-file structure: one dish is one file at `data/dishes/<slug>.md` (frontmatter fields plus ingredient and recipe rows), and ingredient facts (pack sizes, macros) live as rows in the `data/ingredients.md` catalog. One dish change is one file diff.
+### 3.3 Debugging a failed run
 
-| Signal pattern                                                                          | Right-sized fix                                                                                                                                                                                                                                                                                                                                                             | Wrong response (rejected)                                                                             |
-| --------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------- |
-| "We never cook lauki" appearing 3+ weeks running                                        | Set `active: No` in each lauki dish's `data/dishes/<slug>.md` frontmatter.                                                                                                                                                                                                                                                                                                  | Delete the dish files (loses optionality) or wait for more data.                                      |
-| "Too spicy on a sick day" appearing once                                                | No change. Record reason: "single instance, not a pattern; user can swap via the dish-swap affordance."                                                                                                                                                                                                                                                                     | Add a `low_spice` tag.                                                                                |
-| "Too spicy" + "want milder dinner when traveling" + "after gym I want light" (5+ weeks) | Add `low_spice` to the `tags` of each relevant `data/dishes/<slug>.md`, edit `docs/engine.md` to add the slot rule, update the engine module, add tests.                                                                                                                                                                                                                    | Add a `low_spice` tag to two dish files and ship without updating the rule.                           |
-| Custom dish "lemon coriander rice" used 4 weeks running                                 | Add a new `data/dishes/lemon-coriander-rice.md` file with its ingredient rows (the catalog covers the ingredient names).                                                                                                                                                                                                                                                    | Make the engine learn custom-dish entries automatically.                                              |
-| Pack size for Paneer feels wrong                                                        | Edit the `Pack Size` cell on Paneer's row in the `data/ingredients.md` catalog (one row, all paneer dishes inherit it).                                                                                                                                                                                                                                                     | Add a per-dish override field.                                                                        |
-| Same dish added by hand 3+ weeks running                                                | Check eligibility first: `active: No`, or a `seasons` list that excludes the current season, keeps a dish out of every pool, and flipping that data row in `data/dishes/<slug>.md` is the whole fix. If it is already eligible, no change: a hand-added pick enters the household record as an as-eaten row and the dish's rate rises on its own (`docs/engine.md` §2, §3). | Add a per-dish boost field, or pin the dish into the generation run.                                  |
-| One member dislikes a dish once (one `dishDislikes` row)                                | No change. Record reason: "single dislike, not a pattern; the fast loop never acts on a dislike (Principle 5)." Mark the dislike consumed.                                                                                                                                                                                                                                  | Set `active: No` on the strength of one tap.                                                          |
-| Same dish disliked repeatedly, or disliked by both members                              | Set `active: No` in that dish's `data/dishes/<slug>.md` (deactivation), or lower its explore ranking if it should stay browsable but de-emphasized.                                                                                                                                                                                                                         | Leave it active because "it is only a couple of dislikes" (a both-member dislike is a clear pattern). |
+If the action runs but the next signals pass still sees stale `queued` rows, follow these steps in
+order:
 
-### 1.8 Proactive runs (the reports and the gate, not just the queued signals)
+1. Open the Actions tab on GitHub, find the `Slow-loop mark applied` run for the merged PR, and read
+   the log lines prefixed `[slow-loop-mark-applied]`. They report how many cluster blocks parsed and
+   the applied, reviewed_no_change, incident, and dislike counts, plus any Convex CLI exit codes.
+2. If the parse counts read zero clusters and zero flat ids, the PR body did not include either
+   section; check the signals brief at `.claude/skills/maintain/passes/signals.md` if the output
+   drifted, or hand-correct the rows via
+   `npx convex run --prod manualChangesMutations:markManualChangesApplied '{ "manualChangeIds": ["..."], "resolvedPr": "..." }'`.
+3. If the Convex CLI returned non-zero, check the production deployment
+   (`disciplined-chameleon-263`) for incident rows written by the mutations themselves; they record
+   which ids were skipped and why.
+4. The action skips entirely when `pull_request.merged` is false or the head ref is not
+   `slow-loop/*`; that is by design and not a failure. The `slow-loop/<date>` branch prefix is
+   therefore load-bearing and does not change.
 
-The slow loop reads the `npm run reports` output every run, and a week with zero manual changes, zero dislikes, and zero incidents can still produce a useful PR. Validators keep facts true; the slow loop keeps the library good. The two are different jobs: a Saturday treat pool too small to keep a treat main off the plate for eight Saturdays is not a broken fact, so no validator flags it, but it is a real quality risk worth a proactive proposal.
+## 4. The passes
 
-What to look for:
+Each pass's brief carries its mandate, its exact reading list, its forbidden inputs, its artifact and
+that artifact's required sections, its refusal list, and its report format. The briefs are the
+operative text; this section is the spec they implement.
 
-- **Thin pools, read off the gate.** Pool health is per-occasion, so `npm run gate` measures it and no report does (`docs/engine.md` §16.3). Three of its lines carry the signal: the Saturday threshold names the treat pool's size directly, the fruit threshold reports where a season's eligible set falls below the four-distinct bar, and the reported-not-gated block counts the fills each role took from an exhausted pool. A role drawing repeatedly from an exhausted pool has too few dishes carrying a rate, and the proactive PR proposes activating or adding candidates for it. Activating an existing dish is a slow-loop data-row edit; adding net-new dishes is an expansion content batch (`ADDING-DISHES.md`), which the slow loop proposes as a priority rather than authoring directly.
-- **Coverage gaps.** The coverage report shows enrichment and macro completeness. Description, recipe, complexity, and photo coverage all stand at every active dish, and the reports test asserts it, so a gap opens only when a batch lands incomplete; when one does, the proactive PR names the enrichment priority.
-- **Tag drift and sourcing.** The HP-vs-protein report flags a dish whose `HP` tag and derived protein disagree. The tag is a rule input (`docs/engine.md` §5.1, §5.2), so a mis-tagged dish distorts composition until either the tag or the catalog row behind its macros is corrected, and the smallest fix is one data row. The special-sourcing report is the same shape of signal for the shopping trip: a newly flagged dish means a specialty run the household did not have before.
+### 4.1 `signals`
 
-A proactive PR follows the same shape as a reactive one: a diagnosis card per proposal (problem size "small pattern" or "structural" as the evidence warrants, chosen level, generality, rejected alternatives) and a `data/changelog.md` rationale. It consumes no Convex rows (there were none), so its cluster blocks list `-` for every id field; the only state it advances is `.maintenance-state`.
+**Why.** Household feedback accumulates in Convex during the week as three signal channels: queued
+`manualChanges` rows (observed behaviour, one row per swap, custom dish, delete, add, day skip, or
+day restore, each with the user's stated reason), queued `dishDislikes` rows (a records-only tap on a
+dish in Explore), and runtime `incidents` from the auto-recovery middleware. None of these can be
+applied directly: each cluster needs right-size diagnosis before becoming a structural change. This
+pass is the only path by which `data/dishes/<slug>.md`, `data/ingredients.md`, and
+`data/changelog.md` change, and the only path by which a queued signal is consumed.
 
-### 1.9 The monthly engine monitor
+**Inputs.** The three queued tables, read-only from production or from a fixture directory
+(`data/test-fixtures/slow-loop/`, whose absent files read as zero rows of that signal, so an older
+fixture still dry-runs cleanly). Context: the dish library, the ingredient catalog,
+`data/changelog.md`, `docs/engine.md`, `engine/src/`, and the household record, the `currentWeek`
+rows of the served weeks, which is the distribution the engine reproduces (`docs/engine.md` §2.1).
+`weekArchive` and `data/menu_history.md` are provenance: nothing reads either, and neither is a
+signal.
 
-Once a month the run carries a monitor table, the production counterpart to the verification gate. The gate proves the engine reproduces the record in simulation (`docs/engine.md` §16.3); the monitor checks it against the record the household is actually building, because a simulated horizon and a lived one diverge for reasons no harness can see (a run of eating out, a season turning, a batch of new dishes). Four measures, all over the trailing 8 served weeks:
+**What it does.** Clusters the rows by theme, writes one diagnosis card per cluster
+(`docs/development.md` §5), and applies a four-level fix ladder: a data row; an existing tag value
+applied to more dishes; a defect fix proved by a failing test that names the clause of
+`docs/engine.md` it violates; an evolution request (§5). "No change warranted" sits below all four
+and is a valid, written outcome. The signal patterns and their thresholds (skips, deletes, adds,
+dislikes, custom dishes, incidents) and the right-size examples live in the brief.
+
+**Output.** Data-row edits, an appended rationale in `data/changelog.md`, any evolution requests, and
+the PR body sections §3.1 specifies, on branch `slow-loop/<date>`.
+
+**Refuses.** Any rule wording change; any new frontmatter key, tag value, or catalog column; any
+engine edit without a failing test that names the spec clause; acting on a single instance of any
+signal.
+
+**Anti-patterns.** Sycophantic agreement ("the swap reason said X so I added a flag for X" without
+checking pattern size); generalizing from one or two cases; adding a column when a row fix or an
+existing tag value would do; modifying `docs/engine.md` without paired engine code and test edits;
+silent dismissal of a signal without a written diagnosis card.
+
+### 4.2 `health`
+
+**Why.** Validators keep facts true; this pass keeps the library good. The two are different jobs. A
+Saturday treat pool too small to keep a treat main off the plate for eight Saturdays is not a broken
+fact, so no validator flags it, but it is a real quality risk. This pass is also the mechanism that
+decides when `/evolve-engine` is worth running, which is why it must not be able to touch the engine
+itself: a pass that can both measure a drift and fix it will fix it, and the fix will be unmeasured.
+
+**Inputs.** Every sitting: the three reports from `npm run reports` (`docs/engine.md` §12.1) and the
+gate's pool-health lines, which are per-occasion and so live in `npm run gate` rather than in any
+report over the library (`docs/engine.md` §16.3). When the monitor is due, also one production record
+export (`npx convex run --prod recordExport:exportRecord '{}'`, a read, with Rajat's per-action
+approval), `npm run gate` run against it, and the `manualChanges` swap rows covering the same weeks.
+
+**What it does.** Reads the reports and the gate lines for thin pools, coverage gaps, tag drift, and
+newly flagged specialty sourcing, and writes a proactive proposal with a diagnosis card for each.
+When the last monitor is 28 or more days old it runs the monthly engine monitor: four measures over
+the trailing eight served weeks, the production counterpart to the verification gate.
 
 | Measure                                      | Read against                                             | What a drift means                                                                             |
 | -------------------------------------------- | -------------------------------------------------------- | ---------------------------------------------------------------------------------------------- |
@@ -111,258 +217,250 @@ Once a month the run carries a monitor table, the production counterpart to the 
 | Saturday swap-outs                           | The Saturday count in the same weeks                     | The treat register is proposing dishes the household does not want on a Saturday               |
 | Exploration swap-away rate                   | The one exploration pick a week                          | The familiar-but-new score is reaching too far from what the household actually cooks          |
 
-Where the numbers come from: pull the record with `npx convex run --prod recordExport:exportRecord '{}'` (a production read, so it needs Rajat's per-action approval), save the JSON, and run `npm run gate <path to the export>`. The gate prints each tracked family's served rate beside its record rate with the row count it rests on, the Saturday treat pool's size, and the per-role exhausted-pool fills. The two swap measures come from the record itself, read against the `manualChanges` swap rows covering the same weeks: a Saturday swap-out is a swap row on a Saturday lunch, and an exploration swap-away is a swap row against the week's exploration pick.
+**Output.** The monitor table in the PR body, the proactive proposals, content priorities named for
+`ADDING-DISHES.md`, and evolution requests. The table is reported, never gated: there is no threshold
+here to fail, and a single month's wobble on a family the record places once a month is counting
+noise (`docs/engine.md` §16.3, threshold 12, states the noise bound). A measure that has moved the
+same way across two consecutive monitors is a structural finding and becomes an evolution request
+with both tables as its evidence.
 
-The table is reported, never gated. The slow loop has no threshold to fail here, and a single month's wobble on a family the record places once a month is counting noise rather than drift (`docs/engine.md` §16.3, threshold 12, states the noise bound). A family that has moved the same way across two monitors running is a structural finding, and it earns a diagnosis card like any other.
+**Refuses.** Any edit under `data/`, `docs/engine.md`, or `engine/`; any threshold change; turning
+one monitor's wobble into a finding; authoring a dish.
 
-### 1.10 Anti-patterns the slow loop must not produce
+**Anti-patterns.** Reporting a measure without the row count it rests on; widening a threshold so a
+measure reads clean; treating a thin pool as a reason to write dishes rather than to name a content
+priority.
 
-- Sycophantic agreement: "the swap reason said X so I added a flag for X" without checking pattern size.
-- Generalizing from one or two cases.
-- Adding a column when a row fix or a tag would do.
-- Modifying `docs/engine.md` without paired engine code and test edits.
-- Silent dismissal of a signal without writing a diagnosis card.
+### 4.3 `docs`
 
-## 2. Canonical-doc reconciliation
+**Why.** Canonical docs must read as coherent present-tense specs with no historical seams, and the
+operational layer at root must stay aligned to them. Producing that quality of writing while shipping
+a feature is unreliable, so it runs as a separate pass. The two layers reconcile together because
+they share every step but the file list, and splitting them produced a flag-and-defer loop in which
+each half deferred an item to the other and neither closed it.
 
-### 2.1 Why
+**Inputs.** The pass's deferred list, then the standing checks, then `docs/CHANGELOG.md` entries
+since the marker. Each entry's `Updated:` line is the primary work queue: it names the sections the
+shipping session judged stale, and the pass verifies that judgment rather than re-deriving every
+entry's impact from the diff, while still scanning the entry body for impact the line missed. Also
+the current documents themselves, as the style anchor, and the code under `engine/` and `app/` for
+claims that are checkable.
 
-Canonical docs in `docs/` must read as coherent present-tense specs with no historical seams. Producing that quality of writing while shipping a feature is unreliable, so reconciliation runs as a separate human-triggered pass.
+**What it does.** One pass, two lanes, one PR. Lane A is the four canonical docs; lane B is the root
+operational docs, the skill and command briefs, and `app/web/e2e/`. It maps each entry to its
+documents, rewrites the relevant sections in place, verifies claims against code, runs the standing
+checks, and opens `docs/maintenance-<date>` with one commit per document, lane A committing first.
+Where an operational doc restates a canonical fact the canonical doc wins, and keeping the pointer
+between the two layers valid is this pass's job.
 
-### 2.2 Trigger
+**The window is not the whole input.** The brief carries a standing-checks list of claims known to
+have gone false once, verified every run regardless of the window: the spec-code parity claim, which
+is held by review and not by a CI check; section-number pointers; the command and skill inventory;
+the root inventory in its three places; and the branch names `docs/development.md` §2 defines. Four
+false or stale claims survived two window-scoped passes because each predated the window.
 
-Rajat invokes `/reconcile-docs` after a notable run of CHANGELOG entries (typically every two to four weeks, or when something clearly changed the steady state). Sessions can also fire it on demand right after a feature ships.
+**Output.** In-place rewrites, one commit per document, plus the conflicts it flags.
 
-### 2.3 Inputs the session reads
+**Refuses.** Rewriting an append-only ledger; editing `docs/engine.md` for anything but wording that
+describes shipped code; historical seams; widening beyond the window except for the standing checks
+and the deferred list; moving or renaming a file autonomously.
 
-- `docs/CHANGELOG.md` entries since the last reconciliation (last-run marker stored in `.maintenance-state`, committed). Each entry's `Updated:` line is the primary work queue: it names the doc sections the shipping session judged stale. The pass verifies that judgment rather than re-deriving every entry's doc impact from the diff, and still scans the entry body for impact the line missed.
-- The `features/` directory if anything is active, and any feature spec referenced by recent CHANGELOG entries (`archive/features/<name>.md` after ship).
-- Current `docs/product.md`, `docs/engine.md`, `docs/engineering.md`, `docs/development.md`, to preserve voice and structure.
-- Current code state under `engine/`, `app/`, plus the data files, to cross-check that doc claims match reality.
+**Anti-patterns.** "Added in feat/X"; "previously X, now Y"; `(new)` or `(updated)` markers in
+headings; inline dates in a document body; past-tense narrative; re-syncing a duplicated product or
+engine number in `README.md` instead of trimming it to a pointer into `docs/`; restating canon in a
+brief that should point at it.
 
-### 2.4 What the session does
+### 4.4 `retro`
 
-1. Determine the set of CHANGELOG entries since the last run.
-2. For each canonical doc, decide which entries affect it.
-3. For each affected doc, rewrite the relevant sections in place. Not as appends, not as "now also" additions. The doc must still read as one coherent spec after the edit.
-4. Verify factual claims against current code where checkable.
-5. Open a PR with one commit per canonical doc touched.
-6. Update `.maintenance-state` with the new last-run marker.
+**Why.** The signals pass turns the household's feedback into product change; this pass turns the
+EM's own process and system friction into process and system change. It is the same machinery pointed
+inward, so the two-loops principle (`docs/product.md` §4) holds: shipping is the fast loop, improving
+how we ship is the slow loop. Friction the EM hits while running streams evaporates at session end
+unless it is captured and triaged, and `RETRO.md` is the durable ledger of it.
 
-### 2.5 Per-doc scope
+The EM runs it inline, because `RETRO.md` is the EM's ledger of its own friction and every fix is a
+judgment about how streams actually run.
 
-| CHANGELOG entry touches…                                                                                                                              | Update target         |
-| ----------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------- |
-| Product scope, persona, principles, tone, future direction                                                                                            | `docs/product.md`     |
-| Rules, slot composition, selection priority, item cap, ingredient consolidation, field reference                                                      | `docs/engine.md`      |
-| Stack, schema, data layer split, deploy model, hosting, integrations, env vars, image format                                                          | `docs/engineering.md` |
-| Session model, worktree workflow, ship workflow, definition of done, diagnosis card, slow-loop trigger, escalation, commit conventions, anti-patterns | `docs/development.md` |
+**Inputs.** Its window is a status, not a date: every entry whose `Status:` is `open`, `triaged`, or
+`fixed in part`, whatever its date, plus everything appended since the marker. A date window loses an
+entry the moment one pass declines to close it. Also the documents and files those entries point at.
 
-A single shipped change often touches more than one doc. Keeping cross-doc consistency is the reconciliation job's responsibility.
+**What it does.**
 
-### 2.6 Style rules for canonical docs
+1. Reads the open entries and clusters them by Area and root cause; several entries often share one
+   fix.
+2. Right-sizes each cluster (`docs/product.md` §4 Principle 1): the smallest level that solves it (a
+   brief line, a process-doc edit, a CI or test change, tooling, an infra item), or `no-change` with
+   a stated reason. It does not generalize from a single one-off entry; a `one-off` recurrence is
+   usually `no-change`.
+3. Lands each fix on the right path: brief lines and CI or tooling edits in the docs PR's third
+   commit group; a canonical-doc edit handed to the docs pass in the same sitting; anything
+   stream-sized (a mutation, a script, a schema field) as a `chore/*` request via `/new-stream`;
+   anything needing Rajat (a secret, a paid tier, a merge-blocking CI gate) surfaced, never actioned
+   (`docs/development.md` §7).
+4. Updates each consumed entry's `Status:` line in place to `fixed (PR #NNN)`, `fixed in part
+(PR #NNN)`, `wont-fix (reason)`, or `triaged (owner, path)`. It never rewrites the rest of the
+   entry; the ledger is append-only history.
 
-Apply to every rewrite the reconciliation job produces.
+**How EMs file entries.** At session close the EM appends a `RETRO.md` entry for each systemic or
+recurring friction (the format and the "what to log" test live in `RETRO.md`). One-off self-inflicted
+slips are not logged. The entry's `Proposed level` is the EM's first-cut sizing; this pass makes the
+final call.
 
-- **Present tense.** "The slow loop runs when Rajat invokes it." Not "The slow loop will run…" or "Slow loop was added in feat/E1…".
-- **One coherent document.** Section order is stable. Updates happen in place.
-- **No slice, round, sprint, or date references** inside the doc body. The reader should not see the historical seams.
-- **No changelog phrasing.** Strip "previously", "now also", "we used to", "this was added because". The CHANGELOG holds the chronology.
-- **Preserve voice.** Each doc has an established register; read the existing sections as a style anchor before writing new ones.
-- **Cross-reference by section number within a doc**, by canonical filename across docs.
-- **No em dashes.** Use commas, parentheses, semicolons, or sentence breaks.
+**Output.** Status lines updated in place, the fixes on their paths, and a table in the docs PR.
 
-### 2.7 Anti-patterns to reject before opening the PR
+**Refuses.** Rewriting any part of an entry other than its `Status:` line; editing a canonical doc
+here; silently actioning an infra or cost item; closing an entry because it is old rather than
+because it is fixed.
 
-- "Added in feat/X" or "introduced in slow-loop/2026-..."
-- "Previously X, now Y"
-- `(new)` or `(updated)` markers in headings
-- Inline dates like "(as of 2026-06-08)"
-- Past-tense narrative
+**Anti-patterns.** Logging one-off slips, turning the ledger into noise (the over-broad-ledger
+failure); fixing a single entry with a cross-cutting abstraction before two entries need it
+(Principle 8); editing canonical docs in this pass instead of routing through the docs pass
+(`docs/development.md` §11.4).
 
-If a rewrite needs any of these to make sense, the job is doing it wrong. The doc describes end state; the why goes in the CHANGELOG entry or the (now-archived) feature spec.
+### 4.5 `hygiene`
 
-### 2.8 Conflict handling
+**Why.** Every item in this pass was done on instinct at a previous sitting or not at all: merged
+branches left on the remote, a prototype worktree kept for months, retired tables on the dev
+deployment, an untracked report file at root. None of it was in any brief, so none of it was
+anybody's job. The EM runs it inline, last, so it sees the tree the other four passes left.
 
-- **Two CHANGELOG entries disagree:** latest ships wins; older statement is overwritten in the canonical doc. Flag in PR description.
-- **CHANGELOG disagrees with current code:** code wins; canonical doc updated to match code reality. Flag for human review.
-- **Ambiguous which doc owns a change:** open the PR with the job's best guess; flag for review.
+**Inputs and checks.** Mechanical:
 
-### 2.9 Repository structure consistency check
+- **Root inventory.** Every entry at the repository root is one of these. Files: `.gitignore`,
+  `.githooks/`, `.maintenance-state`, `.prettierignore`, `.prettierrc`, `.stylelintrc.json`,
+  `README.md`, `CLAUDE.md`, `DECISIONS.md`, `MAINTENANCE.md`, `ADDING-DISHES.md`,
+  `EVOLVING-THE-ENGINE.md`, `RETRO.md`, `claude-design.md`, `eslint.config.js`, `package.json`,
+  `package-lock.json`, `tsconfig.json`, `tsconfig.base.json`, `vercel.json`. Directories:
+  `.claude/`, `.github/`, `app/`, `archive/`, `data/`, `docs/`, `engine/`, `features/`, `scripts/`.
+  Gitignored entries the check tolerates: `.git`, `.vercel`, `node_modules`, `coordination/`. This
+  list mirrors the enforced allowlist regex in `.github/workflows/ci.yml`; the authoritative
+  annotated layout is `docs/engineering.md` §14. A change to the inventory is a three-place edit:
+  the regex, this list, and that layout.
+- **`.gitkeep`s.** Every empty-but-anticipated directory carries one. `features/` is the standing
+  case.
+- **Folder naming**, per `docs/engineering.md` §14.
+- **Remote branches** whose PR is merged or closed.
+- **Worktrees** with no Live row in `coordination/active-streams.md`.
+- **Retired tables** on the dev deployment, against `app/convex/schema.ts`.
+- **`CLAUDE.md`'s "Currently building" line**, against `features/` and `docs/PLAN.md`.
+- **Untracked files** that are not gitignored, and anything `npm run format:check` would redden.
+- **`.maintenance-state`** itself: five rows, no row left `running`, every counted deferral present
+  in the Deferred section.
 
-The reconciliation job also runs mechanical checks against `docs/engineering.md` §14:
+**What it does.** Safe cases are done: deleting a remote branch whose PR merged is the one
+destructive action this pass takes on its own. Everything else destructive or ambiguous goes on a
+list for Rajat in the PR body. The pass never moves or renames a file autonomously.
 
-- Root inventory: every entry at root must be one of these. Files: `.gitignore`, `.githooks/`, `.maintenance-state`, `.retro-state`, `.prettierignore`, `.prettierrc`, `.stylelintrc.json`, `README.md`, `CLAUDE.md`, `DECISIONS.md`, `MAINTENANCE.md`, `ADDING-DISHES.md`, `EVOLVING-THE-ENGINE.md`, `RETRO.md`, `claude-design.md`, `eslint.config.js`, `package.json`, `package-lock.json`, `tsconfig.json`, `tsconfig.base.json`, `vercel.json`. Directories: `.claude/`, `.github/`, `app/`, `archive/`, `data/`, `docs/`, `engine/`, `features/`, `scripts/`. Gitignored entries the check tolerates: `.git`, `.vercel`, `node_modules`, `coordination/`. This list mirrors the enforced allowlist in `.github/workflows/ci.yml`; the authoritative annotated layout is `docs/engineering.md` §14.
-- Empty-but-anticipated directories carry `.gitkeep`.
-- Folder naming follows the conventions in `docs/engineering.md` §14.
+**Output.** A report, as the docs PR's fourth commit group.
 
-Mismatches flag in the PR description. The job does not move or rename files autonomously.
+**Refuses.** Any write to production; moving or renaming a file; deleting anything other than a
+remote branch whose PR merged; acting on a file a live stream owns.
 
-## 3. Slow-loop mark-applied action
+**Anti-patterns.** Deleting on a guess; renaming a file to satisfy a convention without checking what
+imports it; reporting "the tree is clean" without having run the loop; fixing a root-inventory
+mismatch in one of its three places and not the other two.
 
-A GitHub Action at `.github/workflows/slow-loop-applied.yml` closes the slow-loop feedback cycle: when a `slow-loop/*` PR merges into `main`, the action calls internal Convex mutations to mark the consumed `manualChanges` rows `applied` or `reviewed_no_change` and the consumed `incidents` rows resolved. Without it, the next `/slow-loop` run would reread the same queued signal and reprocess it.
+## 5. The evolution-request ledger
 
-### 3.1 PR body contract
+`data/engine-requests.md`, append-only, committed, beside `data/changelog.md`. It is the only thing
+that flows between the two skills, and it flows one way.
 
-`/slow-loop` produces a PR body with two sources of truth for the action:
+One entry per evolution-sized finding: the date, the pass that raised it, the pattern in one
+sentence, the evidence (row ids, the two monitor tables, dates, counts), what maintenance did
+meanwhile (a conservative data-level action, or nothing), and a status of `open`,
+`taken into <version>`, or `dismissed (reason)`. The entry template is
+`.claude/skills/maintain/templates/request.md`.
 
-1. A `## Consumed signals by cluster` section with one fenced ` ```cluster ` block per cluster. Each block has these keys: `outcome:` (either `applied` or `reviewed_no_change`, derived from that cluster's diagnosis card "Chosen level"), `manual_change_ids:` (comma-separated `manualChanges` row ids consumed by this cluster, or `-` if none), `incident_ids:` (comma-separated, or `-`), and `dislike_ids:` (comma-separated `dishDislikes` row ids, or `-`). The action parses this section to map each id to the correct outcome. The `manual_change_ids` and `dislike_ids` keys are optional in a block; an older PR body that omits them still parses. Dislike ids are outcome-independent: a consumed dislike is resolved regardless of the cluster's manual-change outcome, so the action collects them from every block without outcome gating.
-2. Flat `Consumed manual-change IDs:`, `Consumed incident IDs:`, and `Consumed dislike IDs:` lines for human readability and as a fallback. If the per-cluster section is absent, the action treats every listed manual-change id as `applied` (conservative default for a PR that touched files).
+Entries state a household-side measurement. They never name a mechanism or describe the current
+engine's internals, so the file is safe to read inside `/evolve-engine`'s clean room.
 
-### 3.2 Convex mutations called
+**What qualifies:** a monitor measure that moved the same way across two consecutive monitors; a
+dislike repeated or shared by both members on a dish the data levels cannot serve; a recurring
+incident class; a skip or delete pattern that reads as a slot-composition problem; a rule the signals
+pass wanted to edit and could not. Each of these is invisible to the record an evolution run pulls,
+which sees served food and hand edits and nothing else.
 
-Three `internalMutation` functions (not exposed to the browser), split across `app/convex/manualChangesMutations.ts` and `app/convex/incidentsMutations.ts`:
+**Who reads it in `/evolve-engine`:** the critic and the decider, from round one, as one added line
+on each reading list. Not the recorder, which recovers a record and this is not one; not the rulebook
+author or the spec author, whose clean room forbids anything that references engine behaviour. At
+step 1 the EM snapshots the open entries into the run folder so the run is deterministic, and at
+cutover it marks them `taken into <version>` or `dismissed`.
 
-- `incidentsMutations:markIncidentsResolved({ incidentIds, resolvedPr })` sets `resolvedAt: now` on each incident row.
-- `manualChangesMutations:markManualChangesApplied({ manualChangeIds, resolvedPr })` sets each `manualChanges` row `status: "applied"`, `resolvedAt: now`, `resolvedPr: <PR URL>`.
-- `manualChangesMutations:markManualChangesReviewedNoChange({ manualChangeIds, resolvedPr })` same shape, status `reviewed_no_change`.
+It lives in `data/` rather than `features/` because `features/` is empty between features by
+convention and this file persists across runs, and `data/` already holds the structural changelog. It
+is not `RETRO.md`, which is process friction only and would become the over-broad ledger it warns
+about, and it is not `DECISIONS.md`, which records decisions taken rather than findings pending.
 
-Each mutation handles missing or already-resolved ids by inserting a `warn`-severity `incidents` row noting which id was skipped, then continuing. The mutations never throw; the post-merge step is best-effort and must not block a merge.
+## 6. The state file and resume
 
-**Dislikes are parsed but not yet written back.** The action parses `dislike_ids:` (and the flat `Consumed dislike IDs:` line) and logs them, but does NOT call a mutation: the `dishDislikes` write-back mutation is not yet built. A slow-loop PR may list consumed dislike ids for the human record, but the rows stay `queued` until that mutation lands.
-
-### 3.3 Debugging a failed run
-
-If the action runs but the next `/slow-loop` invocation still sees stale `queued` rows, follow these steps in order:
-
-1. Open the Actions tab on GitHub, find the `Slow-loop mark applied` run for the merged slow-loop PR, and read the log lines prefixed `[slow-loop-mark-applied]`. They report how many cluster blocks parsed, the applied/reviewed_no_change/incidents/dislike counts, and any Convex CLI exit codes. The dislike count is logged but no mutation runs for it (the dislike write-back is not yet built).
-2. If the parse counts read zero clusters and zero flat ids, the slow-loop PR body did not include either section; edit `.claude/commands/slow-loop.md` if `/slow-loop`'s output drifted, or hand-correct the rows via `npx convex run --prod manualChangesMutations:markManualChangesApplied '{ "manualChangeIds": ["..."], "resolvedPr": "..." }'`.
-3. If the Convex CLI returned non-zero, check the production deployment (`disciplined-chameleon-263`) for incident rows written by the mutations themselves; they record which ids were skipped and why.
-4. The action skips entirely when `pull_request.merged` is false or the head ref is not `slow-loop/*`; that is by design and not a failure.
-
-## 4. State file
-
-`.maintenance-state` at root holds the input-window markers for the maintenance jobs:
-
-```
-last_reconcile: 2026-07-12
-last_reconcile_ops: 2026-07-12
-last_slow_loop: 2026-07-13
-```
-
-`last_reconcile` is the canonical-doc reconciliation marker (§2); `last_reconcile_ops` is the operational-doc reconciliation marker (§7); `last_slow_loop` is the slow-loop marker (§1). Committed to the repo. The job history becomes part of `git log` and is visible to anyone who clones.
-
-## 5. First run notes
-
-- The first `/reconcile-docs` run is a no-op: the canonical docs were written fresh as part of the restructure.
-- The first `/slow-loop` run after the app is live will have zero queued signals (none have been logged yet). The session writes a one-line PR or simply exits with a status report; an empty slow loop is a healthy outcome, not a failure.
-
-## 6. Process retro intake
-
-The slow loop (§1) turns user feedback into product change. This pass turns the EM's own
-process and system friction into process and system change. It is the same machinery
-pointed inward, so the two-loops principle (`docs/product.md` §4) holds: shipping is the
-fast loop; improving how we ship is the slow loop.
-
-### 6.1 Why
-
-Friction the EM hits while running streams (a gate that does not work as documented, a
-recurring merge conflict, a watchdog that kills agents) evaporates at session end unless
-it is captured and triaged. `RETRO.md` is the durable, append-only ledger of that
-friction; this pass is how it converts into fixes instead of being re-discovered every
-session.
-
-### 6.2 Trigger
-
-Runs alongside the existing reconcile/slow-loop cadence (no separate schedule). The EM
-runs it when `RETRO.md` has unhandled entries, conventionally during the same sitting as
-`/reconcile-docs`.
-
-### 6.3 Inputs the session reads
-
-- `RETRO.md` entries with `Status: open` appended since `last_retro` (see §6.6).
-- The canonical docs and operational docs the entries point at (`development.md`,
-  `engineering.md`, the `.claude/commands/` brief templates, the CI workflow).
-
-### 6.4 What the session does
-
-1. Read open entries; cluster by Area and root cause (several entries may share one fix).
-2. Right-size each cluster (Principle 1): pick the smallest level that solves it
-   (brief-template line, process-doc edit, CI/test change, tooling, infra item), or
-   `no-change` with a stated reason. Do not generalize from a single one-off entry;
-   a `one-off` recurrence is usually `no-change`.
-3. Land the fix on the right path: canonical-doc edits go through `/reconcile-docs`
-   (§2); brief-template and CI/test fixes go through a `chore/*` PR; infra items that
-   need Rajat (a secret, a paid tier) are surfaced to him, not actioned silently
-   (`development.md` §7).
-4. Update each consumed entry's `Status` line in place to `fixed (PR #NNN)` or
-   `wont-fix (reason)`. Never rewrite the rest of the entry; the ledger is append-only
-   history.
-
-### 6.5 How EMs file entries
-
-At session close the EM appends a `RETRO.md` entry for each systemic or recurring
-friction (format and the "what to log" test live in `RETRO.md`). One-off self-inflicted
-slips are not logged. The entry's `Proposed level` is the EM's first-cut sizing; the
-intake pass (§6.4) makes the final call.
-
-### 6.6 State
-
-`.retro-state` at root holds the marker for this pass:
+`.maintenance-state` at the repository root is the sitting's only state: a manifest with one row per
+pass.
 
 ```
-last_retro: 2026-07-13
+| pass    | last-run   | status  | deferred | note                              |
+| ------- | ---------- | ------- | -------- | --------------------------------- |
+| signals | 2026-07-14 | done    | 0        | -                                 |
+| health  | never      | pending | -        | monitor never run                 |
+| docs    | 2026-09-07 | done    | 1        | product.md P3 CI claim            |
+| retro   | 2026-09-07 | done    | 2        | 2026-08-18 entries still open     |
+| hygiene | 2026-09-07 | done    | 1        | merged branches left on the remote|
 ```
 
-Committed to the repo, like `.maintenance-state` (§4), so the run history is in `git log`.
+Below the table, a **Deferred** section lists each deferred item under the pass that owns it.
 
-### 6.7 Anti-patterns
+- `last-run` is the pass's input-window marker: the signals pass reads queued rows since it, the docs
+  pass reads CHANGELOG entries since it, the health pass measures the monitor's 28-day gate from it.
+  The retro pass's main window is a status rather than a date, so its `last-run` bounds only the
+  "appended since" half.
+- `status` is `done`, `pending`, or `running`. A row left `running` by a dead session is treated as
+  not done and re-run from scratch: every brief has a fixed reading list, so a re-run reproduces the
+  artifact. Overwrite a partial artifact; never repair one.
+- **A pass may not report `done` with an unrecorded deferral**, and every pass reads its deferred
+  items before its date window. That is the whole fix for open items falling out of a window forever,
+  and it is what flat date markers cannot express.
 
-- Logging one-off slips, turning the ledger into noise (the over-broad-ledger failure).
-- Fixing a single entry with a cross-cutting abstraction before two entries need it
-  (Principle 8).
-- Editing canonical docs in this pass directly instead of routing through
-  `/reconcile-docs` (`development.md` §12.4).
-- Silently actioning an infra or cost item that should be surfaced to Rajat.
+The file is committed, so the job history is part of `git log`. The template is
+`.claude/skills/maintain/templates/state.md`.
 
-## 7. Operational-doc reconciliation
+`/maintain resume` reads this file and continues from the first pass not marked `done`. There is no
+self-scheduled wakeup: a sitting is hours, not days, and a sitting that dies is resumed at the next
+one. That is the one `/evolve-engine` mechanism deliberately not imported.
 
-### 7.1 Why
+## 7. What `/maintain` refuses as a whole
 
-The operational docs at root (`README.md`, `CLAUDE.md`, `MAINTENANCE.md`, `ADDING-DISHES.md`, `claude-design.md`) and the command briefs under `.claude/commands/` describe how the project is oriented, operated, and changed. They drift the same way the canonical docs in `docs/` drift under ship pressure: a feature lands, the chronology goes into the CHANGELOG honestly, but an orientation line, an operational spec, or a command brief keeps the old steady state until someone notices. README drifts fastest of all, because it restates product and engine facts that live canonically in `docs/`, so the same number ends up maintained in two places and one falls behind. This pass keeps the operational layer aligned to shipped reality and to the canonical docs, in present tense, without historical seams.
+- **A rule edit, a new tag value, a new frontmatter key, or an engine behaviour change, in any
+  pass.** Those are `/evolve-engine`'s (§1). The output is an evolution request (§5) plus the
+  conservative data-level action.
+- **An engine code edit without a failing test that names the clause of `docs/engine.md` it
+  violates.**
+- **Acting on a single instance of any signal.** One skip is not a calendar override; one delete is
+  not an over-generation finding; one dislike is not a deactivation; one monitor's wobble is not a
+  drift.
+- **Writing anything to production.** The only production access is the signals pass's read of the
+  queued tables and the health pass's record export. The write-back happens on merge, through the
+  action (§3).
+- **Rewriting an append-only ledger** (`DECISIONS.md`, `RETRO.md`, `docs/CHANGELOG.md`,
+  `data/changelog.md`). The retro pass edits `Status:` lines in place and nothing else. An entry is
+  history and is never rewritten; a ledger's instructional header is spec and the docs pass may
+  correct it.
+- **Editing a file a live stream owns** (`docs/development.md` §11.2). Skip it and record it.
+- **Reporting a pass `done` with an unrecorded deferral.**
+- **Running at all when the engine's shape is wrong.** That is `/evolve-engine`. This skill is for
+  the data, the docs, the ledgers, and the repository around it.
 
-### 7.2 Trigger
+## 8. First sitting
 
-Rajat invokes `/reconcile-ops` after a notable run of CHANGELOG entries, conventionally during the same sitting as `/reconcile-docs`. The session is the trigger; the output is a pull request; the merge is the approval.
+Two items the first sitting carries and no later one does.
 
-### 7.3 Inputs the session reads
-
-- `docs/CHANGELOG.md` entries since the last operational-doc reconciliation (last-run marker `last_reconcile_ops` in `.maintenance-state`, committed; see §4).
-- The current canonical docs in `docs/`, as the source of truth the operational docs summarize and point at. Where an operational doc restates a canonical fact, the canonical doc wins.
-- The current operational docs and command briefs in scope (§7.5), as the style and structure anchor.
-- Current code and data state where an operational claim is checkable.
-
-### 7.4 What the session does
-
-1. Determine the set of CHANGELOG entries since `last_reconcile_ops` (or since the `since:<date>` argument). If none, write a one-line summary, bump the marker to today, and exit. An empty operational reconciliation is a healthy outcome, the same pattern as §2.
-2. For each entry, decide which operational doc(s) or command brief(s) it affects per §7.5.
-3. For each affected doc, rewrite the relevant sections in place, in present tense, so the doc still reads as one coherent spec. Verify factual claims against the canonical docs and against code where checkable.
-4. For README, prefer a pointer over a re-synced number: when an entry changes a product or engine fact that README restates, trim the restated fact to a link into `docs/` rather than copying the new value. A lean README that points at canon does not drift.
-5. For the command briefs, the procedure steps stay aligned to reality and the pointer section-numbers stay valid. The briefs point at canon rather than restating it, so reconciling them means keeping the pointers and the step lists correct, not rewriting the canon they reference.
-6. Run the mechanical repository-structure check (§2.9, against the authoritative allowlist mirrored in `.github/workflows/ci.yml` and the annotated layout in `docs/engineering.md` §14). Flag mismatches in the PR; do not move or rename files autonomously.
-7. Open a PR on a `docs/ops-<date>` branch (per `docs/development.md` §2), bump `last_reconcile_ops` to today in the same PR.
-
-### 7.5 Per-doc affect map
-
-| CHANGELOG entry touches…                                                                | Update target                                           |
-| --------------------------------------------------------------------------------------- | ------------------------------------------------------- |
-| Repo orientation, doc hierarchy, working folders, project status (README, CLAUDE)       | `/reconcile-ops`                                        |
-| Operational specs (the slow loop, reconciliation jobs, retro intake, dish-add playbook) | `/reconcile-ops` (`MAINTENANCE.md`, `ADDING-DISHES.md`) |
-| The design contract (`claude-design.md`)                                                | `/reconcile-ops`                                        |
-| A slash-command brief's procedure, pointers, or arguments (`.claude/commands/*.md`)     | `/reconcile-ops`                                        |
-
-Out of scope for `/reconcile-ops`: the canonical specs in `docs/` (owned by `/reconcile-docs`, §2.5), and the append-only ledgers `DECISIONS.md`, `RETRO.md`, `docs/CHANGELOG.md`, and `data/changelog.md`, which are never rewritten by any reconciliation pass.
-
-A single shipped change can touch both layers (a canonical doc and an orientation line that points at it). `/reconcile-docs` owns the canonical side; `/reconcile-ops` owns the operational side; keeping the pointer between them valid is this pass's responsibility.
-
-### 7.6 Style rules
-
-The operational docs read as present-tense steady-state specs with no historical seams, the same standard the canonical docs hold. The style rules in §2.6 and the anti-patterns in §2.7 apply unchanged; reference them rather than re-listing them here. Slash-command briefs keep their imperative step lists, but their descriptive prose follows the same no-historical-seams rule. The slow-loop signal-cluster guidance is canonical in §1.4, and `/slow-loop` points there rather than restating it.
-
-### 7.7 Anti-patterns
-
-- Re-syncing a duplicated product or engine number in README instead of trimming it to a pointer into `docs/`; the duplication is the drift source.
-- Restating canon in a command brief that should point at it (the brief already opens by telling the reader to re-read the spec).
-- Rewriting an append-only ledger (`DECISIONS.md`, `RETRO.md`, `docs/CHANGELOG.md`, `data/changelog.md`); these are out of scope.
-- Editing a canonical doc in `docs/` in this pass; that is `/reconcile-docs`'s lane (§2).
-- Historical seams in the rewrite: "previously", "now also", a stream letter, a date in the doc body (§2.7).
+- **The pre-v6 signal backlog is consumed with a stated cutoff.** The signals marker is 2026-07-14
+  and engine v6 replaced the whole chooser on 2026-09-07. Every queued row before that cutover was
+  generated by an engine that no longer exists, and the 2026-07-14 run already showed what that
+  produces: 144 rows, seven clusters, every one `reviewed_no_change`. The first signals pass consumes
+  everything before the cutover as `reviewed_no_change` with the single reason "generated by engine
+  v5; superseded by v6 (#256)" and starts its real window at the first v6-generated week. From then
+  on the signals pass is bound to phase close-out (`docs/development.md` §3 step 8) so it cannot lag
+  an engine replacement again.
+- **The monitor has never run.** The health pass owns it, gated on 28 days, and it is that pass's
+  headline output. Its first run has no previous monitor to compare against, so no measure can be a
+  finding on it; the two-consecutive-monitors test starts at the second.

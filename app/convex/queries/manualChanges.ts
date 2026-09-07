@@ -3,9 +3,9 @@ import type { Doc } from "../_generated/dataModel.js";
 
 /**
  * Returns all `manualChanges` rows whose status is `"queued"`, sorted by
- * `createdAt` ascending. Consumed by the slow loop as fuel for rule redesign
- * alongside queued dislikes and open incidents (see `features/manual-changes.md`
- * and `.claude/commands/slow-loop.md`).
+ * `createdAt` ascending. Consumed by the `/maintain` signals pass as fuel for
+ * rule redesign alongside queued dislikes and open incidents (see
+ * `features/manual-changes.md` and `.claude/skills/maintain/passes/signals.md`).
  */
 export const listQueuedManualChanges = query({
   args: {},

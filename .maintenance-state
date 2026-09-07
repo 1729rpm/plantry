@@ -1,3 +1,47 @@
-last_reconcile: 2026-09-07
-last_reconcile_ops: 2026-09-07
-last_slow_loop: 2026-07-14
+| pass    | last-run   | status  | deferred | note                                    |
+| ------- | ---------- | ------- | -------- | --------------------------------------- |
+| signals | 2026-07-14 | pending | 0        | pre-v6 backlog awaits the stated cutoff |
+| health  | never      | pending | -        | monitor never run                       |
+| docs    | 2026-09-07 | done    | 3        | product.md P3 CI-parity claim           |
+| retro   | 2026-09-07 | done    | 2        | two 2026-08-18 entries still open       |
+| hygiene | 2026-09-07 | done    | 2        | branches and worktrees left on the tree |
+
+## Deferred
+
+### signals
+
+- (none)
+
+### health
+
+- (none)
+
+### docs
+
+- `docs/product.md` §4 Principle 3 still says spec-code parity is a CI failure. The pairing is held
+  by review (`docs/engineering.md` §15, `docs/engine.md` §16.2); no such check exists.
+- `docs/engineering.md` §14 counts four `.claude/commands/` entries, describes `MAINTENANCE.md` as
+  the slow-loop plus reconciliation plus retro-intake spec, and cites `MAINTENANCE.md` §3 and §6 for
+  sections that have moved. The `.claude/skills/` line, the state-file lines, and the `data/`
+  listing are current; the rest of the section is the first docs pass's.
+- `docs/development.md` §2 gains `docs/maintenance-<date>` as the docs pass's branch and drops
+  `docs/ops-<date>`; §6 becomes "Maintenance trigger" and describes all five passes at the depth it
+  gives the slow loop today; §5's diagnosis card gains one line, that inside `/maintain` a rule edit
+  and engine code resolve to an evolution request.
+
+### retro
+
+- 2026-08-18, "A day of spec amendments and two ledger entries lived only in an uncommittable
+  working tree". Status open. The commit-after-every-pass rule in `/maintain` and `/evolve-engine`
+  addresses the maintenance half; the entry itself is unclosed.
+- 2026-08-18, "A design handoff landed at the repo root and outlived its feature there". Status
+  open. The archived copy is verified byte-identical; removing the root copy needs Rajat's approval.
+
+### hygiene
+
+- Three remote branches survive their pull requests: `data/photos-4` (#65, closed), `data/photos-7`
+  (#73, closed), `docs/maintenance-skill-structure` (#266, merged).
+- `/evolve-engine` still lives in the legacy command layout. Moving it to
+  `.claude/skills/evolve-engine/` is a mechanical `git mv` of the command file and `.claude/evolve/`
+  plus the caller grep, deferred because its paths are cited in two specs, eleven briefs, and a
+  template.
