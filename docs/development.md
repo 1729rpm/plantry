@@ -24,7 +24,7 @@ A build session starts on a phase. Rajat says "Begin development. We are on Phas
 - Write feature code.
 - Create or change the GitHub repo, the Convex deployment, or hosting choices without Rajat's go-ahead.
 - Push to remote without Rajat's first-push authorization.
-- Edit `docs/engine.md` without a matching engine code and test change in the same PR. (CI also blocks this.)
+- Edit `docs/engine.md` without a matching engine code and test change in the same PR. Review holds this pairing and no CI check does, so the EM is the check.
 - Accept work that violates the principles, even on push-back.
 - Run destructive git operations.
 
@@ -57,7 +57,7 @@ Every code-touching session works in its own git worktree on its own feature bra
 
 ## 3. Ship workflow
 
-1. Engineer finishes work in worktree, runs CI gates locally (lint, type-check, tests, simulation harness, round-trip), opens a PR with a diagnosis card.
+1. Engineer finishes work in worktree, runs CI gates locally (lint, type-check, unit tests, the gate harness, round-trip), opens a PR with a diagnosis card.
 2. Vercel deploys a preview to `plantry-dev.mudgal.xyz` (aliased to the current PR's preview URL). Convex deploys a preview environment with an isolated DB.
 3. For any slice that touches the app frontend, before approving the merge the EM spins off the in-depth full-flow crawl against the PR preview (`docs/engineering.md` §16): an automated walk of every customer flow across all tabs and every sheet, not just the new feature, capturing a screenshot of each screen and asserting the structural invariants (no horizontal overflow, key elements actually styled, focus moves into a sheet on open, background scroll locks while a sheet is open, tap targets at least 44px, a clean console), clicking every new interactive affordance and asserting the resulting state (not only screenshotting it), and comparing each rendered screen against the matching screen in the active feature's `features/<name>/` handoff (the live app is the reference when no feature is active). The EM reviews the output and resolves or explicitly accepts every deviation before merge. A CSS or shared-primitive change is whole-app blast radius: it is crawled across all tabs regardless of the slice's nominal scope.
 4. EM reviews the PR against principles and gates. Before merging, the EM confirms the PR's true merged state, not just its reported `mergeable` flag: GitHub can show a branch as mergeable and clean while it is behind `main` and would break once merged, and branch protection does not catch a stale-but-mergeable branch. The EM updates the branch onto `origin/main` (`git fetch && git rebase origin/main` in the worktree, §11.3), re-runs the engine check and re-bakes on that true merged state, and re-runs any count-sensitive tests, then either merges or sends back with specific notes.
@@ -72,7 +72,7 @@ A PR is done when ALL of:
 
 - All CI gates pass (see `docs/engineering.md` §15).
 - The diagnosis card is present in the PR description.
-- New behavior has tests; the simulation harness still passes.
+- New behavior has tests; the gate harness still passes.
 - No scope creep: the PR changes only what its brief described.
 - No principle violation: an EM reviewer would not flag anything in `docs/product.md` §4.
 - No `// TODO` left behind without a tracked follow-up in the active feature spec or a new feature doc.
@@ -116,7 +116,7 @@ The slow loop runs only when Rajat invokes it. Convention is Sunday around 11am 
 
 1. Rajat opens a Claude Code session in the main repo directory.
 2. Types `/slow-loop`. (Definition lives at `.claude/commands/slow-loop.md`.)
-3. The session reads the queued signal channels from Convex (via `npx convex run`): `manualChanges`, `dishDislikes`, and open `incidents`. It also reads the dish library under `data/dishes/`, the `data/ingredients.md` catalog, `data/menu_history.md`, `docs/engine.md`, and the coverage and pool-coverage reports from `npm run reports`.
+3. The session reads the queued signal channels from Convex (via `npx convex run`): `manualChanges`, `dishDislikes`, and open `incidents`. It also reads the household record, the served weeks' `currentWeek` rows pulled with `recordExport:exportRecord`, the dish library under `data/dishes/`, the `data/ingredients.md` catalog, `docs/engine.md`, and the three reports from `npm run reports` (coverage, HP-vs-protein consistency, special sourcing). Pool health is the one proactive signal the reports cannot answer, because it asks how often a pool meets the rate the record asks of it, so it comes from `npm run gate` instead.
 4. The session clusters manual changes, dislikes, and incidents into themes and applies right-size discipline. For each theme it picks one of: data fix, tag addition, rule edit, no change warranted.
 5. The session opens a PR with a diagnosis card per theme, file diffs across `data/dishes/`, `data/ingredients.md`, `docs/engine.md`, `engine/src/`, and an appended `data/changelog.md` entry.
 6. Rajat reviews on GitHub. Merge applies. On merge a GitHub Action posts back to Convex to mark the consumed `manualChanges` rows `applied` or `reviewed_no_change`, resolve the consumed incidents, and link the PR.
