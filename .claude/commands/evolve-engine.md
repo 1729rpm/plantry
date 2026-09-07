@@ -4,7 +4,7 @@ description: Re-derive the meal-planning engine from what the household actually
 
 You are the EM running an engine evolution for Plantry. The full spec lives in
 `EVOLVING-THE-ENGINE.md`. Re-read it now, along with `CLAUDE.md`, `docs/development.md` §1, §2, §11,
-and `MAINTENANCE.md` §1 (so you can tell a slow-loop-sized problem from an evolution-sized one).
+and `MAINTENANCE.md` §1 (so you can tell a maintenance-sized problem from an evolution-sized one).
 
 This command runs mostly unattended and can span days. You orchestrate; you never do the judgment
 work. Every step's thinking is delegated to a fresh agent with an exact reading list, and every
@@ -49,7 +49,8 @@ agent's artifact is committed before the next step starts, so a dead session los
    the worktree; the main directory cannot commit.
 3. Create `features/engine-<version>/` and copy `.claude/evolve/templates/RUN.md` into it as `RUN.md`,
    filling the header (version, branch, worktree path, the model you will spawn agents on) and laying
-   out every row of the run as `pending`: step 1; step 2; step 3; step 4 round 1; step 5 round 1 (six
+   out every row of the run as `pending`: step 1 (your own ledger-snapshot row first, then the three
+   recorder rows); step 2; step 3; step 4 round 1; step 5 round 1 (six
    debate exchange rows plus differ, critic, decider pass A, decider pass B); step 4 round 2; step 5
    round 2; step 4 round 3; step 5 round 3; step 6; step 7.
 4. Add a row to `coordination/active-streams.md` naming the run's lane: `features/engine-<version>/`
@@ -62,10 +63,16 @@ agent's artifact is committed before the next step starts, so a dead session los
    production reads, which are this pull and the step 7 re-export. The harness's permission gate may
    still prompt once when a command runs; that prompt is a click, never a decision, so the run carries
    no decision for Rajat before step 6. Do not stop to ask him.
-2. Before the export, check whether any custom pick in the served weeks has since been promoted to a
+2. **Snapshot the evolution requests.** Copy the `open` entries of `data/engine-requests.md` into the
+   run folder as `engine-requests.md`, verbatim and open entries only, and commit it with the
+   manifest before you spawn anything. The ledger is where `/maintain` files the household-side
+   findings the record cannot express, and it keeps growing; the run answers the set as it stood at
+   step 1. Mark the row done once the file is committed. If the ledger has no open entries, write the
+   file anyway with a line saying so, so every later reading list resolves.
+3. Before the export, check whether any custom pick in the served weeks has since been promoted to a
    library dish; re-point those slots first so the record does not split one dish across a label and
    an id.
-3. Spawn the recorder with `.claude/evolve/roles/recorder.md`. It runs two read-only commands, which
+4. Spawn the recorder with `.claude/evolve/roles/recorder.md`. It runs two read-only commands, which
    are one approval:
    - `npx convex run --prod recordExport:exportRecord '{}'` for the engine-shaped record, which
      becomes `record.json`;
@@ -80,7 +87,7 @@ agent's artifact is committed before the next step starts, so a dead session los
 
    It writes `record.json`, `as-eaten.md`, and `edit-reasons.md`.
 
-4. Verify the sanity checks in the `as-eaten.md` preamble reconcile with `record.json` yourself before
+5. Verify the sanity checks in the `as-eaten.md` preamble reconcile with `record.json` yourself before
    marking the row done. Everything downstream measures against this file.
 
 ### Step 2. The rulebook (`rulebook-author.md`)
@@ -117,11 +124,13 @@ Run the five roles in this order. Each is its own spawn and its own manifest row
    round two the list adds the previous round's dry-run menu and the previous rounds' differ and
    critic reports, for the resolution audit and the regression hunt. Output: `review-<n>-differ.md`.
 2. **Critic** (`critic.md`). Reading list: `dry-run-<n>.md` in full, `spec.md`, `rulebook.md`,
-   `as-eaten.md`, `edit-reasons.md`, `review-<n>-differ.md`. Forbidden: `docs/engine.md`, `engine/`,
-   any prior engine spec. Output: `review-<n>-critic.md`.
+   `as-eaten.md`, `edit-reasons.md`, `review-<n>-differ.md`, `engine-requests.md`. Forbidden:
+   `docs/engine.md`, `engine/`, any prior engine spec. Say in the prompt that the requests are read
+   last, after it has formed its own view from the food. Output: `review-<n>-critic.md`.
 3. **Decider, pass A** (`decider.md`, grounding pass). Reading list: both reviews, `spec.md`,
-   `dry-run-<n>.md`, `as-eaten.md`, `edit-reasons.md`, `rulebook.md`, and every previous
-   `decisions-*.md`. Output: `brief-<n>.md`, the numbered decision list.
+   `dry-run-<n>.md`, `as-eaten.md`, `edit-reasons.md`, `rulebook.md`, `engine-requests.md`, and every
+   previous `decisions-*.md`. Output: `brief-<n>.md`, the numbered decision list, with the open
+   requests grouped into its root-cause table.
 4. **Debate** (`debater-simplicity.md`, `debater-coverage.md`). Six spawns in this order: simplicity
    exchange 1, coverage exchange 1, simplicity exchange 2, coverage exchange 2, simplicity exchange 3,
    coverage exchange 3. Both sides share one reading list: the round's two reviews, `brief-<n>.md`,
@@ -130,7 +139,8 @@ Run the five roles in this order. Each is its own spawn and its own manifest row
    exchange from `debate-<n>.md`. Each spawn appends its section to `debate-<n>.md` under a heading
    naming the side and the exchange, verbatim, before reporting.
 5. **Decider, pass B** (`decider.md`, decision pass). Reading list: both reviews, `brief-<n>.md`,
-   `debate-<n>.md`, `spec.md`, `as-eaten.md`, `edit-reasons.md`, `rulebook.md`. It amends `spec.md` in
+   `debate-<n>.md`, `spec.md`, `as-eaten.md`, `edit-reasons.md`, `rulebook.md`,
+   `engine-requests.md`. It amends `spec.md` in
    place, writing the measured reason into every changed clause, and writes `decisions-<n>.md`. Give
    it the mandate verbatim from `EVOLVING-THE-ENGINE.md` §4.5: prioritise what changes the household's
    hand edits; weigh a change by the recorded edits it removes; refuse minor optimisation; decide only
@@ -171,7 +181,9 @@ now final) and into `CHANGES.md`, log them in `DECISIONS.md` as his decisions, c
    Commit the gate report as `features/engine-<version>/gate-report.md`.
 6. Spawn the differ one last time on the gate's dry run against `as-eaten.md`, in its clean-room
    format, as `final-comparison.md`. Same restriction: two menu files, nothing else.
-7. Close the run: mark every manifest row done, finish `CHANGES.md`, append the CHANGELOG and
+7. Close the run: mark every manifest row done; mark each entry the run snapshotted at step 1 in
+   `data/engine-requests.md` as `taken into <version>` or `dismissed (reason)`, so maintenance can see
+   what the run answered; finish `CHANGES.md`, append the CHANGELOG and
    DECISIONS entries, move the run folder under `archive/features/` at phase close (the gate report
    stays where it is, as the harness's living output), reset `CLAUDE.md`'s "Currently building" line,
    and remove the run worktree and branch.
@@ -227,8 +239,8 @@ The run is designed to survive both.
 - **Widening a threshold until the run passes.** Re-measure the household baseline by the harness's
   own method and set the band around that; if the threshold is arithmetically unsatisfiable, amend the
   spec first with the measured reason.
-- **Running this at all for a single wrong rule.** That is `/slow-loop`. This command is for an engine
-  whose shape is wrong.
+- **Running this at all for a single wrong rule.** That is `/maintain`, which files it as an evolution
+  request. This command is for an engine whose shape is wrong.
 
 ## Why this command exists
 
