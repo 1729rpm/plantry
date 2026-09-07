@@ -372,8 +372,7 @@ plantry/
   claude-design.md     # design contract (lowercase by convention from the file itself)
   .gitignore
   .githooks/           # pre-commit hook (blocks commits from the main directory)
-  .maintenance-state   # last-reconcile marker for the maintenance job
-  .retro-state         # last-retro marker for the process retro intake (MAINTENANCE.md §6)
+  .maintenance-state   # per-pass manifest for /maintain (last-run, status, deferred list)
   .prettierrc          # formatter config
   .prettierignore      # formatter ignore list
   .stylelintrc.json    # CSS lint config (unbalanced/unclosed-brace gate)
@@ -384,7 +383,8 @@ plantry/
   package-lock.json    # locked dependency tree
   vercel.json          # hosting config
   .github/workflows/
-  .claude/commands/    # /slow-loop, /new-stream, /reconcile-docs, /reconcile-ops
+  .claude/skills/      # /maintain (SKILL.md, passes/, templates/)
+  .claude/commands/    # /evolve-engine, /new-stream
   scripts/             # build and bake scripts
   docs/                # canonical specs + CHANGELOG + PLAN
     screenshots/       # app screenshots the README embeds
@@ -394,6 +394,7 @@ plantry/
     ingredients.md     # ingredient catalog: one row per ingredient (group, unit, pack size)
     menu_history.md    # the pre-app menu record, provenance; parsed at bake time, read by nothing
     changelog.md       # structural-change audit (slow-loop rationale entries)
+    engine-requests.md # append-only evolution-request ledger (MAINTENANCE.md §5)
     test-fixtures/     # slow-loop dry-run fixtures (data/test-fixtures/slow-loop/*.example.json)
   features/            # the active feature's documents (one feature at a time; a phase may carry a spec, a plan, reviews, and dry runs)
   engine/              # TS engine module
