@@ -14,7 +14,7 @@ Format:
 
 ---
 
-## 2026-06-09  First fixture-driven slow-loop run (#271)
+## 2026-06-09  First fixture-driven slow-loop run (slow-loop PR pending)
 
 The test-fixture dry-run that proves the slow-loop pipeline end-to-end. All five queued comments in `data/test-fixtures/slow-loop/queued-comments.example.json` and both incidents in `data/test-fixtures/slow-loop/incidents.example.json` were considered under the right-size discipline (`docs/product.md` §4 Principle 1). Every cluster resolved to no change warranted. The pipeline (`/slow-loop` slash command + structural-changelog write + GitHub Action for marking consumed Convex rows) is validated end-to-end; the lack of code changes is the honest output for one synthetic week, not a failure of the discipline.
 
