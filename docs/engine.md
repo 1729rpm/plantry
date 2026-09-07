@@ -374,6 +374,7 @@ No RNG anywhere, including Saturday. Same inputs, same week, byte for byte. Ever
   - `fruit`: marks a Fruit-of-the-day candidate (§9).
   - `cuisine_neutral`: marks a plain protein with no cuisine character (grilled chicken breast, boiled eggs) that pairs with any register, and the register-neutral steamed rice. An eligible companion on a non-Indian plate regardless of the star's cuisine (§5.1).
 - `primaryIngredient`: dominant fresh or packaged ingredient. Drives the §5.1 cross-meal ingredient demotion and, through the protein-family table, the §5.1 cross-meal family rule and §7's family governor. A free categorization label, not required to match a catalog ingredient name. Use `Mixed Veg` when no single vegetable dominates.
+- `preferred`: Yes/No. Required on every dish file and read by no rule. The favorites table (§8) carries the household's standing picks, and §3's deficits carry frequency, so the field is inert; it stays required because every dish file declares it and the parser round-trips it byte-identically.
 - `active`: Yes/No. Eligibility filter per §1.
 - `satiety`: High, Medium, or Low. Used by §11.
 - `prepMinutes`: estimated active prep time in minutes. Used by the §5.1 whole-day prep ceiling and the §11 tiebreaker.

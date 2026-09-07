@@ -8,16 +8,15 @@ Two adults: Rajat (product owner) and Tuhina (second user). Cooking style is hig
 
 ## 2. Weekly loop
 
-| Day           | Fruit   | Breakfast | Lunch   | Items |
-| ------------- | ------- | --------- | ------- | ----- |
-| Mon, Wed, Fri | 1 fruit | 2 items   | 3 items | 5     |
-| Tue, Thu      | 1 fruit | 1 item    | 4 items | 5     |
-| Sat           | 1 fruit | none      | 3 items | 3     |
-| Sun           | none    | none      | none    | 0     |
+| Day        | Fruit   | Breakfast    | Lunch                     | Item ceiling |
+| ---------- | ------- | ------------ | ------------------------- | ------------ |
+| Mon to Fri | 1 fruit | 1 or 2 items | 2 or 3 items              | 5            |
+| Sat        | 1 fruit | none         | 2 or 3 items, treat shape | 3            |
+| Sun        | none    | none         | none                      | 0            |
 
-Every day Mon to Sat also carries a Fruit of the day: one in-season fruit, shown as its own light section separate from breakfast and lunch (Saturday included, even though it has no breakfast). Breakfast itself is savoury. The fruit sits outside the breakfast and lunch slots and outside the item cap, so the "Items" column above (the capped breakfast plus lunch count) is unchanged by it.
+Every day Mon to Sat also carries a Fruit of the day: one in-season fruit, shown as its own light section separate from breakfast and lunch (Saturday included, even though it has no breakfast). Breakfast itself is savoury. The fruit sits outside the breakfast and lunch slots and outside the item cap, so the "Item ceiling" column above (the capped breakfast plus lunch count) is unchanged by it. Saturday is the week's indulgence, so its lunch is a treat main with a dessert beside it and at most one accompaniment. The counts are ceilings, never targets: a lighter day is a good day, and the day-by-day shapes live in `docs/engine.md` §5.
 
-Each week, the engine reads the dish library, the rules, the season, and the recent history, then produces a complete valid menu plus a grocery list. The week opens on the Menu tab. From a day's Edit button, either user can swap any dish (the engine offers a generic ranked picker over the active library, searchable across meal-time and led by the dishes whose meal-time matches the slot, so a breakfast dish can land in a lunch slot), add a library dish to a day, drop in a custom dish (a free-text dish not in the library) in place of a position or as an extra dish on the day, delete a dish, or skip a whole day (eating out or away) and restore it later. Swaps, adds, custom dishes, deletes, skips, and restores apply immediately and are recorded against the week with author, timestamp, and an optional reason that feeds the slow loop when one is given. A skipped day keeps its dishes (restore is lossless) but counts no groceries and does not enter the history on finalize. A dislike does nothing immediately; it queues for the slow loop (Principle 5).
+Each week, the engine reads the dish library, the rules, the season, and the household record (every week the household has been served, counted as it was actually eaten), then produces a complete valid menu plus a grocery list. The record is the target rather than one input among many: the engine proposes the dishes the household already eats, at the frequencies the record shows, with one exploration pick a week as the bounded channel for something new (`docs/engine.md` §2). The week opens on the Menu tab. From a day's Edit button, either user can swap any dish (the engine offers a generic ranked picker over the active library, searchable across meal-time and led by the dishes whose meal-time matches the slot, so a breakfast dish can land in a lunch slot), add a library dish to a day, drop in a custom dish (a free-text dish not in the library) in place of a position or as an extra dish on the day, delete a dish, or skip a whole day (eating out or away) and restore it later. Swaps, adds, custom dishes, deletes, skips, and restores apply immediately and are recorded against the week with author, timestamp, and an optional reason that feeds the slow loop when one is given. A skipped day keeps its dishes (restore is lossless) but counts no groceries and contributes nothing to the record. A dislike does nothing immediately; it queues for the slow loop (Principle 5).
 
 The Explore tab is a separate surface for browsing dishes the household has not cooked yet (see §3 item 4). The Yours tab holds the household's two shared lists, favorites and the wishlist (see §3 item 5). The week's running record of every edit is the Changes log, reached from the profile sheet (see §3 item 6).
 
@@ -35,7 +34,7 @@ The Explore tab is a separate surface for browsing dishes the household has not 
 
 6. **Changes log (profile sheet).** A newest-first record of the week: every menu edit (swap, add, custom dish, delete, skip, restore), each with its author, timestamp, a plain-language headline, and the quoted reason when one was given. It is reached from the identity avatar on the Menu header, which carries the unread badge and opens the profile sheet; the profile sheet shows the week's edit count and the row into the log. Dish ids resolve to names; no internal label or enum value reaches the screen.
 
-7. **History update.** On finalize, the week's cooked dishes append to the historical record, which drives the no-repeat (recency) logic on subsequent weeks. Skipped days and custom dishes are excluded: a skipped day was not cooked, and a custom dish has no library id, so recency must not see either.
+7. **The household record.** Every week the household has been served, counted as it was eaten, is the record the next week is generated from (`docs/engine.md` §2). A hand edit therefore teaches the engine directly: a swapped-in dish counts and a swapped-out one does not. A skipped day contributes nothing, because it was not cooked, and a free-text custom dish contributes nothing until the dish it names becomes a library dish. Finalizing a week also files an archived copy of it, kept as provenance rather than as signal.
 
 ## 4. Principles
 
