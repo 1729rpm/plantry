@@ -14,16 +14,23 @@ anything. You count.
 
 ## Reading list
 
-- The production Convex deployment `disciplined-chameleon-263`, read-only:
-  - `npx convex run --prod recordExport:exportRecord '{}'` for the record itself. This is the same
-    function the engine's own record read goes through, so the export cannot drift from what
-    generation sees.
-  - the `manualChanges` rows covering the same weeks, for the reasons the household typed while
-    editing. Queued rows come from `npx convex run --prod queries/manualChanges:listQueuedManualChanges`;
-    rows already marked `applied` or `reviewed_no_change` are not returned by that query. If a channel
-    you need is unreachable, say so in your report and in the file's preamble; do not invent a query
-    and do not silently drop the rows.
+- The production Convex deployment `disciplined-chameleon-263`, read-only, through two commands that
+  together are one approval:
+  - `npx convex run --prod recordExport:exportRecord '{}'` for the engine-shaped record. This is the
+    same function the engine's own record read goes through, so the export cannot drift from what
+    generation sees. It is the source of `record.json` and nothing else.
+  - `npx convex export --prod --path <run folder>/prod-snapshot.zip`, run from `app/convex`, for the
+    raw snapshot: every table, every row, whatever its status. Unzip it into the session scratchpad or
+    a temp directory, **never into the run folder**, and read two files out of it.
+    `currentWeek/documents.jsonl` carries the raw slot state, including custom picks with their labels
+    and their positions, which `recordExport:exportRecord` drops. `manualChanges/documents.jsonl`
+    carries every hand edit and its reason regardless of status, so the rows already marked `applied`
+    or `reviewed_no_change` are there alongside the queued ones. The snapshot is the source of
+    `edit-reasons.md` and the cross-check on `record.json`.
 - `app/convex/schema.ts`, for the shape of the tables you are reading.
+
+The zip is not committed. `.gitignore` excludes `features/engine-*/prod-snapshot.zip`; if you wrote it
+anywhere else, delete it when you are done.
 
 ## Forbidden inputs
 
@@ -81,7 +88,8 @@ counts from, so do not restyle it.
 
 Every recorded hand edit, and what the household said while making it. Required sections:
 
-- **Preamble**: the source table, the date range, and the totals, at minimum the total number of
+- **Preamble**: the source (`manualChanges/documents.jsonl` from the snapshot, all statuses), the
+  date range, and the totals, at minimum the total number of
   edits and the split by kind (swap, custom, delete, add, skip_day, restore_day). The rulebook cites
   these totals, so they must be exact.
 - **The edits**, a table with one row per edit: week, day, meal, kind, what was there before, what
@@ -98,5 +106,5 @@ it, do not assert it.
 ## Report format
 
 Report back in prose, under 300 words: the date range and week count pulled, the sanity-check numbers,
-any disagreement between sources and which you took, any channel you could not reach, and the three
+any disagreement between the snapshot and the engine-shaped export and which you took, and the three
 file paths. Do not paste the menu into your report; the artifact is the deliverable.

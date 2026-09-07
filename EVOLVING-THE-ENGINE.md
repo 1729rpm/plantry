@@ -37,7 +37,8 @@ Steps 2 to 6 are each carried out by a fresh agent running on the highest-intell
 harness offers, at the highest reasoning effort available, with the reading list its brief states and
 no other input. The EM orchestrates, commits, and never does the judgment work itself. Rajat is asked
 for exactly two things across a whole run: the parked taste decisions at step 6, and the per-action
-approvals that production reads and writes require.
+approvals the cutover's production writes require. His invocation of the command is his approval for
+the run's production reads.
 
 ## 3. The clean-room rule
 
@@ -74,8 +75,26 @@ against. Nothing is written to production at this step or at any step before the
   id and therefore contributes no rows to any rate.
 - The reasons the household typed while editing are pulled alongside the food. They are the only
   place the record says why, and half the rulebook's rules are quotations from them.
-- The pull is a production read and needs Rajat's per-action approval. That approval is a permission
-  grant, not a decision, and it is the one interruption the run carries before step 6.
+
+The pull is two commands and one approval:
+
+- `npx convex run --prod recordExport:exportRecord '{}'` gives the engine-shaped record, through the
+  same function the engine's own record read goes through, so the export cannot drift from what
+  generation sees. It is the source of `record.json`.
+- `npx convex export --prod --path <run folder>/prod-snapshot.zip`, run from `app/convex`, gives the
+  raw snapshot: every table, every row, whatever its status. Unzipped into a scratchpad or a temp
+  directory and never into the run folder, it yields `currentWeek/documents.jsonl` (the raw slot
+  state, including custom picks with their labels and positions, which the engine-shaped export
+  drops) and `manualChanges/documents.jsonl` (every hand edit and its reason regardless of status,
+  so rows already marked applied or reviewed are there alongside the queued ones). It is the source
+  of `edit-reasons.md` and the cross-check on `record.json`. The zip is never committed;
+  `.gitignore` excludes `features/engine-*/prod-snapshot.zip`.
+
+Rajat's invocation of `/evolve-engine <version>` is his approval for the run's production **reads**,
+which are the step 1 export and the step 7 re-export. The harness's permission gate may still prompt
+once at execution time, and that prompt is a click, never a decision: the run carries no decision for
+Rajat before step 6. Production **writes**, which is the cutover and nothing else, keep per-action
+approval.
 
 Before the pull, any custom pick that has since been promoted to a library dish is re-pointed at its
 library id, so the record does not split one dish across a label and an id.
@@ -216,7 +235,7 @@ artifact and that artifact's required sections, the measured-reason rule, and it
 
 | Role                | Brief                   | Reads                                                                                                                                  | Must not read                                          | Writes                                                        |
 | ------------------- | ----------------------- | -------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------ | ------------------------------------------------------------- |
-| recorder            | `recorder.md`           | Production `currentWeek` and `manualChanges`, read-only                                                                                | Nothing is forbidden; nothing is written               | `record.json`, `as-eaten.md`, `edit-reasons.md`               |
+| recorder            | `recorder.md`           | The read-only production record export and the read-only production snapshot (`currentWeek` and `manualChanges`, all rows)             | Nothing is forbidden; nothing is written               | `record.json`, `as-eaten.md`, `edit-reasons.md`               |
 | rulebook author     | `rulebook-author.md`    | `as-eaten.md`, `edit-reasons.md`                                                                                                       | `docs/engine.md`, `engine/`, any engine spec, `data/`  | `rulebook.md`                                                 |
 | spec author         | `spec-author.md`        | `rulebook.md`, `as-eaten.md`, `edit-reasons.md`                                                                                        | `docs/engine.md`, `engine/`, any prior spec or dry run | `spec.md`                                                     |
 | simulator           | `simulator.md`          | `spec.md`, `record.json`, the dish library under `data/`                                                                               | The reviews, the rulebook's commentary, prior dry runs | `sim/`, `dry-run-<n>.md`                                      |
@@ -349,10 +368,15 @@ The template is `.claude/evolve/templates/RUN.md`.
 5. **On a usage-limit error** (a subagent dying with an API 429 naming a session limit and a reset
    time), the EM parses the reset time, adds a safety margin, writes it to `resume-at`, sets the row
    `blocked` with the error in `last-error`, commits, and pushes. It then schedules its own wakeup
-   for that time and stops working. Two harness mechanisms serve this: a self-paced loop that wakes
-   the session on its own cadence, and a timed wakeup created for a specific clock time. Either is
-   acceptable; the timed one is the better fit for a known reset time, and the intent is what
-   matters: the session must come back by itself without Rajat.
+   for that time and stops working. Two harness mechanisms serve this:
+   - `CronCreate`, which creates a timed wakeup at a clock time. This is the primary mechanism for a
+     known reset time: a one-shot schedule at the reset time plus a ten-minute margin.
+   - `ScheduleWakeup`, the self-paced loop wakeup. It is clamped to one hour per hop, so a reset
+     further away than that is reached by chaining: each wakeup re-reads `RUN.md` and, if `resume-at`
+     is still in the future, schedules the next hop. This is the fallback when cron is unavailable.
+
+   The intent is what matters, whichever is used: the session must come back by itself without Rajat.
+
 6. **At wakeup** the EM re-reads `RUN.md` and resumes from the first row that is not `done`, clearing
    its `resume-at`.
 7. **If the session itself is gone**, the next session invoked as `/evolve-engine resume` reads
@@ -373,8 +397,9 @@ are the delegated judgment the process exists for.
 **The agents** do the work. Each is fresh, each has an exact reading list, and each writes one
 artifact.
 
-**Rajat** answers the parked taste questions at step 6 and grants the per-action approvals that
-production reads and writes require. He is not asked to arbitrate between reviewers, to choose
+**Rajat** answers the parked taste questions at step 6 and grants the per-action approvals the
+cutover's production writes require; his invocation of the command is his approval for the run's
+production reads, and the harness's prompt on one of those is a click rather than a decision. He is not asked to arbitrate between reviewers, to choose
 between mechanisms the record can distinguish, or to approve a round.
 
 ## 11. The final outputs

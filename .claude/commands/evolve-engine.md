@@ -34,8 +34,9 @@ agent's artifact is committed before the next step starts, so a dead session los
   role brief names. A missing section is a re-run, not a note.
 - **Do not summarise an agent's findings into the next agent's prompt.** The next agent reads the
   artifact, or it does not read it at all.
-- **Never write to production.** The only production access in the whole run is the read-only export
-  at step 1 and the cutover at step 7, both with Rajat's per-action approval.
+- **Never write to production.** The only production access in the whole run is the read-only pull at
+  step 1, its re-export at step 7, and the cutover. Rajat's invocation of this command is his approval
+  for the reads; the writes at cutover keep per-action approval.
 
 ## Procedure
 
@@ -57,14 +58,28 @@ agent's artifact is committed before the next step starts, so a dead session los
 
 ### Step 1. The truth (`recorder.md`)
 
-1. Ask Rajat for the per-action approval on the production read, in one line, naming the command. This
-   is a permission grant, not a decision, and it is the only interruption before step 6.
+1. **Approval.** Rajat's invocation of `/evolve-engine <version>` is his approval for the run's
+   production reads, which are this pull and the step 7 re-export. The harness's permission gate may
+   still prompt once when a command runs; that prompt is a click, never a decision, so the run carries
+   no decision for Rajat before step 6. Do not stop to ask him.
 2. Before the export, check whether any custom pick in the served weeks has since been promoted to a
    library dish; re-point those slots first so the record does not split one dish across a label and
    an id.
-3. Spawn the recorder with `.claude/evolve/roles/recorder.md`. It runs the read-only export
-   (`npx convex run --prod recordExport:exportRecord '{}'`), pulls the recorded hand-edit reasons, and
-   writes `record.json`, `as-eaten.md`, and `edit-reasons.md`.
+3. Spawn the recorder with `.claude/evolve/roles/recorder.md`. It runs two read-only commands, which
+   are one approval:
+   - `npx convex run --prod recordExport:exportRecord '{}'` for the engine-shaped record, which
+     becomes `record.json`;
+   - `npx convex export --prod --path <run folder>/prod-snapshot.zip`, run from `app/convex`, for the
+     raw snapshot of every table and every row whatever its status. It is unzipped into the
+     scratchpad or a temp directory, never into the run folder, and `currentWeek/documents.jsonl`
+     gives the raw slot state (custom picks with their labels and positions included, which the
+     engine-shaped export drops) while `manualChanges/documents.jsonl` gives every hand edit and its
+     reason regardless of status. The snapshot is the source of `edit-reasons.md` and the cross-check
+     on `record.json`. The zip is not committed; `.gitignore` excludes
+     `features/engine-*/prod-snapshot.zip`.
+
+   It writes `record.json`, `as-eaten.md`, and `edit-reasons.md`.
+
 4. Verify the sanity checks in the `as-eaten.md` preamble reconcile with `record.json` yourself before
    marking the row done. Everything downstream measures against this file.
 
@@ -175,10 +190,16 @@ The run is designed to survive both.
 - **A subagent dying with an API 429 naming a session limit and a reset time** is not a failure of the
   step. Parse the reset time from the error, add a safety margin (ten minutes is enough), write it to
   the row's `resume-at`, set the row `blocked` with the error text in `last-error`, commit, and push.
-  Then schedule your own wakeup for that time and stop working. Two harness mechanisms do this: a
-  self-paced loop that wakes the session on its own cadence, and a timed wakeup created for a specific
-  clock time. Prefer the timed one for a known reset time. Whichever you use, the requirement is that
-  the session comes back on its own without Rajat.
+  Then schedule your own wakeup for that time and stop working. Two harness mechanisms do this:
+  - **`CronCreate`** creates a timed wakeup at a clock time. This is the primary mechanism, because
+    the reset time is known: create a one-shot schedule at the reset time plus a ten-minute margin.
+  - **`ScheduleWakeup`** is the self-paced loop wakeup and the fallback when cron is unavailable. It
+    is clamped to one hour per hop, so a reset further away than an hour is reached by chaining:
+    each wakeup re-reads `RUN.md`, and if `resume-at` is still in the future it schedules the next
+    hop rather than re-spawning the row.
+
+  Whichever you use, the requirement is that the session comes back on its own without Rajat.
+
 - **At wakeup**, re-read `RUN.md`, clear the `resume-at`, and re-spawn the blocked row from its brief.
 - **If the session is gone entirely**, the next session runs `/evolve-engine resume`: read `RUN.md`
   from the branch, treat any row left `running` as not done, and restart from the first non-`done`
@@ -189,7 +210,7 @@ The run is designed to survive both.
 ## What to refuse
 
 - **Writing anything to production** at any step before the cutover, including a "harmless" test
-  generation. The run reads production once, at step 1.
+  generation. The run only reads production, at step 1 and again before the cutover's gate run.
 - **Letting the rulebook author or the spec author see the current engine.** `docs/engine.md`,
   `engine/`, and every prior spec are forbidden to both, and the whole process is worthless if they
   read them. The same applies to the differ and the spec.

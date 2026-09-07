@@ -44,3 +44,7 @@ engine/src/data/history.ts
 coordination/active-streams.md
 # SessionStart hook that surfaces un-promoted in-week custom dishes — local EM tooling
 coordination/pending-custom-dishes.sh
+
+# Read-only production snapshot pulled at step 1 of an engine evolution
+# (EVOLVING-THE-ENGINE.md 4.1). Cross-check input only; never committed.
+features/engine-*/prod-snapshot.zip
