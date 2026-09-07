@@ -277,13 +277,13 @@ export function generateWeekV6(args: GenerateWeekV6Args): GeneratedWeekV6 {
     rateFormula: variant?.rateFormula,
   });
   /**
-   * §11's frozen run fixes the **rates** selection competes on at the cutover
-   * record, and nothing else: the occupation memory §6 step 5 places dishes by,
-   * the exploration slot's own weekday memory, and §3.2's presence rates all read
-   * the record as it stands. `frozenRatesStats` states the split in full and says
-   * why. Frozen memories never advance, so every week of the horizon resolves the
-   * same least-recently-used day and the run reports a slot lock that belongs to
-   * the harness rather than to the engine.
+   * §11's frozen run fixes **every rate** at the cutover record, §3.2's two slot
+   * presence rates included, and nothing else: the occupation memory §6 step 5
+   * places dishes by and the exploration slot's own weekday memory read the record
+   * as it stands. `frozenRatesStats` states the split in full and says why. Frozen
+   * memories never advance, so every week of the horizon resolves the same
+   * least-recently-used day and the run reports a slot lock that belongs to the
+   * harness rather than to the engine.
    */
   const stats = variant?.frozenRates
     ? frozenRatesStats(

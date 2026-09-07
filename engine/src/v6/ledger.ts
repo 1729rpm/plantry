@@ -522,8 +522,8 @@ export interface ReplayLedgerArgs {
  * Monsoon and Winter weeks and bank dozens of servings for it.
  *
  * Variants honoured (§11): `frozenRates` (every accrual uses the cutover **record**'s
- * rates, while §3.2's presence rate and every memory the record carries track the
- * record as it stands, the split `frozenRatesStats` states; the fruit season scope is
+ * rates, §3.2's slot presence rates included, while the memories the record carries
+ * track the record as it stands, the split `frozenRatesStats` states; the fruit season scope is
  * still evaluated per replayed week's season against the fixed record, and each
  * season's rate derivation is cached so the loop stays cheap),
  * `coldStartCap` (the seed cap, per dish or `"pool"`), `seedOptionalPools` (seed every
@@ -602,10 +602,11 @@ export function replayLedger(args: ReplayLedgerArgs): Ledger {
     let fruitAllSeason: boolean;
     const asItStood = sorted.filter((row) => row.weekStart < week);
     if (variant?.frozenRates) {
-      // §11's frozen run freezes the rates, not the memories: `accrue` reads §3.2's
-      // presence rate off these stats too, and that is a rate the record keeps
-      // rather than a quantity selection competes on, so it tracks the live record
-      // like the occupation memories do. `frozenRatesStats` states the whole split.
+      // §11's frozen run freezes every rate, not the memories. `accrue` reads
+      // §3.2's presence rate off these stats too, and presence is a rate, so it is
+      // frozen with the dish rates: a presence ledger whose target tracked the live
+      // record would let the engine's own output move the bar this control measures
+      // it against. `frozenRatesStats` states the whole split.
       const rates = frozenIn(weekSeason);
       stats = frozenRatesStats(
         rates.stats,
