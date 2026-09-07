@@ -27,6 +27,10 @@ export default [
       // exclusion design_handoff/ had under the previous handoff model).
       "features/**/*.jsx",
       "features/**/*.js",
+      // Throwaway engine-evolution simulators (EVOLVING-THE-ENGINE.md section 4.4).
+      // Committed with their run so a dead session can reproduce the numbers, but not
+      // build code: each one implements a spec that changes every round.
+      "features/engine-*/sim/**",
     ],
   },
   js.configs.recommended,
