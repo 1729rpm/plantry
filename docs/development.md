@@ -1,6 +1,6 @@
 # Development
 
-How changes are made in this repo. Session model, worktree workflow, ship workflow, definition of done, diagnosis card discipline, slow loop trigger, escalation, commit conventions, anti-patterns. The process implements the cross-project standard at `~/Downloads/AI Products/DEVELOPMENT-PLAYBOOK.md`; this doc records how it lands here plus this repo's deliberate deltas.
+How changes are made in this repo. Session model, worktree workflow, ship workflow, definition of done, diagnosis card discipline, maintenance trigger, escalation, commit conventions, anti-patterns. The process implements the cross-project standard at `~/Downloads/AI Products/DEVELOPMENT-PLAYBOOK.md`; this doc records how it lands here plus this repo's deliberate deltas.
 
 ## 1. Session model
 
@@ -45,10 +45,13 @@ Every code-touching session works in its own git worktree on its own feature bra
 
 **Branch naming:**
 
-- `feat/<stream-letter>-<short-name>` for engineer streams. Example: `feat/B-engine-section-1-3`.
-- `slow-loop/<date>` for slow-loop PRs. Example: `slow-loop/2026-07-12`.
-- `docs/maintenance-<date>` for canonical-doc reconciliation. Example: `docs/maintenance-2026-07-12`.
-- `chore/<short>` for tooling, deps, CI.
+- `feat/<stream-letter>-<short-name>` for engineer streams inside a feature. Example: `feat/B-engine-section-1-3`. A standalone feature stream with no letter is `feat/<short-name>`.
+- `feat/engine-<version>` for the integration branch of an engine evolution's build (step 7 of `EVOLVING-THE-ENGINE.md`); every build stream PR targets it, and it squash-merges to `main` once the gate passes.
+- `fix/<short-name>` for a defect fix that is not part of a feature stream.
+- `evolve/engine-<version>` for an `/evolve-engine` run: the run folder under `features/engine-<version>/` and every artifact the run commits. Example: `evolve/engine-v7`.
+- `slow-loop/<date>` for the first PR of a `/maintain` sitting, the signals and health passes. Example: `slow-loop/2026-07-12`. The prefix is load-bearing: the mark-applied action (`MAINTENANCE.md` §3) triggers on it.
+- `docs/maintenance-<date>` for the second PR of a sitting, the docs, retro, and hygiene passes. Example: `docs/maintenance-2026-07-12`.
+- `chore/<short>` for tooling, deps, CI, and the stream-sized fixes the retro pass files.
 - `data/enrichment-<n>` for content batches that add descriptions, recipes, and cook fields to existing dishes. Example: `data/enrichment-0`.
 - `data/photos-<n>` for content batches that add or refresh dish photos. Example: `data/photos-0`.
 - `data/expansion-<n>` for content batches that add new dishes to the library. Example: `data/expansion-0`.
@@ -62,9 +65,9 @@ Every code-touching session works in its own git worktree on its own feature bra
 3. For any slice that touches the app frontend, before approving the merge the EM spins off the in-depth full-flow crawl against the PR preview (`docs/engineering.md` §16): an automated walk of every customer flow across all tabs and every sheet, not just the new feature, capturing a screenshot of each screen and asserting the structural invariants (no horizontal overflow, key elements actually styled, focus moves into a sheet on open, background scroll locks while a sheet is open, tap targets at least 44px, a clean console), clicking every new interactive affordance and asserting the resulting state (not only screenshotting it), and comparing each rendered screen against the matching screen in the active feature's `features/<name>/` handoff (the live app is the reference when no feature is active). The EM reviews the output and resolves or explicitly accepts every deviation before merge. A CSS or shared-primitive change is whole-app blast radius: it is crawled across all tabs regardless of the slice's nominal scope.
 4. EM reviews the PR against principles and gates. Before merging, the EM confirms the PR's true merged state, not just its reported `mergeable` flag: GitHub can show a branch as mergeable and clean while it is behind `main` and would break once merged, and branch protection does not catch a stale-but-mergeable branch. The EM updates the branch onto `origin/main` (`git fetch && git rebase origin/main` in the worktree, §11.3), re-runs the engine check and re-bakes on that true merged state, and re-runs any count-sensitive tests, then either merges or sends back with specific notes.
 5. On merge to `main`, Vercel and Convex promote to production at `plantry.mudgal.xyz`. The EM verifies the live deploy (open the URL, re-run the crawl's smoke pass across all tabs (every tab renders, no horizontal overflow, a clean console), not only the current week).
-6. EM appends an entry to `docs/CHANGELOG.md`: date, short title, a present-tense description referencing the PR, a `Why:` line (the motivation), and an `Updated:` line naming the canonical or operational doc sections the change makes stale (or "none"). The `Updated:` line is the work queue for `/reconcile-docs` and `/reconcile-ops`; without it the reconciliation passes re-derive each entry's doc impact from the diff. When the merged change references an entry in `data/changelog.md` that shipped with a `(#TBD)` or `(PR pending)` placeholder, the EM backfills the real PR number on that entry at merge time, so no new placeholder persists past its merge.
+6. EM appends an entry to `docs/CHANGELOG.md`: date, short title, a present-tense description referencing the PR, a `Why:` line (the motivation), and an `Updated:` line naming the canonical or operational doc sections the change makes stale (or "none"). The `Updated:` line is the work queue for the docs pass of `/maintain` (`MAINTENANCE.md` §4.3); without it the pass re-derives each entry's doc impact from the diff. When the merged change references an entry in `data/changelog.md` that shipped with a `(#TBD)` or `(PR pending)` placeholder, the EM backfills the real PR number on that entry at merge time, so no new placeholder persists past its merge.
 7. EM closes out the worktree as part of the same merge step, not later: `scripts/end-session.sh` run from inside the worktree (it merges the session's Claude auto-memory into the canonical project memory dir, then removes the worktree; Claude Code keys memory on the dasherized cwd, so a worktree session's memory is lost on removal without this merge) and `git branch -D <branch>` (a squash-merge leaves the branch non-ancestor, so `-D` is expected), then `git -C <main dir> checkout main && git pull --ff-only` so the EM's local `main` does not drift behind `origin/main`, and moves the stream's registry row to Shipped (§11.1). When the merged PR is a feature activation whose spec lived untracked in the main dir, the `git pull --ff-only` aborts (the merge would overwrite the now-tracked untracked file) and the abort is easy to miss when tailing output, leaving the main dir silently on the old commit; confirm the pull landed with `git -C <main dir> log -1` and, if it aborted, remove or stash the untracked spec and pull again. A merge is not done until its worktree and branch are gone and local `main` is current; leaving them is what accumulates stale worktrees and a stale main across parallel sessions. New streams always branch off freshly-fetched `origin/main` (§11.3), never this local `main`, so a missed update never silently bases a stream on stale code; keeping it current is hygiene, not correctness-critical.
-8. **Feature close-out.** When the LAST stream of a feature merges (a feature is done when every stream in its spec's stream-state table has merged), the EM closes the feature in the same sitting: confirm the feature's stream-state table reflects the true merged state (correct it if it lags; never archive a stale table), `git mv features/<name>.md archive/features/<name>.md` while keeping `features/.gitkeep` in place, reset the `CLAUDE.md` "Currently building" line to `_none_`, flip the phase's row in `docs/PLAN.md` to shipped, tag the close (`git tag -a phase-<n>-complete -m "Phase <n>: <name>"`, tag pushed, so `git log phase-<n-1>-complete..phase-<n>-complete` answers what the phase contained permanently), and run (or queue) `/reconcile-docs` and `/reconcile-ops` for any docs the feature touched.
+8. **Feature close-out.** When the LAST stream of a feature merges (a feature is done when every stream in its spec's stream-state table has merged), the EM closes the feature in the same sitting: confirm the feature's stream-state table reflects the true merged state (correct it if it lags; never archive a stale table), `git mv features/<name>.md archive/features/<name>.md` while keeping `features/.gitkeep` in place, reset the `CLAUDE.md` "Currently building" line to `_none_`, flip the phase's row in `docs/PLAN.md` to shipped, tag the close (`git tag -a phase-<n>-complete -m "Phase <n>: <name>"`, tag pushed, so `git log phase-<n-1>-complete..phase-<n>-complete` answers what the phase contained permanently), and queue a `/maintain` sitting: its docs pass reconciles any doc the feature touched, and its signals pass consumes the queued signals the phase's engine generated, so an engine replacement never leaves a backlog behind (`MAINTENANCE.md` §8). When the feature carried a design handoff (a `features/<name>/` folder, or a handoff tree that landed at the root), verify that the archived copy under `archive/features/` is byte-identical to it, then remove the working copy in the same close-out, so a handoff never outlives its feature at the root or in `features/`.
 
 ## 4. Definition of done
 
@@ -83,7 +86,7 @@ A PR is done when ALL of:
 
 ## 5. Diagnosis card
 
-Every PR description starts with a diagnosis card. Engineer PRs, slow-loop PRs, EM-authored chore PRs, all of them. The card forces right-size discipline (Principle 1) to be auditable.
+Every PR description starts with a diagnosis card. Engineer PRs, maintenance PRs, EM-authored chore PRs, all of them. The card forces right-size discipline (Principle 1) to be auditable.
 
 ```
 ## Diagnosis
@@ -104,24 +107,25 @@ Every PR description starts with a diagnosis card. Engineer PRs, slow-loop PRs, 
 **Residual checks:** <verification the automated crawl and CI could not close and that travels with this PR: real-device (iPhone) sign-off, an after-production-deploy behaviour, a flow that needs a seeded or regenerated week (`docs/engineering.md` §16); or "none">
 ```
 
+The card keeps all six levels everywhere. Inside `/maintain`, a cluster whose honest level is a rule edit or engine code resolves to an evolution request in `data/engine-requests.md` (`MAINTENANCE.md` §1 and §5), with the conservative data-level action taken meanwhile; the card names both levels as considered and says so.
+
 For trivial changes (a typo fix, a dep bump) the card is one line: `**Problem size:** trivial; no diagnosis needed.` The EM uses judgment on what counts as trivial.
 
 For PRs that propose no behavior change after diagnosis ("the comment looks like a one-week aberration"), the card states this explicitly and the PR exists only to mark the queued items `reviewed_no_change` with the reason.
 
-## 6. Slow loop trigger
+## 6. Maintenance trigger
 
-The slow loop runs only when Rajat invokes it. Convention is Sunday around 11am IST, but the cadence is not enforced.
+Maintenance runs only when Rajat invokes it. Convention is Sunday around 11am IST, but the cadence is not enforced; a sitting that is skipped is caught up by the next one, because every pass reads its own deferred list before its window.
 
-**To run the slow loop:**
+**To run a sitting:**
 
 1. Rajat opens a Claude Code session in the main repo directory.
-2. Types `/slow-loop`. (Definition lives at `.claude/commands/slow-loop.md`.)
-3. The session reads the queued signal channels from Convex (via `npx convex run`): `manualChanges`, `dishDislikes`, and open `incidents`. It also reads the household record, the served weeks' `currentWeek` rows pulled with `recordExport:exportRecord`, the dish library under `data/dishes/`, the `data/ingredients.md` catalog, `docs/engine.md`, and the three reports from `npm run reports` (coverage, HP-vs-protein consistency, special sourcing). Pool health is the one proactive signal the reports cannot answer, because it asks how often a pool meets the rate the record asks of it, so it comes from `npm run gate` instead.
-4. The session clusters manual changes, dislikes, and incidents into themes and applies right-size discipline. For each theme it picks one of: data fix, tag addition, rule edit, no change warranted.
-5. The session opens a PR with a diagnosis card per theme, file diffs across `data/dishes/`, `data/ingredients.md`, `docs/engine.md`, `engine/src/`, and an appended `data/changelog.md` entry.
-6. Rajat reviews on GitHub. Merge applies. On merge a GitHub Action posts back to Convex to mark the consumed `manualChanges` rows `applied` or `reviewed_no_change`, resolve the consumed incidents, and link the PR.
+2. Types `/maintain`. (The skill lives at `.claude/skills/maintain/`: an orchestrator, one brief per pass, and two templates. A pass name runs that pass alone; `resume` continues a sitting from `.maintenance-state`, the committed manifest that carries each pass's marker, status, and deferred list.)
+3. The EM creates one maintenance worktree off freshly fetched `origin/main` and runs five passes in a fixed order. **Signals** reads the queued signal channels from Convex, read-only via `npx convex run` (`manualChanges`, `dishDislikes`, open `incidents`), plus the household record, the dish library under `data/dishes/`, the `data/ingredients.md` catalog, and `docs/engine.md`; it clusters the rows into themes and applies right-size discipline through a four-level ladder: a data row, an existing tag value applied to more dishes, a defect fix proved by a failing test that names the clause of `docs/engine.md` it violates, or an evolution request. "No change warranted" sits below all four. **Health** runs the three reports from `npm run reports` (coverage, HP-vs-protein consistency, special sourcing) and reads the gate's pool-health lines, because pool health asks how often a pool meets the rate the record asks of it and only `npm run gate` measures that; every 28 days it also runs the engine monitor over a production record export. It writes a table and proposals and changes nothing. **Docs** rewrites the canonical and operational documents in place against the CHANGELOG's `Updated:` lines, a standing-checks list, and its deferred list. **Retro** triages every open `RETRO.md` entry into brief lines, CI or tooling fixes, `chore/*` requests, or items for Rajat. **Hygiene** checks the tree, the branches, the worktrees, and the dev deployment; it deletes remote branches whose PR merged and lists anything else destructive for Rajat. Signals, health, and docs run as subagents; retro and hygiene run inline in the EM session.
+4. The sitting ends with at most two PRs, each carrying a diagnosis card per cluster or proposal. `slow-loop/<date>` holds the signals pass's file diffs across `data/dishes/` and `data/ingredients.md` (and, for a proved defect, `engine/src/` with its test), the appended `data/changelog.md` entries, the health pass's monitor table, and any evolution request appended to `data/engine-requests.md`; it is the PR that carries judgment, so Rajat reads it. `docs/maintenance-<date>` holds docs, retro, and hygiene as three commit groups and is mechanical catch-up.
+5. Rajat reviews on GitHub. Merge applies. On merge of the `slow-loop/*` PR a GitHub Action posts back to Convex to mark the consumed `manualChanges` rows `applied` or `reviewed_no_change`, mark the consumed `dishDislikes` rows `applied`, resolve the consumed incidents, and link the PR.
 
-Full slow-loop spec: `MAINTENANCE.md`.
+Maintenance never edits a rule, adds a tag value or frontmatter key, or changes engine behaviour: those belong to `/evolve-engine` (`EVOLVING-THE-ENGINE.md`), reached through the evolution-request ledger. Full spec, including the boundary between the two and the state file: `MAINTENANCE.md`.
 
 ## 7. Escalation rules
 
@@ -131,7 +135,7 @@ The EM decides on its own:
 - PR merges that pass principles and gates.
 - File and folder organization changes within the agreed layout.
 - Test-only changes, dep bumps, lint fixes.
-- Most slow-loop reasoning (the card makes the reasoning auditable).
+- Most maintenance reasoning (the card makes the reasoning auditable).
 
 The EM surfaces to Rajat before acting:
 
@@ -139,7 +143,7 @@ The EM surfaces to Rajat before acting:
 - Cross-stream product behavior changes (e.g., changing what the menu image looks like).
 - Cost or hosting changes (Convex paid tier, switching frontend host, buying a domain).
 - Adding a tool, service, or library not named in `docs/engineering.md`.
-- Any structural change to canonical data (the `data/dishes/` library, the `data/ingredients.md` catalog, `docs/engine.md`) initiated by the EM rather than the slow loop.
+- Any structural change to canonical data (the `data/dishes/` library, the `data/ingredients.md` catalog, `docs/engine.md`) initiated by the EM rather than by a `/maintain` sitting or an `/evolve-engine` run.
 - Genuine judgment ties where the EM has weighed both sides.
 
 EM-without-Rajat decisions go into `DECISIONS.md`. Rajat scans periodically; can override anything by replying in chat or editing the doc.
@@ -161,7 +165,7 @@ The EM rejects PRs that exhibit any of:
 - Generalizing from one or two cases ("we could add a column to handle this and three other hypothetical cases").
 - Adding a Pydantic-style abstraction or helper before two existing call sites need it.
 - Touching `docs/engine.md` without a matching engine code change.
-- Touching canonical dish data (the `data/dishes/` library, the `data/ingredients.md` catalog) outside the two legitimate paths. Structural rule and library changes go through the slow loop. Content batches (descriptions, recipes, cook fields, photos, new dishes) go through reviewed content-batch PRs on `data/enrichment-*`, `data/photos-*`, or `data/expansion-*` branches, each reviewed by Rajat personally. Any other path is the anti-pattern.
+- Touching canonical dish data (the `data/dishes/` library, the `data/ingredients.md` catalog) outside the two legitimate paths. Changes to existing values go through the signals pass of `/maintain`; rule and engine changes go through `/evolve-engine`. Content batches (descriptions, recipes, cook fields, photos, new dishes) go through reviewed content-batch PRs on `data/enrichment-*`, `data/photos-*`, or `data/expansion-*` branches, each reviewed by Rajat personally. Any other path is the anti-pattern.
 - Past-tense narrative in canonical docs ("we used to do X but now do Y").
 - "Refactor while I'm here" scope creep.
 - New libraries or platform services not in `docs/engineering.md` §1.
@@ -225,7 +229,7 @@ Some files cannot be lane-partitioned because every stream touches them. Each ge
 - **`docs/CHANGELOG.md`, `DECISIONS.md`, and feature stream-tables** are EM-owned. Engineers do not edit them. The EM batches CHANGELOG and DECISIONS entries into one docs PR at a checkpoint (the main dir cannot commit, so this matches the repo's existing docs-PR cadence). Append-only; never rewrite an existing entry.
 - **Tree-wide data migrations** (a change that rewrites every file under `data/dishes/`, e.g. adding a field to every dish) merge _last_ among the streams that touch that tree, so the migrating stream rebases once onto the others' content rows rather than forcing every content stream to fight a tree-wide rewrite.
 - **Shared UI primitives** (the `Chip`, picker styles, anything under a shared component or global CSS): keep edits inside your own component. Touch the shared primitive only if unavoidable, and add a Hotspot ledger row when you do. A shared-primitive change is whole-app blast radius and gets the full crawl (§3).
-- **Canonical docs** (`docs/product.md`, `docs/engine.md`, `docs/engineering.md`, this file) are reconciled by the maintenance job / `reconcile-docs`, not edited in shipping sessions (see `MAINTENANCE.md`). The one exception is an append-only addition that would otherwise force a renumber of sections other docs cross-reference; append, do not insert.
+- **Canonical docs** (`docs/product.md`, `docs/engine.md`, `docs/engineering.md`, this file) are reconciled by the docs pass of `/maintain` (`MAINTENANCE.md` §4.3), not edited in shipping sessions. The one exception is an append-only addition that would otherwise force a renumber of sections other docs cross-reference; append, do not insert.
 
 ### 11.5 Staging hygiene
 
