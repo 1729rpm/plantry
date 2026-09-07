@@ -190,9 +190,8 @@ now final) and into `CHANGES.md`, log them in `DECISIONS.md` as his decisions, c
 
 ## Branch naming for this command
 
-- `evolve/engine-<version>` for the run itself (this brief is where the name is defined; the branch
-  list in `docs/development.md` §2 is canonical for everything else and is reconciled separately).
-- `feat/engine-<version>` for the integration branch at step 7.
+- `evolve/engine-<version>` for the run itself (`docs/development.md` §2).
+- `feat/engine-<version>` for the integration branch at step 7 (`docs/development.md` §2).
 - `feat/<stream-letter>-<version>-<short>` for each build stream, per `docs/development.md` §2.
 
 ## Usage limits, session death, and resuming
