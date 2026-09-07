@@ -147,7 +147,7 @@ Engine v6 stream F2 (`features/engine-v6-plan.md` §6). Across the eight served 
 - No live-data snapshot assertion in `engine/test/data/reports.test.ts` moves, including the special-sourcing array the same-day #242 batch edited: this branch rebases onto that entry and leaves the test file untouched. The coverage assertions are invariants (`withPhoto`/`withDescription`/`withRecipe`/`withComplexity` `=== activeDishCount`) and auto-track the active library growing 253 to 257, all four shipped complete and photo'd; the per-season slot-row count (18) is structural; the Summer Fruit pool (4) is untouched since none of the four is `category: Fruit`; the special-sourcing array stays as #242 left it since Urad Dal carries no `Special` flag. Pools deepened (Summer, measured against the post-#242 library): Menu 4 complete_meal non-HP 27 to 28 (Dosa), Menu 3 Dessert 9 to 10 (Atta halva), weekday companions 58 to 59 (Stuffed capsicum). No pool-report row moves for Paneer manchurian: its cuisine is Chinese, and every Menu 1 and Menu 2 weekday pool filters to `cuisine === "Indian"`, so it joins the §3 international lunch form's non-Indian anchor pool, which the report does not enumerate. No engine, app, or rule change.
 - Out of scope here: the prod slot re-pointing. Four served slots still carry `dishId: null` and enter the v6 record only once stream E1's Convex internal mutation retargets them (2026-07-20 Tue lunch to 287, 2026-08-10 Tue lunch to 288, 2026-08-10 Sat lunch to 285 and 286, 2026-08-10 Wed lunch to the existing 23) with Rajat's per-action approval.
 
-## 2026-09-07  Hummus becomes a lunch main (Category Accompaniment to Dry dish)  (#TBD)
+## 2026-09-07  Hummus becomes a lunch main (Category Accompaniment to Dry dish)  (#259)
 
 Engine v6 stream F4 (`features/engine-v6-plan.md` §6), spec §14 item 3, on Rajat's decision of 2026-09-07 that hummus is a lunch main rather than a side. One frontmatter field on one dish file; no ingredient, rule, engine, or app change, and reversible by flipping the field back.
 
@@ -157,7 +157,7 @@ Engine v6 stream F4 (`features/engine-v6-plan.md` §6), spec §14 item 3, on Raj
 - No live-data snapshot in `engine/test/data/reports.test.ts` moves. The active library stays at 257 (nothing is activated or deactivated), so the `withPhoto`/`withDescription`/`withRecipe`/`withComplexity` invariants against `activeDishCount` are untouched; the special-sourcing array keeps its `{ 174, "Hummus", ["Tahini"] }` row unchanged, since that report reads the ingredient catalog rather than the category; and the special-ingredient set assertion is unaffected. The byte-identical round-trip validator passes on the edited file (a one-line diff).
 - Known consequence, routed to the engine v6 gate stream and not resolved here: reclassifying hummus moves its two record rows out of the §11 salad family (record denominator 8 rows to 6) and into the lunch-star pool, which lowers the record's own accompaniment presence and shifts three gate thresholds past their bars. See the PR body for the before-and-after numbers.
 
-## 2026-09-07  Paneer bhurji id 13 and id 106: examined, both kept  (#TBD)
+## 2026-09-07  Paneer bhurji id 13 and id 106: examined, both kept  (#259)
 
 Same stream and PR. Two Active dishes carry the name Paneer bhurji. They were compared field by field and found to be genuinely different library entries, so neither was deactivated and neither was renamed. No file changed.
 
