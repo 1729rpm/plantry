@@ -15,6 +15,22 @@ work queue for /reconcile-docs and /reconcile-ops; or "none".
 
 ---
 
+## 2026-09-07  Phase 9 closes: engine v6 shipped, docs reconciled, harness and cleanup PRs landed
+
+Phase 9's last content batch (hummus a lunch main, #259) lands and the phase closes: the
+spec and plan move to `archive/features/`, the evidence trail to `archive/features/engine-v6/`,
+`CLAUDE.md` reads none, `docs/PLAN.md` marks Phase 9 shipped, and the close is tagged
+`phase-9-complete`. Alongside: the smoke harness crawls the Yours tab, the profile sheet, and
+the Changes log (#258); the frozen gate run freezes the presence rate, which cures its
+specialty-roti starvation (#261, frozen 11 of 12); the operational (#260) and canonical (#262)
+reconciles bring every doc to engine v6, with the monthly engine monitor in `MAINTENANCE.md`
+§1.9; the retro intake settles the six Phase 9 entries; winter fruits are not added (Rajat) and
+weekly generation stays hand-triggered and paused until Rajat says. (#CLOSEOUT)
+Why: `docs/development.md` §3 step 8, the feature close-out, and Rajat's instruction to
+complete the EM work list.
+Updated: none (both reconciles ran in this sitting; `app/web/e2e/` joins the ops reconcile's
+scope via its brief).
+
 ## 2026-09-07  Engine v6 cutover on prod: custom picks re-pointed, first v6 week generated
 
 The six household custom picks in the served weeks now carry library ids (Red Sauce
