@@ -1,7 +1,7 @@
 ---
 id: 174
 name: Hummus
-category: Accompaniment
+category: Dry dish
 time: Lunch
 tags: []
 primaryIngredient: Chickpea
