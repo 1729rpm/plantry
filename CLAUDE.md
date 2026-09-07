@@ -30,11 +30,7 @@ Read order by task:
 
 ## Currently building
 
-> **Phase 9, Engine v6. Start at `features/engine-v6-plan.md`** (the phase spec: outcome, branch model, stream
-> table with lanes, per-stream briefs, hotspots, gate, cutover runbook), then `features/engine-v6.md` (the rules
-> spec, round 3). Streams build on the integration branch `feat/engine-v6`; nothing merges to `main` until the
-> §11 gate harness passes on the integrated engine. Phase 8 (engine v4.1) is abandoned; its spec and restart
-> brief live under `archive/features/` and are history, not truth.
+_none_
 
 When no feature is active, this line reads "_none_". It resets to `_none_` on feature close-out, when the last stream of a feature merges (`docs/development.md` §3 step 8).
 

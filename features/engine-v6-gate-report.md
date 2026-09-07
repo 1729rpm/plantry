@@ -22,7 +22,7 @@ The corrected run has **no swap-away rows to replay**: every week of this fixtur
 
 | Run | Thresholds passed | Failed | Not measured |
 | --- | --- | --- | --- |
-| 1. Frozen | 10 | 2 | 0 |
+| 1. Frozen | 11 | 1 | 0 |
 | 2. Self-feeding | 8 | 4 | 0 |
 | 3. Corrected | 8 | 4 | 0 |
 | Variant: cold-start cap 0.5 | 10 | 2 | 0 |
@@ -32,38 +32,35 @@ The corrected run has **no swap-away rows to replay**: every week of this fixtur
 
 ## 1. Frozen (60 weeks)
 
-**1. Distribution fidelity (within 25 percent of the record rate, per occasion): FAIL**
+**1. Distribution fidelity (within 25 percent of the record rate, per occasion): PASS**
 
-- 10 of 11 tracked families inside the bar
+- 11 of 11 tracked families inside the bar
 - chicken: served 0.235 vs record 0.206 (+14.2%) 21 rows PASS
 - paneer: served 0.162 vs record 0.157 (+3.2%) 16 rows PASS
 - egg: served 0.204 vs record 0.196 (+4.0%) 20 rows PASS
 - fish: served 0.080 vs record 0.078 (+1.8%) 8 rows PASS
 - prawn: served 0.047 vs record 0.049 (-5.0%) 5 rows PASS
-- mutton: served 0.018 vs record 0.020 (-9.5%) 2 record rows, reported not gated
-- dal-family: served 0.153 vs record 0.147 (+4.0%) 15 rows PASS
-- international: served 0.191 vs record 0.186 (+2.4%) 19 rows PASS
-- plain roti: served 0.213 vs record 0.216 (-1.3%) 22 rows PASS
-- specialty roti: served 0.029 vs record 0.049 (-41.2%) 5 rows FAIL
-- salad: served 0.089 vs record 0.098 (-9.5%) 10 rows PASS
+- mutton: served 0.020 vs record 0.020 (+1.8%) 2 record rows, reported not gated
+- dal-family: served 0.151 vs record 0.147 (+2.5%) 15 rows PASS
+- international: served 0.186 vs record 0.186 (-0.0%) 19 rows PASS
+- plain roti: served 0.217 vs record 0.216 (+0.7%) 22 rows PASS
+- specialty roti: served 0.038 vs record 0.049 (-23.1%) 5 rows PASS
+- salad: served 0.082 vs record 0.098 (-16.3%) 10 rows PASS
 - raita/curd: served 0.089 vs record 0.098 (-9.5%) 10 rows PASS
-
-Diagnosis: 1 tracked family is outside the 25 percent bar; the summed dish rates of those pools do not reproduce the record.
 
 **2. Lunch-main uniqueness (65 percent distinct over any rolling 8 weeks): PASS**
 
-- worst rolling window 67.5 percent distinct across 34 windows (household baseline 77)
+- worst rolling window 65.0 percent distinct across 34 windows (household baseline 77)
 
 **3. Overlap band (week-over-week Jaccard within 0.05 of the record baseline): PASS**
 
-- served 0.242 against the record's own 0.194 by the same method, delta 0.048
+- served 0.235 against the record's own 0.194 by the same method, delta 0.042
 
 **4. Slot anti-lock (no dish or category holds one weekday-meal slot in over half the horizon): PASS**
 
 - no non-exempt dish lock; worst category run 14 of 41 weeks
-- Roti holds Thu lunch in 22 of 41 weeks, at 0.468 of the role's occasions over 41 eligible weeks (a preference-free spread of 96 placements over 5 days puts one day over 20.5 weeks 87.7 percent of the time): exempt, §11's arithmetic exemption
-- Roti holds Fri lunch in 22 of 41 weeks, at 0.468 of the role's occasions over 41 eligible weeks (a preference-free spread of 96 placements over 5 days puts one day over 20.5 weeks 87.7 percent of the time): exempt, §11's arithmetic exemption
-- Roti holds Mon lunch in 21 of 41 weeks, at 0.468 of the role's occasions over 41 eligible weeks (a preference-free spread of 96 placements over 5 days puts one day over 20.5 weeks 87.7 percent of the time): exempt, §11's arithmetic exemption
+- Roti holds Wed lunch in 24 of 41 weeks, at 0.478 of the role's occasions over 41 eligible weeks (a preference-free spread of 98 placements over 5 days puts one day over 20.5 weeks 91.5 percent of the time): exempt, §11's arithmetic exemption
+- Roti holds Fri lunch in 21 of 41 weeks, at 0.478 of the role's occasions over 41 eligible weeks (a preference-free spread of 98 placements over 5 days puts one day over 20.5 weeks 91.5 percent of the time): exempt, §11's arithmetic exemption
 
 **5. Saturday (no treat repeat inside a rolling window, dessert on every Saturday): PASS**
 
@@ -75,59 +72,59 @@ Diagnosis: 1 tracked family is outside the 25 percent bar; the summed dish rates
 - 31 weeks measured, 10 weeks under a thin in-season pool and exempt
 - no violations
 
-**7. Coverage (every dish eaten twice or more at start is served in any eligible 20-week window): FAIL**
+**7. Coverage (every dish eaten twice or more at start is served in any eligible 20-week window): PASS**
 
-- 49 dishes tracked; 1 with an unserved 20-week window
-- Beetroot roti unserved across weeks 40 to 59
-
-Diagnosis: 1 record dishes go 20 eligible weeks unserved; their deficits are not accruing past the pool leaders.
+- 49 dishes tracked; 0 with an unserved 20-week window
 
 **8. International persistence (0.75 to 1.75 weekday stars per week in every 10-week window): PASS**
 
-- 32 windows, 0.80 to 1.50 per week, 0 at zero
+- 32 windows, 0.90 to 1.50 per week, 0 at zero
 
 **9. Breakfast and forms (10 distinct mains per 25 weeks, boiled-egg mornings, dal-led lunches): PASS**
 
 - worst 25-week window 16 distinct breakfast mains
-- 24 weeks with a standalone boiled-egg breakfast, 52 dal-led weekday lunches in the horizon
+- 24 weeks with a standalone boiled-egg breakfast, 53 dal-led weekday lunches in the horizon
 
 **10. Plate size and effort (4-item lunches under 10 percent, no 5-item lunch, no day over 150 minutes): PASS**
 
-- 4-item lunches 8.8 percent of 205 weekday lunches, 5-item 0
-- 0 days over the 120-minute prep ceiling (reported), 0 over 150
+- 4-item lunches 7.8 percent of 205 weekday lunches, 5-item 0
+- 1 days over the 120-minute prep ceiling (reported), 0 over 150
+- 2027-05-24 Tue 135 minutes
 
 **11. Presence rates (each optional slot within 25 percent of the record's presence rate): PASS**
 
-- breakfast small item: served 0.634 vs record 0.652 (-2.8%) PASS
-- weekday companion: served 0.702 vs record 0.674 (+4.2%) PASS
-- Saturday accompaniment: served 0.951 vs record 0.900 (+5.7%) PASS
-- served weekday companions 144 of 205 occasions, counted by role; the same plans read back by the record-side classification give 138 (gap -6, 4.2 percent), which is how far the two readings of one quantity sit apart
+- breakfast small item: served 0.629 vs record 0.652 (-3.5%) PASS
+- weekday companion: served 0.698 vs record 0.674 (+3.5%) PASS
+- Saturday accompaniment: served 0.902 vs record 0.900 (+0.3%) PASS
+- served weekday companions 143 of 205 occasions, counted by role; the same plans read back by the record-side classification give 138 (gap -5, 3.5 percent), which is how far the two readings of one quantity sit apart
 
-**12. Drift bound (weeks 40 to 60 within each family's own counting noise of weeks 20 to 40): PASS**
+**12. Drift bound (weeks 40 to 60 within each family's own counting noise of weeks 20 to 40): FAIL**
 
-- 11 of 11 families inside their own counting noise
-- 8 of 11 would also sit inside the 10 percent aspiration, which needs about 200 placements a window to be a bound at all
-- chicken: 0.218 (48 placements) then 0.251 (58) (+15.1%) 21 record rows, counting noise +19.5%, 10 percent aspiration not met PASS
+- 10 of 11 families inside their own counting noise
+- 7 of 11 would also sit inside the 10 percent aspiration, which needs about 200 placements a window to be a bound at all
+- chicken: 0.214 (47 placements) then 0.255 (59) (+19.6%) 21 record rows, counting noise +19.6%, 10 percent aspiration not met FAIL
 - paneer: 0.155 (34 placements) then 0.169 (39) (+9.2%) 16 record rows, counting noise +23.5%, 10 percent aspiration met PASS
 - egg: 0.209 (46 placements) then 0.199 (46) (-4.8%) 20 record rows, counting noise +20.9%, 10 percent aspiration met PASS
 - fish: 0.082 (18 placements) then 0.078 (18) (-4.8%) 8 record rows, counting noise +33.3%, 10 percent aspiration met PASS
 - prawn: 0.045 (10 placements) then 0.048 (11) (+4.8%) 5 record rows, counting noise +43.7%, 10 percent aspiration met PASS
-- mutton: 0.023 (5 placements) then 0.013 (3) (-42.9%) 2 record rows, counting noise +73.0%, 10 percent aspiration not met, reported not gated
-- dal-family: 0.155 (34 placements) then 0.152 (35) (-2.0%) 15 record rows, counting noise +24.1%, 10 percent aspiration met PASS
-- international: 0.182 (40 placements) then 0.199 (46) (+9.5%) 19 record rows, counting noise +21.6%, 10 percent aspiration met PASS
-- plain roti: 0.218 (48 placements) then 0.208 (48) (-4.8%) 22 record rows, counting noise +20.4%, 10 percent aspiration met PASS
-- specialty roti: 0.041 (9 placements) then 0.017 (4) (-57.7%) 5 record rows, counting noise +60.1%, 10 percent aspiration not met PASS
-- salad: 0.100 (22 placements) then 0.078 (18) (-22.1%) 10 record rows, counting noise +31.8%, 10 percent aspiration not met PASS
-- raita/curd: 0.091 (20 placements) then 0.087 (20) (-4.8%) 10 record rows, counting noise +31.6%, 10 percent aspiration met PASS
+- mutton: 0.023 (5 placements) then 0.017 (4) (-23.8%) 2 record rows, counting noise +67.1%, 10 percent aspiration not met, reported not gated
+- dal-family: 0.150 (33 placements) then 0.152 (35) (+1.0%) 15 record rows, counting noise +24.3%, 10 percent aspiration met PASS
+- international: 0.182 (40 placements) then 0.190 (44) (+4.8%) 19 record rows, counting noise +21.8%, 10 percent aspiration met PASS
+- plain roti: 0.218 (48 placements) then 0.216 (50) (-0.8%) 22 record rows, counting noise +20.2%, 10 percent aspiration met PASS
+- specialty roti: 0.041 (9 placements) then 0.035 (8) (-15.3%) 5 record rows, counting noise +48.6%, 10 percent aspiration not met PASS
+- salad: 0.095 (21 placements) then 0.069 (16) (-27.4%) 10 record rows, counting noise +33.2%, 10 percent aspiration not met PASS
+- raita/curd: 0.095 (21 placements) then 0.082 (19) (-13.8%) 10 record rows, counting noise +31.7%, 10 percent aspiration not met PASS
+
+Diagnosis: 1 families move further between the two halves of the horizon than the counting noise of the comparison: the self-feed is ratcheting on those families.
 
 **13. Reported, not gated**
 
-- Novelty placements: 40 in 41 weeks (0.98 a week)
-- Weekday lunches with no animal protein: 73 of 205 (35.6 percent)
-- Saturday plate shape: 2 items x 2, 3 items x 39
-- Negative-deficit fills per week: fruit 5.20, carb 0.63, dessert 0.41, special-protein 0.20, partner 0.12
-- Picks by protein family (top 10): Chicken 106, Wheat Flour 101, Egg 92, Paneer 73, Curd 66, Banana 48, Papaya 48, Mint Leaf 37, Fish 36, Avocado 32
-- Constraint repairs: protein-floor 34, protein-family 9, prep-ceiling 7, consecutive-fruit 4, consecutive-rice 1
+- Novelty placements: 41 in 41 weeks (1.00 a week)
+- Weekday lunches with no animal protein: 72 of 205 (35.1 percent)
+- Saturday plate shape: 2 items x 4, 3 items x 37
+- Negative-deficit fills per week: fruit 5.20, carb 0.71, dessert 0.41, special-protein 0.20, partner 0.12
+- Picks by protein family (top 10): Chicken 106, Wheat Flour 103, Egg 92, Paneer 73, Curd 66, Banana 48, Papaya 48, Fish 36, Mint Leaf 36, Avocado 32
+- Constraint repairs: protein-floor 32, prep-ceiling 17, protein-family 7, consecutive-fruit 4, consecutive-rice 1
 
 ### Diagnosis, threshold 5: the Saturday sequence and the treat pool
 
@@ -194,43 +191,42 @@ Diagnosis: 1 record dishes go 20 eligible weeks unserved; their deficits are not
 
 ### Diagnosis, threshold 2: the worst rolling 8-week window's stars
 
-- Worst window: weeks 25 to 32, 67.5 percent distinct over 40 stars.
-- Origins in that window: deficit 34, exploration 6
+- Worst window: weeks 34 to 41, 65.0 percent distinct over 40 stars.
+- Origins in that window: deficit 33, exploration 7
 - Arithmetic ceiling on distinctness from the record's own rates: 69.8 percent over a rolling 8-week window (12.1 of 40 stars are repeats no schedule that matches those rates can avoid), against the 65 percent bar. Star turns each dish's own rate forces (top 6): Fish tikka 4.5, Chicken masala gravy 2.6, Grilled chicken breast 2.6, Chicken tikka 1.9, Moong dal 1.9, Prawn pepper fry 1.9.
 - Star pool at simulation start: 60 dishes summing to 1.348 per weekday-lunch occasion against 1 star slot per occasion; the whole weekday-lunch scope sums to 2.609 per occasion against about 2.61 picks a lunch. A summed star rate above 1 means the star pool accrues faster than the five star slots can charge it, so every deficit floats up together and the ranking is decided by rate alone rather than by turn-taking.
 - Repeated in that window:
--   Chicken masala gravy: x4 in the window, weekday-lunch rate 0.087 at start (one turn every 2.3 weeks), 18 stars and 18 weekday-lunch placements in the horizon against 17.8 the rate predicts
--   Chole: x2 in the window, weekday-lunch rate 0.043 at start (one turn every 4.6 weeks), 7 stars and 9 weekday-lunch placements in the horizon against 8.9 the rate predicts
--   Kadhi: x2 in the window, weekday-lunch rate 0.043 at start (one turn every 4.6 weeks), 8 stars and 9 weekday-lunch placements in the horizon against 8.9 the rate predicts
--   Khichdi: x2 in the window, weekday-lunch rate 0.043 at start (one turn every 4.6 weeks), 9 stars and 9 weekday-lunch placements in the horizon against 8.9 the rate predicts
+-   Fish tikka: x4 in the window, weekday-lunch rate 0.152 at start (one turn every 1.3 weeks), 15 stars and 31 weekday-lunch placements in the horizon against 31.2 the rate predicts
+-   Chicken masala gravy: x3 in the window, weekday-lunch rate 0.087 at start (one turn every 2.3 weeks), 18 stars and 18 weekday-lunch placements in the horizon against 17.8 the rate predicts
+-   Moong dal: x3 in the window, weekday-lunch rate 0.065 at start (one turn every 3.1 weeks), 13 stars and 13 weekday-lunch placements in the horizon against 13.4 the rate predicts
+-   Palak chicken gravy: x2 in the window, weekday-lunch rate 0.043 at start (one turn every 4.6 weeks), 8 stars and 8 weekday-lunch placements in the horizon against 8.9 the rate predicts
+-   Kadhi: x2 in the window, weekday-lunch rate 0.043 at start (one turn every 4.6 weeks), 5 stars and 9 weekday-lunch placements in the horizon against 8.9 the rate predicts
+-   Khichdi: x2 in the window, weekday-lunch rate 0.043 at start (one turn every 4.6 weeks), 8 stars and 8 weekday-lunch placements in the horizon against 8.9 the rate predicts
 -   Curd rice: x2 in the window, weekday-lunch rate 0.043 at start (one turn every 4.6 weeks), 9 stars and 9 weekday-lunch placements in the horizon against 8.9 the rate predicts
--   Moong dal: x2 in the window, weekday-lunch rate 0.065 at start (one turn every 3.1 weeks), 12 stars and 13 weekday-lunch placements in the horizon against 13.4 the rate predicts
 -   Soya chunks masala: x2 in the window, weekday-lunch rate 0.043 at start (one turn every 4.6 weeks), 9 stars and 9 weekday-lunch placements in the horizon against 8.9 the rate predicts
 -   Rajma chawal: x2 in the window, weekday-lunch rate 0.043 at start (one turn every 4.6 weeks), 9 stars and 9 weekday-lunch placements in the horizon against 8.9 the rate predicts
--   Malai kofta: x2 in the window, weekday-lunch rate 0.043 at start (one turn every 4.6 weeks), 5 stars and 8 weekday-lunch placements in the horizon against 8.9 the rate predicts
--   Grilled chicken breast: x2 in the window, weekday-lunch rate 0.087 at start (one turn every 2.3 weeks), 4 stars and 17 weekday-lunch placements in the horizon against 17.8 the rate predicts
 -   Singapore noodles: x2 in the window, weekday-lunch rate 0.043 at start (one turn every 4.6 weeks), 8 stars and 8 weekday-lunch placements in the horizon against 8.9 the rate predicts
-- Repairs that replaced a star across the horizon: 0. By role: floor 34, plate swap 14, companion 7
+- Repairs that replaced a star across the horizon: 0. By role: floor 32, companion 15, plate swap 12, breakfast-small 2
 - The window's stars, week by week:
--   week 25: Singapore noodles (deficit, deficit 1.83); Chicken masala gravy (deficit, deficit 1.87); Malai kofta (deficit, deficit 1.83); Rajma chawal (deficit, deficit 1.43); Curd rice (deficit, deficit 1.43)
--   week 26: Thai green curry chicken (deficit, deficit 1.52); Khichdi (deficit, deficit 1.61); Kadhi (deficit, deficit 1.65); Soya chunks masala (deficit, deficit 1.61); Chole (deficit, deficit 1.61)
--   week 27: Mushroom matar (deficit, deficit 1.63); Egg curry (exploration, deficit 0.00); Toor dal (deficit, deficit 1.63); White sauce pasta (deficit, deficit 1.63); Chicken masala gravy (deficit, deficit 1.74)
--   week 28: Malai kofta (deficit, deficit 1.48); Moong dal (deficit, deficit 1.91); Prawn curry (deficit, deficit 1.63); Panchmel dal (deficit, deficit 1.52); Masoor dal (exploration, deficit 0.00)
--   week 29: Chana dal (exploration, deficit 0.00); Singapore noodles (deficit, deficit 1.70); Grilled chicken breast (deficit, deficit 1.61); Palak chicken gravy (deficit, deficit 1.70); Chicken masala gravy (deficit, deficit 1.61)
--   week 30: Veg fried rice (deficit, deficit 1.52); Butter chicken (deficit, deficit 1.52); Veg hakka noodles (deficit, deficit 1.63); Tinda masala (exploration, deficit 0.00); Moong dal (deficit, deficit 1.57)
--   week 31: Curd rice (deficit, deficit 1.74); Kadhi (deficit, deficit 1.74); Vegetable stew (exploration, deficit 0.00); Khichdi (deficit, deficit 1.70); Rajma chawal (deficit, deficit 1.74)
--   week 32: Soya chunks masala (deficit, deficit 1.91); Fish curry (exploration, deficit 0.00); Chole (deficit, deficit 1.91); Grilled chicken breast (deficit, deficit 1.91); Chicken masala gravy (deficit, deficit 1.91)
+-   week 34: Singapore noodles (deficit, deficit 1.78); Palak chicken gravy (deficit, deficit 1.78); Chicken masala gravy (deficit, deficit 1.78); Moong dal (deficit, deficit 1.87); Thai green curry chicken (deficit, deficit 1.39)
+-   week 35: Rajma chawal (deficit, deficit 1.61); Vegetable daliya (exploration, deficit 0.00); Curd rice (deficit, deficit 1.61); Kadhi (deficit, deficit 1.61); Fish tikka (deficit, deficit 1.63)
+-   week 36: Soya chunks masala (deficit, deficit 1.78); Chicken masala gravy (deficit, deficit 1.65); Chole (deficit, deficit 1.78); Khichdi (deficit, deficit 1.78); Pepper chicken dry (exploration, deficit 0.00)
+-   week 37: Shakshuka (exploration, deficit 0.00); Mushroom matar (deficit, deficit 1.72); Moong dal (deficit, deficit 1.85); Fish tikka (deficit, deficit 2.15); White sauce pasta (deficit, deficit 1.72)
+-   week 38: Fish tikka (deficit, deficit 1.91); Palak chicken gravy (deficit, deficit 1.65); Lebanese lentil soup (exploration, deficit 0.00); Prawn curry (deficit, deficit 1.72); Singapore noodles (deficit, deficit 1.65)
+-   week 39: Chicken masala gravy (deficit, deficit 1.96); Panchmel dal (deficit, deficit 1.72); Malai kofta (deficit, deficit 1.87); Dal makhani (exploration, deficit 0.00); Fish tikka (deficit, deficit 1.67)
+-   week 40: Moong dal (deficit, deficit 1.83); Vietnamese lemongrass chicken (exploration, deficit 0.00); Vegetable korma (deficit, deficit 1.72); Curd rice (deficit, deficit 1.70); Veg hakka noodles (deficit, deficit 1.72)
+-   week 41: Khichdi (deficit, deficit 1.87); Kadhi (deficit, deficit 1.91); Rajma chawal (deficit, deficit 1.91); Soya chunks masala (deficit, deficit 1.87); Chicken breast (exploration, deficit 0.00)
 
 ### Diagnosis, threshold 4: where the locked weekdays come from
 
 - Boiled eggs breakfast: Mon 9  Tue 8  Wed 8  Thu 36  Fri 2 over 41 weeks
 -   63 placements over 41 eligible weeks, 0.307 of the role's occasions, so an unbiased assignment expects 12.6 of 41 on each of its 5 days with a spread of 3.0: one named day goes over half the horizon 0.4 percent of the time and at least one of the 5 does 1.9 percent of the time. §11's exemption asks for a rate at or above 0.40 with that last figure over 50 percent, so this role is not exempt.
-- Roti lunch: Mon 21  Tue 14  Wed 17  Thu 22  Fri 22 over 41 weeks
--   96 placements over 41 eligible weeks, 0.468 of the role's occasions, so an unbiased assignment expects 19.2 of 41 on each of its 5 days with a spread of 3.2: one named day goes over half the horizon 34.2 percent of the time and at least one of the 5 does 87.7 percent of the time. §11's exemption asks for a rate at or above 0.40 with that last figure over 50 percent, so this role is exempt.
+- Roti lunch: Mon 18  Tue 18  Wed 24  Thu 17  Fri 21 over 41 weeks
+-   98 placements over 41 eligible weeks, 0.478 of the role's occasions, so an unbiased assignment expects 19.6 of 41 on each of its 5 days with a spread of 3.2: one named day goes over half the horizon 38.9 percent of the time and at least one of the 5 does 91.5 percent of the time. §11's exemption asks for a rate at or above 0.40 with that last figure over 50 percent, so this role is exempt.
 - Avocado toast breakfast: Mon 5  Tue 3  Wed 4  Thu 16  Fri 4 over 41 weeks
 -   32 placements over 41 eligible weeks, 0.156 of the role's occasions, so an unbiased assignment expects 6.4 of 41 on each of its 5 days with a spread of 2.3: one named day goes over half the horizon 0.0 percent of the time and at least one of the 5 does 0.0 percent of the time. §11's exemption asks for a rate at or above 0.40 with that last figure over 50 percent, so this role is not exempt.
-- Exploration plates that led their lunch, by weekday: Mon 8  Tue 6  Wed 5  Thu 7  Fri 6. §6 step 5 reserves this weekday out of the supply before the repertoire plates choose, so a skew here would push every other plate onto the leftovers.
-- Whole-plate lunch swaps in the §6 step 6 pass: 10 (week 21 protein-family Mon for Tue; week 21 consecutive-rice Tue for Wed; week 27 protein-family Mon for Tue; week 28 protein-family Mon for Fri; week 30 protein-family Mon for Fri; week 42 protein-family Tue for Fri; week 45 protein-family Mon for Thu; week 47 protein-family Mon for Wed; week 49 protein-family Mon for Fri; week 58 protein-family Mon for Tue). A swap exchanges two days' plates, so it moves a carb only with the plate it rides on.
+- Exploration plates that led their lunch, by weekday: Mon 7  Tue 7  Wed 5  Thu 5  Fri 8. §6 step 5 reserves this weekday out of the supply before the repertoire plates choose, so a skew here would push every other plate onto the leftovers.
+- Whole-plate lunch swaps in the §6 step 6 pass: 8 (week 21 protein-family Mon for Tue; week 21 consecutive-rice Tue for Wed; week 26 protein-family Mon for Wed; week 30 protein-family Mon for Fri; week 32 protein-family Mon for Tue; week 33 protein-family Mon for Tue; week 36 protein-family Mon for Fri; week 39 protein-family Wed for Fri). A swap exchanges two days' plates, so it moves a carb only with the plate it rides on.
 
 ## 2. Self-feeding (60 weeks)
 

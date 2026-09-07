@@ -18,6 +18,7 @@ In scope (the operational layer):
 - `MAINTENANCE.md`, `ADDING-DISHES.md` (operational specs).
 - `claude-design.md` (the design contract).
 - `.claude/commands/*.md` (the slash-command briefs).
+- `app/web/e2e/*.mjs` (the UI crawl harnesses): their tab lists, selectors, and sheet flows are checked against the live app's surfaces, so a surface change never leaves the crawl asserting a retired tab.
 
 Out of scope:
 
