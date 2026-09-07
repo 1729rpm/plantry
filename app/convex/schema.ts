@@ -209,6 +209,12 @@ export default defineSchema({
   // `reason` is OPTIONAL (a dislike is a lightweight tap, unlike Decision #8's
   // required save-reason); `consumedWeekStart` is null until the slow loop
   // consumes the row (`features/design-revamp.md` §1.5, §1.8).
+  // `resolvedPr` carries the URL of the merged slow-loop PR that consumed the
+  // row, written with the status by `dishDislikesMutations:markDislikesApplied`
+  // (MAINTENANCE.md §3). It is optional rather than `v.union(v.string(),
+  // v.null())` so every row written before the write-back existed still
+  // validates (Convex checks every existing row against the new schema on
+  // deploy, and a required field would fail the deploy).
   dishDislikes: defineTable({
     createdAt: v.number(),
     author: v.union(v.literal("rajat"), v.literal("tuhina")),
@@ -216,6 +222,7 @@ export default defineSchema({
     reason: v.union(v.string(), v.null()),
     status: v.union(v.literal("queued"), v.literal("applied"), v.literal("dismissed")),
     consumedWeekStart: v.union(v.string(), v.null()),
+    resolvedPr: v.optional(v.string()),
   }).index("by_status", ["status"]),
 
   // The household's standing favorites list (`features/wishlist-favorites-v2`).

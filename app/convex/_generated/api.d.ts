@@ -10,6 +10,7 @@
 
 import type * as dayMutations from "../dayMutations.js";
 import type * as dishDislikes from "../dishDislikes.js";
+import type * as dishDislikesMutations from "../dishDislikesMutations.js";
 import type * as explore from "../explore.js";
 import type * as favorites from "../favorites.js";
 import type * as generateWeek from "../generateWeek.js";
@@ -43,6 +44,7 @@ import type {
 declare const fullApi: ApiFromModules<{
   dayMutations: typeof dayMutations;
   dishDislikes: typeof dishDislikes;
+  dishDislikesMutations: typeof dishDislikesMutations;
   explore: typeof explore;
   favorites: typeof favorites;
   generateWeek: typeof generateWeek;
