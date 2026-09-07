@@ -76,7 +76,7 @@ Pass 1 of 5 of the first `/maintain` sitting. Brief: `.claude/skills/maintain/pa
 ## 3. Edits made
 
 - `data/changelog.md`: one appended entry, `## 2026-09-07  maintenance signals: pre-v6 backlog consumed at the cutover, first v6 week read, no change warranted  (slow-loop PR pending)`. Level: none (the entry records the two no-change clusters, the counts, and the empty dislikes table). The heading's `(#271)` follows the 2026-06-09 entry's convention; the EM may substitute the PR number before committing, since the entry is not history until it lands.
-- `features/maintenance-2026-09-07/signals.md`: this artifact.
+- `archive/maintenance/2026-09-07/signals.md`: this artifact.
 - No `data/dishes/*.md`, `data/ingredients.md`, `docs/engine.md`, `engine/`, or `app/` file changed.
 
 ## 4. Evolution requests filed
@@ -132,7 +132,7 @@ Consumed dislike IDs: -
 ## File changes
 
 - `data/changelog.md`: one appended entry for the sitting (both clusters no change warranted, the counts, the empty dislikes table). No level; the entry is the record of the consumption.
-- `features/maintenance-2026-09-07/signals.md`: the pass artifact.
+- `archive/maintenance/2026-09-07/signals.md`: the pass artifact.
 - No dish file, catalog row, engine module, spec section, or app file changed. `data/engine-requests.md` untouched.
 ```
 
