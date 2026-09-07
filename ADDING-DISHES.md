@@ -1,11 +1,11 @@
-# Adding dishes — content-batch playbook
+# Adding dishes: the content-batch playbook
 
 The single procedure for adding a new dish (or a batch of dishes) to the library. Operational doc, sibling to `MAINTENANCE.md`: where `MAINTENANCE.md` is the playbook for the _automated_ structural-change path (the slow loop), this is the playbook for the _manual, reviewed_ structural-change path (content-batch dish adds).
 
 Read this before authoring any new dish. It does not restate the specs; it orchestrates them and bakes in every trap we have actually hit. Authoritative homes it points at:
 
-- Dish + catalog schema, field-by-field: `docs/engine.md` §12.
-- The rules a dish feeds (eligibility, composition, recency, HP, protein diversity): `docs/engine.md` §1-§10.
+- Dish + catalog schema, field-by-field: `docs/engine.md` §15.
+- The rules a dish feeds (eligibility, the record and its rates, pools and selection, plate composition, the fruit slot): `docs/engine.md` §1 to §9.
 - Photo system (model, prompt skeleton, params, env): `docs/engineering.md` §4 and `data/dish-photos/STYLE.md`.
 - The change path, branch naming, definition of done, diagnosis card: `docs/development.md` §2, §4, §5, §9.
 
@@ -18,12 +18,12 @@ Right-size first (`docs/product.md` §4, Principle 1): a single comment is not a
 ## 1. Read order
 
 1. This file.
-2. `docs/engine.md` §12 (the schema you are about to fill) and §1-§3 (so you tag `category`/`time`/`tags`/`seasons` such that the dish actually lands in a slot, not in limbo).
+2. `docs/engine.md` §15 (the schema you are about to fill), then §1, §4, and §5 (so you tag `category`/`time`/`tags`/`seasons`/`cuisine` such that the dish actually lands in a slot, not in limbo).
 3. `data/dish-photos/STYLE.md` (the photo look and the per-dish detail mechanism).
 
 ## 2. The dish file
 
-One file per dish at `data/dishes/<slug>.md`. The `<slug>` is the name lowercased, hyphenated, punctuation stripped; it is **unique and permanent** and must match the `name`. Two dishes that share a name are disambiguated by suffixing the id (`docs/engine.md` §12).
+One file per dish at `data/dishes/<slug>.md`. The `<slug>` is the name lowercased, hyphenated, punctuation stripped; it is **unique and permanent** and must match the `name`. Two dishes that share a name are disambiguated by suffixing the id (`docs/engine.md` §15).
 
 Pick the next free integer `id` (scan `data/dishes/` for the current max; ids are never reused). Frontmatter template:
 
@@ -32,7 +32,7 @@ Pick the next free integer `id` (scan `data/dishes/` for the current max; ids ar
 id: <next free integer>
 name: <Display name>
 category: <Gravy dish | Dry dish | Complete meal | Rice | Chapati | Paratha | Bread | Chilla | Accompaniment | Dessert | Keto | Fruit>
-time: <Breakfast | Lunch>          # Fruit-category dishes still carry a time, but the Fruit slot is separate (§3.3)
+time: <Breakfast | Lunch>          # Fruit-category dishes still carry a time, but the fruit slot is separate (§9)
 tags: []                            # subset of [HP, complete_meal, complete_carb, fruit, cuisine_neutral]; HP only if it truly clears the protein bar
 primaryIngredient: <dominant ingredient, or "Mixed Veg" when none dominates>
 preferred: No                       # new dishes ship preferred: No
@@ -41,7 +41,7 @@ satiety: <Low | Medium | High>
 prepMinutes: <integer>
 seasons: <[Summer]|[Monsoon]|[Winter]|All>   # MUST include the current season to be eligible now
 cuisine: <one of the taxonomy below; Indian by default>
-carbAffinity: <Rice | Roti>          # optional; a lunch main's canonical carb (§3.1). Omit unless canonical (kadhi/chhole/Thai curry -> Rice); absent = default Chapati
+carbAffinity: <Rice | Roti>          # optional; a lunch main's canonical carb (§5.1). Omit unless canonical (kadhi/chhole/Thai curry -> Rice); absent = default Chapati
 complexity: <Easy | Medium | Hard>
 buySpecially: <free text, only if an ingredient needs a special run>
 photo: <slug>.jpg                   # set automatically by the photo tool; see §5
@@ -63,15 +63,15 @@ photo: <slug>.jpg                   # set automatically by the photo tool; see �
 
 Field traps that have actually bitten us:
 
-- **`tags` is for rule logic only.** Do not encode display facts as tags; cuisine is its own first-class `cuisine` field (§12), not a tag. One canonical source per fact.
-- **`HP` is a rule input.** It drives one-HP-per-meal (§3) and protein diversity (§4.6). Tag it only if the dish genuinely is high-protein; a mis-tag distorts generation. It is keyed on the tag, never the dish name.
-- **`category: Fruit`** routes a dish to the Fruit-of-the-day slot (§3.3), which is separate from breakfast and lunch. Fruit dishes are recency-exempt.
+- **`tags` is for rule logic only.** Do not encode display facts as tags; cuisine is its own first-class `cuisine` field (§15), not a tag. One canonical source per fact.
+- **`HP` is a rule input.** It drives the one-HP-source-per-meal rule and the day-scoped protein floor (§5.1), and it is one of the things that makes a dish eligible for the lunch star pool (§5.2). Tag it only if the dish genuinely is high-protein; a mis-tag distorts generation, and the HP-vs-protein report surfaces the drift. It is keyed on the tag, never the dish name.
+- **`category: Fruit`** routes a dish to the Fruit of the day slot (§9), which is separate from breakfast and lunch and outside the item cap. A fruit is scheduled by its season-scoped rate like any other dish; when a season's fruit pool runs short, the slot draws by least-recently-served across every eligible fruit, so a newly added in-season fruit reaches the plate quickly.
 - **`seasons` gates eligibility now.** `[Winter]` on a dish added in June means it will not appear until October. Include the current Bangalore season (Summer Mar-May, Monsoon Jun-Sep, Winter Oct-Feb) or use `All`.
-- **`preferred: No`** on every new dish. Promotion is Rajat's call later, not a default of authoring.
+- **`preferred: No`** on every new dish. The parser requires the field on every dish file and no engine rule reads it: a dish earns its place in the week by acquiring a rate in the household record (`docs/engine.md` §2), never by a flag on the file.
 
 ### Cuisine taxonomy (exactly one, required)
 
-`Indian` (default for any dish with no international cuisine), `Italian`, `Chinese`, `Mexican`, `Greek`, `Spanish`, `Korean`, `Japanese`, `Continental`, `Vietnamese`, `Lebanese`, `Mediterranean`, `Thai`. §3 composition reads it for meal-level cuisine coherence (the Indian thali composes only `Indian` dishes; the international lunch form and its §3.2 selection use `cuisine !== "Indian"` for the anchor pool and same-cuisine companion match, with `cuisine_neutral` proteins eligible in any register); eligibility (§1) and §4 selection do not read it. It also feeds the Explore cuisine filter and the photo prompt's cuisine slot. See `docs/engine.md` §12.
+`Indian` (default for any dish with no international cuisine), `Italian`, `Chinese`, `Mexican`, `Greek`, `Spanish`, `Korean`, `Japanese`, `Continental`, `Vietnamese`, `Lebanese`, `Mediterranean`, `Thai`. §5 composition reads it for meal-level cuisine coherence (an Indian plate composes only `Indian` dishes; the international lunch form of §5.4 uses `cuisine !== "Indian"` for the star pool and matches companions same-cuisine, with `cuisine_neutral` proteins eligible in any register); eligibility (§1) and §4 selection do not read it. It also feeds the Explore cuisine filter and the photo prompt's cuisine slot. See `docs/engine.md` §15.
 
 ## 3. Ingredients (catalog-first)
 
@@ -81,7 +81,7 @@ The `## Ingredients` table is parsed into rows; **every `Ingredient` value must 
 - **Reuse, never duplicate.** One row per ingredient. Mango and Pineapple were reused, not re-added, in the fruit batch (PR #104).
 - **New catalog row needs:** `Group` (Proteins and Dairy | Fruit | Vegetables | Aromatics and Herbs | Pantry), `Unit` (g/ml/pcs), and macros (`Protein/Carbs/Fat/Fiber per 100g`) **for macro-relevant groups only** (Proteins and Dairy, Pantry, Vegetables). Aromatics/Herbs may stay blank. There is no `Other` catch-all: an ingredient left without an explicit group falls to Pantry, which renders last on the buy list. `pcs`-unit rows need `Grams per piece`. Set `Special: Yes` if it needs a supermarket/specialty run (it surfaces in the special-sourcing report). Honour the grouping judgment calls documented at the top of `data/ingredients.md` (Onion/Tomato/Lemon are Aromatics, Capsicum/Cucumber are Vegetables, Coconut Milk/Sprout are Pantry, fruit is its own Fruit group).
 - **Untracked staples are never itemized.** Water, salt, common spices, base cooking oil, plain rice-as-water do not get ingredient rows; they live in recipe prose. A dish with no tracked ingredients ships an **empty but present** `## Ingredients` table (Steamed rice, PR #100).
-- **Macros are derived, never hand-stored.** There is no per-dish protein/carb field. Fix a catalog row's macros and every dish using it is corrected (`docs/engine.md` §11).
+- **Macros are derived, never hand-stored.** There is no per-dish protein/carb field. Fix a catalog row's macros and every dish using it is corrected (`docs/engine.md` §12).
 
 ## 4. Description and recipe
 
@@ -149,21 +149,21 @@ When in doubt, ship inactive and let Rajat flip.
 ```bash
 npm run bake     # parses every dish + catalog, runs the blocking validators
 npm test         # vitest: schema, ingredient-resolution, byte-identical round-trip, simulation, live-data snapshots
-npm run reports  # coverage + pool + special-sourcing reports (sanity-check your dish appears where expected)
+npm run reports  # coverage, HP-vs-protein, and special-sourcing reports (sanity-check your dish appears where expected)
 ```
 
 The blocking validators (`engine/src/data/validators.ts`) will fail the bake on: invalid frontmatter, **duplicate id**, **duplicate slug**, **slug not matching name**, an **out-of-set `tags` or `cuisine` value** (both are closed enums, so a typo is a parse failure, not a silent menu change), an **ingredient name that does not resolve** to the catalog, or a dish file that does **not round-trip byte-identical**. Fix at the source; do not hand-massage generated output.
 
 ## 8. The live-data snapshots that move (only when activating)
 
-`engine/test/data/reports.test.ts` pins live counts. Activating dishes (or shipping active) moves them; an `active: No` dish moves nothing. Update the exact assertion(s):
+`engine/test/data/reports.test.ts` asserts the reports against the real library, so activating dishes (or shipping active) can move what it reads; an `active: No` dish moves nothing. Most assertions are invariants rather than pinned counts, which is deliberate: a hardcoded active-dish count turns every batch into a CI-only failure whenever a local baked count is stale. What can move:
 
-- **`cov.withPhoto` → new active count.** Every active dish carries a photo, so this tracks `activeDishCount`. (Was 259 at last edit.)
-- **`withDescription` / `withRecipe` / `withComplexity` === `activeDishCount`** must stay green: a dish shipped without those drops a count and fails. This is the guard that forces complete dishes.
-- **Pool counts** if the dish changes a slot pool: the per-season slot-row count (19/season) and, for fruit, the Summer Fruit pool count (`toBe(5)` at last edit). Re-run `npm run reports` to read the new numbers, then pin them.
-- **Special-sourcing array** if the dish uses a `Special: Yes` ingredient: the sorted-by-dishId array gains a row.
+- **Full enrichment coverage.** `withDescription`, `withRecipe`, `withComplexity`, and `withPhoto` must each equal `activeDishCount`. There is no number to bump here: an active dish shipped without a description, recipe, complexity, or photo drops one of these below the count and fails. Ship the dish complete instead.
+- **Full macro coverage.** Every macro-relevant catalog row carries protein, carbs, fat, and fibre. A new row in Proteins and Dairy, Pantry, or Vegetables without macros fails all three macro assertions.
+- **The special-ingredient set.** A new catalog row with `Special: Yes` widens the expected set of special ingredient names, which is pinned exactly so a row cannot be silently re-marked. Add the name and say why in the PR.
+- **The special-sourcing array.** The list of active dishes and their special ingredients, sorted by dish id. Activating or deactivating a dish that uses a special ingredient adds or removes a row; insert it in dish-id order.
 
-These are report snapshots tracking live data, not rules. Bump them to the truth; never loosen an assertion to make it pass.
+These track live data, not rules. Bump them to the truth; never loosen an assertion to make it pass.
 
 ## 9. Schema-field caution (rare)
 
@@ -175,7 +175,7 @@ Adding a _new frontmatter field_ (not a new dish) is a different, heavier change
 - PR description opens with the **diagnosis card** (`docs/development.md` §5): problem size, fix level (data row), why, generality, rejected alternatives.
 - Append a **structural-changelog entry** to `data/changelog.md` (the append-only library audit: date, title, PR#, what changed, rationale).
 - The EM appends a one-line entry to `docs/CHANGELOG.md` on merge, and logs any judgment call (active-vs-inactive, new catalog rows) to `DECISIONS.md`.
-- Definition of done: all CI gates green (engine "Lint, typecheck, build, test" must be **pass**, not merely mergeable), diagnosis card present, no scope creep, simulation still passes.
+- Definition of done: all CI gates green (engine "Lint, typecheck, build, test" must be **pass**, not merely mergeable), diagnosis card present, no scope creep. `npm test` includes the CI-sized verification gate (`engine/test/v6/gate.test.ts`), so a batch that changes a pool's shape is checked there.
 
 ## Checklist
 

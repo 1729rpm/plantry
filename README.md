@@ -23,13 +23,13 @@ A weekly meal planner for a small household, built as an installable Progressive
 
 ## What it does
 
-- **Generates a full week.** A deterministic TypeScript engine reads the dish library, the rules, the current season, and recent history, then produces a valid Mon-to-Sat menu plus a grocery list. Each day also carries an in-season "fruit of the day".
+- **Generates a full week.** A deterministic TypeScript engine reads the dish library, the current season, and the household's record of what it has actually eaten, then produces a valid Mon-to-Sat menu plus a grocery list. Each day also carries an in-season fruit. The rules it follows are specified in `docs/engine.md`.
 - **Stays shareable.** The week renders to a family of images (a menu image and per-dish recipe sheets) that go out through the phone's native share sheet, so the plan lands in a chat at the start of the week.
 - **Builds the grocery list automatically.** Ingredients are aggregated across the week, grouped in a fixed shopping order, and rounded up to whole pack sizes. Common pantry staples are omitted unless a dish explicitly needs them. The list is skip-aware: a skipped day contributes nothing.
 - **Supports in-week edits.** Either user can swap a dish (via a ranked picker over the matching library), add a dish, drop in a custom dish, delete a dish, and skip a whole day and restore it later. Every edit records an author and a timestamp; a written reason is offered on each one and is optional.
 - **Surfaces new dishes.** An Explore feed ranks dishes the household has not cooked yet, "familiar but new": novelty that still resembles what the household actually cooks. Multi-select filters narrow the grid, and anything already planned or already on a shared list is hidden.
 - **Keeps the household's shared lists.** A Yours tab holds two lists both users write to: favorites, which generation places into every week, and a wishlist of dishes to try, each row placeable into the week in a tap.
-- **Keeps a running record.** A Changes log lists every edit and comment for the week, newest first, in plain language, reached from the profile sheet.
+- **Keeps a running record.** A Changes log lists every edit to the week, newest first, in plain language, reached from the profile sheet.
 
 The app is organised as four tabs: **Menu**, **Grocery**, **Explore**, and **Yours**.
 
@@ -37,16 +37,16 @@ The app is organised as four tabs: **Menu**, **Grocery**, **Explore**, and **You
 
 Plantry is structured around a clean split between a pure rules engine, a backend, and a frontend.
 
-- **Engine** (`engine/`): a pure-function TypeScript module that holds all meal-planning logic (selection, composition, no-repeat recency, grocery aggregation). It is imported by both the backend and the tests, and it mirrors a human-readable rules spec (`docs/engine.md`), section by section, with each section paired to a module and a test file.
+- **Engine** (`engine/`): a pure-function TypeScript module that holds all meal-planning logic. It is imported by both the backend and the tests, and it mirrors a human-readable rules spec (`docs/engine.md`), section by section, with each section paired to a module and a test file.
 - **Backend** (`app/convex/`): [Convex](https://www.convex.dev/) schema and server functions hold the live week, the edit log, and the queued feedback.
 - **Frontend** (`app/web/`): a [Vite](https://vitejs.dev/) + React + TypeScript PWA, with a service worker for offline-tolerant, installable use.
-- **Data** (`data/`): a human-edited, version-controlled dish library, ingredient catalog, and history seed. This is the target of the slow review loop.
+- **Data** (`data/`): a human-edited, version-controlled dish library and ingredient catalog. This is the target of the slow review loop.
 
 ### Two loops, never one
 
 A core design idea is the separation of a fast loop from a slow loop.
 
-- The **fast loop** is operational and immediate: swaps, adds, custom dishes, deletes, skips, saves, and dislikes, each applied to a single week and easily undone.
+- The **fast loop** is operational and immediate: swaps, adds, custom dishes, deletes, skips, and dislikes, each applied to a single week and easily undone.
 - The **slow loop** is structural and human-approved: changes to the dish library, the rules, or the engine. Feedback that implies a structural change is recorded, not applied; it only takes effect through a reviewed pull request.
 
 The fast loop never silently mutates the rules. This keeps day-to-day use frictionless while ensuring that anything affecting every future week passes through review.
@@ -67,7 +67,7 @@ Every change is judged against a small set of rules, including:
 engine/        Pure TypeScript meal-planning engine (rules live here)
 app/convex/    Convex backend: schema and server functions
 app/web/       Vite + React + TypeScript PWA
-data/          Version-controlled dish library, ingredients, history
+data/          Version-controlled dish library and ingredient catalog
 docs/          Canonical specs: product, engine, engineering, development
 ```
 

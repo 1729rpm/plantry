@@ -52,7 +52,7 @@ Conflict handling (two CHANGELOG entries disagree, CHANGELOG disagrees with code
 
 - Rewriting a doc to mention a specific PR, stream letter, or date.
 - Adding "previously" or "now also" phrasing.
-- Touching `docs/engine.md` without a paired engine code and test change (the CI parity gate also catches this; do not fight the gate). If shipped reality changed engine rules, the slow loop is the right tool, not reconciliation.
+- Touching `docs/engine.md` without a paired engine code and test change. The pairing is held by review rather than by a CI check (`docs/engine.md` §16.2), so nothing mechanical will stop you. If shipped reality changed engine rules, the slow loop is the right tool, not reconciliation.
 - Expanding scope beyond the CHANGELOG entries in the input window. If a doc is wrong about something not in the window, flag it in the PR description and leave the fix for next time or for a focused chore PR.
 
 ## Why this command exists

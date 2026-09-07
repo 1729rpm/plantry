@@ -10,7 +10,7 @@ Full product spec: `docs/product.md`.
 
 ## Doc hierarchy
 
-Four canonical specs plus a changelog in `docs/`, three operational docs at root.
+Four canonical specs plus a phase plan and a changelog in `docs/`; the operational docs live at root.
 
 - `docs/product.md`: what we are building, persona, scope, principles, tone, future scope. Owns scope decisions.
 - `docs/engine.md`: the meal-planning rules spec. The TS engine mirrors it section by section, each section paired to a module under `engine/src/` and a test file; the pairing is held by review, not by a CI check. Owns rule decisions.
@@ -40,19 +40,19 @@ When no feature is active, this line reads "_none_". It resets to `_none_` on fe
 
 ## Working folders
 
-- `data/`: human-edited library, ingredient quantities, history seed, structural changelog, generated menu images. The slow loop's target.
+- `data/`: human-edited dish library, ingredient catalog, dish photos, structural changelog, slow-loop dry-run fixtures, and the pre-app menu record kept as provenance. The slow loop's target.
 - `engine/`: TypeScript engine module. Pure functions; imported by Convex functions and tests.
 - `app/convex/`: Convex schema and server functions. The backend lives here.
 - `app/web/`: Vite + React + TS PWA. Frontend.
-- `features/`: active feature spec. Empty (.gitkeep) between features.
+- `features/`: the active feature's documents (spec, development plan, and whatever reviews and reports the phase carries). Empty (.gitkeep) between features.
 - `archive/`: history. **Do not read for current truth.** Old plans, handoffs, retired docs.
-- `.claude/commands/`: repo-scoped Claude Code slash commands (`/slow-loop`, `/new-stream`).
+- `.claude/commands/`: repo-scoped Claude Code slash commands (`/slow-loop`, `/new-stream`, `/reconcile-docs`, `/reconcile-ops`).
 
 ## Working in this repo
 
 Code-touching sessions work in their own git worktree. The main directory at `/Users/rajatmugdal/Downloads/AI Products/Plantry` is the EM's coordinate-and-review space; a pre-commit hook in `.git/hooks/` rejects commits from it. Engineers commit from their worktree.
 
-The EM (this session by default) spawns engineers via `/new-stream <branch> <stream>`. Rajat invokes the slow loop via `/slow-loop`. Both commands are defined under `.claude/commands/`.
+The EM (this session by default) spawns engineers via `/new-stream <branch> <stream>`. Rajat invokes the slow loop via `/slow-loop` and the two reconciliation passes via `/reconcile-docs` and `/reconcile-ops`. All four commands are defined under `.claude/commands/`.
 
 Because several worktree sessions run at once, the EM keeps a live-session registry at `coordination/active-streams.md` (local, gitignored): every in-flight stream and the file lanes it owns. Read it before spawning any stream or starting code work so two sessions never collide on the same files; if lanes overlap, sequence the streams and record the merge order. The later-merging session always owns the rebase. Full protocol: `docs/development.md` §11.
 
@@ -60,9 +60,11 @@ Full ground rules (session model, branch naming, commit style, definition of don
 
 ## Operational docs
 
-- `MAINTENANCE.md`: spec for the slow loop and for canonical-doc reconciliation. Read before running `/slow-loop`.
+- `MAINTENANCE.md`: spec for the slow loop, for canonical-doc and operational-doc reconciliation, and for the process retro intake. Read before running `/slow-loop`, `/reconcile-docs`, or `/reconcile-ops`.
 - `ADDING-DISHES.md`: content-batch playbook for adding a new dish (schema, ingredients, photo prompt-refining, cuisine, the active/inactive review gate, the test snapshots that move). Read before authoring any new dish.
 - `DECISIONS.md`: append-only log of decisions the EM has taken on Rajat's behalf, with reasoning. Scannable.
+- `RETRO.md`: append-only ledger of the EM's own process and system friction. The EM appends at session close; `MAINTENANCE.md` §6 triages it into fixes.
+- `claude-design.md`: the standing contract for Claude Design when it authors a design handoff.
 - `docs/development.md`: ground rules for making changes in this repo.
 
 ## Project-specific style

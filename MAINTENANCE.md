@@ -1,14 +1,14 @@
-# Plantry — Maintenance
+# Plantry maintenance
 
-Spec for the two human-triggered jobs that keep the repo healthy: the slow loop (turning accumulated user feedback into structural change) and canonical-doc reconciliation (keeping `docs/product.md`, `docs/engine.md`, `docs/engineering.md`, `docs/development.md` aligned to shipped reality).
+Spec for the four human-triggered jobs that keep the repo healthy: the slow loop (turning accumulated user feedback into structural change, §1), canonical-doc reconciliation (keeping `docs/product.md`, `docs/engine.md`, `docs/engineering.md`, and `docs/development.md` aligned to shipped reality, §2), the process retro intake (turning the EM's own friction into process change, §6), and operational-doc reconciliation (keeping the root operational docs and the command briefs aligned to both, §7).
 
-Both jobs run from Claude Code sessions invoked by Rajat. Neither is on a cron. The session is the trigger; the output is always a pull request; the merge is the approval.
+Every one of them runs from a Claude Code session invoked by Rajat. None is on a cron. The session is the trigger; the output is always a pull request; the merge is the approval.
 
 ## 1. The slow loop
 
 ### 1.1 Why
 
-User feedback accumulates in Convex during the week as several signal channels: queued `manualChanges` rows (observed behavior, one row per swap, custom dish, delete, add, day skip, or day restore, each with the user's stated reason), queued `dishDislikes` rows (a records-only tap on a dish in Explore), and runtime `incidents` from the auto-recovery middleware. The loop also reads two non-blocking reports (the coverage report and the pool-coverage report, both from `npm run reports`) so it can act proactively, not only reactively. None of these can be applied directly: each cluster needs right-size diagnosis before becoming a structural change. The slow loop is the only path by which the dish library (`data/dishes/<slug>.md`), the ingredient catalog (`data/ingredients.md`), `docs/engine.md`, `engine/`, or `data/changelog.md` change.
+User feedback accumulates in Convex during the week as several signal channels: queued `manualChanges` rows (observed behavior, one row per swap, custom dish, delete, add, day skip, or day restore, each with the user's stated reason), queued `dishDislikes` rows (a records-only tap on a dish in Explore), and runtime `incidents` from the auto-recovery middleware. The loop also reads the non-blocking reports from `npm run reports` and the pool health the verification gate measures per occasion (`npm run gate`), so it can act proactively, not only reactively. None of these can be applied directly: each cluster needs right-size diagnosis before becoming a structural change. The slow loop is the only path by which the dish library (`data/dishes/<slug>.md`), the ingredient catalog (`data/ingredients.md`), `docs/engine.md`, `engine/`, or `data/changelog.md` change.
 
 ### 1.2 Trigger
 
@@ -24,13 +24,14 @@ Reactive signals (what the user did or said this week):
 
 Proactive signals (the health of the library itself, independent of any user action):
 
-- The coverage report and the pool-coverage report from `npm run reports`. Coverage shows enrichment and macro completeness; pool-coverage shows how many eligible candidates each slot has per season, flagging thin pools (two or fewer). Neither is a CI gate; both are judgment the slow loop acts on.
+- The three reports from `npm run reports` (`docs/engine.md` §12.1): coverage, which shows enrichment and macro completeness; HP-vs-protein consistency, which flags dishes whose `HP` tag and derived protein disagree; and special sourcing, which lists the active dishes needing a specialty run. None of the three is a CI gate; all three are judgment the slow loop acts on.
+- Pool health, which the gate measures rather than the reports. How healthy a pool is means how often it can meet the rate the record asks of it, a per-occasion question the library alone cannot answer, so it surfaces in `npm run gate` (`docs/engine.md` §16.3) and not in a report over the library.
 
 Context (read, not clustered on directly):
 
-- Current `data/dishes/` (the per-dish files), `data/ingredients.md` (the ingredient catalog), `data/menu_history.md`, `data/changelog.md`.
+- Current `data/dishes/` (the per-dish files), `data/ingredients.md` (the ingredient catalog), `data/changelog.md`.
 - Current `docs/engine.md` plus `engine/src/` for the engine state.
-- Recent Convex `weekArchive` rows for context on what was actually cooked.
+- The household record, the Convex `currentWeek` rows of the served weeks, which is the distribution the engine reproduces (`docs/engine.md` §2.1). `weekArchive` and `data/menu_history.md` are provenance: nothing reads either, and neither is a signal.
 
 ### 1.4 What the session does
 
@@ -50,7 +51,7 @@ Context (read, not clustered on directly):
 4. Produce concrete edits:
    - Data fix: edit the dish's `data/dishes/<slug>.md` file or the ingredient catalog row in `data/ingredients.md`.
    - Tag addition: add the tag to relevant dishes + edit the rule text in `docs/engine.md` + edit the engine module + add tests.
-   - Rule change: edit `docs/engine.md` + the engine module + tests + run the simulation harness.
+   - Rule change: edit `docs/engine.md` + the engine module + tests + run `npm run gate` (`docs/engine.md` §16.3, §16.4).
    - Append the rationale to `data/changelog.md`.
 
 ### 1.5 Output
@@ -60,6 +61,7 @@ A single PR titled `slow-loop/<date>: <one-line summary of themes>`. PR descript
 - A short list of clusters processed.
 - A diagnosis card per cluster (problem size, fix level, generality, rejected alternatives).
 - File diffs across `data/`, `docs/engine.md`, `engine/`, and the appended `data/changelog.md`.
+- The monthly engine monitor table (§1.9) on the run that carries it.
 
 ### 1.6 On merge
 
@@ -69,35 +71,51 @@ A GitHub Action posts back to Convex:
 - Marks the corresponding `incidents` as resolved.
 - Lists the consumed `dishDislikes` rows in the PR but leaves them `queued`: the dislike write-back mutation is not yet wired (see §3).
 
-The action then triggers a redeploy: build emits new typed library/history modules from the updated markdown, Convex picks up the new functions, Vercel rebuilds the frontend. The next generated week uses the new rules.
+The action then triggers a redeploy: the build bakes a new typed library module from the updated markdown, Convex picks up the new functions, Vercel rebuilds the frontend. The next generated week uses the new rules.
 
 ### 1.7 Right-size examples
 
 The fixes name the per-dish-file structure: one dish is one file at `data/dishes/<slug>.md` (frontmatter fields plus ingredient and recipe rows), and ingredient facts (pack sizes, macros) live as rows in the `data/ingredients.md` catalog. One dish change is one file diff.
 
-| Signal pattern                                                                          | Right-sized fix                                                                                                                                          | Wrong response (rejected)                                                                             |
-| --------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------- |
-| "We never cook lauki" appearing 3+ weeks running                                        | Set `active: No` in each lauki dish's `data/dishes/<slug>.md` frontmatter.                                                                               | Delete the dish files (loses optionality) or wait for more data.                                      |
-| "Too spicy on a sick day" appearing once                                                | No change. Record reason: "single instance, not a pattern; user can swap via the dish-swap affordance."                                                  | Add a `low_spice` tag.                                                                                |
-| "Too spicy" + "want milder dinner when traveling" + "after gym I want light" (5+ weeks) | Add `low_spice` to the `tags` of each relevant `data/dishes/<slug>.md`, edit `docs/engine.md` to add the slot rule, update the engine module, add tests. | Add a `low_spice` tag to two dish files and ship without updating the rule.                           |
-| Custom dish "lemon coriander rice" used 4 weeks running                                 | Add a new `data/dishes/lemon-coriander-rice.md` file with its ingredient rows (the catalog covers the ingredient names).                                 | Make the engine learn custom-dish entries automatically.                                              |
-| Pack size for Paneer feels wrong                                                        | Edit the `Pack Size` cell on Paneer's row in the `data/ingredients.md` catalog (one row, all paneer dishes inherit it).                                  | Add a per-dish override field.                                                                        |
-| Same dish saved for next week 3+ weeks running, never placed                            | Flip `preferred: Yes` in that dish's `data/dishes/<slug>.md` so the picker ranks it up; or revisit its recency treatment if `preferred` is already set.  | Hard-code the dish into the generation run.                                                           |
-| One member dislikes a dish once (one `dishDislikes` row)                                | No change. Record reason: "single dislike, not a pattern; the fast loop never acts on a dislike (Principle 5)." Mark the dislike consumed.               | Set `active: No` on the strength of one tap.                                                          |
-| Same dish disliked repeatedly, or disliked by both members                              | Set `active: No` in that dish's `data/dishes/<slug>.md` (deactivation), or lower its explore ranking if it should stay browsable but de-emphasized.      | Leave it active because "it is only a couple of dislikes" (a both-member dislike is a clear pattern). |
+| Signal pattern                                                                          | Right-sized fix                                                                                                                                                                                                                                                                                                                                                             | Wrong response (rejected)                                                                             |
+| --------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------- |
+| "We never cook lauki" appearing 3+ weeks running                                        | Set `active: No` in each lauki dish's `data/dishes/<slug>.md` frontmatter.                                                                                                                                                                                                                                                                                                  | Delete the dish files (loses optionality) or wait for more data.                                      |
+| "Too spicy on a sick day" appearing once                                                | No change. Record reason: "single instance, not a pattern; user can swap via the dish-swap affordance."                                                                                                                                                                                                                                                                     | Add a `low_spice` tag.                                                                                |
+| "Too spicy" + "want milder dinner when traveling" + "after gym I want light" (5+ weeks) | Add `low_spice` to the `tags` of each relevant `data/dishes/<slug>.md`, edit `docs/engine.md` to add the slot rule, update the engine module, add tests.                                                                                                                                                                                                                    | Add a `low_spice` tag to two dish files and ship without updating the rule.                           |
+| Custom dish "lemon coriander rice" used 4 weeks running                                 | Add a new `data/dishes/lemon-coriander-rice.md` file with its ingredient rows (the catalog covers the ingredient names).                                                                                                                                                                                                                                                    | Make the engine learn custom-dish entries automatically.                                              |
+| Pack size for Paneer feels wrong                                                        | Edit the `Pack Size` cell on Paneer's row in the `data/ingredients.md` catalog (one row, all paneer dishes inherit it).                                                                                                                                                                                                                                                     | Add a per-dish override field.                                                                        |
+| Same dish added by hand 3+ weeks running                                                | Check eligibility first: `active: No`, or a `seasons` list that excludes the current season, keeps a dish out of every pool, and flipping that data row in `data/dishes/<slug>.md` is the whole fix. If it is already eligible, no change: a hand-added pick enters the household record as an as-eaten row and the dish's rate rises on its own (`docs/engine.md` §2, §3). | Add a per-dish boost field, or pin the dish into the generation run.                                  |
+| One member dislikes a dish once (one `dishDislikes` row)                                | No change. Record reason: "single dislike, not a pattern; the fast loop never acts on a dislike (Principle 5)." Mark the dislike consumed.                                                                                                                                                                                                                                  | Set `active: No` on the strength of one tap.                                                          |
+| Same dish disliked repeatedly, or disliked by both members                              | Set `active: No` in that dish's `data/dishes/<slug>.md` (deactivation), or lower its explore ranking if it should stay browsable but de-emphasized.                                                                                                                                                                                                                         | Leave it active because "it is only a couple of dislikes" (a both-member dislike is a clear pattern). |
 
-### 1.8 Proactive runs (the reports, not just the queued signals)
+### 1.8 Proactive runs (the reports and the gate, not just the queued signals)
 
-The slow loop reads the coverage report and the pool-coverage report from `npm run reports` every run, and a week with zero manual changes, zero dislikes, and zero incidents can still produce a useful PR. Validators keep facts true; the slow loop keeps the library good. The two are different jobs: a thin Dessert pool is not a broken fact, so no validator flags it, but it is a real quality risk worth a proactive proposal.
+The slow loop reads the `npm run reports` output every run, and a week with zero manual changes, zero dislikes, and zero incidents can still produce a useful PR. Validators keep facts true; the slow loop keeps the library good. The two are different jobs: a Saturday treat pool too small to keep a treat main off the plate for eight Saturdays is not a broken fact, so no validator flags it, but it is a real quality risk worth a proactive proposal.
 
-What to look for in the reports:
+What to look for:
 
-- **Thin pools.** The pool-coverage report flags any slot with two or fewer eligible candidates per season (`<- thin`). A thin pool means the engine has almost no room to vary that slot, so the household sees the same one or two dishes repeatedly. The proactive PR proposes activating or adding candidates for that slot. Today the live thinnest pools are seasonal carry slots like "Breakfast Option A: fruit" and "Breakfast Option B: complete_carb" at three candidates, and the Monsoon "Menu 3: Dessert" pool at six; these are the natural targets when no reactive signal dominates a run. (Activating an existing dish is a slow-loop data-row edit; adding net-new dishes is a B3 expansion content batch, which the slow loop proposes as a priority rather than authoring directly.)
-- **Coverage gaps.** The coverage report shows enrichment and macro completeness. Recipe coverage is currently 100%, so "N dishes lack recipes" is not a live gap; when a gap does open (for example a new expansion batch lands undescribed), the proactive PR names the next enrichment-batch priority. Photo coverage is the one large standing gap and is tracked separately on the B2 photo track, not via the slow loop.
+- **Thin pools, read off the gate.** Pool health is per-occasion, so `npm run gate` measures it and no report does (`docs/engine.md` §16.3). Three of its lines carry the signal: the Saturday threshold names the treat pool's size directly, the fruit threshold reports where a season's eligible set falls below the four-distinct bar, and the reported-not-gated block counts the fills each role took from an exhausted pool. A role drawing repeatedly from an exhausted pool has too few dishes carrying a rate, and the proactive PR proposes activating or adding candidates for it. Activating an existing dish is a slow-loop data-row edit; adding net-new dishes is an expansion content batch (`ADDING-DISHES.md`), which the slow loop proposes as a priority rather than authoring directly.
+- **Coverage gaps.** The coverage report shows enrichment and macro completeness. Description, recipe, complexity, and photo coverage all stand at every active dish, and the reports test asserts it, so a gap opens only when a batch lands incomplete; when one does, the proactive PR names the enrichment priority.
+- **Tag drift and sourcing.** The HP-vs-protein report flags a dish whose `HP` tag and derived protein disagree. The tag is a rule input (`docs/engine.md` §5.1, §5.2), so a mis-tagged dish distorts composition until either the tag or the catalog row behind its macros is corrected, and the smallest fix is one data row. The special-sourcing report is the same shape of signal for the shopping trip: a newly flagged dish means a specialty run the household did not have before.
 
-A proactive PR follows the same shape as a reactive one: a diagnosis card per proposal (problem size "small pattern" or "structural" as the report warrants, chosen level, generality, rejected alternatives) and a `data/changelog.md` rationale. It consumes no Convex rows (there were none), so its cluster blocks list `-` for every id field; the only state it advances is `.maintenance-state`.
+A proactive PR follows the same shape as a reactive one: a diagnosis card per proposal (problem size "small pattern" or "structural" as the evidence warrants, chosen level, generality, rejected alternatives) and a `data/changelog.md` rationale. It consumes no Convex rows (there were none), so its cluster blocks list `-` for every id field; the only state it advances is `.maintenance-state`.
 
-### 1.9 Anti-patterns the slow loop must not produce
+### 1.9 The monthly engine monitor
+
+Once a month the run carries a monitor table, the production counterpart to the verification gate. The gate proves the engine reproduces the record in simulation (`docs/engine.md` §16.3); the monitor checks it against the record the household is actually building, because a simulated horizon and a lived one diverge for reasons no harness can see (a run of eating out, a season turning, a batch of new dishes). Four measures, all over the trailing 8 served weeks:
+
+| Measure                                      | Read against                                             | What a drift means                                                                             |
+| -------------------------------------------- | -------------------------------------------------------- | ---------------------------------------------------------------------------------------------- |
+| Family rate per occasion, per tracked family | The same family's rate in the record baseline            | The engine is over- or under-serving a protein family the record does not ask for at that rate |
+| Saturday treat pool size                     | The rolling no-repeat window the Saturday threshold sets | A pool at or below the window forces a repeat the household did not choose                     |
+| Saturday swap-outs                           | The Saturday count in the same weeks                     | The treat register is proposing dishes the household does not want on a Saturday               |
+| Exploration swap-away rate                   | The one exploration pick a week                          | The familiar-but-new score is reaching too far from what the household actually cooks          |
+
+Where the numbers come from: pull the record with `npx convex run --prod recordExport:exportRecord '{}'` (a production read, so it needs Rajat's per-action approval), save the JSON, and run `npm run gate <path to the export>`. The gate prints each tracked family's served rate beside its record rate with the row count it rests on, the Saturday treat pool's size, and the per-role exhausted-pool fills. The two swap measures come from the record itself, read against the `manualChanges` swap rows covering the same weeks: a Saturday swap-out is a swap row on a Saturday lunch, and an exploration swap-away is a swap row against the week's exploration pick.
+
+The table is reported, never gated. The slow loop has no threshold to fail here, and a single month's wobble on a family the record places once a month is counting noise rather than drift (`docs/engine.md` §16.3, threshold 12, states the noise bound). A family that has moved the same way across two monitors running is a structural finding, and it earns a diagnosis card like any other.
+
+### 1.10 Anti-patterns the slow loop must not produce
 
 - Sycophantic agreement: "the swap reason said X so I added a flag for X" without checking pattern size.
 - Generalizing from one or two cases.
@@ -119,8 +137,8 @@ Rajat invokes `/reconcile-docs` after a notable run of CHANGELOG entries (typica
 
 - `docs/CHANGELOG.md` entries since the last reconciliation (last-run marker stored in `.maintenance-state`, committed). Each entry's `Updated:` line is the primary work queue: it names the doc sections the shipping session judged stale. The pass verifies that judgment rather than re-deriving every entry's doc impact from the diff, and still scans the entry body for impact the line missed.
 - The `features/` directory if anything is active, and any feature spec referenced by recent CHANGELOG entries (`archive/features/<name>.md` after ship).
-- Current `docs/product.md`, `docs/engine.md`, `docs/engineering.md`, `docs/development.md` — to preserve voice and structure.
-- Current code state under `engine/`, `app/`, plus the data files — to cross-check that doc claims match reality.
+- Current `docs/product.md`, `docs/engine.md`, `docs/engineering.md`, `docs/development.md`, to preserve voice and structure.
+- Current code state under `engine/`, `app/`, plus the data files, to cross-check that doc claims match reality.
 
 ### 2.4 What the session does
 
