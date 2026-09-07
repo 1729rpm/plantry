@@ -1,10 +1,10 @@
-# RETRO — EM friction ledger
+# RETRO: EM friction ledger
 
 Append-only log of process and system friction the EM hits while running streams. This
-is the slow loop pointed at our own process: the maintenance job reads open entries,
-clusters them, right-sizes each, and converts recurring friction into process or system
-improvements (the `/maintain` retro pass, `MAINTENANCE.md` §4.4). Newest first. Append,
-never rewrite an entry; the retro pass edits only the `Status` line of an existing entry.
+is the slow loop pointed at our own process: the `/maintain` retro pass reads open
+entries, clusters them, right-sizes each, and converts recurring friction into process or
+system improvements (`MAINTENANCE.md` §4.4). Newest first. Append, never rewrite an
+entry; the retro pass edits only the `Status` line of an existing entry.
 
 ## What to log
 
