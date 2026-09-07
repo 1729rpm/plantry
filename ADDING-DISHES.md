@@ -1,6 +1,6 @@
 # Adding dishes: the content-batch playbook
 
-The single procedure for adding a new dish (or a batch of dishes) to the library. Operational doc, sibling to `MAINTENANCE.md`: where `MAINTENANCE.md` is the playbook for the _automated_ structural-change path (the slow loop), this is the playbook for the _manual, reviewed_ structural-change path (content-batch dish adds).
+The single procedure for adding a new dish (or a batch of dishes) to the library. Operational doc, sibling to `MAINTENANCE.md` and `EVOLVING-THE-ENGINE.md`: where `/maintain` keeps the library's existing values true and `/evolve-engine` changes how the engine decides, this is the playbook for the _manual, reviewed_ path that grows the library (content-batch dish adds).
 
 Read this before authoring any new dish. It does not restate the specs; it orchestrates them and bakes in every trap we have actually hit. Authoritative homes it points at:
 
@@ -11,7 +11,7 @@ Read this before authoring any new dish. It does not restate the specs; it orche
 
 ## 0. The legitimate path
 
-New dishes go through a **reviewed content-batch PR**, never silently into the engine or rules (`docs/development.md` §9 anti-patterns). Branch: `data/expansion-<n>` (`docs/development.md` §2). Rajat reviews every batch personally. Structural rule/tag changes are a _different_ path (the slow loop); a dish add never edits `docs/engine.md` or `engine/src/`.
+New dishes go through a **reviewed content-batch PR**, never silently into the engine or rules (`docs/development.md` §9 anti-patterns). Branch: `data/expansion-<n>` (`docs/development.md` §2). Rajat reviews every batch personally. A rule change or a new tag value is a _different_ path (`/evolve-engine`, reached through the evolution-request ledger, `MAINTENANCE.md` §1 and §5); a dish add never edits `docs/engine.md` or `engine/src/`. The health pass of `/maintain` names content priorities for this playbook (a thin pool, a coverage gap) and never authors a dish; a person writes the batch.
 
 Right-size first (`docs/product.md` §4, Principle 1): a single comment is not a new dish. Net-new dishes are a content-coverage decision (the library wants more of some kind of meal), not a response to one week's noise.
 
