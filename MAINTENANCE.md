@@ -120,9 +120,10 @@ Four `internalMutation` functions (not exposed to the browser), split across
   `manualChanges` row `status: "applied"`, `resolvedAt: now`, `resolvedPr: <PR URL>`.
 - `manualChangesMutations:markManualChangesReviewedNoChange({ manualChangeIds, resolvedPr })` same
   shape, status `reviewed_no_change`.
-- `dishDislikesMutations:markDislikesApplied({ dislikeIds, resolvedPr })` same shape for each
-  `dishDislikes` row. The mark-applied script calls it for every `dislike_ids` value it collects, so
-  a consumed dislike leaves the queue and the next signals pass reads only new taps.
+- `dishDislikesMutations:markDislikesApplied({ dislikeIds, resolvedPr })` sets each `dishDislikes`
+  row `status: "applied"`, `resolvedAt: now`, `resolvedPr: <PR URL>`, and `consumedWeekStart` to the
+  Monday of the consuming week. The mark-applied script calls it for every `dislike_ids` value it
+  collects, so a consumed dislike leaves the queue and the next signals pass reads only new taps.
 
 Each mutation handles missing or already-resolved ids by inserting a `warn`-severity `incidents` row
 noting which id was skipped, then continuing. The mutations never throw; the post-merge step is
