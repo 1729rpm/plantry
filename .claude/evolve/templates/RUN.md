@@ -30,6 +30,7 @@ artifact. Overwrite a partial artifact; never repair one.
 
 | step | round | role                   | status  | artifact             | started | finished | last-error | resume-at |
 | ---- | ----- | ---------------------- | ------- | -------------------- | ------- | -------- | ---------- | --------- |
+| 1    | -     | EM (ledger snapshot)   | pending | engine-requests.md   | -       | -        | -          | -         |
 | 1    | -     | recorder               | pending | record.json          | -       | -        | -          | -         |
 | 1    | -     | recorder               | pending | as-eaten.md          | -       | -        | -          | -         |
 | 1    | -     | recorder               | pending | edit-reasons.md      | -       | -        | -          | -         |

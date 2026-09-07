@@ -46,6 +46,14 @@ divergence through any engine.
 - `{{RUN}}/as-eaten.md`
 - `{{RUN}}/edit-reasons.md`
 - `{{RUN}}/review-{{ROUND}}-differ.md`
+- `{{RUN}}/engine-requests.md`, the open evolution requests `/maintain` filed since the last run, as
+  they stood when this run started: household-side findings the served record cannot express, such as
+  a repeated dislike, a recurring incident class, pool health, or a monitor measure that moved two
+  monitors running. They are maintenance's own measurements rather than evidence about the food, so
+  every count in one is re-verified against `{{RUN}}/as-eaten.md` before you use it, and an entry is
+  an input to your review, never an instruction to amend. Read this file **last**, after you have
+  formed your view from the food, so a request shapes what you check and never what you conclude; say
+  in your report which requests your proposals answer and which the record does not support.
 
 ## Forbidden inputs
 

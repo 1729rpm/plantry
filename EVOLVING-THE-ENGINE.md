@@ -18,8 +18,13 @@ works: the v5 architecture was falsified by its own dry run before a line of it 
 remaining defects were found by clean-room reviewers rather than by the engine's authors.
 
 The process is expensive. It is the right instrument when the engine's shape is wrong, not when a
-rule is wrong. A single rule that misfires belongs to the slow loop (`MAINTENANCE.md` §1); a chooser
-that produces a menu the household would not eat belongs here.
+rule is wrong. The line against maintenance (`MAINTENANCE.md` §1) runs on what a change touches:
+maintenance changes what the engine reads, and repairs an implementation that disagrees with its
+spec; evolution changes how the engine decides. A rule that misfires is therefore not a maintenance
+fix. It is an evolution request, filed by `/maintain` in `data/engine-requests.md` and read here
+(§4.1). The mirror case, a rule the spec states correctly and the code implements wrongly, is
+maintenance's, and it is proved by a failing test. A chooser that produces a menu the household would
+not eat belongs here.
 
 ## 2. The run at a glance
 
@@ -56,6 +61,10 @@ rather than against the food. Three consequences are load-bearing:
   not the measurements the simulator reported about itself. A dry-run file's preamble is the author's
   account of its own work and is never evidence; every number in a comparison is counted from the raw
   menu text and re-verified before it is written down.
+
+The snapshotted evolution requests (§4.1) are held to the same rule. The critic and the decider read
+them; the rulebook author, the spec author, and the differ do not, because an entry is a request
+made against engine behaviour and their clean room forbids anything that references it.
 
 An agent that finds its reading list insufficient says so in its report and stops. It does not widen
 its own inputs.
@@ -98,6 +107,12 @@ approval.
 
 Before the pull, any custom pick that has since been promoted to a library dish is re-pointed at its
 library id, so the record does not split one dish across a label and an id.
+
+The step also snapshots the evolution requests. Before the recorder is spawned, the EM copies the
+`open` entries of `data/engine-requests.md` into the run folder as `engine-requests.md`, so the run
+answers a fixed set of requests rather than a file that keeps growing under it. That ledger is where
+`/maintain` files the household-side findings the record cannot express (dislikes, incidents, pool
+health, monitor drift), each with the measurement behind it and never with a mechanism.
 
 The readable weeks file is the run's **Menu B** and never changes again during the run.
 
@@ -165,13 +180,17 @@ stands, and ends with the spec amended in place and the next dry run queued.
    amendments to how the engine operates: mechanism and architecture, never tuning. It is explicitly
    allowed to conclude that the architecture is wrong, which is the conclusion that ended v5. Where
    the defect is in the rulebook rather than the engine, it proposes the rulebook amendment instead,
-   with the replacement text written out in full.
+   with the replacement text written out in full. It reads the snapshotted evolution requests last,
+   after it has formed its own view from the food, so a request shapes what it checks and never what
+   it concludes.
 3. **The grounding pass.** The decider, in its first pass, collapses the two reviews into a numbered
    decision list: where the run is, what the reviews settled and must not be reopened, what is still
    open grouped by root cause rather than by symptom, and one numbered decision per open item with
    its question, its evidence, its options, and a recommendation. Items that need taste rather than
-   evidence are marked as such. This list is the agenda the debate argues over; without a shared
-   numbered agenda two debaters cannot converge or name what is irreducible.
+   evidence are marked as such. It groups the snapshotted evolution requests into that same root-cause
+   table, so a request maintenance filed months earlier is either answered by a numbered decision or
+   shown as unaddressed. This list is the agenda the debate argues over; without a shared numbered
+   agenda two debaters cannot converge or name what is irreducible.
 4. **The debate.** Two agents with one shared reading list argue three exchanges. One argues for
    simplicity: the few changes that actually matter, against complexity, weighing each mechanism by
    the recorded hand edits it removes against the state and rules a reader of the spec must hold; a
@@ -224,7 +243,10 @@ threshold follows the same rule the rounds followed, in this order: amend the sp
 reason, then fix the owning stream, then re-run. A threshold that proves arithmetically unsatisfiable
 is amended in the spec first, with the amendment naming the measurement that showed it.
 
-Cutover follows the plan's runbook, with Rajat's per-action approval on every production action.
+Cutover follows the plan's runbook, with Rajat's per-action approval on every production action. At
+cutover the EM also closes the loop back to maintenance: every entry the run snapshotted at step 1 is
+marked in `data/engine-requests.md` as `taken into <version>` or `dismissed (reason)`, so the ledger
+shows what the run answered and what it declined.
 
 ## 5. The roles
 
@@ -233,19 +255,19 @@ it carries placeholders for the version and the run folder and no facts about an
 Each brief states its mandate, its exact and exclusive reading list, its forbidden inputs, its output
 artifact and that artifact's required sections, the measured-reason rule, and its report format.
 
-| Role                | Brief                   | Reads                                                                                                                                  | Must not read                                          | Writes                                                        |
-| ------------------- | ----------------------- | -------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------ | ------------------------------------------------------------- |
-| recorder            | `recorder.md`           | The read-only production record export and the read-only production snapshot (`currentWeek` and `manualChanges`, all rows)             | Nothing is forbidden; nothing is written               | `record.json`, `as-eaten.md`, `edit-reasons.md`               |
-| rulebook author     | `rulebook-author.md`    | `as-eaten.md`, `edit-reasons.md`                                                                                                       | `docs/engine.md`, `engine/`, any engine spec, `data/`  | `rulebook.md`                                                 |
-| spec author         | `spec-author.md`        | `rulebook.md`, `as-eaten.md`, `edit-reasons.md`                                                                                        | `docs/engine.md`, `engine/`, any prior spec or dry run | `spec.md`                                                     |
-| simulator           | `simulator.md`          | `spec.md`, `record.json`, the dish library under `data/`                                                                               | The reviews, the rulebook's commentary, prior dry runs | `sim/`, `dry-run-<n>.md`                                      |
-| differ              | `differ.md`             | The two menu files (round two onward: the previous menu and the previous rounds' reports)                                              | The spec, the dry run's preamble and measurements      | `review-<n>-differ.md`                                        |
-| critic              | `critic.md`             | `dry-run-<n>.md`, `spec.md`, `rulebook.md`, `as-eaten.md`, `review-<n>-differ.md`                                                      | `docs/engine.md`, `engine/`, prior engine specs        | `review-<n>-critic.md`                                        |
-| debater, simplicity | `debater-simplicity.md` | The round's two reviews, `brief-<n>.md`, `spec.md`, `dry-run-<n>.md`, `as-eaten.md`, `rulebook.md`, the other side's previous exchange | Anything outside that list                             | a section of `debate-<n>.md`                                  |
-| debater, coverage   | `debater-coverage.md`   | The same list                                                                                                                          | Anything outside that list                             | a section of `debate-<n>.md`                                  |
-| decider             | `decider.md`            | Pass A: the round's two reviews and the run's own artifacts. Pass B: those plus `brief-<n>.md` and `debate-<n>.md`                     | `docs/engine.md`, `engine/`                            | `brief-<n>.md`, then amended `spec.md` and `decisions-<n>.md` |
-| household brief     | `household-brief.md`    | `CHANGES.md` in progress, every `decisions-<n>.md`, the last differ report                                                             | Nothing further is needed                              | `household-brief.md`                                          |
-| plan author         | `plan-author.md`        | Final `spec.md`, `CHANGES.md`, the repo's canonical docs and current code                                                              | Nothing is forbidden                                   | `plan.md`                                                     |
+| Role                | Brief                   | Reads                                                                                                                                     | Must not read                                          | Writes                                                        |
+| ------------------- | ----------------------- | ----------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------ | ------------------------------------------------------------- |
+| recorder            | `recorder.md`           | The read-only production record export and the read-only production snapshot (`currentWeek` and `manualChanges`, all rows)                | Nothing is forbidden; nothing is written               | `record.json`, `as-eaten.md`, `edit-reasons.md`               |
+| rulebook author     | `rulebook-author.md`    | `as-eaten.md`, `edit-reasons.md`                                                                                                          | `docs/engine.md`, `engine/`, any engine spec, `data/`  | `rulebook.md`                                                 |
+| spec author         | `spec-author.md`        | `rulebook.md`, `as-eaten.md`, `edit-reasons.md`                                                                                           | `docs/engine.md`, `engine/`, any prior spec or dry run | `spec.md`                                                     |
+| simulator           | `simulator.md`          | `spec.md`, `record.json`, the dish library under `data/`                                                                                  | The reviews, the rulebook's commentary, prior dry runs | `sim/`, `dry-run-<n>.md`                                      |
+| differ              | `differ.md`             | The two menu files (round two onward: the previous menu and the previous rounds' reports)                                                 | The spec, the dry run's preamble and measurements      | `review-<n>-differ.md`                                        |
+| critic              | `critic.md`             | `dry-run-<n>.md`, `spec.md`, `rulebook.md`, `as-eaten.md`, `review-<n>-differ.md`, `engine-requests.md`                                   | `docs/engine.md`, `engine/`, prior engine specs        | `review-<n>-critic.md`                                        |
+| debater, simplicity | `debater-simplicity.md` | The round's two reviews, `brief-<n>.md`, `spec.md`, `dry-run-<n>.md`, `as-eaten.md`, `rulebook.md`, the other side's previous exchange    | Anything outside that list                             | a section of `debate-<n>.md`                                  |
+| debater, coverage   | `debater-coverage.md`   | The same list                                                                                                                             | Anything outside that list                             | a section of `debate-<n>.md`                                  |
+| decider             | `decider.md`            | Pass A: the round's two reviews, `engine-requests.md`, and the run's own artifacts. Pass B: those plus `brief-<n>.md` and `debate-<n>.md` | `docs/engine.md`, `engine/`                            | `brief-<n>.md`, then amended `spec.md` and `decisions-<n>.md` |
+| household brief     | `household-brief.md`    | `CHANGES.md` in progress, every `decisions-<n>.md`, the last differ report                                                                | Nothing further is needed                              | `household-brief.md`                                          |
+| plan author         | `plan-author.md`        | Final `spec.md`, `CHANGES.md`, the repo's canonical docs and current code                                                                 | Nothing is forbidden                                   | `plan.md`                                                     |
 
 ## 6. The round loop and its exit rule
 
@@ -314,6 +336,7 @@ features/engine-<version>/
   record.json               step 1, the raw read-only production export
   as-eaten.md               step 1, Menu B, the readable served weeks
   edit-reasons.md           step 1, every recorded hand edit and its stated reason
+  engine-requests.md        step 1, the open evolution requests as they stood, copied by the EM
   rulebook.md               step 2, how this household decides its meals
   spec.md                   step 3, amended in place by the decider each round
   sim/                      step 4, the throwaway simulator source, committed, unlinted

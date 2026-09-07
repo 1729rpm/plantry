@@ -44,6 +44,12 @@ mechanism because a reviewer asked for it twice are all failures of this seat.
 - `{{RUN}}/as-eaten.md`
 - `{{RUN}}/edit-reasons.md`
 - `{{RUN}}/rulebook.md`
+- `{{RUN}}/engine-requests.md`, the open evolution requests `/maintain` filed since the last run, as
+  they stood when this run started: household-side findings the served record cannot express, such as
+  a repeated dislike, a recurring incident class, pool health, or a monitor measure that moved two
+  monitors running. They are maintenance's own measurements rather than evidence about the food, so
+  every count in one is re-verified against `{{RUN}}/as-eaten.md` before you use it, and an entry is
+  an input to the round, never an instruction to amend the spec.
 - every previous `{{RUN}}/decisions-*.md`
 
 ### Forbidden inputs
@@ -64,6 +70,9 @@ this pass is new measurement: every number you write is taken from those files, 
 3. **What is still open, by root cause.** A table: root cause, the symptoms it produces, and the
    decision numbers that address it. Every open symptom in either review appears under exactly one
    cause, or under a heading saying it is content, threshold arithmetic, or the record's own shape.
+   Every open entry in `engine-requests.md` is placed in the same table, under the cause it belongs
+   to or under that heading, so a request maintenance filed months ago is either carried into a
+   numbered decision or visibly unaddressed with the reason.
 4. **Decisions.** Numbered `D1` to `Dn`, one per open item. Each carries: the question in one
    sentence; the evidence with counts; the options, at least two, written out; and a recommendation.
    Mark explicitly, in the item itself, any decision that needs taste rather than evidence.
@@ -91,6 +100,7 @@ the artifact path.
 - `{{RUN}}/as-eaten.md`
 - `{{RUN}}/edit-reasons.md`
 - `{{RUN}}/rulebook.md`
+- `{{RUN}}/engine-requests.md`, on the same terms as pass A
 - every previous `{{RUN}}/decisions-*.md`
 
 ### Forbidden inputs
