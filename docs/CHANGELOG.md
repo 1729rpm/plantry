@@ -15,6 +15,20 @@ work queue for /reconcile-docs and /reconcile-ops; or "none".
 
 ---
 
+## 2026-09-07  Engine v6 cutover on prod: custom picks re-pointed, first v6 week generated
+
+The six household custom picks in the served weeks now carry library ids (Red Sauce
+Pasta 284, Paneer Manchurian 287, Stuffed capsicum 288, Cabbage matar aaloo 23, Dosa 285,
+Atta halva 286) via the `promoteCustomPick` internal mutation, so the household record is
+complete; the gate ran on the prod record export and its report replaces the fixture report
+at `features/engine-v6-gate-report.md` (self-feeding 8 of 12, frozen 10 of 12, thresholds 2
+and 5 open by decision, threshold 8 re-based on the record's own rate); the first v6 week,
+2026-09-07, is generated on prod with zero incidents. Prod data actions, no code change;
+docs only in this PR. (#257)
+Why: `features/engine-v6-plan.md` §8, the cutover runbook.
+Updated: none beyond the entries in the #256 line; the slow-loop monthly monitor table and
+the stale smoke harness stay queued for `/reconcile-ops`.
+
 ## 2026-09-07  Engine v6, the record-matching engine (Phase 9 integration)
 
 Production generation, the Explore feed, and the picker read the household record
