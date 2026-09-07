@@ -24,7 +24,7 @@ complete; the gate ran on the prod record export and its report replaces the fix
 at `features/engine-v6-gate-report.md` (self-feeding 8 of 12, frozen 10 of 12, thresholds 2
 and 5 open by decision, threshold 8 re-based on the record's own rate); the first v6 week,
 2026-09-07, is generated on prod with zero incidents. Prod data actions, no code change;
-docs only in this PR. (#TBD)
+docs only in this PR. (#257)
 Why: `features/engine-v6-plan.md` §8, the cutover runbook.
 Updated: none beyond the entries in the #256 line; the slow-loop monthly monitor table and
 the stale smoke harness stay queued for `/reconcile-ops`.
