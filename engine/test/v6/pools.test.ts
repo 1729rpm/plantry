@@ -387,6 +387,115 @@ describe("v6 pools: carb affinity (docs/engine.md §3.1)", () => {
   });
 });
 
+describe("v6 pools: a low-rate specialty roti wins its turn (§3.2, frozen rates)", () => {
+  // The §11 frozen run runs the specialty rotis at -41 percent of the record rate
+  // and leaves beetroot roti unserved for 20 weeks. Ruling a selection defect in or
+  // out was the first step of that diagnosis: does the carb slot ever let a low-rate
+  // roti through once its deficit tops the pool, against a plain roti whose rate is
+  // seven times higher and whose deficit accrues seven times as fast?
+  //
+  // These fixtures are that ruling-out, and they guard it. They go through
+  // `carbPoolForLead`, so `buildPool`'s scope-presence gate and deficit lookup and
+  // the §3.2 ranking are all in the path, not just the fill rule. Rates are the
+  // record's own frozen ones: 22, 3 and 2 weekday-lunch rows in 46 occasions.
+  const plainRoti = makeDish({ id: 200, category: "Chapati", primaryIngredient: "Wheat Flour" });
+  const beetrootRoti = makeDish({ id: 201, category: "Chapati", primaryIngredient: "Beetroot" });
+  const missiRoti = makeDish({ id: 202, category: "Chapati", primaryIngredient: "Chickpea" });
+  const dal = makeDish({ id: 203, category: "Gravy dish", primaryIngredient: "Toor Dal" });
+  const library = [plainRoti, beetrootRoti, missiRoti, dal];
+
+  const specs: StatSpec[] = [
+    { id: 200, eaten: { weekdayLunch: 22 }, rate: { weekdayLunch: 22 / 46 } },
+    { id: 201, eaten: { weekdayLunch: 3 }, rate: { weekdayLunch: 3 / 46 } },
+    { id: 202, eaten: { weekdayLunch: 2 }, rate: { weekdayLunch: 2 / 46 } },
+  ];
+
+  it("gives the carb slot to a specialty roti once its deficit tops the pool", () => {
+    // Plain roti has taken two of this week's carb slots and is down to 0.39, below
+    // beetroot roti's 1.89. §3.2 ranks on deficit alone, so its rate must not rescue
+    // it: the measured week-60 pool in the frozen run is exactly these three numbers.
+    const ctx = makeContext(library, specs, [
+      [200, "weekdayLunch", 0.39],
+      [201, "weekdayLunch", 1.89],
+      [202, "weekdayLunch", 1.26],
+    ]);
+    const pool = carbPoolForLead(ctx, dal);
+    expect(ids(pool)).toEqual([201, 202, 200]);
+    const fill = fillStructuralWithOrigin(pool, new Set([200]));
+    expect(fill?.entry.dish.id).toBe(201);
+    expect(fill?.origin).toBe("deficit");
+  });
+
+  it("still gives it the slot when plain roti has not been placed at all this week", () => {
+    // The workhorse fallback's not-already-placed guard applies to the fallback and
+    // to nothing else, so an untouched plain roti below a specialty roti on deficit
+    // still loses. Without this the fallback's guard would be doing the ranking.
+    const ctx = makeContext(library, specs, [
+      [200, "weekdayLunch", 0.39],
+      [201, "weekdayLunch", 1.89],
+      [202, "weekdayLunch", 1.26],
+    ]);
+    const fill = fillStructuralWithOrigin(carbPoolForLead(ctx, dal), new Set());
+    expect(fill?.entry.dish.id).toBe(201);
+    expect(fill?.origin).toBe("deficit");
+  });
+
+  it("hands an exhausted chapati pool to a specialty roti when plain roti is placed", () => {
+    // Every deficit non-positive, which is what a chapati pool looks like on the
+    // fifth carb slot of a week that plain roti has already taken four times. §3.2's
+    // workhorse fallback excludes what is already placed, so the overflow reaches the
+    // higher-rate of the two specialty rotis and not the least-negative deficit.
+    const ctx = makeContext(library, specs, [
+      [200, "weekdayLunch", 0],
+      [201, "weekdayLunch", -4.17],
+      [202, "weekdayLunch", -0.02],
+    ]);
+    const fill = fillStructuralWithOrigin(carbPoolForLead(ctx, dal), new Set([200]));
+    expect(fill?.entry.dish.id).toBe(201);
+    expect(fill?.origin).toBe("fallback");
+  });
+
+  it("returns the overflow to plain roti when nothing is placed yet", () => {
+    // The other half of the same rule, and the one the debate settled: an exhausted
+    // pool goes to the workhorse, not to the specialty roti whose turn it looks like.
+    const ctx = makeContext(library, specs, [
+      [200, "weekdayLunch", -1.4],
+      [201, "weekdayLunch", -0.05],
+      [202, "weekdayLunch", -0.02],
+    ]);
+    const fill = fillStructuralWithOrigin(carbPoolForLead(ctx, dal), new Set());
+    expect(fill?.entry.dish.id).toBe(200);
+    expect(fill?.origin).toBe("fallback");
+  });
+
+  it("keeps a chapati out of the pool a Rice-affinity lead asks for", () => {
+    // The diagnosis' other candidate cause: a plate that takes rice by affinity must
+    // not be able to spend a chapati's turn. The two affinity pools are disjoint, so
+    // a chapati deficit is only ever charged by a chapati placement.
+    const steamedRice = makeDish({
+      id: 204,
+      category: "Rice",
+      primaryIngredient: "Rice",
+      tags: ["cuisine_neutral"],
+    });
+    const riceLead = makeDish({ id: 205, category: "Gravy dish", carbAffinity: "Rice" });
+    const ctx = makeContext(
+      [...library, steamedRice, riceLead],
+      [...specs, { id: 204, eaten: { weekdayLunch: 3 }, rate: { weekdayLunch: 3 / 46 } }],
+      [
+        [200, "weekdayLunch", 0.39],
+        [201, "weekdayLunch", 1.89],
+        [202, "weekdayLunch", 1.26],
+        [204, "weekdayLunch", -1.2],
+      ],
+    );
+    expect(ids(carbPoolForLead(ctx, riceLead))).toEqual([204]);
+    expect(fillStructuralWithOrigin(carbPoolForLead(ctx, riceLead), new Set())?.entry.dish.id).toBe(
+      204,
+    );
+  });
+});
+
 describe("v6 pools: §5.4 Saturday pools", () => {
   const saturdayTreat = makeDish({
     id: 70,
