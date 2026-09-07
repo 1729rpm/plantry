@@ -25,7 +25,7 @@ the Changes log (#258); the frozen gate run freezes the presence rate, which cur
 specialty-roti starvation (#261, frozen 11 of 12); the operational (#260) and canonical (#262)
 reconciles bring every doc to engine v6, with the monthly engine monitor in `MAINTENANCE.md`
 §1.9; the retro intake settles the six Phase 9 entries; winter fruits are not added (Rajat) and
-weekly generation stays hand-triggered and paused until Rajat says. (#CLOSEOUT)
+weekly generation stays hand-triggered and paused until Rajat says. (#263)
 Why: `docs/development.md` §3 step 8, the feature close-out, and Rajat's instruction to
 complete the EM work list.
 Updated: none (both reconciles ran in this sitting; `app/web/e2e/` joins the ops reconcile's

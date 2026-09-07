@@ -236,9 +236,9 @@ run only reads entries appended since.
 ## 2026-09-07  Phase 9 build (engine v6), EM session close
 
 - **Stale UI smoke harness.** `app/web/e2e/smoke.mjs` still asserts a "Changes" tab that Phase 7 moved into the profile sheet, so every prod smoke pass since then has failed on the harness, not the app. Systemic: the harness is not in any reconcile pass's scope. Fix: put `app/web/e2e/*` in `/reconcile-ops`'s file list.
-  - Status: fixed (PR #258 for the harness; PR #CLOSEOUT adds `app/web/e2e/` to the reconcile-ops scope)
+  - Status: fixed (PR #258 for the harness; PR #263 adds `app/web/e2e/` to the reconcile-ops scope)
 - **Shared session scratchpad across sibling subagents.** Two streams wrote `pr-body.md` to the same scratchpad and one PR body was overwritten with another stream's (caught by the engineer). Fix applied in the brief contract (stream-prefixed filenames); a per-stream scratchpad would remove the class.
-  - Status: fixed (PR #CLOSEOUT: new-stream.md brief line, stream-prefixed scratchpad filenames); the per-stream scratchpad itself is a Claude Code tooling matter, wont-fix here
+  - Status: fixed (PR #263: new-stream.md brief line, stream-prefixed scratchpad filenames); the per-stream scratchpad itself is a Claude Code tooling matter, wont-fix here
 - **Subagents die on the account session limit or stall after CI.** Two engineers were lost mid-stream (one before any work, one after pushing and marking ready). Mitigation used: commit-and-push-early in the contract, and check the PR state before respawning. Systemic: no automatic resume.
   - Status: wont-fix (platform behaviour); the commit-and-push-early brief line and the check-the-PR-state-before-respawning practice are the mitigations
 - **Docs claim CI checks that do not exist** (spec-code parity, Convex codegen). Found by stream G. Fixed in `docs/engineering.md` §15 and `CLAUDE.md`; consider adding the parity step for real.
@@ -246,5 +246,5 @@ run only reads entries appended since.
 - **The plan's stream briefs contradicted each other on one ownership point** (the structural-pool predicate named as A's and B's). Resolved in the briefs by making it a parameter. Fix: a single owner per shared symbol in the plan's hotspot table.
   - Status: triaged (the next phase plan's hotspot table names one owner per shared symbol; no repo file to change now)
 - **`engine/test/data/bake.test.ts` deletes the baked library in `afterAll`,** so local gates out of CI order fail typecheck with a misleading error. Fix: document in `docs/development.md` or make the test restore what it deletes.
-  - Status: fixed (PR #CLOSEOUT: new-stream.md brief line, run the gates in CI order and re-bake after tests); making the test restore the file is left for a chore
+  - Status: fixed (PR #263: new-stream.md brief line, run the gates in CI order and re-bake after tests); making the test restore the file is left for a chore
 
