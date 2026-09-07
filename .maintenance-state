@@ -1,10 +1,10 @@
 | pass    | last-run   | status  | deferred | note                                    |
 | ------- | ---------- | ------- | -------- | --------------------------------------- |
-| signals | 2026-07-14 | pending | 0        | pre-v6 backlog awaits the stated cutoff |
-| health  | never      | pending | -        | monitor never run                       |
-| docs    | 2026-09-07 | done    | 3        | product.md P3 CI-parity claim           |
-| retro   | 2026-09-07 | done    | 2        | two 2026-08-18 entries still open       |
-| hygiene | 2026-09-07 | done    | 2        | branches and worktrees left on the tree |
+| signals | 2026-09-07 | running | 0        | first sitting; pre-v6 backlog cutoff    |
+| health  | 2026-09-07 | running | -        | first monitor                           |
+| docs    | 2026-09-07 | running | 3        | product.md P3 CI-parity claim           |
+| retro   | 2026-09-07 | running | 2        | two 2026-08-18 entries still open       |
+| hygiene | 2026-09-07 | running | 2        | branches and worktrees left on the tree |
 
 ## Deferred
 
