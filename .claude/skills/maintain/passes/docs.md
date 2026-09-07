@@ -66,7 +66,7 @@ stale claims survived two window-scoped passes because each predated the window;
 shapes that produced them.
 
 1. **The spec-code parity claim.** `docs/product.md` §4 Principle 3, `docs/engineering.md` §15, and
-   `docs/engine.md` §13 and §16.2 all describe how `docs/engine.md` and `engine/` are kept in
+   `docs/engine.md` §16 and §16.2 all describe how `docs/engine.md` and `engine/` are kept in
    lockstep. The pairing is held by review, not by a CI check. Every document that describes it says
    so, in those words, until a check actually exists.
 2. **Section-number pointers.** Every `<file>.md §<n>` cross-reference in a canonical or operational
