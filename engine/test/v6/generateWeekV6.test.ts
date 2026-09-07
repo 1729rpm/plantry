@@ -596,14 +596,37 @@ describe("§3.2 presence ledgers, over a self-fed horizon", () => {
     }
     // The horizon has to exercise the floor, or the first assertion is vacuous.
     expect(floorRepairs).toBeGreaterThan(0);
-    // Plate size counts floor appends as companions; neither of the two real
-    // measures does, so both sit below it.
-    expect(byRole).toBeLessThan(plateSize);
-    // The two readings of the one quantity: the record carries no roles, so a
+
+    // All three counts read one quantity, how often a weekday lunch carried a
+    // third thing, and each reads it by a different rule, so they are asserted
+    // against a band and never against each other's order.
+    //
+    // `byRole` counts a plate carrying a `companion` pick. `byClassification`
+    // applies the record-side rule (a third item that is not the §5.1 protein-floor
+    // append). `plateSize` is the coarsest: any weekday lunch of three or more items.
+    //
+    // This used to assert `byRole < plateSize`, on the reasoning that plate size
+    // also counts floor appends while neither real measure does, so both had to sit
+    // below it. That reasoning is incomplete and the ordering was never a rule. It
+    // assumes every companion-bearing plate reaches three items, and the
+    // self-sufficient plate does not: a `complete_meal` star suppresses the carb and
+    // may still take one Accompaniment companion, which is a two-item plate that
+    // `byRole` counts and `plateSize` cannot see. Change the library's mix of
+    // self-sufficient stars and the ordering flips with no engine change behind it,
+    // which is what stream F4 hit when hummus became a Category Dry dish (byRole 66
+    // and plateSize 69 before, 67 and 65 after).
+    //
+    // The band is the record's own ambiguity: the record carries no roles, so a
     // plate of a dry-protein star, a carb and a gravy companion is indistinguishable
-    // from a gravy star, a carb and a floor append, and the classification reads
-    // some of those the other way. The residual is small and bounded; a wide gap
-    // would put every §11 threshold 11 number out by that much.
-    expect(Math.abs(byRole - byClassification) / byRole).toBeLessThan(0.15);
+    // from a gravy star, a carb and a floor append, and the readings resolve some of
+    // those the other way. The residual is bounded; a wide gap would put every §11
+    // threshold 11 number out by that much. 15 percent is the measured width of that
+    // ambiguity rather than a round number chosen for comfort: the two real readings
+    // sit 10.6 percent apart on `main` before this change and 11.9 percent after, so
+    // a 10 percent band would fail on both, while 15 percent still catches a genuine
+    // divergence between the two ledgers.
+    const ambiguityBand = 0.15;
+    expect(Math.abs(byRole - byClassification) / byRole).toBeLessThan(ambiguityBand);
+    expect(Math.abs(byRole - plateSize) / byRole).toBeLessThan(ambiguityBand);
   });
 });

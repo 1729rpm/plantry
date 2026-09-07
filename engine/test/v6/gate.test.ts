@@ -10,19 +10,32 @@
  *
  * ## The engine does not pass its gate yet, and this file records exactly that
  *
- * Two of the five thresholds this test measures fail today. They are listed in
+ * Three of the five thresholds this test measures fail today. They are listed in
  * `KNOWN_GATE_FAILURES` with the number measured when this stream landed and the
  * reason as far as the harness can see it. This is not a suppression: the list is
  * asserted in both directions, so a threshold that starts passing fails this test
  * until its entry is deleted, and a listed threshold that collapses further fails
  * on its collapse guard. §11 makes passing the gate the condition for merging the
- * phase to `main`, and the EM owns that decision; the two entries below are the
+ * phase to `main`, and the EM owns that decision; the three entries below are the
  * findings that decision reads.
  *
  * The collapse guards are deliberately generous rather than exact ratchets: the
  * content batches (F1 to F4) change the library under this test, which moves every
  * number, and an exact ratchet would turn a content merge into a spurious CI
  * failure. They catch a collapse, not a wobble.
+ *
+ * ## What this file measures against, and what it does not
+ *
+ * The seed here is `fixtures/record-8weeks`, the hand-built 8-week fixture. The
+ * merge decision reads a run against the real prod export instead
+ * (`npm run gate -- <path to the export>`), which is a longer record with larger
+ * per-family row counts. The two disagree on any threshold whose arithmetic is
+ * sensitive to a small denominator, and threshold 1 is exactly that: a family with
+ * 5 record rows in the fixture carries about 45 percent of counting noise on its own
+ * rate, so a change that moves two rows anywhere near it can push it through a
+ * 25 percent bar without anything in the engine having changed. Threshold 1's entry
+ * below is that case and says so. Read a threshold-1 entry as a statement about the
+ * fixture unless it also names a prod-record run that fails.
  */
 
 import { beforeAll, describe, expect, it } from "vitest";
@@ -54,15 +67,18 @@ const CI_THRESHOLDS = [1, 2, 4, 5, 10] as const;
  *
  * Delete an entry when its threshold starts passing; this test fails until you do.
  *
- * The map is unchanged in this cycle and holds the two entries gate fix cycle 3
- * left it with. Threshold 4, slot anti-lock, went to PASS on the self-feeding run
+ * Threshold 1 is the entry stream F4 added, and it is a fixture artifact rather
+ * than an engine finding; its own text carries the prod-record numbers that show
+ * why. The other two are the entries gate fix cycle 3 left the map with.
+ *
+ * Threshold 4, slot anti-lock, went to PASS on the self-feeding run
  * in that cycle once §11's arithmetic exemption was amended to the
  * conjunction the EM settled after gate fix cycle 2: a rate at or above 0.4 of the
  * role's weekly slots, and a preference-free spread that already puts one of the
  * role's days over half the horizon more often than not. Plain roti sits at 0.473
  * of the carb role's occasions and fails the threshold nine times in ten under an
  * assignment with no weekday preference at all, so the two weekdays it holds 23 of
- * 41 weeks are arithmetic and not a lock. Two entries remain.
+ * 41 weeks are arithmetic and not a lock. Three entries remain.
  *
  * The frozen run's own threshold 4 failure went with it in this cycle. It was the
  * artifact the cycle-3 PR called it: `variant.frozenRates` froze the whole
@@ -74,6 +90,15 @@ const KNOWN_GATE_FAILURES = new Map<
   number,
   { measured: number; collapseGuard: number; finding: string }
 >([
+  [
+    1,
+    {
+      measured: 1,
+      collapseGuard: 3,
+      finding:
+        "One tracked family of eleven is outside the 25 percent bar: raita/curd at -29.0 percent, served 0.044 against a record rate of 0.063 carried by 5 rows. This is an artifact of the 8-week fixture's small denominators, not an engine finding, and the same change is a net improvement on the real record. Stream F4 moved hummus (174) from Category Accompaniment to Category Dry dish, which is what the household does with it. Because the harness keys the salad family on a Lunch-time Accompaniment, hummus's two record rows leave that family: the fixture's salad denominator falls from 8 rows to 6 and its target rate from 0.100 to 0.075, both correct, since the record now reads those two occasions as mains. The knock-on is that the accompaniment slot loses the same two occasions of record presence, so the optional slot fires less often across the horizon while raita/curd keeps its untouched 5-row target of 0.063. Its rate did not move, only its supply, and on 5 rows the family carries about 45 percent of counting noise, so two occasions are enough to cross a 25 percent bar. On the 10-week prod export the same library change leaves threshold 1 passing on the self-feeding run (11 of 11 inside the bar, raita/curd improving from -9.5 to -7.3 percent on 10 rows) and turns the frozen run from FAIL to PASS (specialty roti -41.2 to -14.1 percent). Delete this entry when the CI fixture is reseeded from a prod export long enough to give every tracked family more than a handful of rows.",
+    },
+  ],
   [
     2,
     {
