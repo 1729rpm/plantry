@@ -3,15 +3,17 @@
 // PR. Reads the PR body from PR_BODY, the merged PR URL from PR_URL, and the
 // Convex prod key from CONVEX_DEPLOY_KEY. Parses the "Consumed signals by
 // cluster" section (and the flat "Consumed manual-change IDs" / "Consumed
-// incident IDs" fallbacks) and runs the internal mutations in
-// app/convex/manualChangesMutations.ts and app/convex/incidentsMutations.ts via
+// incident IDs" / "Consumed dislike IDs" fallbacks) and runs the internal
+// mutations in app/convex/manualChangesMutations.ts,
+// app/convex/incidentsMutations.ts and app/convex/dishDislikesMutations.ts via
 // `npx convex run --prod`. Exits 0 even when the body is unparseable; the action
 // is best-effort and must not block a merge.
 //
-// Cluster blocks may also carry `dislike_ids:` (consumed dishDislikes rows). The
-// dislike ids are parsed tolerantly but NOT yet written back: the `dishDislikes`
-// write-back mutation is not yet built, so until it lands dislike ids are logged
-// and not written back. See MAINTENANCE.md §3.
+// Cluster blocks may also carry `dislike_ids:` (consumed dishDislikes rows).
+// They are parsed tolerantly (the key is optional in a block, the flat line is
+// the fallback, and the ids are outcome-independent) and marked `applied` by
+// dishDislikesMutations:markDislikesApplied, which also stamps the consumed week
+// and the PR URL on each row. See MAINTENANCE.md §3.
 //
 // Run locally for unit testing:
 //   PR_BODY="$(cat sample-pr-body.md)" PR_URL=https://example/pr/1 \
@@ -184,14 +186,12 @@ console.log(
   `[slow-loop-mark-applied] manual-changes: applied=${appliedManualChangeIds.length} reviewed_no_change=${reviewedNoChangeManualChangeIds.length}; incidents=${incidentIds.length}; dislikes=${dislikeIds.length}`,
 );
 
-// Dislikes are parsed for forward-compatibility but NOT written back here: the
-// `dishDislikes` write-back mutation is not yet built. Until it lands this is a
-// guarded no-op that logs the ids so a slow-loop PR can already list them;
-// consumed dislikes stay queued. See MAINTENANCE.md §3.
+// The parsed dislike ids are marked below, after the dry-run gate, by the same
+// best-effort `npx convex run` path the other two mutations use. Logged here so
+// the action's output names them even when the mutation call later fails. See
+// MAINTENANCE.md §3.
 if (dislikeIds.length > 0) {
-  console.log(
-    `[slow-loop-mark-applied] dislike ids parsed but NOT marked (dishDislikes write-back not yet built): ${dislikeIds.join(", ")}`,
-  );
+  console.log(`[slow-loop-mark-applied] dislike ids to mark applied: ${dislikeIds.join(", ")}`);
 }
 
 if (DRY_RUN) {
@@ -237,6 +237,12 @@ if (reviewedNoChangeManualChangeIds.length > 0) {
 if (incidentIds.length > 0) {
   runConvex("incidentsMutations:markIncidentsResolved", {
     incidentIds,
+    resolvedPr: prUrl,
+  });
+}
+if (dislikeIds.length > 0) {
+  runConvex("dishDislikesMutations:markDislikesApplied", {
+    dislikeIds,
     resolvedPr: prUrl,
   });
 }
