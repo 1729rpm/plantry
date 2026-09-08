@@ -27,6 +27,7 @@ Lebanese chopped salad with crisp toasted bread and a lemony dressing.
 | Bread | 1 | pcs |
 | Mint Leaf | 10 | g |
 | Lemon | 1 | pcs |
+| Olive Oil | 15 | ml |
 
 ## Recipe
 

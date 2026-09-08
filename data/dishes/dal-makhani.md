@@ -31,11 +31,12 @@ Black urad and kidney beans slow-simmered with butter and cream into a rich dal.
 | Garlic | 10 | g |
 | Green Chilli | 1 | pcs |
 | Coriander Leaf | 10 | g |
+| Fresh Cream | 30 | ml |
 
 ## Recipe
 
 1. Pressure cook the soaked urad and kidney beans with salt until very soft.
 2. Saute onion, ginger, garlic and green chilli, add tomato and spices.
 3. Add the cooked dal with its water and simmer long on low heat.
-4. Stir in butter and a little cream, mashing some beans to thicken.
+4. Stir in 20 g butter and the cream, mashing some beans to thicken.
 5. Finish with kasuri methi and coriander.
