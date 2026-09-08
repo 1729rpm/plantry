@@ -15,6 +15,14 @@ work queue for /reconcile-docs and /reconcile-ops; or "none".
 
 ---
 
+## 2026-09-08  Medium-confidence dish audit corrections
+
+Apply the medium-confidence audit findings the EM agreed with (verdict per finding in `docs/reviews/medium-confidence-verdicts-2026-09-08.md`). The ingredient catalog moves to a stated raw, edible-portion basis with a provenance section: Chicken, Chicken Breast and Mutton lose their cooked-meat protein values, and Broken Wheat, Fresh Cream (tracked, 200 ml pack), Mutton Keema and Whole Masoor join the catalog. Paneer jalfrezi becomes a Dry dish. Six dishes point at the product their recipe needs (chicken breast, mutton mince, broken wheat, whole masoor); fifteen ingredient rows are added where a recipe already used olive oil, vinegar or cream without a row; butter is quantified in recipe prose on nine dishes; nine pulse dishes gain the soak-overnight prePrep; twenty-nine recipe steps now use the ingredient they list or state the missing boil, oven setting, stock or coating amount. Vegetable daliya leaves the special-sourcing report. HP tags, active flags, dish IDs, rules and app code are untouched. (#TBD)
+
+Why: the buy list and the derived macros should describe what the household actually buys and cooks; the raw-basis convention and the provenance section make the next catalog row auditable instead of a guess.
+
+Updated: `data/ingredients.md` top prose (grouping calls, the new basis and provenance section) is changed in this PR; `ADDING-DISHES.md` §5 should point new catalog rows at that section (docs pass); no canonical `docs/` section is stale.
+
 ## 2026-09-08  High-confidence dish audit corrections
 
 Correct 51 high-confidence finding groups across 106 dishes and the ingredient catalog, with recipe quantities, shopping inputs, product names and sourced profiles. Partial grocery-derived nutrition cannot produce a Healthy classification; Explore displays "Healthy (under review)". A self-contained handoff preserves all 59 medium-confidence findings and all 270 post-fix recipe snapshots for review. (#275)
