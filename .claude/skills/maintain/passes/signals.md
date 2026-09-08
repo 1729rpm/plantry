@@ -39,7 +39,7 @@ Reactive signals, the window `{{WINDOW_FROM}}` to `{{DATE}}`:
 - When `{{FIXTURE}}` is `none`: the production Convex deployment, `disciplined-chameleon-263`,
   read-only. Queued manual changes come from
   `npx convex run --prod queries/manualChanges:listQueuedManualChanges`. Queued dislikes come from
-  the `dishDislikes` table (`queued` status). Open incidents come from
+  `npx convex run --prod queries/dishDislikes:listQueuedDislikes`. Open incidents come from
   `npx convex run --prod queries/incidents:listIncidents`. The dev deployment,
   `lovely-curlew-631`, is for live coding only; never source signal input from it. Narrow to the
   window client-side after the fetch.

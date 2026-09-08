@@ -50,7 +50,11 @@ When the monitor is due (see below), also:
 - `npm run gate <path to the export>`, which prints each tracked family's served rate beside its
   record rate with the row count it rests on, the Saturday treat pool's size, and the per-role
   exhausted-pool fills.
-- The `manualChanges` swap rows covering the same weeks, for the two swap measures.
+- The `manualChanges` swap rows covering the same weeks, for the two swap measures:
+  `npx convex run --prod queries/manualChanges:listManualChangesByWeek '{"fromWeekStart":"<Monday>","toWeekStart":"<Monday>"}'`,
+  the first and last Monday of the eight-week window, inclusive on both ends. The query returns rows
+  of every status, so the weeks a past signals pass already consumed still count; filter to
+  `changeKind: "swap"` after the fetch.
 - The previous monitor's table, from the last sitting's artifact or its PR body, for the
   two-consecutive-monitors test.
 
