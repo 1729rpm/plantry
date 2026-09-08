@@ -22,6 +22,7 @@ import type * as lib_record from "../lib/record.js";
 import type * as manualChangesMutations from "../manualChangesMutations.js";
 import type * as promoteCustomPick from "../promoteCustomPick.js";
 import type * as queries_activity from "../queries/activity.js";
+import type * as queries_dishDislikes from "../queries/dishDislikes.js";
 import type * as queries_favorites from "../queries/favorites.js";
 import type * as queries_incidents from "../queries/incidents.js";
 import type * as queries_manualChanges from "../queries/manualChanges.js";
@@ -56,6 +57,7 @@ declare const fullApi: ApiFromModules<{
   manualChangesMutations: typeof manualChangesMutations;
   promoteCustomPick: typeof promoteCustomPick;
   "queries/activity": typeof queries_activity;
+  "queries/dishDislikes": typeof queries_dishDislikes;
   "queries/favorites": typeof queries_favorites;
   "queries/incidents": typeof queries_incidents;
   "queries/manualChanges": typeof queries_manualChanges;
