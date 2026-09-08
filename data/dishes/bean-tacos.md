@@ -12,6 +12,7 @@ prepMinutes: 25
 seasons: All
 cuisine: Mexican
 complexity: Easy
+prePrep: Soak the kidney beans overnight and boil till tender; the listed weight is dry
 photo: bean-tacos.jpg
 ---
 

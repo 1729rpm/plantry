@@ -13,6 +13,7 @@ seasons: All
 cuisine: Mediterranean
 complexity: Easy
 skill: Steam the couscous loose and fluff it so it does not clump
+prePrep: Soak the chickpeas overnight and boil till tender; the listed weight is dry
 photo: mediterranean-couscous-bowl.jpg
 ---
 

@@ -30,7 +30,7 @@ Whole-wheat parathas stuffed with spiced chicken keema.
 ## Recipe
 
 1. For four stuffed parathas (two portions), knead 160 g whole-wheat atta with 95 ml water, adding up to 15 ml more as needed; cool the cooked keema before filling.
-2. Cook the keema with onion, ginger, green chilli and spices until dry, then cool.
+2. Cook the keema with onion, ginger, green chilli and spices until dry, then cool and stir in the chopped coriander.
 3. Roll a ball of atta dough, place the filling, seal and roll out gently.
 4. Cook on a hot tawa with ghee until golden on both sides.
 5. Serve hot with curd.

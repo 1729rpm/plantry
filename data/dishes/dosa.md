@@ -17,7 +17,7 @@ prePrep: Soak the rice and urad dal overnight, grind to a batter and leave it to
 photo: dosa.jpg
 ---
 
-Thin crisp South Indian crepe of fermented rice and lentil batter, served with sambar.
+Thin crisp South Indian crepe of fermented rice and lentil batter.
 
 ## Ingredients
 

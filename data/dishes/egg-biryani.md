@@ -36,6 +36,6 @@ A fragrant layered rice biryani with masala-coated boiled eggs.
 1. For two portions, use 150 g dry basmati rice; soak and drain it, then parboil in 1 litre boiling water and drain before layering as directed.
 2. Boil the eggs, halve them and fry lightly with turmeric and chilli.
 3. Parboil basmati rice with whole spices and drain at three-quarters done.
-4. Brown the onions, add ginger garlic, tomato, mint and biryani masala.
+4. Brown the onions, add ginger garlic, green chilli, tomato, mint and biryani masala.
 5. Layer the masala, eggs and rice, scatter mint and coriander, and cook on dum.
 6. Rest covered, then fold gently before serving.

@@ -32,8 +32,8 @@ Chicken and potatoes roasted together in lemon, garlic and oregano.
 
 ## Recipe
 
-1. Toss the chicken and potato wedges with olive oil, garlic, lemon juice and oregano.
+1. Toss the curry-cut chicken and potato wedges with olive oil, garlic, lemon juice and oregano.
 2. Spread in a roasting tray with sliced onion.
 3. Pour in a little water so the potatoes stay moist.
-4. Roast, turning once, till the chicken is done and the potatoes are golden.
+4. Roast at 200 C for 45 to 50 minutes, turning once, till the chicken is done and the potatoes are golden.
 5. Rest briefly and serve with the pan juices.
