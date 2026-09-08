@@ -203,7 +203,9 @@ itself: a pass that can both measure a drift and fix it will fix it, and the fix
 gate's pool-health lines, which are per-occasion and so live in `npm run gate` rather than in any
 report over the library (`docs/engine.md` §16.3). When the monitor is due, also one production record
 export (`npx convex run --prod recordExport:exportRecord '{}'`, a read, with Rajat's per-action
-approval), `npm run gate` run against it, and the `manualChanges` swap rows covering the same weeks.
+approval), `npm run gate` run against it, and the `manualChanges` swap rows covering the same weeks,
+read status-blind through `queries/manualChanges:listManualChangesByWeek` so the weeks a past signals
+pass already consumed still count.
 
 **What it does.** Reads the reports and the gate lines for thin pools, coverage gaps, tag drift, and
 newly flagged specialty sourcing, and writes a proactive proposal with a diagnosis card for each.
