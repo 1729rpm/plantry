@@ -32,8 +32,9 @@ Mixed vegetables in a light white sauce baked under a cheese crust.
 
 ## Recipe
 
-1. Parboil the broccoli, cauliflower, carrot and beans till just tender.
-2. Make a light white sauce with milk, a little flour, garlic and pepper.
-3. Fold the vegetables through the sauce and tip into a baking dish.
-4. Scatter grated cheese over the top.
-5. Bake till bubbling and golden.
+1. For the white sauce, use 10 g plain flour with the listed 150 ml milk: whisk the flour into 30 ml cold milk first, then add it to the remaining hot milk and simmer, stirring, until thickened.
+2. Parboil the broccoli, cauliflower, carrot and beans till just tender.
+3. Make a light white sauce with milk, a little flour, garlic and pepper.
+4. Fold the vegetables through the sauce and tip into a baking dish.
+5. Scatter grated cheese over the top.
+6. Bake till bubbling and golden.

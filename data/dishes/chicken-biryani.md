@@ -36,8 +36,9 @@ Layered basmati rice and marinated chicken slow-cooked on dum with fried onions.
 
 ## Recipe
 
-1. Marinate the chicken in curd, ginger garlic paste, chilli and biryani spices.
-2. Fry sliced onion till golden, then cook the marinated chicken with tomato till tender.
-3. Parboil soaked basmati rice with whole spices and salt, drain at 70 percent done.
-4. Layer rice over the chicken with mint, coriander and fried onions.
-5. Cover tight and cook on dum on low heat 20 minutes, then rest before fluffing.
+1. For two portions, use 150 g dry basmati rice; soak and drain it, then parboil in 1 litre boiling water and drain before layering as directed.
+2. Marinate the chicken in curd, ginger garlic paste, chilli and biryani spices.
+3. Fry sliced onion till golden, then cook the marinated chicken with tomato till tender.
+4. Parboil soaked basmati rice with whole spices and salt, drain at 70 percent done.
+5. Layer rice over the chicken with mint, coriander and fried onions.
+6. Cover tight and cook on dum on low heat 20 minutes, then rest before fluffing.

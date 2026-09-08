@@ -25,6 +25,7 @@ Fluffy omelette loaded with onion, tomato and capsicum.
 | Onion | 40 | g |
 | Tomato | 40 | g |
 | Capsicum | 40 | g |
+| Green Chilli | 1 | pcs |
 
 ## Recipe
 

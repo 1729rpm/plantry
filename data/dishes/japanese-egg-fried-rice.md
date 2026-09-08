@@ -31,8 +31,9 @@ A light egg fried rice seasoned with soy, ginger and spring onion.
 
 ## Recipe
 
-1. Scramble the eggs softly in hot oil and set aside.
-2. Fry the ginger, carrot and peas briefly.
-3. Add cold rice and toss on high heat till hot through.
-4. Season with soy sauce and fold the egg back in.
-5. Finish with plenty of spring onion and serve.
+1. For two portions, use 360 g cooked rice from 120 g dry rice. If starting from dry rice, rinse, cook covered with 240 ml water until absorbed, then rest 10 minutes; cool before any frying or cold assembly.
+2. Scramble the eggs softly in hot oil and set aside.
+3. Fry the ginger, carrot and peas briefly.
+4. Add cold rice and toss on high heat till hot through.
+5. Season with soy sauce and fold the egg back in.
+6. Finish with plenty of spring onion and serve.

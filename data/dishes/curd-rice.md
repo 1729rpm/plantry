@@ -28,7 +28,8 @@ Cooling South Indian curd rice with a mustard and curry-leaf tempering.
 
 ## Recipe
 
-1. Mash cooked rice while warm and let it cool slightly.
-2. Mix in the curd, grated ginger and salt to a soft consistency.
-3. Temper mustard seeds, curry leaves and green chilli in oil.
-4. Pour the tempering over and stir through.
+1. For two portions, use 360 g cooked rice from 120 g dry rice. If starting from dry rice, rinse, cook covered with 240 ml water until absorbed, then rest 10 minutes; cool before any frying or cold assembly.
+2. Mash cooked rice while warm and let it cool slightly.
+3. Mix in the curd, grated ginger and salt to a soft consistency.
+4. Temper mustard seeds, curry leaves and green chilli in oil.
+5. Pour the tempering over and stir through.

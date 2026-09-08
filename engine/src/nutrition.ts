@@ -3,8 +3,8 @@ import type { CatalogIngredient, Dish, Ingredient } from "./data/schemas.js";
 /**
  * Nutrition derivation (docs/engine.md §11 Nutrition).
  *
- * Per-dish macros are DERIVED, never hand-stored. There is no per-dish protein
- * or carb field and deliberately no override (Principle 8): the single source of
+ * Per-dish macros are DERIVED, never hand-stored. Grocery totals are partial.
+ * There is no per-dish protein or carb field and deliberately no override (Principle 8): the single source of
  * truth is each ingredient row's quantity times the catalog's per-100g macros.
  * Correcting one ingredient's macros corrects every dish that uses it.
  *
@@ -12,8 +12,8 @@ import type { CatalogIngredient, Dish, Ingredient } from "./data/schemas.js";
  * per person, so the dish total is divided by two.
  *
  * Calories per person follow the Atwater convention (4 kcal/g protein and carbs,
- * 9 kcal/g fat) and a derived `healthy` boolean keys off protein's share of
- * calories and fibre per person (see engine.md §11 for the thresholds).
+ * 9 kcal/g fat). A `healthy` classification requires complete recipe inputs
+ * as well as the protein and fibre thresholds (docs/engine.md §12).
  *
  * Blank catalog macros read as zero (spices and aromatics may stay blank
  * forever; only macro-relevant rows carry values). A `pcs`-unit ingredient converts
@@ -39,17 +39,18 @@ export interface DishMacros {
   caloriesPerPerson: number;
   /**
    * Protein-to-carb ratio (protein / carbs). `null` when carbs are zero (the
-   * ratio is undefined); callers decide how to present "no carbs".
+   * ratio is undefined); on partial inputs this never establishes "no carbs".
    */
   proteinToCarbRatio: number | null;
   /**
-   * Whether the dish clears the Healthy bar (engine.md §11): at least
+   * Null for partial inputs. With complete inputs, the dish needs at least
    * `HEALTHY_PROTEIN_CALORIE_FRACTION` of its calories from protein AND at least
    * `HEALTHY_FIBER_PER_PERSON` grams of fibre per person. Computed only where
-   * macro data exists: a dish with zero derived calories (no macro data) is
-   * never healthy, so the flag never produces a false positive.
+   * complete recipe data exists; partial data never produces a health claim.
    */
-  healthy: boolean;
+  healthy: boolean | null;
+  /** Partial grocery inputs must not be presented as complete recipe nutrition. */
+  nutritionBasis: "partial" | "complete-recipe";
 }
 
 /** The two people the household cooks for; macros display per person. */
@@ -96,9 +97,30 @@ function rowGrams(row: Ingredient, catalogEntry: CatalogIngredient | undefined):
 export function deriveDishMacros(
   ingredientRows: Ingredient[],
   catalog: CatalogIngredient[],
+  options: { completeRecipe?: boolean } = {},
 ): DishMacros {
   const byName = new Map<string, CatalogIngredient>();
   for (const entry of catalog) byName.set(entry.ingredient, entry);
+
+  // An explicit complete-recipe assertion is required: the caller must supply
+  // quantified pantry inputs too, using matching raw/cooked/edible food forms.
+  // Missing catalog values or unweighable rows still invalidate that assertion.
+  const completeRecipe =
+    options.completeRecipe === true &&
+    ingredientRows.length > 0 &&
+    ingredientRows.every((row) => {
+      const entry = byName.get(row.ingredient);
+      return (
+        entry !== undefined &&
+        row.unit === entry.unit &&
+        Number.isFinite(row.quantity) &&
+        row.quantity > 0 &&
+        (row.unit !== "pcs" || (entry.gramsPerPiece ?? 0) > 0) &&
+        [entry.proteinPer100g, entry.carbsPer100g, entry.fatPer100g, entry.fiberPer100g].every(
+          (value) => value !== undefined && Number.isFinite(value) && value >= 0,
+        )
+      );
+    });
 
   let proteinTotal = 0;
   let carbsTotal = 0;
@@ -135,7 +157,8 @@ export function deriveDishMacros(
     fiberPerPerson,
     caloriesPerPerson,
     proteinToCarbRatio: proteinToCarbRatio(proteinPerPerson, carbsPerPerson),
-    healthy: isHealthy(proteinPerPerson, caloriesPerPerson, fiberPerPerson),
+    healthy: completeRecipe ? isHealthy(proteinPerPerson, caloriesPerPerson, fiberPerPerson) : null,
+    nutritionBasis: completeRecipe ? "complete-recipe" : "partial",
   };
 }
 

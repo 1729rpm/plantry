@@ -26,6 +26,8 @@ Maharashtrian moth or moong sprouts simmered in a light onion tomato masala.
 | Tomato | 60 | g |
 | Green Chilli | 2 | pcs |
 | Coriander Leaf | 10 | g |
+| Ginger | 8 | g |
+| Garlic | 8 | g |
 
 ## Recipe
 

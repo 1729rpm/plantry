@@ -49,9 +49,9 @@ describe("per-dish file round-trip", () => {
   });
 
   it("parses a dish with zero ingredient rows", () => {
-    const original = readFileSync(resolve(dishesDir, "toast.md"), "utf8");
-    const parsed = parseDishFile("toast", original);
-    expect(parsed.dish.id).toBe(109);
+    const original = readFileSync(resolve(dishesDir, "steamed-rice.md"), "utf8");
+    const parsed = parseDishFile("steamed-rice", original);
+    expect(parsed.dish.id).toBe(272);
     expect(parsed.ingredients).toEqual([]);
     expect(serializeDishFile(parsed)).toBe(original);
   });

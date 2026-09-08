@@ -30,8 +30,9 @@ Whole-wheat paratha stuffed with spiced grated paneer.
 
 ## Recipe
 
-1. Grate the paneer and mix with finely chopped onion, chilli, ginger, coriander and salt.
-2. Roll out a wheat-dough disc, place the filling and seal into a ball.
-3. Dust and roll out gently into a paratha without tearing.
-4. Cook on a hot tawa with ghee, turning, till golden on both sides.
-5. Serve hot with curd or pickle.
+1. For four stuffed parathas (two portions), knead 160 g whole-wheat atta with 95 ml water, adding up to 15 ml more as needed; use the listed paneer filling.
+2. Grate the paneer and mix with finely chopped onion, chilli, ginger, coriander and salt.
+3. Roll out a wheat-dough disc, place the filling and seal into a ball.
+4. Dust and roll out gently into a paratha without tearing.
+5. Cook on a hot tawa with ghee, turning, till golden on both sides.
+6. Serve hot with curd or pickle.

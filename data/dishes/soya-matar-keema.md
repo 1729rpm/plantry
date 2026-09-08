@@ -25,6 +25,8 @@ Minced soya and green peas cooked keema style in onion tomato masala.
 | Green Pea | 80 | g |
 | Onion | 80 | g |
 | Tomato | 80 | g |
+| Ginger | 10 | g |
+| Garlic | 10 | g |
 
 ## Recipe
 

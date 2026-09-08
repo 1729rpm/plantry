@@ -26,6 +26,9 @@ Mild Kerala style mixed vegetables simmered in coconut milk.
 | French Bean | 60 | g |
 | Green Pea | 40 | g |
 | Coconut Milk | 100 | ml |
+| Ginger | 10 | g |
+| Green Chilli | 1 | pcs |
+| Curry Leaf | 5 | g |
 
 ## Recipe
 

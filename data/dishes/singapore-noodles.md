@@ -29,6 +29,7 @@ Thin rice noodles tossed with egg, vegetables and a warm curry-powder seasoning.
 | Cabbage | 60 | g |
 | Spring Onion | 40 | g |
 | Garlic | 8 | g |
+| Soy Sauce | 20 | ml |
 
 ## Recipe
 

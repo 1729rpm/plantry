@@ -32,6 +32,7 @@ Spiced mashed vegetables served with butter-toasted pav.
 | Garlic | 10 | g |
 | Coriander Leaf | 10 | g |
 | Pav Bread | 4 | pcs |
+| Lemon | 1 | pcs |
 
 ## Recipe
 

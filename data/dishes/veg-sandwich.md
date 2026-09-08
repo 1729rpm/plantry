@@ -27,6 +27,8 @@ Layered vegetable sandwich with cucumber, tomato and a green chutney spread.
 | Onion | 30 | g |
 | Lettuce | 20 | g |
 | Coriander Leaf | 10 | g |
+| Green Chilli | 1 | pcs |
+| Lemon | 0.5 | pcs |
 
 ## Recipe
 

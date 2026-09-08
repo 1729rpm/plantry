@@ -28,7 +28,8 @@ Lightly spiced one pot rice with boiled eggs and peas.
 
 ## Recipe
 
-1. Boil the eggs, peel and halve them.
-2. Fry whole spices and onion, add tomato and peas with mild spices.
-3. Add soaked rice and water and cook covered till fluffy.
-4. Fold the egg halves through gently before serving.
+1. For two portions, rinse and soak 150 g dry basmati rice for 15 minutes, then drain. Use 300 ml fresh water for the covered absorption-cooking step; rest 10 minutes before fluffing.
+2. Boil the eggs, peel and halve them.
+3. Fry whole spices and onion, add tomato and peas with mild spices.
+4. Add soaked rice and water and cook covered till fluffy.
+5. Fold the egg halves through gently before serving.

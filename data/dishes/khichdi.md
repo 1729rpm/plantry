@@ -30,8 +30,9 @@ Soft one-pot rice and moong dal cooked with ginger, a light comfort meal.
 
 ## Recipe
 
-1. Rinse rice and moong dal together and drain.
-2. Temper cumin, ginger and green chilli in ghee, add tomato.
-3. Add the rice and dal with turmeric, salt and plenty of water.
-4. Pressure cook until soft and porridge-like.
-5. Finish with coriander and a squeeze of lemon.
+1. For two portions, rinse 100 g dry rice with the listed dry moong dal; use 650 ml water for a soft khichdi, adding hot water at the end only to loosen it.
+2. Rinse rice and moong dal together and drain.
+3. Temper cumin, ginger and green chilli in ghee, add tomato.
+4. Add the rice and dal with turmeric, salt and plenty of water.
+5. Pressure cook until soft and porridge-like.
+6. Finish with coriander and a squeeze of lemon.

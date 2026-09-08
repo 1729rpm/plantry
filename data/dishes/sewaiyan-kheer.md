@@ -15,7 +15,7 @@ complexity: Easy
 photo: sewaiyan-kheer.jpg
 ---
 
-Roasted vermicelli simmered in sweetened milk with cashews and raisins.
+Thin rice vermicelli simmered in milk with cardamom, cashews and raisins.
 
 ## Ingredients
 
@@ -24,11 +24,13 @@ Roasted vermicelli simmered in sweetened milk with cashews and raisins.
 | Milk | 500 | ml |
 | Cashew | 20 | g |
 | Raisin | 15 | g |
+| Rice Vermicelli | 60 | g |
 
 ## Recipe
 
-1. Roast the vermicelli in a little ghee till golden, then fry the cashews and raisins.
-2. Bring the milk to a boil and add the roasted vermicelli.
-3. Simmer, stirring, till the vermicelli softens and the milk thickens.
-4. Sweeten with sugar and flavour with cardamom.
-5. Stir in the cashews and raisins and serve warm or chilled.
+1. For two dessert portions, use the listed 60 g thin rice vermicelli and 500 ml milk with 30 g sugar and 10 g ghee.
+2. Roast the thin rice vermicelli in a little ghee till golden, then fry the cashews and raisins.
+3. Bring the milk to a boil and add the roasted thin rice vermicelli.
+4. Simmer, stirring, till the thin rice vermicelli softens and the milk thickens.
+5. Sweeten with sugar and flavour with cardamom.
+6. Stir in the cashews and raisins and serve warm or chilled.

@@ -30,6 +30,7 @@ Cold rice noodles tossed with crisp vegetables, herbs and a tangy lime dressing.
 | Mint Leaf | 10 | g |
 | Coriander Leaf | 10 | g |
 | Lemon | 1 | pcs |
+| Soy Sauce | 15 | ml |
 
 ## Recipe
 

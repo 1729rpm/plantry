@@ -29,11 +29,13 @@ A loaded bowl of spiced beans, rice, corn and fresh salsa.
 | Capsicum | 60 | g |
 | Lemon | 1 | pcs |
 | Coriander Leaf | 10 | g |
+| Garlic | 8 | g |
 
 ## Recipe
 
-1. Warm the cooked beans with cumin, garlic and a pinch of chilli till saucy.
-2. Make a quick salsa with chopped tomato, onion, coriander and lemon.
-3. Saute the capsicum and corn till lightly charred.
-4. Build bowls with rice, beans, corn and salsa.
-5. Squeeze over lemon and serve.
+1. For two portions, use 360 g cooked rice from 120 g dry rice. If starting from dry rice, rinse, cook covered with 240 ml water until absorbed, then rest 10 minutes; cool before any frying or cold assembly.
+2. Warm the cooked beans with cumin, garlic and a pinch of chilli till saucy.
+3. Make a quick salsa with chopped tomato, onion, coriander and lemon.
+4. Saute the capsicum and corn till lightly charred.
+5. Build bowls with rice, beans, corn and salsa.
+6. Squeeze over lemon and serve.

@@ -30,11 +30,13 @@ Cold rice stir-fried with chicken, egg and vegetables Indo-Chinese style.
 | Capsicum | 60 | g |
 | Spring Onion | 40 | g |
 | Garlic | 10 | g |
+| Soy Sauce | 20 | ml |
 
 ## Recipe
 
-1. Dice the chicken small and stir-fry till cooked through, then set aside.
-2. Scramble the eggs in the same wok and push to the side.
-3. Stir-fry garlic with diced carrot, beans and capsicum on high heat.
-4. Add cold cooked rice, soy sauce and pepper and toss till hot.
-5. Return the chicken and egg, fold through spring onion and serve.
+1. For two portions, use 360 g cooked rice from 120 g dry rice. If starting from dry rice, rinse, cook covered with 240 ml water until absorbed, then rest 10 minutes; cool before any frying or cold assembly.
+2. Dice the chicken small and stir-fry till cooked through, then set aside.
+3. Scramble the eggs in the same wok and push to the side.
+4. Stir-fry garlic with diced carrot, beans and capsicum on high heat.
+5. Add cold cooked rice, soy sauce and pepper and toss till hot.
+6. Return the chicken and egg, fold through spring onion and serve.

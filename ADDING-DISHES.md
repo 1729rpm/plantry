@@ -81,7 +81,8 @@ The `## Ingredients` table is parsed into rows; **every `Ingredient` value must 
 - **Reuse, never duplicate.** One row per ingredient. Mango and Pineapple were reused, not re-added, in the fruit batch (PR #104).
 - **New catalog row needs:** `Group` (Proteins and Dairy | Fruit | Vegetables | Aromatics and Herbs | Pantry), `Unit` (g/ml/pcs), and macros (`Protein/Carbs/Fat/Fiber per 100g`) **for macro-relevant groups only** (Proteins and Dairy, Pantry, Vegetables). Aromatics/Herbs may stay blank. There is no `Other` catch-all: an ingredient left without an explicit group falls to Pantry, which renders last on the buy list. `pcs`-unit rows need `Grams per piece`. Set `Special: Yes` if it needs a supermarket/specialty run (it surfaces in the special-sourcing report). Honour the grouping judgment calls documented at the top of `data/ingredients.md` (Onion/Tomato/Lemon are Aromatics, Capsicum/Cucumber are Vegetables, Coconut Milk/Sprout are Pantry, fruit is its own Fruit group).
 - **Untracked staples are never itemized.** Water, salt, common spices, base cooking oil, plain rice-as-water do not get ingredient rows; they live in recipe prose. A dish with no tracked ingredients ships an **empty but present** `## Ingredients` table (Steamed rice, PR #100).
-- **Macros are derived, never hand-stored.** There is no per-dish protein/carb field. Fix a catalog row's macros and every dish using it is corrected (`docs/engine.md` §12).
+- **Pantry quantities still belong in the recipe.** Specify two-person rice, flour, sugar, fat and liquid amounts in recipe steps even when they are omitted from groceries.
+- **Macros are derived, never hand-stored.** There is no per-dish protein/carb field. Correcting a catalog row updates the partial estimates of every dish using it (`docs/engine.md` §12). Grocery coverage does not establish complete recipe nutrition; pantry omissions must not generate a Healthy classification.
 
 ## 4. Description and recipe
 

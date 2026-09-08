@@ -24,10 +24,13 @@ Fragrant one pot rice cooked with chickpeas and whole spices.
 | Chickpea | 120 | g |
 | Onion | 80 | g |
 | Tomato | 50 | g |
+| Ginger | 10 | g |
+| Garlic | 10 | g |
 
 ## Recipe
 
-1. Soak and boil the chickpeas till tender, or use cooked ones.
-2. Fry whole spices and sliced onion till golden, add ginger garlic and tomato.
-3. Add the chickpeas and soaked rice and toss with salt.
-4. Add measured water and cook covered till the rice is fluffy.
+1. For two portions, rinse and soak 150 g dry basmati rice for 15 minutes, then drain. Use 300 ml fresh water for the covered absorption-cooking step; rest 10 minutes before fluffing.
+2. Soak and boil the chickpeas till tender, or use cooked ones.
+3. Fry whole spices and sliced onion till golden, add ginger garlic and tomato.
+4. Add the chickpeas and soaked rice and toss with salt.
+5. Add measured water and cook covered till the rice is fluffy.

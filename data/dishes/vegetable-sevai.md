@@ -29,6 +29,7 @@ Rice vermicelli tossed with vegetables and a curry-leaf tempering.
 | Green Chilli | 2 | pcs |
 | Curry Leaf | 5 | g |
 | Coriander Leaf | 10 | g |
+| Lemon | 0.5 | pcs |
 
 ## Recipe
 

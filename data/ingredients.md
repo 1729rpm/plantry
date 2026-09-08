@@ -68,6 +68,7 @@ Grouping judgment calls (institutional memory; do not silently re-bucket):
 | Chicken Breast | Proteins and Dairy | g | 250 g | | 31 | 0 | 3.6 | 0 | |
 | Chicken Keema | Proteins and Dairy | g | 500 g | | 17 | 0 | 20 | 0 | |
 | Chickpea | Pantry | g | | | 19 | 61 | 6 | 17 | |
+| Chilli Sauce | Pantry | g | | | 1.5 | 33 | 1.2 | 3.7 | |
 | Coconut Milk | Pantry | ml | | | 2.3 | 6 | 21 | 0 | |
 | Coriander Leaf | Aromatics and Herbs | g | | | | | | | |
 | Cornflour | Pantry | g | | | 0.3 | 91 | 0.1 | 0.9 | |
@@ -106,9 +107,9 @@ Grouping judgment calls (institutional memory; do not silently re-bucket):
 | Noodles | Pantry | g | | | 12 | 71 | 1.4 | 2.4 | |
 | Oats | Pantry | g | | | 13 | 67 | 7 | 10 | |
 | Olive Oil | Pantry | ml | | | 0 | 0 | 100 | 0 | |
-| Onion | Aromatics and Herbs | g | | | | | | | |
-| Papaya | Fruit | g | | | 0.5 | 11 | 0.3 | 1.7 | |
+| Onion | Aromatics and Herbs | g | | | 0.68 | 7.43 | 0 | 2.03 | |
 | Paneer | Proteins and Dairy | g | 200 g | | 18 | 4 | 20 | 0 | |
+| Papaya | Fruit | g | | | 0.5 | 11 | 0.3 | 1.7 | |
 | Parsley | Aromatics and Herbs | g | | | 3 | 6 | 0.8 | 3.3 | Yes |
 | Pasta | Pantry | g | | | 13 | 75 | 1.5 | 3.2 | |
 | Pav Bread | Pantry | pcs | | 40 | 8 | 52 | 3.5 | 2.5 | |
@@ -133,12 +134,16 @@ Grouping judgment calls (institutional memory; do not silently re-bucket):
 | Spring Onion | Aromatics and Herbs | g | | | 1.8 | 7 | 0.2 | 2.6 | |
 | Sprout | Pantry | g | | | 9 | 22 | 0.5 | 6 | |
 | Sweet Corn | Pantry | g | | | 3.4 | 19 | 1.2 | 2.4 | |
+| Sweet Potato Glass Noodles | Pantry | g | | | 0 | 73 | 0 | 1 | Yes |
 | Tahini | Pantry | g | | | 17 | 21 | 54 | 9 | Yes |
+| Thai Green Curry Paste | Pantry | g | | | 1.76 | 17.65 | 0 | 5.88 | Yes |
+| Thai Red Curry Paste | Pantry | g | | | 2.5 | 18.75 | 0 | 6.25 | Yes |
 | Tinda | Vegetables | g | | | 1 | 5 | 0.2 | 1.5 | |
 | Tofu | Proteins and Dairy | g | 200 g | | 12 | 2 | 5 | 0.9 | |
-| Tomato | Aromatics and Herbs | g | | | | | | | |
+| Tomato | Aromatics and Herbs | g | | | 0.68 | 3.38 | 0 | 0.68 | |
 | Toor Dal | Pantry | g | | | 22 | 63 | 1.5 | 15 | |
 | Tortilla | Pantry | pcs | | 45 | 8 | 50 | 7 | 3 | |
 | Urad Dal | Pantry | g | | | 25 | 59 | 1.2 | 18 | |
 | Walnut | Pantry | g | | | 15 | 14 | 65 | 7 | |
+| White Vinegar | Pantry | ml | | | 0 | 0 | 0 | 0 | |
 | Zucchini | Vegetables | g | | | 1.2 | 3 | 0.3 | 1 | |

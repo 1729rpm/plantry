@@ -245,6 +245,9 @@ describe("specialSourcingReport", () => {
         "Gochujang",
         "Pomegranate Molasses",
         "Miso Paste",
+        "Sweet Potato Glass Noodles",
+        "Thai Green Curry Paste",
+        "Thai Red Curry Paste",
       ]),
     );
 
@@ -263,10 +266,12 @@ describe("specialSourcingReport", () => {
     //   Wheat; Lentil salad -> Parsley (the last two from the activated
     //   easy-to-cook expansion).
     expect(report).toEqual([
+      { dishId: 161, dishName: "Thai green curry chicken", ingredients: ["Thai Green Curry Paste"] },
       { dishId: 174, dishName: "Hummus", ingredients: ["Tahini"] },
       { dishId: 176, dishName: "Tabbouleh", ingredients: ["Bulgur Wheat", "Parsley"] },
       { dishId: 184, dishName: "Muhammara", ingredients: ["Pomegranate Molasses"] },
       { dishId: 192, dishName: "Korean chicken stir fry", ingredients: ["Gochujang"] },
+      { dishId: 207, dishName: "Korean japchae", ingredients: ["Sweet Potato Glass Noodles"] },
       { dishId: 210, dishName: "Japanese miso soup", ingredients: ["Miso Paste"] },
       { dishId: 250, dishName: "Vegetable daliya", ingredients: ["Bulgur Wheat"] },
       { dishId: 267, dishName: "Lentil salad", ingredients: ["Parsley"] },

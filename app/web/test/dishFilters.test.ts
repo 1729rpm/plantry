@@ -175,10 +175,9 @@ describe("dishMatchesPickerFilters — AND across dimensions, OR within meal-tim
     );
   });
 
-  it("the Healthy pill reads the engine-derived flag (live library id)", () => {
-    // id 9 (Mushroom matar) is engine-derived Healthy in the baked library; an
-    // arbitrary fixture id is not, mirroring library.test.ts's Healthy fixture.
-    expect(dishMatchesPickerFilters(dish({ id: 9 }), ["Healthy"])).toBe(true);
+  it("the Healthy pill excludes recipes with incomplete nutrition", () => {
+    // Mushroom matar has partial grocery nutrition, as does the unrecognized fixture.
+    expect(dishMatchesPickerFilters(dish({ id: 9 }), ["Healthy"])).toBe(false);
     expect(dishMatchesPickerFilters(dish({ id: 999999 }), ["Healthy"])).toBe(false);
   });
 });

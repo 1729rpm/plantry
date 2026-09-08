@@ -14,7 +14,7 @@ cuisine: Indian
 complexity: Medium
 skill: Comfortable, browning the onion masala matters
 equipment: Heavy kadhai
-buySpecially: Curry cut chicken, 600g
+buySpecially: Curry cut chicken, 300g
 photo: chicken-masala-gravy.jpg
 ---
 

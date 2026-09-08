@@ -25,7 +25,8 @@ Rustic winter flatbreads of pearl millet, warming and earthy.
 
 ## Recipe
 
-1. Knead pearl millet flour with warm water into a firm but pliable dough.
-2. Pat each ball thin between your palms or on a sheet, dusting with flour.
-3. Cook on a hot tawa, flipping once the base sets.
-4. Finish on a low flame and brush with ghee while warm.
+1. For four small bajra rotis (two portions), mix 160 g pearl-millet flour with 120 ml warm water, adding up to 20 ml more to make a pliable dough.
+2. Knead pearl millet flour with warm water into a firm but pliable dough.
+3. Pat each ball thin between your palms or on a sheet, dusting with flour.
+4. Cook on a hot tawa, flipping once the base sets.
+5. Finish on a low flame and brush with ghee while warm.

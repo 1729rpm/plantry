@@ -24,10 +24,12 @@ Thick hung-curd dessert sweetened and flavoured with cardamom and saffron.
 |------------|----------|------|
 | Curd | 500 | g |
 | Cashew | 15 | g |
+| Milk | 15 | ml |
 
 ## Recipe
 
-1. Hang the curd in muslin until it firms into thick chakka.
-2. Whisk the hung curd smooth with powdered sugar.
-3. Stir in cardamom and saffron soaked in a little warm milk.
-4. Chill and serve topped with slivered cashews.
+1. For this two-person batch, measure 50 g powdered sugar; use the listed 15 ml milk to soak the saffron before adding it to the curd.
+2. Hang the curd in muslin until it firms into thick chakka.
+3. Whisk the hung curd smooth with powdered sugar.
+4. Stir in cardamom and saffron soaked in a little warm milk.
+5. Chill and serve topped with slivered cashews.

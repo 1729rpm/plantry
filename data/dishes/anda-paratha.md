@@ -29,7 +29,8 @@ Wheat paratha cooked with a spiced egg layer sealed inside, a filling breakfast.
 
 ## Recipe
 
-1. Knead a soft wheat dough and roll out a paratha, half cooking it on the tawa.
-2. Beat the eggs with chopped onion, green chilli, coriander and salt.
-3. Pour the egg onto the tawa and lay the paratha over it to bond.
-4. Flip and cook both sides with a little ghee till golden and the egg is set.
+1. For two large egg parathas (two portions), use 120 g whole-wheat atta and 75 ml water, adding up to 10 ml more for a soft dough.
+2. Knead a soft wheat dough and roll out a paratha, half cooking it on the tawa.
+3. Beat the eggs with chopped onion, green chilli, coriander and salt.
+4. Pour the egg onto the tawa and lay the paratha over it to bond.
+5. Flip and cook both sides with a little ghee till golden and the egg is set.

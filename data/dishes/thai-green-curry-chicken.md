@@ -32,6 +32,8 @@ Boneless chicken and vegetables in a fragrant Thai green coconut curry.
 | Garlic | 8 | g |
 | Ginger | 8 | g |
 | Basil | 8 | g |
+| Thai Green Curry Paste | 25 | g |
+| Soy Sauce | 10 | ml |
 
 ## Recipe
 
@@ -39,4 +41,4 @@ Boneless chicken and vegetables in a fragrant Thai green coconut curry.
 2. Add the chicken and seal it on all sides.
 3. Pour in the rest of the coconut milk and simmer till the chicken is cooked through.
 4. Add the beans and capsicum and cook till just tender.
-5. Finish with torn basil and a splash of fish sauce or soy sauce, and serve with rice.
+5. Finish with torn basil and a splash of soy sauce, and serve with rice.

@@ -30,11 +30,15 @@ Fried vegetable balls simmered in a garlicky Indo-Chinese brown sauce.
 | Garlic | 12 | g |
 | Ginger | 10 | g |
 | Cornflour | 40 | g |
+| Soy Sauce | 15 | ml |
+| Chilli Sauce | 15 | g |
+| White Vinegar | 10 | ml |
 
 ## Recipe
 
-1. Mix finely grated cabbage and carrot with cornflour and seasoning, shape into small balls.
-2. Deep fry the balls till golden and firm, then drain.
-3. Stir-fry garlic, ginger and capsicum, then add soy sauce, vinegar and chilli sauce.
-4. Thicken with a cornflour slurry into a glossy brown gravy.
-5. Add the fried balls just before serving, scatter spring onion, and serve with rice.
+1. Use the listed chilli sauce as a ready-made hot red chilli sauce (sriracha style), weighed in grams.
+2. Mix finely grated cabbage and carrot with cornflour and seasoning, shape into small balls.
+3. Deep fry the balls till golden and firm, then drain.
+4. Stir-fry garlic, ginger and capsicum, then add soy sauce, white vinegar and chilli sauce.
+5. Thicken with a cornflour slurry into a glossy brown gravy.
+6. Add the fried balls just before serving, scatter spring onion, and serve with rice.

@@ -966,3 +966,10 @@ Worktrees: `../plantry-stream-A` (`feat/A-data-history`), `../plantry-stream-B` 
 **Filed:** `chore/maintain-queries` (two queries, one additive index) spawned as an engineer stream after the sitting closed; #272 merges before it (H24).
 **Reversibility:** high; every call is a procedure reading and the two ledgers record it. **Right-size:** no spec change beyond one SKILL.md step and one brief line each in hygiene and new-stream.
 
+
+
+## 2026-09-08: Authorized dish audit corrections
+
+For the high-confidence audit fixes, keep the established Chicken 300 g recipe portions and align their conflicting purchase notes; keep total dry Panchmel dal at 130 g while dividing it among five lentils; rename ID 188 to Kidney bean quesadilla to preserve its existing ingredient choice; make the rice-vermicelli sevai variation explicit; use cornflour and pantry vanilla for the fruit custard and specify banana/papaya as its default fruit. Newly supplied amounts are two-person recipe defaults and are recorded in the fix report. Pantry rice/flour/sugar amounts remain recipe prose under the existing grocery policy.
+
+For H51, adopt the audit's conservative correction: label grocery-derived nutrition partial and return an unknown Healthy result instead of pretending excluded pantry inputs have no nutritional effect. The Healthy filter remains visible as under review in Explore and unavailable in pickers. Full recipe-input modeling and the medium-confidence raw/cooked/product choices remain separate review work. Existing structural HP tags remain unchanged.

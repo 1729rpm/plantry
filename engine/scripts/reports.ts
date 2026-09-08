@@ -42,6 +42,11 @@ export function runReports(options: ReportsOptions): string {
 
   const lines: string[] = [];
 
+  lines.push(
+    "Nutrition basis: partial tracked-ingredient totals; pantry inputs are omitted. Not complete recipe nutrition or a health classification.",
+  );
+  lines.push("");
+
   // --- Coverage report ----------------------------------------------------
   const cov = coverageReport(dishes, catalog);
   lines.push("=== Coverage report (enrichment + macros) ===");
@@ -69,7 +74,7 @@ export function runReports(options: ReportsOptions): string {
     `  fibre:         ${cov.macroRelevantWithFiber}/${cov.macroRelevantCount} (${pct(cov.macroRelevantWithFiber, cov.macroRelevantCount)})`,
   );
   lines.push(
-    "  (Aromatics, herbs and the Other group may stay blank; food-group rows carry macros.)",
+    "  (Some aromatic/herb rows remain blank; catalog coverage does not establish full recipe coverage.)",
   );
   lines.push("");
 

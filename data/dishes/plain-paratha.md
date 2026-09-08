@@ -24,6 +24,7 @@ Flaky layered wheat paratha griddled with ghee.
 
 ## Recipe
 
-1. Knead a soft wheat dough with a little oil and salt, rest 10 minutes.
-2. Roll out a ball, smear with ghee, fold into layers and roll again.
-3. Griddle on a hot tawa, brushing ghee, until golden and flaky on both sides.
+1. For four parathas (two portions), use 160 g whole-wheat atta and 95 ml water, adding up to 15 ml more for a soft dough.
+2. Knead a soft wheat dough with a little oil and salt, rest 10 minutes.
+3. Roll out a ball, smear with ghee, fold into layers and roll again.
+4. Griddle on a hot tawa, brushing ghee, until golden and flaky on both sides.

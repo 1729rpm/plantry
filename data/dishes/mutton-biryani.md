@@ -36,8 +36,9 @@ Layered basmati rice and marinated mutton slow-cooked on dum with fried onions.
 
 ## Recipe
 
-1. Marinate the mutton in curd, ginger garlic paste, chilli and biryani spices, ideally overnight.
-2. Fry sliced onion till golden, then cook the marinated mutton with tomato till tender.
-3. Parboil soaked basmati rice with whole spices and salt, drain at 70 percent done.
-4. Layer rice over the mutton with mint, coriander and fried onions.
-5. Cover tight and cook on dum on low heat 25 minutes, then rest before fluffing.
+1. For two portions, use 150 g dry basmati rice; soak and drain it, then parboil in 1 litre boiling water and drain before layering as directed.
+2. Marinate the mutton in curd, ginger garlic paste, chilli and biryani spices, ideally overnight.
+3. Fry sliced onion till golden, then cook the marinated mutton with tomato till tender.
+4. Parboil soaked basmati rice with whole spices and salt, drain at 70 percent done.
+5. Layer rice over the mutton with mint, coriander and fried onions.
+6. Cover tight and cook on dum on low heat 25 minutes, then rest before fluffing.

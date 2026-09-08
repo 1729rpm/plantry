@@ -21,6 +21,7 @@ import {
   type ExploreFilterState,
   type MealTimeFilter,
 } from "../lib/dishFilters.js";
+import { HEALTHY_FILTER_AVAILABLE } from "../lib/healthy.js";
 import { Chip, Sheet } from "./primitives.js";
 
 interface ExploreFiltersProps {
@@ -47,12 +48,18 @@ export function ExploreFilters({ state, onChange, pool }: ExploreFiltersProps) {
         <Chip active={state.easy} onClick={() => onChange({ ...state, easy: !state.easy })}>
           Easy to cook
         </Chip>
-        <Chip
-          active={state.healthy}
-          onClick={() => onChange({ ...state, healthy: !state.healthy })}
-        >
-          Healthy
-        </Chip>
+        {HEALTHY_FILTER_AVAILABLE ? (
+          <Chip
+            active={state.healthy}
+            onClick={() => onChange({ ...state, healthy: !state.healthy })}
+          >
+            Healthy
+          </Chip>
+        ) : (
+          <button type="button" className="chip" disabled title="Recipe nutrition is under review">
+            Healthy (under review)
+          </button>
+        )}
         <Chip active={state.cuisines.length > 0} onClick={() => setPanel("cuisines")}>
           Cuisines{state.cuisines.length > 0 ? ` (${state.cuisines.length})` : ""}
           <span className="chip__chevron" aria-hidden="true">

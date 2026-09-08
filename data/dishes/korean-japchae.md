@@ -22,7 +22,7 @@ Glass noodles tossed with stir-fried vegetables in a sweet soy sesame glaze.
 
 | Ingredient | Quantity | Unit |
 |------------|----------|------|
-| Noodles | 180 | g |
+| Sweet Potato Glass Noodles | 180 | g |
 | Carrot | 80 | g |
 | Spinach | 80 | g |
 | Mushroom | 80 | g |
@@ -34,7 +34,7 @@ Glass noodles tossed with stir-fried vegetables in a sweet soy sesame glaze.
 
 ## Recipe
 
-1. Boil the noodles, drain and toss with a little sesame oil.
+1. Boil the dry sweet-potato-starch glass noodles (dangmyeon) according to the packet, drain and toss with a little sesame oil.
 2. Stir-fry the carrot, mushroom, capsicum and spinach separately, keeping each crisp.
 3. Mix soy sauce, sesame oil, garlic and a little sugar into a glaze.
 4. Toss the noodles, vegetables and glaze together over low heat.

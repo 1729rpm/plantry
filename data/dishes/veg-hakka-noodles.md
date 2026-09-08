@@ -28,11 +28,15 @@ Boiled wheat noodles tossed Indo-Chinese style with shredded vegetables.
 | Capsicum | 70 | g |
 | Spring Onion | 40 | g |
 | Garlic | 10 | g |
+| Soy Sauce | 20 | ml |
+| Chilli Sauce | 15 | g |
+| White Vinegar | 10 | ml |
 
 ## Recipe
 
-1. Boil the noodles till just done, drain, rinse and toss with a little oil.
-2. Stir-fry garlic with the shredded cabbage, carrot and capsicum on high heat.
-3. Keep the vegetables crunchy; do not let them soften fully.
-4. Add the noodles with soy sauce, vinegar and a little chilli sauce.
-5. Toss hard till coated, finish with spring onion and serve.
+1. Use the listed chilli sauce as a ready-made hot red chilli sauce (sriracha style), weighed in grams.
+2. Boil the noodles till just done, drain, rinse and toss with a little oil.
+3. Stir-fry garlic with the shredded cabbage, carrot and capsicum on high heat.
+4. Keep the vegetables crunchy; do not let them soften fully.
+5. Add the noodles with soy sauce, white vinegar and a little chilli sauce.
+6. Toss hard till coated, finish with spring onion and serve.

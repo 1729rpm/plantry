@@ -27,8 +27,9 @@ Thin crisp South Indian crepe of fermented rice and lentil batter, served with s
 
 ## Recipe
 
-1. Soak rice and urad dal separately for six hours, then grind each to a smooth batter.
-2. Mix the two with salt and leave covered overnight to ferment and rise.
-3. Thin the batter with water to a pouring consistency.
-4. Pour a ladle onto a hot greased tawa and spread it outward into a thin round.
-5. Drizzle oil at the edges and cook until the underside is golden and crisp, then fold and serve.
+1. For two portions (about six small dosas), use 180 g dry rice with the listed 60 g dry urad dal; start grinding with 180 ml fresh water and add up to 120 ml more gradually to reach a pouring batter.
+2. Soak rice and urad dal separately for six hours, then grind each to a smooth batter.
+3. Mix the two with salt and leave covered overnight to ferment and rise.
+4. Thin the batter with water to a pouring consistency.
+5. Pour a ladle onto a hot greased tawa and spread it outward into a thin round.
+6. Drizzle oil at the edges and cook until the underside is golden and crisp, then fold and serve.

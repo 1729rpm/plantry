@@ -28,6 +28,8 @@ Smoky roasted aubergine mashed into a spiced onion and tomato bhuna.
 | Green Pea | 50 | g |
 | Green Chilli | 2 | pcs |
 | Coriander Leaf | 10 | g |
+| Ginger | 10 | g |
+| Garlic | 10 | g |
 
 ## Recipe
 

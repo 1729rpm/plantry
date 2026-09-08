@@ -22,6 +22,8 @@ A simple pan-seared chicken breast seasoned with pepper and lemon.
 
 | Ingredient | Quantity | Unit |
 |------------|----------|------|
+| Chicken Breast | 300 | g |
+| Lemon | 0.5 | pcs |
 
 ## Recipe
 

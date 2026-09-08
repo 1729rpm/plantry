@@ -27,11 +27,15 @@ Crisp cornflour-coated paneer tossed in a garlicky Indo Chinese manchurian sauce
 | Capsicum | 50 | g |
 | Spring Onion | 30 | g |
 | Garlic | 10 | g |
+| Soy Sauce | 15 | ml |
+| Chilli Sauce | 15 | g |
+| White Vinegar | 10 | ml |
 
 ## Recipe
 
-1. Cube the paneer, coat it in cornflour seasoned with salt and pepper, and shallow fry till golden.
-2. Stir fry garlic, capsicum and spring onion whites on high heat for a minute.
-3. Add soy sauce, chilli sauce, a splash of vinegar and a little water, and cook to a glaze.
-4. Toss in the paneer so every cube is coated, keeping the pan dry.
-5. Finish with the spring onion greens and serve hot.
+1. Use the listed chilli sauce as a ready-made hot red chilli sauce (sriracha style), weighed in grams.
+2. Cube the paneer, coat it in cornflour seasoned with salt and pepper, and shallow fry till golden.
+3. Stir fry garlic, capsicum and spring onion whites on high heat for a minute.
+4. Add soy sauce, chilli sauce, a splash of white vinegar and a little water, and cook to a glaze.
+5. Toss in the paneer so every cube is coated, keeping the pan dry.
+6. Finish with the spring onion greens and serve hot.

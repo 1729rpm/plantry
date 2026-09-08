@@ -32,6 +32,7 @@ Soft paneer and potato koftas in a rich cashew-tomato gravy.
 | Garlic | 10 | g |
 | Green Chilli | 1 | pcs |
 | Coriander Leaf | 10 | g |
+| Cornflour | 15 | g |
 
 ## Recipe
 

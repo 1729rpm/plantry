@@ -31,8 +31,9 @@ Creamy slow-stirred rice with mushrooms, garlic and a little cheese.
 
 ## Recipe
 
-1. Saute the mushrooms till browned and set aside.
-2. Soften onion and garlic in olive oil, then stir in the rice for a minute.
-3. Add warm water a ladle at a time, stirring till each is absorbed and the rice is creamy.
-4. Fold in the mushrooms, cheese and a splash of milk.
-5. Season well and serve.
+1. For two portions, use 140 g dry rice and keep 600 ml hot water ready; add it gradually and stop when the grains are tender with a slight bite.
+2. Saute the mushrooms till browned and set aside.
+3. Soften onion and garlic in olive oil, then stir in the rice for a minute.
+4. Add warm water a ladle at a time, stirring till each is absorbed and the rice is creamy.
+5. Fold in the mushrooms, cheese and a splash of milk.
+6. Season well and serve.

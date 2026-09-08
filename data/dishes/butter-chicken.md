@@ -32,6 +32,7 @@ Tandoori-style chicken simmered in a silky tomato, butter and cashew gravy.
 | Garlic | 10 | g |
 | Green Chilli | 1 | pcs |
 | Coriander Leaf | 10 | g |
+| Curd | 60 | g |
 
 ## Recipe
 

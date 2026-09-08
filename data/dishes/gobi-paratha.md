@@ -30,7 +30,8 @@ Whole-wheat parathas stuffed with spiced grated cauliflower.
 
 ## Recipe
 
-1. Grate the cauliflower, squeeze out moisture, and mix with onion, ginger, chilli, coriander and spices.
-2. Roll a ball of atta dough, place the filling, seal and roll out gently.
-3. Cook on a hot tawa with ghee until golden brown spots appear on both sides.
-4. Serve hot with curd or pickle.
+1. For four stuffed parathas (two portions), knead 160 g whole-wheat atta with 95 ml water, adding up to 15 ml more as needed; use the listed cauliflower filling.
+2. Grate the cauliflower, squeeze out moisture, and mix with onion, ginger, chilli, coriander and spices.
+3. Roll a ball of atta dough, place the filling, seal and roll out gently.
+4. Cook on a hot tawa with ghee until golden brown spots appear on both sides.
+5. Serve hot with curd or pickle.
