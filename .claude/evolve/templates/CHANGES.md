@@ -71,4 +71,4 @@ chronology appears. A no-change round is recorded as a result, not as an absence
 Anything this run learned about the process rather than the engine: a reading list that had to widen,
 a threshold that was unsatisfiable and why, an artifact format that did not survive a re-run, a role
 whose brief needs amending. The EM carries this into `RETRO.md` and, where it is a process change,
-into `EVOLVING-THE-ENGINE.md` through the operational reconciliation pass.
+into `EVOLVING-THE-ENGINE.md` through the docs pass of `/maintain`.

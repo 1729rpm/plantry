@@ -152,9 +152,13 @@ catch-up, and the spec says so, so Rajat can merge it on your word.
 
 Set every run pass to `done` with today's date and its deferral count, confirm the Deferred section
 names every deferred item with its owning pass, `git mv features/maintenance-<date>
-archive/maintenance/<date>` while keeping `features/.gitkeep` in place, commit, push. Move the
-registry row to Shipped, and on merge remove the worktree and delete the branches
-(`docs/development.md` §3 step 7).
+archive/maintenance/<date>` while keeping `features/.gitkeep` in place, commit, push. Each branch
+moves its own half of the folder: `slow-loop/<date>` moves the signals and health artifacts and
+`docs/maintenance-<date>` moves the other three, each staged by path, so `features/` is empty once
+both PRs merge and neither PR waits on the other. Both branches also carry `.maintenance-state`;
+the docs branch starts from the slow-loop branch's copy so the shared hunks are identical, and the
+later-merging PR owns any rebase (`docs/development.md` §11.3). Move the registry row to Shipped,
+and on merge remove the worktree and delete the branches (`docs/development.md` §3 step 7).
 
 ## Resume
 

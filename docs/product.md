@@ -38,11 +38,11 @@ The Explore tab is a separate surface for browsing dishes the household has not 
 
 ## 4. Principles
 
-These are decision rules. Every change to Plantry (engineer pull request, slow-loop proposal, EM autonomous call) is judged against them.
+These are decision rules. Every change to Plantry (engineer pull request, maintenance or evolution proposal, EM autonomous call) is judged against them.
 
 1. **Right-size the fix.** Before any change lands, state the size of the problem (one-off, small pattern, structural), the smallest level it can be solved at (data row, new tag, rule wording, engine code, UI affordance, infrastructure), and whether the proposed fix generalizes. A single-row data fix beats a new column; a new tag beats a new cross-cutting rule; a UI affordance beats a new rule altogether. Do not generalize from one or two cases.
 2. **Solve structurally, not by name.** When a special case appears, identify the property that makes it special and encode that property. Tag presence is preferred over dish-name matching.
-3. **Spec and code stay in lockstep.** `docs/engine.md` is the human-readable rules spec; `engine/` is its executable form. Any change to one without the other is a continuous-integration failure.
+3. **Spec and code stay in lockstep.** `docs/engine.md` is the human-readable rules spec; `engine/` is its executable form. A change to one lands with the matching change to the other in the same pull request. The pairing is held by review, not by a CI check (`docs/engine.md` §16.2).
 4. **Two loops, never one.** The fast loop is operational and immediate (swap, add, custom dish, delete, skip, save, dislike). The slow loop is structural and human-approved (library, rules, engine). The fast loop never silently mutates the rules. It does not block a §3-incompatible pick either: the swap picker is generic over the whole active library, so a user can land a cross-meal dish (a breakfast dish in a lunch slot) on purpose; the resulting composition mismatch is deliberate signal the slow loop reads, not an error the fast loop refuses. The only hard guards a meal swap keeps are Active, in-season, and not-Fruit (the fruit slot stays category-locked); meal-time is an ordering signal, not a pool filter.
 5. **Record, do not apply.** Feedback that implies structural change is queued, not applied. A dislike records a signal; the slow loop is the only path by which structure changes.
 6. **Non-sycophantic feedback handling.** When feedback arrives, diagnose size and level before proposing a fix. "No change warranted" is a valid output, with a stated reason. Agreeable acceptance of every request is a failure mode.

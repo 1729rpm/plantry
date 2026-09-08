@@ -2,9 +2,9 @@
 | ------- | ---------- | ------- | -------- | --------------------------------------- |
 | signals | 2026-09-07 | done    | 2        | dislikes listing query owed as a chore  |
 | health  | 2026-09-07 | done    | 6        | exploration pick not persisted          |
-| docs    | 2026-09-07 | running | 3        | product.md P3 CI-parity claim           |
-| retro   | 2026-09-07 | running | 2        | two 2026-08-18 entries still open       |
-| hygiene | 2026-09-07 | running | 2        | branches and worktrees left on the tree |
+| docs    | 2026-09-07 | done    | 8        | product.md tab list and save action     |
+| retro   | 2026-09-07 | done    | 0        | -                                       |
+| hygiene | 2026-09-07 | done    | 4        | two closed photo branches, Rajat's call |
 
 ## Deferred
 
@@ -35,30 +35,32 @@
 
 ### docs
 
-- `docs/product.md` §4 Principle 3 still says spec-code parity is a CI failure. The pairing is held
-  by review (`docs/engineering.md` §15, `docs/engine.md` §16.2); no such check exists.
-- `docs/engineering.md` §14 counts four `.claude/commands/` entries, describes `MAINTENANCE.md` as
-  the slow-loop plus reconciliation plus retro-intake spec, and cites `MAINTENANCE.md` §3 and §6 for
-  sections that have moved. The `.claude/skills/` line, the state-file lines, and the `data/`
-  listing are current; the rest of the section is the first docs pass's.
-- `docs/development.md` §2 gains `docs/maintenance-<date>` as the docs pass's branch and drops
-  `docs/ops-<date>`; §6 becomes "Maintenance trigger" and describes all five passes at the depth it
-  gives the slow loop today; §5's diagnosis card gains one line, that inside `/maintain` a rule edit
-  and engine code resolve to an evolution request.
+- `docs/product.md` line 1 names the fourth tab as Changes; it is Yours (§6 and the app agree). Predates the window.
+- `docs/product.md` §1, §4 Principle 4, and §9 still list "save a dish for next week" among the fast-loop
+  actions; that action was removed with the Yours tab. Predates the window.
+- `docs/CHANGELOG.md` format header names `/reconcile-docs` and `/reconcile-ops` as the `Updated:` line's
+  consumers; needs one decision, whether the docs brief's header carve-out (RETRO.md only) widens to match
+  `MAINTENANCE.md` §7 (any ledger's header) or §7 narrows.
+- `docs/engineering.md` §2's Convex column omits `favorites`, `wishlist`, and `dishDislikes`. Predates the window.
+- `docs/PLAN.md` Phase 2's outcome cell names the retired command shapes; a shipped phase's wording, left as a note.
+- The gate report preamble sentence ("every week of this fixture predates cutover") comes from
+  `engine/scripts/gate.ts` and is wrong for an export carrying a `generatedPlan`; a chore-sized conditional.
+- `app/web/e2e/smoke.mjs` carries a phase-narrating code comment; left for the next e2e-touching stream.
+- `README.md` says Explore hides "anything already planned or already on a shared list"; `docs/product.md` §3
+  says only this week's plan is hidden; not verified against `getExploreFeed`, one of the two is wrong.
 
 ### retro
 
-- 2026-08-18, "A day of spec amendments and two ledger entries lived only in an uncommittable
-  working tree". Status open. The commit-after-every-pass rule in `/maintain` and `/evolve-engine`
-  addresses the maintenance half; the entry itself is unclosed.
-- 2026-08-18, "A design handoff landed at the repo root and outlived its feature there". Status
-  open. The archived copy is verified byte-identical; removing the root copy needs Rajat's approval.
+- (none)
 
 ### hygiene
 
-- Three remote branches survive their pull requests: `data/photos-4` (#65, closed), `data/photos-7`
-  (#73, closed), `docs/maintenance-skill-structure` (#266, merged).
-- `/evolve-engine` still lives in the legacy command layout. Moving it to
-  `.claude/skills/evolve-engine/` is a mechanical `git mv` of the command file and `.claude/evolve/`
-  plus the caller grep, deferred because its paths are cited in two specs, eleven briefs, and a
-  template.
+- `data/photos-4` (#65) and `data/photos-7` (#73) survive closed, unmerged PRs with one commit each;
+  closed-but-unmerged is Rajat's call, not the merged case this pass deletes.
+- `comments` and `nextWeekQueue` remain as empty tables on the dev deployment `lovely-curlew-631`,
+  retired from `app/convex/schema.ts`; dropping a table is Rajat's.
+- `archive/features/UI Improvements/` breaks the kebab-case folder rule; a rename touches four name
+  references, and this pass never renames.
+- `/evolve-engine` still lives in the legacy `.claude/commands/` layout; the move to
+  `.claude/skills/evolve-engine/` is a mechanical `git mv` plus a caller grep, deferred because
+  nothing this sitting touched needs it.

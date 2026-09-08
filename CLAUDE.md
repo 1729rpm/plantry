@@ -15,9 +15,9 @@ Four canonical specs plus a phase plan and a changelog in `docs/`; the operation
 - `docs/product.md`: what we are building, persona, scope, principles, tone, future scope. Owns scope decisions.
 - `docs/engine.md`: the meal-planning rules spec. The TS engine mirrors it section by section, each section paired to a module under `engine/src/` and a test file; the pairing is held by review, not by a CI check. Owns rule decisions.
 - `docs/engineering.md`: stack, Convex schema, data layer split, deploy model, hosting, Swiggy MCP shape, env vars. Owns stack and integration decisions.
-- `docs/development.md`: session isolation, worktree workflow, ship workflow, definition of done, diagnosis card, slow-loop trigger, escalation rules, commit conventions. Owns "how to make changes" decisions. Implements the cross-project standard at `~/Downloads/AI Products/DEVELOPMENT-PLAYBOOK.md` and records this repo's deliberate deltas.
+- `docs/development.md`: session isolation, worktree workflow, ship workflow, definition of done, diagnosis card, maintenance trigger, escalation rules, commit conventions. Owns "how to make changes" decisions. Implements the cross-project standard at `~/Downloads/AI Products/DEVELOPMENT-PLAYBOOK.md` and records this repo's deliberate deltas.
 - `docs/PLAN.md`: the phase plan for the build, one row per phase with a verifiable outcome. Owns sequencing.
-- `docs/CHANGELOG.md`: append-only chronological index of shipped changes. One entry per change, each ending with the `Updated:` line the reconciliation passes consume.
+- `docs/CHANGELOG.md`: append-only chronological index of shipped changes. One entry per change, each ending with the `Updated:` line the `/maintain` docs pass consumes.
 
 Read order by task:
 
@@ -36,11 +36,11 @@ When no feature is active, this line reads "_none_". It resets to `_none_` on fe
 
 ## Working folders
 
-- `data/`: human-edited dish library, ingredient catalog, dish photos, structural changelog, slow-loop dry-run fixtures, and the pre-app menu record kept as provenance. The slow loop's target.
+- `data/`: human-edited dish library, ingredient catalog, dish photos, structural changelog, the evolution-request ledger, the signals pass's dry-run fixtures, and the pre-app menu record kept as provenance. The target of `/maintain`'s signals pass.
 - `engine/`: TypeScript engine module. Pure functions; imported by Convex functions and tests.
 - `app/convex/`: Convex schema and server functions. The backend lives here.
 - `app/web/`: Vite + React + TS PWA. Frontend.
-- `features/`: the active feature's documents (spec, development plan, and whatever reviews and reports the phase carries). Empty (.gitkeep) between features.
+- `features/`: the active feature's documents (spec, development plan, and whatever reviews and reports the phase carries), a maintenance sitting's artifacts or an evolution run's folder while one runs, and the gate harness's living report (`features/engine-v6-gate-report.md`). Otherwise empty (.gitkeep) between features.
 - `archive/`: history. **Do not read for current truth.** Old plans, handoffs, retired docs.
 - `.claude/skills/`: repo-scoped Claude Code skills (`/maintain`). `.claude/commands/`: repo-scoped slash commands (`/evolve-engine`, `/new-stream`).
 
@@ -66,6 +66,6 @@ Full ground rules (session model, branch naming, commit style, definition of don
 
 ## Project-specific style
 
-- No em dashes or long dashes anywhere in newly produced text: user-facing content (PWA UI strings, generated menu images, grocery lists, share images) and internal docs alike (specs, CHANGELOG, DECISIONS, briefs, PR descriptions, code comments, commit messages). Use commas, parentheses, semicolons, or sentence breaks. Existing em dashes in append-only ledger history stay as written (those entries are never rewritten); reconciliation passes strip them from spec sections as they touch them.
+- No em dashes or long dashes anywhere in newly produced text: user-facing content (PWA UI strings, generated menu images, grocery lists, share images) and internal docs alike (specs, CHANGELOG, DECISIONS, briefs, PR descriptions, code comments, commit messages). Use commas, parentheses, semicolons, or sentence breaks. Existing em dashes in append-only ledger history stay as written (those entries are never rewritten); the `/maintain` docs pass strips them from spec sections as it touches them.
 - Canonical docs in `docs/` read as present-tense steady-state specs. No "added in", no "previously", no historical seams. The CHANGELOG holds the chronology.
 - Explain non-obvious software, infra, data, finance, or business-strategy concepts inline; Rajat prefers more information, never less, on terms an experienced PM would not already know. Skip explanations for PM-craft and Indian quick-commerce knowledge.
