@@ -15,6 +15,21 @@ work queue for /reconcile-docs and /reconcile-ops; or "none".
 
 ---
 
+## 2026-09-08  Listing queries for the maintenance passes
+
+Two read-only Convex query functions the sitting reads production through.
+`queries/dishDislikes:listQueuedDislikes` returns the queued `dishDislikes` rows through the
+`by_status` index, `createdAt` ascending, mirroring the manual-changes and incidents listings, so
+the signals pass reads all three signal channels the same way. `queries/manualChanges:
+listManualChangesByWeek({ fromWeekStart, toWeekStart })` returns every `manualChanges` row of any
+status whose `weekStart` falls in the inclusive ISO-Monday range, through the existing
+`by_weekStart` index, so the health pass's monitor counts swap rows for all eight trailing weeks
+rather than only the weeks no sitting has consumed yet. The signals and health briefs and
+`MAINTENANCE.md` §4.2 name the queries. No schema change. (#273)
+Why: the first sitting read the dislikes table through a CLI dump because no query listed it, and
+its first monitor saw 4 of 8 weeks because the queued-only read cannot see consumed rows.
+Updated: none (`MAINTENANCE.md` §4.2 and both briefs updated in the same PR).
+
 ## 2026-09-07  First /maintain sitting, part two: docs reconciled, retro closed, hygiene swept
 
 The docs, retro, and hygiene passes of the first maintenance sitting, on
