@@ -38,7 +38,7 @@ Layered basmati rice and spiced mixed vegetables slow-cooked on dum.
 
 1. For two portions, use 150 g dry basmati rice; soak and drain it, then parboil in 1 litre boiling water and drain before layering as directed.
 2. Fry sliced onion till golden and set aside.
-3. Cook the vegetables with ginger, garlic, tomato and biryani spices till just tender.
+3. Cook the vegetables with ginger, garlic, green chilli, tomato and biryani spices till just tender.
 4. Parboil soaked basmati rice with whole spices and salt, drain at 70 percent done.
 5. Layer rice over the vegetables with mint, coriander and fried onions.
 6. Cover tight and cook on dum on low heat 20 minutes, then rest before fluffing.

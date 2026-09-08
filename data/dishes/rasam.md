@@ -32,5 +32,5 @@ Thin peppery tamarind and tomato broth with a little dal, soothing with rice.
 
 1. Cook a little toor dal till soft and keep the cooking water.
 2. Simmer mashed tomato with tamarind water, rasam powder, crushed garlic and salt.
-3. Add the dal water and bring to a gentle froth without boiling hard.
+3. Mash the dal and add it with its cooking water; bring to a gentle froth without boiling hard.
 4. Temper mustard seeds and curry leaves in ghee, pour over and add coriander.

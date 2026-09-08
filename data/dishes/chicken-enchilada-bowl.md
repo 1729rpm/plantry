@@ -13,6 +13,7 @@ seasons: All
 cuisine: Mexican
 complexity: Medium
 skill: Reduce the tomato sauce well so the bowl is saucy, not watery
+prePrep: Soak the kidney beans overnight and boil till tender; the listed weight is dry
 photo: chicken-enchilada-bowl.jpg
 ---
 

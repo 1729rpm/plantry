@@ -34,7 +34,7 @@ Paneer and capsicum in a robust tomato gravy with freshly crushed kadai masala.
 ## Recipe
 
 1. Dry roast coriander seeds and dried chilli, then coarsely crush.
-2. Saute onion, ginger, garlic and capsicum in the kadhai.
+2. Saute onion, ginger, garlic, green chilli and capsicum in the kadhai.
 3. Add tomato and the crushed masala, cook till the oil separates.
 4. Fold in the paneer cubes and toss for a few minutes.
 5. Finish with coriander and a pinch of kasuri methi.
