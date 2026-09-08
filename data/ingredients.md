@@ -37,11 +37,53 @@ Grouping judgment calls (institutional memory; do not silently re-bucket):
 - Cucumber: Vegetables. Eaten as a vegetable in salads.
 - Coconut Milk: Pantry. A shelf-stable tin/carton, bought rarely, not dairy.
 - Sprout: Pantry. Dry pulse pre-sprouted, slots with the other dry pulses.
+- Fresh Cream: Proteins and Dairy, tracked in 200 ml packs. Perishable and
+  bought for the dish that needs it, unlike butter and ghee, which stay
+  pantry staples quantified in recipe prose and never itemized.
+- Broken Wheat (daliya): Pantry, regular sourcing. A separate row from
+  Bulgur Wheat, which is parboiled, soak-only, and special-sourced; the two
+  are not interchangeable in cooking or shopping.
 - Fruit is its own group. All fruits (Banana, the "Fruit" placeholder, Jamun,
   Litchi, Mango, Papaya, Peach, Pineapple, Plum, Pomegranate) sit in the Fruit
   group, rendered second after Proteins and Dairy. The "Fruit" placeholder
   ingredient name serves the "Seasonal fruit" dish (id 123); it is not a
   specific buy-list item, but the Fruit group keeps it visible.
+
+## Nutrition basis and provenance
+
+Every per-100 g value is for the raw, edible portion of the ingredient as
+purchased, unless a row note below says otherwise. Bone-in cuts and fruit
+with peel or stone are not yield-adjusted; the quantity on a dish row is the
+purchase quantity, and `ml` rows are treated as grams 1:1 (engine.md §12).
+The figures are approximate reference values taken from the Indian Food
+Composition Tables 2017 (IFCT, National Institute of Nutrition, Hyderabad)
+and USDA FoodData Central, rounded. They are display estimates, not label
+data. Onion, Tomato and the five products added on 2026-09-08 (Sweet Potato
+Glass Noodles, Thai Red Curry Paste, Thai Green Curry Paste, Chilli Sauce,
+White Vinegar) carry their individual sources in
+`docs/reviews/high-confidence-fixes-2026-09-08.md`.
+
+Row notes, for the rows whose product is not obvious from the name:
+
+- Chicken: raw skinless curry cut, mixed cuts, bone-in as purchased, with no
+  bone yield applied.
+- Chicken Breast: raw skinless breast.
+- Chicken Keema: raw chicken mince with skin.
+- Mutton and Mutton Keema: raw goat or sheep meat as sold in Bangalore.
+  Protein follows the IFCT goat figure; fat stays at the lamb composite
+  figure pending the household's actual product, since goat is far leaner.
+- Fish: raw fillet or steak, generic white fish. Prawn: raw and cleaned.
+- Egg: whole egg, 50 g edible per piece.
+- Paneer and Curd: full-fat dairy as sold. Fresh Cream: 25 percent fat dairy
+  cream, the Amul-style 200 ml pack.
+- Tofu: firm block tofu, the form Bangalore supermarkets stock; the soft
+  tofu called for in the two soups uses the same row.
+- Sprout: home-sprouted whole moong on a semi-dry basis, higher than
+  commercial bean sprouts; a value to verify against the household's own
+  sprouting. Bean Sprout: fresh commercial moong sprouts.
+- Coconut Milk: thick tinned or carton coconut milk.
+- Chickpea, Kidney Bean, Whole Masoor, every dal, Broken Wheat and Bulgur
+  Wheat: dry pulse or grain as purchased, so the dish rows are dry weights.
 | Ingredient | Group | Unit | Pack Size | Grams per piece | Protein /100g | Carbs /100g | Fat /100g | Fiber /100g | Special |
 |------------|-------|------|-----------|-----------------|---------------|-------------|-----------|-------------|---------|
 | Avocado | Vegetables | g | | | 2 | 9 | 15 | 7 | |
@@ -56,6 +98,7 @@ Grouping judgment calls (institutional memory; do not silently re-bucket):
 | Bread | Pantry | pcs | | 30 | 9 | 49 | 3.2 | 2.7 | |
 | Brinjal | Vegetables | g | | | 1 | 6 | 0.2 | 3 | |
 | Broccoli | Vegetables | g | | | 2.8 | 7 | 0.4 | 2.6 | |
+| Broken Wheat | Pantry | g | | | 12 | 72 | 1.5 | 12 | |
 | Bulgur Wheat | Pantry | g | | | 12 | 76 | 1.3 | 18 | Yes |
 | Cabbage | Vegetables | g | | | 1.3 | 6 | 0.1 | 2.5 | |
 | Capsicum | Vegetables | g | | | 1 | 6 | 0.3 | 2.1 | |
@@ -64,8 +107,8 @@ Grouping judgment calls (institutional memory; do not silently re-bucket):
 | Cauliflower | Vegetables | g | | | 1.9 | 5 | 0.3 | 2 | |
 | Chana Dal | Pantry | g | | | 20 | 60 | 6 | 13 | |
 | Cheese | Proteins and Dairy | g | | | 25 | 1.3 | 33 | 0 | |
-| Chicken | Proteins and Dairy | g | | | 27 | 0 | 14 | 0 | |
-| Chicken Breast | Proteins and Dairy | g | 250 g | | 31 | 0 | 3.6 | 0 | |
+| Chicken | Proteins and Dairy | g | | | 20 | 0 | 6 | 0 | |
+| Chicken Breast | Proteins and Dairy | g | 250 g | | 23 | 0 | 2.6 | 0 | |
 | Chicken Keema | Proteins and Dairy | g | 500 g | | 17 | 0 | 20 | 0 | |
 | Chickpea | Pantry | g | | | 19 | 61 | 6 | 17 | |
 | Chilli Sauce | Pantry | g | | | 1.5 | 33 | 1.2 | 3.7 | |
@@ -82,6 +125,7 @@ Grouping judgment calls (institutional memory; do not silently re-bucket):
 | Fish | Proteins and Dairy | g | 500 g | | 20 | 0 | 5 | 0 | |
 | Flattened Rice | Pantry | g | | | 7 | 77 | 1.2 | 2.4 | |
 | French Bean | Vegetables | g | | | 1.8 | 7 | 0.2 | 2.7 | |
+| Fresh Cream | Proteins and Dairy | ml | 200 ml | | 2 | 3.5 | 25 | 0 | |
 | Fruit | Fruit | pcs | | | | | | | |
 | Garlic | Aromatics and Herbs | g | | | | | | | |
 | Ginger | Aromatics and Herbs | g | | | | | | | |
@@ -103,7 +147,8 @@ Grouping judgment calls (institutional memory; do not silently re-bucket):
 | Moong Dal | Pantry | g | | | 24 | 59 | 1.2 | 16 | |
 | Mozzarella | Proteins and Dairy | g | 200 g | | 22 | 2.2 | 22 | 0 | |
 | Mushroom | Vegetables | g | 200 g | | 3.1 | 3.3 | 0.3 | 1 | |
-| Mutton | Proteins and Dairy | g | | | 25 | 0 | 21 | 0 | |
+| Mutton | Proteins and Dairy | g | | | 20 | 0 | 21 | 0 | |
+| Mutton Keema | Proteins and Dairy | g | | | 20 | 0 | 21 | 0 | |
 | Noodles | Pantry | g | | | 12 | 71 | 1.4 | 2.4 | |
 | Oats | Pantry | g | | | 13 | 67 | 7 | 10 | |
 | Olive Oil | Pantry | ml | | | 0 | 0 | 100 | 0 | |
@@ -146,4 +191,5 @@ Grouping judgment calls (institutional memory; do not silently re-bucket):
 | Urad Dal | Pantry | g | | | 25 | 59 | 1.2 | 18 | |
 | Walnut | Pantry | g | | | 15 | 14 | 65 | 7 | |
 | White Vinegar | Pantry | ml | | | 0 | 0 | 0 | 0 | |
+| Whole Masoor | Pantry | g | | | 25 | 60 | 1.1 | 11 | |
 | Zucchini | Vegetables | g | | | 1.2 | 3 | 0.3 | 1 | |
