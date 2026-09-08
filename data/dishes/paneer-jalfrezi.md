@@ -1,7 +1,7 @@
 ---
 id: 241
 name: Paneer jalfrezi
-category: Gravy dish
+category: Dry dish
 time: Lunch
 tags: [HP]
 primaryIngredient: Paneer
@@ -26,10 +26,11 @@ Paneer and crunchy peppers tossed in a tangy semi dry jalfrezi masala.
 | Onion | 80 | g |
 | Tomato | 60 | g |
 | Green Chilli | 2 | pcs |
+| White Vinegar | 5 | ml |
 
 ## Recipe
 
 1. Cut the paneer, capsicum and onion into thick strips.
 2. Fry onion and capsicum on high heat to keep them crunchy, then set aside.
-3. Make a quick tomato masala with spices and a dash of vinegar.
+3. Make a quick tomato masala with green chilli, spices and the vinegar.
 4. Toss in the paneer and the vegetables and cook till just coated.

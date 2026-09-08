@@ -29,11 +29,12 @@ A chilled blended soup of ripe tomato, cucumber and capsicum.
 | Onion | 30 | g |
 | Garlic | 4 | g |
 | Olive Oil | 15 | ml |
+| White Vinegar | 10 | ml |
 
 ## Recipe
 
 1. Roughly chop the tomato, cucumber, capsicum and onion.
 2. Blend with garlic, olive oil and a splash of water till smooth.
-3. Season with salt and a little vinegar.
+3. Season with salt and the vinegar.
 4. Chill thoroughly.
 5. Serve cold with a drizzle of olive oil on top.

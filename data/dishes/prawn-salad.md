@@ -29,6 +29,7 @@ Poached prawns over crisp salad leaves with a lemon dressing.
 | Onion | 50 | g |
 | Lemon | 1 | pcs |
 | Coriander Leaf | 10 | g |
+| Olive Oil | 15 | ml |
 
 ## Recipe
 

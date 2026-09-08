@@ -4,7 +4,7 @@ name: Lentil salad
 category: Accompaniment
 time: Lunch
 tags: []
-primaryIngredient: Masoor Dal
+primaryIngredient: Whole Masoor
 preferred: No
 active: Yes
 satiety: Medium
@@ -21,11 +21,12 @@ Whole lentils tossed with cucumber, tomato and a lemon herb dressing.
 
 | Ingredient | Quantity | Unit |
 |------------|----------|------|
-| Masoor Dal | 80 | g |
+| Whole Masoor | 80 | g |
 | Cucumber | 60 | g |
 | Tomato | 60 | g |
 | Parsley | 10 | g |
 | Lemon | 1 | pcs |
+| Olive Oil | 15 | ml |
 
 ## Recipe
 
