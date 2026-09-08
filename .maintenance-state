@@ -1,20 +1,37 @@
 | pass    | last-run   | status  | deferred | note                                    |
 | ------- | ---------- | ------- | -------- | --------------------------------------- |
-| signals | 2026-07-14 | pending | 0        | pre-v6 backlog awaits the stated cutoff |
-| health  | never      | pending | -        | monitor never run                       |
-| docs    | 2026-09-07 | done    | 3        | product.md P3 CI-parity claim           |
-| retro   | 2026-09-07 | done    | 2        | two 2026-08-18 entries still open       |
-| hygiene | 2026-09-07 | done    | 2        | branches and worktrees left on the tree |
+| signals | 2026-09-07 | done    | 2        | dislikes listing query owed as a chore  |
+| health  | 2026-09-07 | done    | 6        | exploration pick not persisted          |
+| docs    | 2026-09-07 | running | 3        | product.md P3 CI-parity claim           |
+| retro   | 2026-09-07 | running | 2        | two 2026-08-18 entries still open       |
+| hygiene | 2026-09-07 | running | 2        | branches and worktrees left on the tree |
 
 ## Deferred
 
 ### signals
 
-- (none)
+- No query function lists `dishDislikes` (only the `dislikeDish` mutation and the internal mark-applied
+  mutation touch it); this sitting read the table through the Convex CLI (empty). A chore-sized
+  `queries/dishDislikes:listQueuedDislikes` is owed so the next sitting reads it like the other two tables.
+- One protein added by hand beside a solo complete-meal lunch (Fish tikka beside Curd rice, 2026-09-07
+  week, one member): one instance, one short of any threshold; recurrence across weeks or by both members
+  becomes an evolution request stated as a household count.
 
 ### health
 
-- (none)
+- The exploration pick is not persisted (`generatedPlan` carries day, meal, dishId only), so the
+  swap-away measure reconstructs it by regenerating the week, which needs the favorites list as of
+  generation time; a schema field plus a §16.1 contract line, owned by engineering (EM).
+- The Saturday swap measure covers 4 of 8 served weeks because the sanctioned export lists queued rows
+  only; a chore-sized `manualChanges` by-`weekStart` query (any status) is owed beside the dislikes one.
+- The two v6 swap measures are provisional (the 2026-09-07 week was one day old at export); the second
+  monitor re-reads both with the week complete.
+- International is the row to watch (+37.8 percent on 19 rows against 32.4 percent noise, 0 of 11
+  occasions in the v6 plan); not a finding on a first monitor.
+- Stale preamble sentence in the gate report ("every week of this fixture predates cutover", wording in
+  `engine/scripts/gate.ts`) now that an export carries a `generatedPlan`; for the docs pass.
+- A validator for an Active dish with 0 ingredient rows (the reports cannot see one); a docs-and-engine
+  chore, not this pass's.
 
 ### docs
 
