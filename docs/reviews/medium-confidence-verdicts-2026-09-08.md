@@ -1,6 +1,6 @@
 # Medium-confidence dish audit: EM verdicts
 
-Date: 8 September 2026. Reviews `docs/reviews/claude-code-medium-confidence-review-2026-09-08.md` (M01 to M59) against the dish files, the catalog, `docs/engine.md` §12, `ADDING-DISHES.md`, and git history. Verdicts are the EM's; Rajat's instruction of 2026-09-08 ("Fix everything that you agree upon, even if low value") authorizes the fixes, shipped as PR #TBD. Findings marked "no change" stay as they are; the reason is recorded here so the next audit does not reopen them.
+Date: 8 September 2026. Reviews `docs/reviews/claude-code-medium-confidence-review-2026-09-08.md` (M01 to M59) against the dish files, the catalog, `docs/engine.md` §12, `ADDING-DISHES.md`, and git history. Verdicts are the EM's; Rajat's instruction of 2026-09-08 ("Fix everything that you agree upon, even if low value") authorizes the fixes, shipped as PR #276. Findings marked "no change" stay as they are; the reason is recorded here so the next audit does not reopen them.
 
 Verdict key: **fix** (agreed, changed in this PR), **fix, low value** (agreed, minor, changed in this PR because Rajat asked for all agreed items), **no change** (valid intentional choice, or already resolved, or the review is wrong).
 

@@ -187,7 +187,7 @@ Correct 106 dishes against findings H01-H50: align two chicken purchase notes to
 
 H51 treats grocery-derived nutrition as partial and withholds Healthy classifications until complete inputs are supplied. Medium-confidence findings remain review decisions in docs/reviews/claude-code-medium-confidence-review-2026-09-08.md. No active status, HP tag, dish ID or production record changes are part of this batch.
 
-## 2026-09-08: Medium-confidence dish audit fixes (#TBD)
+## 2026-09-08: Medium-confidence dish audit fixes (#276)
 
 Apply the medium-confidence audit findings (M01-M59) the EM agreed with. The verdict per finding, including the reasons the other findings are declined, is in docs/reviews/medium-confidence-verdicts-2026-09-08.md. Rajat's instruction of 2026-09-08, "Fix everything that you agree upon, even if low value", is the authorization for this EM-initiated change to canonical data.
 
