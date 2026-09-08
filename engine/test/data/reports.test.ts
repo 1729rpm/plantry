@@ -262,9 +262,9 @@ describe("specialSourcingReport", () => {
     //   Muhammara -> Pomegranate Molasses; Korean chicken stir fry ->
     //   Gochujang (Korean tofu soup 208 and Tofu bibimbap 191 also use
     //   Gochujang but are both inactive, so they drop out of this active-only
-    //   report); Japanese miso soup -> Miso Paste; Vegetable daliya -> Bulgur
-    //   Wheat; Lentil salad -> Parsley (the last two from the activated
-    //   easy-to-cook expansion).
+    //   report); Japanese miso soup -> Miso Paste; Lentil salad -> Parsley
+    //   (from the activated easy-to-cook expansion). Vegetable daliya is not
+    //   here: it uses the regular-sourcing Broken Wheat row, not Bulgur Wheat.
     expect(report).toEqual([
       { dishId: 161, dishName: "Thai green curry chicken", ingredients: ["Thai Green Curry Paste"] },
       { dishId: 174, dishName: "Hummus", ingredients: ["Tahini"] },
@@ -273,7 +273,6 @@ describe("specialSourcingReport", () => {
       { dishId: 192, dishName: "Korean chicken stir fry", ingredients: ["Gochujang"] },
       { dishId: 207, dishName: "Korean japchae", ingredients: ["Sweet Potato Glass Noodles"] },
       { dishId: 210, dishName: "Japanese miso soup", ingredients: ["Miso Paste"] },
-      { dishId: 250, dishName: "Vegetable daliya", ingredients: ["Bulgur Wheat"] },
       { dishId: 267, dishName: "Lentil salad", ingredients: ["Parsley"] },
     ]);
 
