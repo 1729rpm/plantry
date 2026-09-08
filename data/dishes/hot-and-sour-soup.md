@@ -27,10 +27,11 @@ Tangy peppery Indo Chinese soup with shredded vegetables and mushroom.
 | Capsicum | 40 | g |
 | Cornflour | 15 | g |
 | Soy Sauce | 15 | ml |
+| White Vinegar | 10 | ml |
 
 ## Recipe
 
 1. Finely shred the cabbage, carrot, capsicum and mushroom.
-2. Saute the vegetables briefly in oil, then add stock and bring to a simmer.
-3. Season with soy sauce, vinegar, salt and plenty of pepper.
+2. Saute the vegetables briefly in oil, then add 600 ml water or stock and bring to a simmer.
+3. Season with soy sauce, the vinegar, salt and plenty of pepper.
 4. Thicken with a cornflour slurry till glossy.

@@ -26,4 +26,4 @@ Plain buttered toast, the simplest side for eggs or chai.
 ## Recipe
 
 1. Toast the bread slices until golden on both sides.
-2. Spread with butter while still warm and serve at once.
+2. Spread with butter, about 10 g for four slices, while still warm and serve at once.

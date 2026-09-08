@@ -32,5 +32,5 @@ Toasted sandwiches filled with spiced paneer, onion and capsicum.
 
 1. Crumble paneer and mix with chopped onion, capsicum, tomato, coriander, salt and chaat masala.
 2. Spread the filling over two bread slices and top with the others.
-3. Toast in a sandwich press or on a buttered tawa until golden.
+3. Toast in a sandwich press or on a tawa with about 10 g butter until golden.
 4. Cut and serve hot with chutney.

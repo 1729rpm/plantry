@@ -39,5 +39,5 @@ Spiced mashed vegetables served with butter-toasted pav.
 1. Boil and mash the potato, cauliflower and peas together.
 2. Saute onion, ginger and garlic, add tomato and pav bhaji masala, cook down.
 3. Add the diced capsicum, then the mashed vegetables and a little water.
-4. Simmer, mashing further, till thick; finish with butter.
-5. Toast the pav in butter and serve hot with chopped onion and lemon.
+4. Simmer, mashing further, till thick; finish with 10 g butter.
+5. Toast the pav in 10 g butter and serve hot with chopped onion, coriander and lemon.

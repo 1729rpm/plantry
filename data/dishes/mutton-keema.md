@@ -23,7 +23,7 @@ Minced mutton bhuna cooked dry with onion, tomato and green peas.
 
 | Ingredient | Quantity | Unit |
 |------------|----------|------|
-| Mutton | 300 | g |
+| Mutton Keema | 300 | g |
 | Onion | 120 | g |
 | Tomato | 100 | g |
 | Green Pea | 80 | g |

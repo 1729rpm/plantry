@@ -32,6 +32,6 @@ Boiled eggs tossed in a dry onion-tomato masala.
 ## Recipe
 
 1. Boil and halve the eggs, then fry lightly with turmeric and chilli.
-2. Saute onion, ginger and garlic until soft, add tomato and ground spices.
+2. Saute onion, ginger, garlic and green chilli until soft, add tomato and ground spices.
 3. Cook the masala down dry until the oil separates.
 4. Fold in the eggs to coat and finish with coriander.

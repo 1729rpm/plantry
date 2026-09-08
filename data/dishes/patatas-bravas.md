@@ -30,7 +30,7 @@ Crisp potato cubes tossed in a smoky, lightly spiced tomato sauce.
 
 ## Recipe
 
-1. Cut the potato into cubes and fry or roast till deep golden and crisp.
+1. Cut the potato into cubes and fry till deep golden and crisp, or roast at 220 C for 30 to 35 minutes.
 2. Cook onion and garlic in olive oil, add tomato, paprika and a pinch of chilli.
 3. Simmer the sauce till thick and smoky.
 4. Toss the crisp potatoes in the sauce just before serving.

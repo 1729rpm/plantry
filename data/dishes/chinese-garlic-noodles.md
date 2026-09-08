@@ -34,5 +34,5 @@ Noodles tossed in a glossy garlic, soy and chilli sauce with crisp greens.
 1. Boil the noodles just under done, drain and toss with a little oil.
 2. Fry the chopped garlic in hot oil till fragrant but not brown.
 3. Add the cabbage and capsicum and stir-fry on high heat till just crisp-tender.
-4. Add the noodles and soy sauce with a pinch of sugar and toss to coat.
+4. Add the noodles and soy sauce with a pinch of sugar and chilli flakes and toss to coat.
 5. Finish with spring onion and serve hot.
