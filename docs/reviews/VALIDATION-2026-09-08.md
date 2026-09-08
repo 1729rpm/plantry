@@ -26,4 +26,6 @@ New ingredient amounts are documented two-person recipe defaults. They are not k
 
 The implementation and this validation record ship together in the fix PR. The original pre-commit delivery patch was verified against a clean copy of the base commit and remains a historical local delivery artifact. GitHub PR and deployment checks are authoritative for shipping status.
 
-The changed filter is verified with a server-rendered component test; no live preview, full-flow browser crawl or real-iPhone check is claimed. Those pre-merge deployment checks remain with the eventual ship workflow. Point 4 remains deferred.
+Pre-merge browser smoke passes against the local production build connected to the development backend. Chromium and WebKit at 390 px and 412 px reach all four tabs and the dish-detail, swap-picker, profile and changes-log sheets, with no horizontal overflow and passing content-gutter checks. A follow-up crawl captures every tab, verifies the Healthy control is disabled in all four browser/width combinations, and reports no console errors or uncaught page errors. The changed filter also has a server-rendered component regression. No real-iPhone check is claimed; this PR changes no CSS or shared layout primitive. Point 4 remains deferred.
+
+Shipping PR: https://github.com/1729rpm/plantry/pull/275.
