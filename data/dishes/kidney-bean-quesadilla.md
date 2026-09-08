@@ -1,6 +1,6 @@
 ---
 id: 188
-name: Black bean quesadilla
+name: Kidney bean quesadilla
 category: Complete meal
 time: Lunch
 tags: [HP, complete_meal]
@@ -28,6 +28,7 @@ Tortillas filled with spiced beans and melted cheese, toasted till crisp.
 | Onion | 50 | g |
 | Capsicum | 50 | g |
 | Coriander Leaf | 8 | g |
+| Garlic | 8 | g |
 
 ## Recipe
 

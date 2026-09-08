@@ -1,0 +1,68 @@
+
+> plantry@0.0.0 reports
+> npm run reports --workspace @plantry/engine
+
+
+> @plantry/engine@0.0.0 reports
+> tsc -b && node dist/scripts/reports.js
+
+Nutrition basis: partial tracked-ingredient totals; pantry inputs are omitted. Not complete recipe nutrition or a health classification.
+
+=== Coverage report (enrichment + macros) ===
+Active dishes: 257
+  description: 257/257 (100%)
+  recipe:      257/257 (100%)
+  complexity:  257/257 (100%)
+  photo:       257/257 (100%)
+Macro-relevant catalog rows: 80
+  protein/carbs: 80/80 (100%)
+  fat:           80/80 (100%)
+  fibre:         80/80 (100%)
+  (Some aromatic/herb rows remain blank; catalog coverage does not establish full recipe coverage.)
+
+=== HP-vs-protein consistency ===
+  dish 4 "Paneer do pyaza": tagged HP but below (19.3 g/person vs 20 g)
+  dish 11 "Mushroom paneer": tagged HP but below (17.3 g/person vs 20 g)
+  dish 12 "Egg curry": tagged HP but below (13.8 g/person vs 20 g)
+  dish 13 "Paneer bhurji": tagged HP but below (18.9 g/person vs 20 g)
+  dish 30 "Boiled eggs": tagged HP but below (13.0 g/person vs 20 g)
+  dish 32 "Besan paneer chilla": tagged HP but below (9.3 g/person vs 20 g)
+  dish 33 "Bread omelette": tagged HP but below (18.6 g/person vs 20 g)
+  dish 38 "Paneer paratha": tagged HP but below (13.7 g/person vs 20 g)
+  dish 42 "Sprouts salad": tagged HP but below (9.5 g/person vs 20 g)
+  dish 50 "Chole bhature": tagged HP but below (16.0 g/person vs 20 g)
+  dish 57 "Anda bhurji": tagged HP but below (13.6 g/person vs 20 g)
+  dish 58 "Egg masala dry": tagged HP but below (13.7 g/person vs 20 g)
+  dish 60 "Kadai paneer": tagged HP but below (19.1 g/person vs 20 g)
+  dish 61 "Matar paneer": tagged HP but below (16.7 g/person vs 20 g)
+  dish 62 "Paneer capsicum": tagged HP but below (19.4 g/person vs 20 g)
+  dish 85 "Paneer sandwich": tagged HP but below (14.8 g/person vs 20 g)
+  dish 96 "Egg biryani": tagged HP but below (13.8 g/person vs 20 g)
+  dish 106 "Paneer bhurji": tagged HP but below (18.5 g/person vs 20 g)
+  dish 126 "Keema pulao": tagged HP but below (18.9 g/person vs 20 g)
+  dish 127 "Egg salad": tagged HP but below (10.5 g/person vs 20 g)
+  dish 128 "Paneer salad": tagged HP but below (9.8 g/person vs 20 g)
+  dish 146 "Moong dal halwa": above threshold but not tagged HP (24.3 g/person vs 20 g)
+  dish 158 "Egg podimas": tagged HP but below (13.2 g/person vs 20 g)
+  dish 174 "Hummus": above threshold but not tagged HP (22.4 g/person vs 20 g)
+  dish 175 "Falafel": tagged HP but below (19.2 g/person vs 20 g)
+  dish 177 "Shakshuka": tagged HP but below (14.7 g/person vs 20 g)
+  dish 185 "Lebanese lentil soup": tagged HP but below (19.3 g/person vs 20 g)
+  dish 234 "Anda paratha": tagged HP but below (6.6 g/person vs 20 g)
+  dish 241 "Paneer jalfrezi": tagged HP but below (14.4 g/person vs 20 g)
+  dish 242 "Egg roast": tagged HP but below (13.8 g/person vs 20 g)
+  dish 249 "Paneer fried rice": tagged HP but below (12.2 g/person vs 20 g)
+  dish 252 "Egg pulao": tagged HP but below (14.7 g/person vs 20 g)
+  dish 257 "Paneer bhurji keto": tagged HP but below (14.1 g/person vs 20 g)
+  dish 269 "Vegetable omelette": tagged HP but below (10.2 g/person vs 20 g)
+
+=== Special-sourcing report (active dishes needing a special trip) ===
+  dish 161 "Thai green curry chicken": Thai Green Curry Paste
+  dish 174 "Hummus": Tahini
+  dish 176 "Tabbouleh": Bulgur Wheat, Parsley
+  dish 184 "Muhammara": Pomegranate Molasses
+  dish 192 "Korean chicken stir fry": Gochujang
+  dish 207 "Korean japchae": Sweet Potato Glass Noodles
+  dish 210 "Japanese miso soup": Miso Paste
+  dish 250 "Vegetable daliya": Bulgur Wheat
+  dish 267 "Lentil salad": Parsley

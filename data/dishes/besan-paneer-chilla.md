@@ -29,7 +29,8 @@ Savoury gram-flour pancakes studded with crumbled paneer and onion.
 
 ## Recipe
 
-1. Whisk besan with water, salt and turmeric into a smooth pouring batter.
-2. Stir in crumbled paneer, chopped onion, tomato, green chilli and coriander.
-3. Ladle onto a hot greased tawa and spread into a thin round.
-4. Cook both sides on medium heat until set and lightly browned.
+1. For four small chillas (two portions), use 80 g besan and 120 ml water; add up to 30 ml more to make a spreadable batter.
+2. Whisk besan with water, salt and turmeric into a smooth pouring batter.
+3. Stir in crumbled paneer, chopped onion, tomato, green chilli and coriander.
+4. Ladle onto a hot greased tawa and spread into a thin round.
+5. Cook both sides on medium heat until set and lightly browned.

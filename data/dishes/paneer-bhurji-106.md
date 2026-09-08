@@ -21,6 +21,12 @@ Crumbled paneer scrambled with onion, tomato and spices, a quick breakfast.
 
 | Ingredient | Quantity | Unit |
 |------------|----------|------|
+| Paneer | 200 | g |
+| Onion | 80 | g |
+| Ginger | 10 | g |
+| Green Chilli | 1 | pcs |
+| Tomato | 80 | g |
+| Coriander Leaf | 10 | g |
 
 ## Recipe
 

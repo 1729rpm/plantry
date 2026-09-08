@@ -31,8 +31,9 @@ Tomato-stained rice cooked with sweet corn, peas and mild spices.
 
 ## Recipe
 
-1. Blend the tomato with garlic into a smooth puree.
-2. Toast the rice in a little oil with chopped onion till glossy.
-3. Add the tomato puree, cumin and a pinch of chilli, then the measured water.
-4. Stir in corn and peas, cover and cook till the rice is fluffy.
-5. Fluff with a fork and fold in coriander.
+1. For two portions, rinse and soak 150 g dry basmati rice for 15 minutes, then drain. Use 300 ml fresh water for the covered absorption-cooking step; rest 10 minutes before fluffing.
+2. Blend the tomato with garlic into a smooth puree.
+3. Toast the rice in a little oil with chopped onion till glossy.
+4. Add the tomato puree, cumin and a pinch of chilli, then the measured water.
+5. Stir in corn and peas, cover and cook till the rice is fluffy.
+6. Fluff with a fork and fold in coriander.

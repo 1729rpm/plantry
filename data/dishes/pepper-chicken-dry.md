@@ -27,6 +27,8 @@ Boneless chicken tossed dry with a heavy hit of crushed black pepper.
 | Capsicum | 50 | g |
 | Ginger | 10 | g |
 | Garlic | 10 | g |
+| Curry Leaf | 5 | g |
+| Lemon | 0.5 | pcs |
 
 ## Recipe
 

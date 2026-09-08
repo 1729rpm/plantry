@@ -28,8 +28,9 @@ Fragrant rice cooked in ghee with whole spices, fried onion and cashews.
 
 ## Recipe
 
-1. Heat ghee and crackle whole spices, then fry sliced onion till golden.
-2. Add ginger garlic paste and the cashews, saute a minute.
-3. Add washed soaked rice and salt, toss to coat.
-4. Pour in measured hot water and cook covered till fluffy.
-5. Rest, then fluff with a fork before serving.
+1. For two portions, rinse and soak 150 g dry basmati rice for 15 minutes, then drain. Use 300 ml fresh water for the covered absorption-cooking step; rest 10 minutes before fluffing.
+2. Heat ghee and crackle whole spices, then fry sliced onion till golden.
+3. Add ginger garlic paste and the cashews, saute a minute.
+4. Add washed soaked rice and salt, toss to coat.
+5. Pour in measured hot water and cook covered till fluffy.
+6. Rest, then fluff with a fork before serving.

@@ -33,8 +33,9 @@ A one-pot rice pulao cooked with spiced chicken keema and peas.
 
 ## Recipe
 
-1. Brown the onions with whole spices, then add ginger garlic and green chilli.
-2. Add the keema and sear, then tomato, mint and ground spices, cook till dry.
-3. Stir in soaked rice and peas, then add measured hot water and salt.
-4. Cover and cook on low until the rice is done and the water is absorbed.
-5. Rest, then fold through with coriander before serving.
+1. For two portions, rinse and soak 150 g dry basmati rice for 15 minutes, then drain. Use 300 ml fresh water for the covered absorption-cooking step; rest 10 minutes before fluffing.
+2. Brown the onions with whole spices, then add ginger garlic and green chilli.
+3. Add the keema and sear, then tomato, mint and ground spices, cook till dry.
+4. Stir in soaked rice and peas, then add measured hot water and salt.
+5. Cover and cook on low until the rice is done and the water is absorbed.
+6. Rest, then fold through with coriander before serving.

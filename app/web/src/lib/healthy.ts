@@ -22,8 +22,13 @@ for (const row of ingredients) {
 const HEALTHY_DISH_IDS = new Set<number>();
 for (const dish of dishes) {
   const rows = rowsByDish.get(dish.id) ?? [];
-  if (deriveDishMacros(rows, catalog).healthy) HEALTHY_DISH_IDS.add(dish.id);
+  if (deriveDishMacros(rows, catalog).healthy === true) HEALTHY_DISH_IDS.add(dish.id);
 }
+
+// Grocery rows omit pantry staples, so none currently qualify as complete
+// recipe nutrition. Keep the filter unavailable until a complete input source
+// supplies defensible classifications; null is not evidence of poor nutrition.
+export const HEALTHY_FILTER_AVAILABLE = HEALTHY_DISH_IDS.size > 0;
 
 /** Whether the engine derives this dish as Healthy (engine.md §11). */
 export function dishIsHealthy(dish: Dish): boolean {

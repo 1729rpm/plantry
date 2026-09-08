@@ -30,8 +30,9 @@ Fragrant basmati rice cooked with green peas and whole spices.
 
 ## Recipe
 
-1. Rinse and soak basmati rice for 15 minutes, then drain.
-2. Saute whole spices, onion, ginger and green chilli in ghee.
-3. Add the peas and rice, toss to coat.
-4. Pour in measured water with salt, bring to a boil, then cover and cook on low.
-5. Fluff and finish with mint and coriander.
+1. For two portions, rinse and soak 150 g dry basmati rice for 15 minutes, then drain. Use 300 ml fresh water for the covered absorption-cooking step; rest 10 minutes before fluffing.
+2. Rinse and soak basmati rice for 15 minutes, then drain.
+3. Saute whole spices, onion, ginger and green chilli in ghee.
+4. Add the peas and rice, toss to coat.
+5. Pour in measured water with salt, bring to a boil, then cover and cook on low.
+6. Fluff and finish with mint and coriander.

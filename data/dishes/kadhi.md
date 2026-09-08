@@ -31,8 +31,9 @@ A tangy besan and curd kadhi finished with a curry-leaf tempering.
 
 ## Recipe
 
-1. Whisk the curd with besan, turmeric, salt and water until smooth and lump-free.
-2. Bring to a gentle simmer, stirring constantly so it does not split.
-3. Add onion and green chilli and simmer until thickened and no longer raw.
-4. Temper cumin, curry leaves and dried red chilli in ghee and pour over.
-5. Finish with coriander.
+1. Whisk 30 g besan with the listed 300 g curd and 500 ml water for two portions of kadhi.
+2. Whisk the curd with besan, turmeric, salt and water until smooth and lump-free.
+3. Bring to a gentle simmer, stirring constantly so it does not split.
+4. Add onion and green chilli and simmer until thickened and no longer raw.
+5. Temper cumin, curry leaves and dried red chilli in ghee and pour over.
+6. Finish with coriander.

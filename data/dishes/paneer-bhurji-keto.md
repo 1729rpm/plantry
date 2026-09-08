@@ -26,6 +26,7 @@ Crumbled paneer scrambled with peppers and onion, a low carb plate.
 | Capsicum | 50 | g |
 | Tomato | 50 | g |
 | Green Chilli | 2 | pcs |
+| Coriander Leaf | 10 | g |
 
 ## Recipe
 

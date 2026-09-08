@@ -26,6 +26,7 @@ Strips of chicken breast tossed with broccoli and peppers, low carb.
 | Broccoli | 100 | g |
 | Capsicum | 60 | g |
 | Garlic | 10 | g |
+| Lemon | 0.5 | pcs |
 
 ## Recipe
 

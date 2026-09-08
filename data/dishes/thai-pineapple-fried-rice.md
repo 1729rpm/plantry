@@ -31,8 +31,9 @@ Cold rice tossed with egg, cashews and sweet pineapple in a light curry-spiced f
 
 ## Recipe
 
-1. Scramble the egg in hot oil and set aside.
-2. Fry the capsicum and cashews briefly, then add cold rice and toss on high heat.
-3. Season with soy sauce and a pinch of curry powder.
-4. Fold through the pineapple, egg and spring onion.
-5. Serve hot.
+1. For two portions, use 360 g cooked rice from 120 g dry rice. If starting from dry rice, rinse, cook covered with 240 ml water until absorbed, then rest 10 minutes; cool before any frying or cold assembly.
+2. Scramble the egg in hot oil and set aside.
+3. Fry the capsicum and cashews briefly, then add cold rice and toss on high heat.
+4. Season with soy sauce and a pinch of curry powder.
+5. Fold through the pineapple, egg and spring onion.
+6. Serve hot.

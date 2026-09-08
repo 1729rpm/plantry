@@ -12,7 +12,7 @@ prepMinutes: 35
 seasons: All
 cuisine: Indian
 complexity: Medium
-buySpecially: Curry cut chicken, 600g
+buySpecially: Curry cut chicken, 300g
 photo: chicken-stew.jpg
 ---
 

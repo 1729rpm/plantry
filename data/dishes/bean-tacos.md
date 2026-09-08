@@ -26,6 +26,8 @@ Tortillas filled with spiced beans, crunchy lettuce and tomato.
 | Lettuce | 40 | g |
 | Tomato | 50 | g |
 | Onion | 40 | g |
+| Garlic | 8 | g |
+| Lemon | 0.5 | pcs |
 
 ## Recipe
 

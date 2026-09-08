@@ -27,11 +27,16 @@ Indo-Chinese paneer tossed dry with capsicum, onion and a garlicky chilli sauce.
 | Onion | 80 | g |
 | Garlic | 10 | g |
 | Green Chilli | 3 | pcs |
+| Cornflour | 20 | g |
+| Soy Sauce | 15 | ml |
+| Chilli Sauce | 15 | g |
+| White Vinegar | 10 | ml |
 
 ## Recipe
 
-1. Cube the paneer and toss in cornflour, then shallow fry till golden, set aside.
-2. On high heat, saute garlic, green chilli, onion and capsicum squares.
-3. Add soy sauce, chilli sauce and a little vinegar.
-4. Return the paneer and toss to coat in the dry sauce.
-5. Serve hot, scattered with spring onion if you have it.
+1. Use the listed chilli sauce as a ready-made hot red chilli sauce (sriracha style), weighed in grams.
+2. Cube the paneer and toss in cornflour, then shallow fry till golden, set aside.
+3. On high heat, saute garlic, green chilli, onion and capsicum squares.
+4. Add soy sauce, chilli sauce and a little white vinegar.
+5. Return the paneer and toss to coat in the dry sauce.
+6. Serve hot, scattered with spring onion if you have it.

@@ -25,6 +25,7 @@ Finely chopped French beans stir fried South Indian style with curry leaves.
 | Carrot | 50 | g |
 | Green Chilli | 2 | pcs |
 | Curry Leaf | 5 | g |
+| Urad Dal | 5 | g |
 
 ## Recipe
 

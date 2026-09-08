@@ -29,6 +29,7 @@ Minced chicken stir-fried hard with garlic, chilli and a fistful of basil.
 | Garlic | 12 | g |
 | Green Chilli | 3 | pcs |
 | Basil | 12 | g |
+| Soy Sauce | 15 | ml |
 
 ## Recipe
 

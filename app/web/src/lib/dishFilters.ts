@@ -9,7 +9,7 @@
 // and first-class `cuisine` field.
 
 import type { Dish } from "@plantry/engine";
-import { dishIsHealthy } from "./healthy.js";
+import { dishIsHealthy, HEALTHY_FILTER_AVAILABLE } from "./healthy.js";
 
 // ── Picker-sheet quality chips (the fruit slot) ──────────────────────────────
 // The fruit slot's Replace picker keeps the simple quality-only chip row: its
@@ -21,7 +21,9 @@ export const DISH_FILTERS = ["Easy to cook", "Healthy"] as const;
 export type DishFilter = (typeof DISH_FILTERS)[number];
 
 // The chips the fruit-slot picker renders (quality only; the pool is Fruit-only).
-export const PICKER_FILTERS: DishFilter[] = ["Easy to cook", "Healthy"];
+export const PICKER_FILTERS: DishFilter[] = HEALTHY_FILTER_AVAILABLE
+  ? ["Easy to cook", "Healthy"]
+  : ["Easy to cook"];
 
 /** Does a dish satisfy every active picker chip? Multi-select is an AND across
  *  the selected chips. */

@@ -210,11 +210,7 @@ describe("swapPickerVisible — search and filters reach the full pool, suggesti
   // it falls outside any short suggestion cap, so a name search (even with a
   // filter active) must still find it. Roti is also "Easy" so it survives the
   // "Easy to cook" chip; the harder dishes earlier in the pool do not.
-  // The "Healthy" chip now reads the engine-derived flag (engine.md §11), keyed
-  // on dish id against the baked live library, not a tag. So the dish that must
-  // satisfy "Healthy" uses a real healthy library id (9, "Mushroom matar"); the
-  // others use ids the engine does not flag healthy. Names are still arbitrary
-  // (the substring search tests key on the fixture name, not the library name).
+  // Grocery-only nutrition is partial, so no library ID qualifies as Healthy.
   const pool: Dish[] = [
     dish({ id: 10, name: "Rajma", complexity: "Hard" }),
     dish({ id: 11, name: "Chole", complexity: "Medium" }),
@@ -274,9 +270,9 @@ describe("swapPickerVisible — search and filters reach the full pool, suggesti
   });
 
   it("ANDs multiple filters (Healthy + Easy)", () => {
-    // Only id 9 is both Easy (fixture) and engine-derived Healthy (live library).
+    // Easy does not turn partial nutrition into a positive health classification.
     const visible = swapPickerVisible(pool, "", ["Easy to cook", "Healthy"], 12);
-    expect(visible.map((d) => d.id)).toEqual([9]);
+    expect(visible.map((d) => d.id)).toEqual([]);
   });
 
   it("supports the meal-time pills (the pool is now generic across meal-time)", () => {

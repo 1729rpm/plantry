@@ -15,6 +15,14 @@ work queue for /reconcile-docs and /reconcile-ops; or "none".
 
 ---
 
+## 2026-09-08  High-confidence dish audit corrections
+
+Correct 51 high-confidence finding groups across 106 dishes and the ingredient catalog, with recipe quantities, shopping inputs, product names and sourced profiles. Partial grocery-derived nutrition cannot produce a Healthy classification; Explore displays "Healthy (under review)". A self-contained handoff preserves all 59 medium-confidence findings and all 270 post-fix recipe snapshots for review. (#275)
+
+Why: recipe/shopping mismatches omit required purchases, while incomplete nutrition inputs cannot support a health classification. Recipe defaults are explicit; household and product uncertainties remain open for review.
+
+Updated: `docs/engine.md` nutrition completeness and reporting, `docs/product.md` Healthy availability, `ADDING-DISHES.md` authoring guidance, and `DECISIONS.md` are reconciled in this PR. No remaining canonical-doc update.
+
 ## 2026-09-08  Listing queries for the maintenance passes
 
 Two read-only Convex query functions the sitting reads production through.

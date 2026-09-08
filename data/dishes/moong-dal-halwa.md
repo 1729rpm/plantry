@@ -30,8 +30,9 @@ Rich winter halwa of slow-roasted moong dal cooked in ghee with milk, cashews an
 
 ## Recipe
 
-1. Grind the soaked moong dal to a coarse paste.
-2. Roast the paste in ghee on low heat, stirring constantly, until golden and nutty.
-3. Add warm milk carefully and cook till absorbed.
-4. Stir in sugar and cardamom, cook till the ghee separates.
-5. Fold in fried cashews and raisins and serve warm.
+1. For the listed 150 g dry moong dal, use 90 g ghee, 90 g sugar, 250 ml milk and 150 ml water; reserve 10 g of the ghee for the nuts. This makes two generous dessert portions.
+2. Grind the soaked moong dal to a coarse paste.
+3. Roast the paste in ghee on low heat, stirring constantly, until golden and nutty.
+4. Add the warm milk and measured water carefully and cook till absorbed.
+5. Stir in sugar and cardamom, cook till the ghee separates.
+6. Fold in fried cashews and raisins and serve warm.

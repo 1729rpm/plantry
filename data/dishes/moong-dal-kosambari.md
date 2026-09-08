@@ -25,6 +25,8 @@ South Indian salad of soaked moong dal with cucumber and carrot.
 | Cucumber | 80 | g |
 | Carrot | 40 | g |
 | Coriander Leaf | 10 | g |
+| Lemon | 0.5 | pcs |
+| Curry Leaf | 3 | g |
 
 ## Recipe
 

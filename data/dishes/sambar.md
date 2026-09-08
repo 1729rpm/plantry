@@ -28,6 +28,7 @@ South Indian toor dal stew with mixed vegetables, tamarind and sambar masala.
 | Brinjal | 60 | g |
 | Tomato | 60 | g |
 | Onion | 50 | g |
+| Curry Leaf | 5 | g |
 
 ## Recipe
 

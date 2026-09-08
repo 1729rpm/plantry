@@ -259,12 +259,12 @@ describe("deriveDishMacros: fat, fibre, calories", () => {
     expect(macros.caloriesPerPerson).toBeCloseTo(170, 10);
   });
 
-  it("returns zero calories and not-healthy for a dish with no macro data", () => {
+  it("returns zero partial calories and unknown health for a dish with no macro data", () => {
     const macros = deriveDishMacros([], []);
     expect(macros.fatPerPerson).toBe(0);
     expect(macros.fiberPerPerson).toBe(0);
     expect(macros.caloriesPerPerson).toBe(0);
-    expect(macros.healthy).toBe(false);
+    expect(macros.healthy).toBeNull();
   });
 });
 
@@ -285,7 +285,9 @@ describe("deriveDishMacros: healthy flag", () => {
     // 100 g soya -> per person P26, C16.5, fat 0.25, fibre 6.5.
     // calories = 4*26 + 4*16.5 + 9*0.25 = 104 + 66 + 2.25 = 172.25.
     // protein fraction = 104/172.25 ~ 0.60 >= 0.25; fibre 6.5 >= 3 -> healthy.
-    const macros = deriveDishMacros([ing("Soyabean Chunk", 100, "g")], catalog);
+    const macros = deriveDishMacros([ing("Soyabean Chunk", 100, "g")], catalog, {
+      completeRecipe: true,
+    });
     expect(macros.healthy).toBe(true);
   });
 
@@ -303,7 +305,9 @@ describe("deriveDishMacros: healthy flag", () => {
         special: false,
       },
     ];
-    const macros = deriveDishMacros([ing("Chicken Breast", 200, "g")], catalog);
+    const macros = deriveDishMacros([ing("Chicken Breast", 200, "g")], catalog, {
+      completeRecipe: true,
+    });
     // protein fraction is well above 0.25, but fibre is 0 < 3.
     const proteinFraction =
       (ATWATER_PROTEIN_KCAL_PER_G * macros.proteinPerPerson) / macros.caloriesPerPerson;
@@ -326,7 +330,7 @@ describe("deriveDishMacros: healthy flag", () => {
         special: false,
       },
     ];
-    const macros = deriveDishMacros([ing("Oats", 100, "g")], catalog);
+    const macros = deriveDishMacros([ing("Oats", 100, "g")], catalog, { completeRecipe: true });
     const proteinFraction =
       (ATWATER_PROTEIN_KCAL_PER_G * macros.proteinPerPerson) / macros.caloriesPerPerson;
     expect(macros.fiberPerPerson).toBeGreaterThanOrEqual(HEALTHY_FIBER_PER_PERSON);
@@ -364,5 +368,43 @@ describe("proteinToCarbRatio", () => {
 
   it("returns null when carbs are zero", () => {
     expect(proteinToCarbRatio(30, 0)).toBeNull();
+  });
+});
+
+describe("partial recipe nutrition", () => {
+  const catalog: CatalogIngredient[] = [
+    {
+      ingredient: "Urad Dal",
+      group: "Pantry",
+      unit: "g",
+      special: false,
+      proteinPer100g: 25,
+      carbsPer100g: 59,
+      fatPer100g: 1.2,
+      fiberPer100g: 18,
+    },
+  ];
+
+  it("does not classify urad-only dosa groceries as a healthy whole recipe", () => {
+    const partial = deriveDishMacros([ing("Urad Dal", 60, "g")], catalog);
+    expect(partial.proteinPerPerson).toBeCloseTo(7.5);
+    expect(partial.caloriesPerPerson).toBeCloseTo(104.04);
+    expect(partial.nutritionBasis).toBe("partial");
+    expect(partial.healthy).toBeNull();
+  });
+
+  it("requires populated macro fields even when a caller asserts completeness", () => {
+    const incomplete = [{ ...catalog[0], fiberPer100g: undefined }];
+    const result = deriveDishMacros([ing("Urad Dal", 60, "g")], incomplete, {
+      completeRecipe: true,
+    });
+    expect(result.nutritionBasis).toBe("partial");
+    expect(result.healthy).toBeNull();
+  });
+
+  it("rejects missing catalog entries and unweighable pieces as complete inputs", () => {
+    const result = deriveDishMacros([ing("Unknown", 2, "pcs")], catalog, { completeRecipe: true });
+    expect(result.nutritionBasis).toBe("partial");
+    expect(result.healthy).toBeNull();
   });
 });

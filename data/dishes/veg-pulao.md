@@ -33,8 +33,9 @@ Fragrant basmati rice cooked with mixed vegetables and whole spices.
 
 ## Recipe
 
-1. Temper whole spices in ghee, then saute onion, ginger and green chilli.
-2. Add the diced vegetables and toss for a couple of minutes.
-3. Add soaked, drained basmati rice and stir gently to coat.
-4. Pour in measured water with salt, cover and cook till the rice is done.
-5. Rest, then fluff with mint and coriander.
+1. For two portions, rinse and soak 150 g dry basmati rice for 15 minutes, then drain. Use 300 ml fresh water for the covered absorption-cooking step; rest 10 minutes before fluffing.
+2. Temper whole spices in ghee, then saute onion, ginger and green chilli.
+3. Add the diced vegetables and toss for a couple of minutes.
+4. Add soaked, drained basmati rice and stir gently to coat.
+5. Pour in measured water with salt, cover and cook till the rice is done.
+6. Rest, then fluff with mint and coriander.

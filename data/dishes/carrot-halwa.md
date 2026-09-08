@@ -30,7 +30,8 @@ Slow-cooked grated carrots reduced in milk with ghee, cashews and raisins.
 
 ## Recipe
 
-1. Grate the carrots and saute in ghee until the raw smell goes.
-2. Add the milk and cook on medium, stirring, until it reduces.
-3. Stir in sugar and cardamom, cook till thick and glossy.
-4. Fold in cashews and raisins fried in ghee, and serve warm.
+1. For two dessert portions, use 40 g sugar and 25 g ghee with the listed 500 g carrot and 250 ml milk; reserve 5 g of the ghee for frying the nuts.
+2. Grate the carrots and saute in ghee until the raw smell goes.
+3. Add the milk and cook on medium, stirring, until it reduces.
+4. Stir in sugar and cardamom, cook till thick and glossy.
+5. Fold in cashews and raisins fried in ghee, and serve warm.

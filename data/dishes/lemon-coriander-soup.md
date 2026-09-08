@@ -25,6 +25,7 @@ Light tangy clear soup of vegetables, coriander and lemon.
 | Cabbage | 40 | g |
 | Coriander Leaf | 15 | g |
 | Lemon | 1 | pcs |
+| Garlic | 8 | g |
 
 ## Recipe
 

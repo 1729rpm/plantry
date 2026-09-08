@@ -179,3 +179,10 @@ First `/maintain` sitting (`MAINTENANCE.md` §8), signals pass. Window 2026-07-1
 - **Dislikes**: none. The `dishDislikes` table holds no documents at all (read via the Convex CLI, since no query function lists the table; a listing query is still owed as a chore so the next sitting reads it the same way as the other two tables).
 
 Consumes: 66 `manualChanges` rows marked `reviewed_no_change` (pre-cutover) plus 1 marked `reviewed_no_change` (post-cutover); 0 incidents; 0 dislikes. No `data/dishes/`, `data/ingredients.md`, `docs/engine.md`, or `engine/` change. No `data/engine-requests.md` entry.
+
+
+## 2026-09-08: High-confidence dish audit fixes (#275)
+
+Correct 106 dishes against findings H01-H50: align two chicken purchase notes to the existing 300 g portions, populate six empty shopping tables, restore dessert mains and missing recipe ingredients, name the kidney-bean quesadilla accurately (ID 188 unchanged), use distinct sweet-potato glass noodles, restore the fifth Panchmel dal while retaining 130 g total, and specify pantry grain/dessert quantities for two. Add five catalog products and source the new profiles and onion/tomato estimates in docs/reviews/high-confidence-fixes-2026-09-08.md. The sevai recipe explicitly uses thin rice vermicelli. Quantities newly specified are recipe defaults, not cooking-trial results.
+
+H51 treats grocery-derived nutrition as partial and withholds Healthy classifications until complete inputs are supplied. Medium-confidence findings remain review decisions in docs/reviews/claude-code-medium-confidence-review-2026-09-08.md. No active status, HP tag, dish ID or production record changes are part of this batch.

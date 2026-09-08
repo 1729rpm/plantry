@@ -21,13 +21,15 @@ Five lentils cooked together and finished with a fragrant ghee tempering.
 
 | Ingredient | Quantity | Unit |
 |------------|----------|------|
-| Toor Dal | 40 | g |
-| Moong Dal | 30 | g |
-| Chana Dal | 30 | g |
-| Masoor Dal | 30 | g |
+| Toor Dal | 26 | g |
+| Moong Dal | 26 | g |
+| Chana Dal | 26 | g |
+| Masoor Dal | 26 | g |
 | Onion | 50 | g |
 | Tomato | 50 | g |
 | Garlic | 10 | g |
+| Ginger | 10 | g |
+| Urad Dal | 26 | g |
 
 ## Recipe
 

@@ -32,8 +32,9 @@ Smoky spiced chicken with charred peppers and onions over rice.
 
 ## Recipe
 
-1. Toss the chicken in cumin, paprika, garlic and a pinch of chilli.
-2. Sear it hard in a hot pan till charred and cooked through, then rest.
-3. Char the sliced peppers and onion in the same pan.
-4. Slice the chicken and pile it with the peppers over rice.
-5. Finish with coriander and a squeeze of lemon.
+1. For two portions, use 360 g cooked rice from 120 g dry rice. If starting from dry rice, rinse, cook covered with 240 ml water until absorbed, then rest 10 minutes; cool before any frying or cold assembly.
+2. Toss the chicken in cumin, paprika, garlic and a pinch of chilli.
+3. Sear it hard in a hot pan till charred and cooked through, then rest.
+4. Char the sliced peppers and onion in the same pan.
+5. Slice the chicken and pile it with the peppers over rice.
+6. Finish with coriander and a squeeze of lemon.

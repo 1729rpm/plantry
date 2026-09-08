@@ -31,6 +31,8 @@ Firm tofu and vegetables simmered in a Thai red coconut curry.
 | Garlic | 8 | g |
 | Ginger | 8 | g |
 | Basil | 8 | g |
+| Thai Red Curry Paste | 25 | g |
+| Soy Sauce | 10 | ml |
 
 ## Recipe
 

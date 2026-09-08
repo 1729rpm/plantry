@@ -21,6 +21,7 @@ Plain buttered toast, the simplest side for eggs or chai.
 
 | Ingredient | Quantity | Unit |
 |------------|----------|------|
+| Bread | 4 | pcs |
 
 ## Recipe
 

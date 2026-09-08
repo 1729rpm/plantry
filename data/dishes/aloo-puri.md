@@ -29,8 +29,9 @@ A spiced potato masala served with puffy deep-fried puris.
 
 ## Recipe
 
-1. Boil and roughly mash the potatoes, keeping some texture.
-2. Temper cumin, ginger and green chilli, add the potato with turmeric and salt.
-3. Loosen with a splash of water into a soft masala and finish with coriander.
-4. Knead a stiff atta dough, roll into small discs and deep-fry until they puff.
-5. Serve the hot puris with the potato masala.
+1. For eight small puris (two portions), knead 160 g whole-wheat atta with 80 ml water and 5 ml oil into a firm dough; rest 15 minutes.
+2. Boil and roughly mash the potatoes, keeping some texture.
+3. Temper cumin, ginger and green chilli, add the potato with turmeric and salt.
+4. Loosen with a splash of water into a soft masala and finish with coriander.
+5. Knead a stiff atta dough, roll into small discs and deep-fry until they puff.
+6. Serve the hot puris with the potato masala.

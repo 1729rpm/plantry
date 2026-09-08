@@ -30,11 +30,13 @@ Shredded chicken in a smoky tomato sauce over rice with beans and cheese.
 | Cheese | 60 | g |
 | Garlic | 8 | g |
 | Coriander Leaf | 10 | g |
+| Lemon | 0.5 | pcs |
 
 ## Recipe
 
-1. Poach the chicken, then shred it.
-2. Cook onion, garlic and capsicum, add tomato, cumin, paprika and chilli, and reduce to a thick sauce.
-3. Stir the shredded chicken and beans into the sauce and simmer briefly.
-4. Spoon over cooked rice, top with grated cheese and let it melt.
-5. Finish with coriander and a squeeze of lime.
+1. For two portions, use 360 g cooked rice from 120 g dry rice. If starting from dry rice, rinse, cook covered with 240 ml water until absorbed, then rest 10 minutes; cool before any frying or cold assembly.
+2. Poach the chicken, then shred it.
+3. Cook onion, garlic and capsicum, add tomato, cumin, paprika and chilli, and reduce to a thick sauce.
+4. Stir the shredded chicken and beans into the sauce and simmer briefly.
+5. Spoon over cooked rice, top with grated cheese and let it melt.
+6. Finish with coriander and the juice of the listed half lemon.

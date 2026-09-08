@@ -30,7 +30,8 @@ Wheat parathas stuffed with spiced mashed potato, griddled till golden.
 
 ## Recipe
 
-1. Boil and mash the potato, mix in onion, ginger, green chilli, coriander and salt.
-2. Knead a soft wheat dough and rest it 10 minutes.
-3. Stuff each dough ball with the potato mix and roll out gently.
-4. Griddle on a hot tawa with ghee until both sides are golden.
+1. For four stuffed parathas (two portions), knead 160 g whole-wheat atta with 95 ml water, adding up to 15 ml more as needed; use the listed potato filling.
+2. Boil and mash the potato, mix in onion, ginger, green chilli, coriander and salt.
+3. Knead a soft wheat dough and rest it 10 minutes.
+4. Stuff each dough ball with the potato mix and roll out gently.
+5. Griddle on a hot tawa with ghee until both sides are golden.

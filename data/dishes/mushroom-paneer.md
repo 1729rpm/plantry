@@ -28,6 +28,7 @@ Paneer and mushrooms in a spiced onion-tomato gravy.
 | Ginger | 10 | g |
 | Garlic | 10 | g |
 | Green Chilli | 1 | pcs |
+| Coriander Leaf | 10 | g |
 
 ## Recipe
 

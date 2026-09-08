@@ -27,8 +27,9 @@ Wheat flour slow roasted in ghee and cooked with sugar syrup into a soft dark ha
 
 ## Recipe
 
-1. Melt ghee in a heavy kadhai and add the wheat flour.
-2. Roast on low heat, stirring constantly, until the flour turns deep brown and smells nutty.
-3. Fry the cashews and raisins alongside, keeping a few back for the top.
-4. Pour in hot sugar syrup carefully, stirring hard so no lumps form.
-5. Cook until the halva thickens, pulls away from the pan and releases its ghee, then serve warm.
+1. For two dessert portions, use 60 g whole-wheat atta, 40 g ghee, 50 g sugar and 180 ml water; dissolve the sugar in the hot water to make the syrup.
+2. Melt ghee in a heavy kadhai and add the wheat flour.
+3. Roast on low heat, stirring constantly, until the flour turns deep brown and smells nutty.
+4. Fry the cashews and raisins alongside, keeping a few back for the top.
+5. Pour in hot sugar syrup carefully, stirring hard so no lumps form.
+6. Cook until the halva thickens, pulls away from the pan and releases its ghee, then serve warm.
