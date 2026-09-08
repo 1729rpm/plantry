@@ -974,7 +974,7 @@ For the high-confidence audit fixes, keep the established Chicken 300 g recipe p
 
 For H51, adopt the audit's conservative correction: label grocery-derived nutrition partial and return an unknown Healthy result instead of pretending excluded pantry inputs have no nutritional effect. The Healthy filter remains visible as under review in Explore and unavailable in pickers. Full recipe-input modeling and the medium-confidence raw/cooked/product choices remain separate review work. Existing structural HP tags remain unchanged.
 
-## 2026-09-08: Medium-confidence dish audit, EM verdicts and fixes (PR #TBD)
+## 2026-09-08: Medium-confidence dish audit, EM verdicts and fixes (PR #276)
 
 **Stream:** EM review of `docs/reviews/claude-code-medium-confidence-review-2026-09-08.md`, then engineer stream `fix/dish-audit-medium`.
 **Context:** Rajat asked the EM to review the 59 medium-confidence groups Codex raised and say which it agreed with, then said "Fix everything that you agree upon, even if low value." That instruction is the §7 authorization for an EM-initiated change to canonical data. Verdicts per finding are in `docs/reviews/medium-confidence-verdicts-2026-09-08.md`.
