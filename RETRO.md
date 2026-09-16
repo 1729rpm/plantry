@@ -34,6 +34,14 @@ the `last-run` value on the retro row of `.maintenance-state`.
 
 ---
 
+## 2026-09-16  Docs-pass standing checks cannot see a claim that was never true
+- Area: verification
+- What happened: `docs/engineering.md` §6 described an auto-recovery middleware (engine-output validation with fallback to the last-good week, throw-to-incident wrapping, a service-worker week cache) that was planned in Phase 2 and never built, and §9 described per-PR Convex previews that never existed. Both survived every window-scoped docs pass and both reconciles because no CHANGELOG entry ever touched them: the pass verifies what shipped, and nothing shipped.
+- Recurrence: systemic (any aspirational section written before its feature and never delivered)
+- Impact: engineers and the EM planned against capabilities that did not exist; a from-scratch rewrite (#278) was needed to find them.
+- Proposed level: brief-template (a sixth standing check in `.claude/skills/maintain/passes/docs.md`: every capability a canonical doc asserts names a file, function, workflow, or table, and the pass greps for it; a claim with no anchor is drift)
+- Status: open
+
 ## 2026-09-07  A sitting's two branches share one artifact folder and one state file, and the skill did not say who moves what
 - Area: coordination
 - What happened: `/maintain` step 3 opens the docs branch off `origin/main` so the docs PR does not depend on the slow-loop PR, and step 8 says to `git mv` the sitting's folder to `archive/maintenance/<date>`. On the first sitting the folder was split across the two branches (signals and health artifacts on `slow-loop/<date>`, the other three on `docs/maintenance-<date>`) and `.maintenance-state` diverged, so a single close-out move would have left two artifacts behind in `features/` and the second PR to merge would have conflicted on the state file.

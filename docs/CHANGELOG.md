@@ -15,6 +15,25 @@ work queue for /reconcile-docs and /reconcile-ops; or "none".
 
 ---
 
+## 2026-09-16  Product, engineering, development, and the design contract rewritten from scratch
+
+`docs/product.md`, `docs/engineering.md`, `docs/development.md`, and `claude-design.md` are rewritten
+wholesale against the shipped code under the rules of the `/maintain` docs pass, with section
+numbering preserved so every `§` pointer across the repo keeps resolving. Corrections the code forced:
+`swapDish` accepts a cross-meal dish and rejects a fruit (`dish-is-fruit`), while `addDish` is the one
+meal-time-strict edit; there is no `swiggyCarts` table; the "auto-recovery middleware" section
+describes the four real layers (generation incidents, tagged mutation returns, the error boundary, the
+precached shell plus the `localStorage` week); previews are Vercel-only and talk to the dev
+deployment; the pre-commit hook guards code paths, not every commit; the grocery query returns grouped
+items; the Convex deployment needs no application variable; DNS carries the live Cloudflare records;
+photo coverage leaves future scope and complete recipe nutrition joins it; `docs/<short-name>` joins
+the branch prefixes. `docs/engine.md` is untouched. (#278)
+Why: the four documents had accumulated claims the code contradicts, and Rajat asked for a perfect
+reflection of the current product without patchwork.
+Updated: none (this PR is the reconciliation). Lane B follow-ups for the next docs pass: `CLAUDE.md`
+says the hook rejects commits from the main directory (it rejects code-path commits); `README.md` says
+Explore hides dishes already on a shared list (the wishlist never hides a dish).
+
 ## 2026-09-08  High-confidence dish audit corrections
 
 Correct 51 high-confidence finding groups across 106 dishes and the ingredient catalog, with recipe quantities, shopping inputs, product names and sourced profiles. Partial grocery-derived nutrition cannot produce a Healthy classification; Explore displays "Healthy (under review)". A self-contained handoff preserves all 59 medium-confidence findings and all 270 post-fix recipe snapshots for review. (#275)
