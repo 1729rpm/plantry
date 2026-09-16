@@ -35,7 +35,7 @@ says the hook rejects commits from the main directory (it rejects code-path comm
 Explore hides dishes already on a shared list (the wishlist never hides a dish).
 ## 2026-09-16  DNS table matches the live Cloudflare records
 
-`docs/engineering.md` §10 records the registrar (Spaceship), the Cloudflare delegation, and the project-specific Vercel CNAME target the integration actually created, replacing the pre-setup "Rajat to add" table that listed the generic `cname.vercel-dns.com`. (#PR)
+`docs/engineering.md` §10 records the registrar (Spaceship), the Cloudflare delegation, and the project-specific Vercel CNAME target the integration actually created, replacing the pre-setup "Rajat to add" table that listed the generic `cname.vercel-dns.com`. (#277)
 
 Why: the section still read as a to-do from before the domains were wired; the live records had a different (equally valid) Vercel target, so the spec was stale.
 
