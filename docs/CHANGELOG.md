@@ -15,6 +15,14 @@ work queue for /reconcile-docs and /reconcile-ops; or "none".
 
 ---
 
+## 2026-09-16  DNS table matches the live Cloudflare records
+
+`docs/engineering.md` §10 records the registrar (Spaceship), the Cloudflare delegation, and the project-specific Vercel CNAME target the integration actually created, replacing the pre-setup "Rajat to add" table that listed the generic `cname.vercel-dns.com`. (#PR)
+
+Why: the section still read as a to-do from before the domains were wired; the live records had a different (equally valid) Vercel target, so the spec was stale.
+
+Updated: none (`docs/engineering.md` §10 is the change).
+
 ## 2026-09-08  High-confidence dish audit corrections
 
 Correct 51 high-confidence finding groups across 106 dishes and the ingredient catalog, with recipe quantities, shopping inputs, product names and sourced profiles. Partial grocery-derived nutrition cannot produce a Healthy classification; Explore displays "Healthy (under review)". A self-contained handoff preserves all 59 medium-confidence findings and all 270 post-fix recipe snapshots for review. (#275)

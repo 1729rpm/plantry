@@ -304,14 +304,14 @@ Each `currentWeek` document carries a `version` field. The frontend includes the
 - **Preview:** every PR. Convex preview deployment with an isolated database. Frontend preview deployment on Vercel. Domain: `plantry-dev.mudgal.xyz` (CNAME points to whichever preview URL the current PR produced; deployed via a Vercel domain alias on PR open).
 - **Branch convention:** `main` is production; every other branch follows `docs/development.md` §2 (engineer streams on `feat/*`, the two `/maintain` PRs on `slow-loop/<date>` and `docs/maintenance-<date>`, an evolution run on `evolve/engine-<version>`). Every PR gets a preview whatever its prefix.
 
-## 10. DNS records (Rajat to add)
+## 10. DNS records
 
-Under `mudgal.xyz` on Cloudflare:
+`mudgal.xyz` is registered at Spaceship and delegated to Cloudflare nameservers; Cloudflare answers every lookup for the domain and holds the two Plantry records. Both were created by the Vercel-Cloudflare integration when the custom domains were added, so their target is the project-specific hostname Vercel assigns (shown under the project's Domains settings) rather than the generic `cname.vercel-dns.com`. Either target works; if the Vercel project is ever recreated, the target changes and the records need re-pointing.
 
-| Type  | Name          | Value                  | Notes                                                                        |
-| ----- | ------------- | ---------------------- | ---------------------------------------------------------------------------- |
-| CNAME | `plantry`     | `cname.vercel-dns.com` | Production frontend. Vercel issues the cert.                                 |
-| CNAME | `plantry-dev` | `cname.vercel-dns.com` | Preview frontend. Vercel alias updates to point at the current PR's preview. |
+| Type  | Name          | Value                                          | Notes                                                                        |
+| ----- | ------------- | ---------------------------------------------- | ---------------------------------------------------------------------------- |
+| CNAME | `plantry`     | `414bed3bf3dfc259.vercel-dns-017.com` (Vercel) | Production frontend. Vercel issues the cert.                                 |
+| CNAME | `plantry-dev` | `414bed3bf3dfc259.vercel-dns-017.com` (Vercel) | Preview frontend. Vercel alias updates to point at the current PR's preview. |
 
 Convex prod and preview each have their own `<deployment>.convex.cloud` URLs; the frontend reads them from `VITE_CONVEX_URL` at build time. No DNS records needed for Convex.
 
