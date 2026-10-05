@@ -12,6 +12,7 @@ prepMinutes: 35
 seasons: All
 cuisine: Indian
 complexity: Easy
+prePrep: Soak the chickpeas overnight and boil till tender; the listed weight is dry
 photo: chana-pulao.jpg
 ---
 

@@ -33,11 +33,12 @@ Soft paneer and potato koftas in a rich cashew-tomato gravy.
 | Green Chilli | 1 | pcs |
 | Coriander Leaf | 10 | g |
 | Cornflour | 15 | g |
+| Fresh Cream | 50 | ml |
 
 ## Recipe
 
 1. Mash paneer and boiled potato, bind with a little cornflour, shape into koftas.
 2. Deep-fry the koftas until golden and set aside.
-3. Saute onion, ginger, garlic and soaked cashews, add tomato and cook down, then blend smooth.
-4. Simmer the puree with spices and a little cream into a glossy gravy.
+3. Saute onion, ginger, garlic, green chilli and soaked cashews, add tomato and cook down, then blend smooth.
+4. Simmer the puree with spices and the cream into a glossy gravy.
 5. Add the koftas just before serving and finish with coriander.

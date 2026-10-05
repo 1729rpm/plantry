@@ -29,6 +29,7 @@ Paneer cubes folded into a smooth, lightly spiced spinach gravy.
 | Ginger | 10 | g |
 | Garlic | 10 | g |
 | Green Chilli | 2 | pcs |
+| Fresh Cream | 30 | ml |
 
 ## Recipe
 
@@ -36,4 +37,4 @@ Paneer cubes folded into a smooth, lightly spiced spinach gravy.
 2. Saute onion, ginger, garlic and green chilli, add tomato and cook down.
 3. Stir in the spinach puree with salt and a little water, simmer 5 minutes.
 4. Fold in the paneer cubes and warm through.
-5. Finish with a swirl of cream and garam masala.
+5. Finish with the cream and garam masala.

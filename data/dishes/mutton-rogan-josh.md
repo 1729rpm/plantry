@@ -34,7 +34,7 @@ Kashmiri style mutton slow-cooked in a spiced curd and onion gravy with a deep r
 
 ## Recipe
 
-1. Brown the onions in oil, then add ginger garlic paste and cook till fragrant.
+1. Brown the onions in oil, then add ginger garlic paste and slit green chilli and cook till fragrant.
 2. Add the mutton and sear on high heat till the pieces are well coloured.
 3. Stir in whisked curd, tomato, Kashmiri chilli and ground spices, cook till the oil separates.
 4. Add hot water, cover and simmer on low heat 45 minutes until the mutton is fork tender.
