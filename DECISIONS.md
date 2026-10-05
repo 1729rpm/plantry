@@ -983,3 +983,12 @@ For H51, adopt the audit's conservative correction: label grocery-derived nutrit
 **Chosen:** (a). The section skeletons were sound; the content inside them was stale, and a from-scratch rewrite inside the same skeleton is what the docs pass's own style rules ask for. "Design" was read as `claude-design.md`, the file the repo names the design contract; `docs/engine.md` was left untouched because the docs pass forbids editing it beyond wording that describes shipped code and no such defect was found. Every conflict between a doc and the code resolved in the code's favour, per the pass's conflict rule, and each is listed in the PR. `docs/<short-name>` is codified as a branch prefix because PRs #277 and #278 already use it. The one claim stated from tooling rather than the Vercel dashboard (the preview environment points at the dev Convex deployment) is flagged as a residual check.
 
 **Reversibility:** documentation only; any sentence can be corrected by the next docs pass. The PR merges on Rajat's word.
+
+## 2026-10-05 22:40 IST  Retire the manual finalize; generation archives the previous week itself
+
+**Stream:** EM (weekly menu setup)
+**Context:** while setting up the 2026-10-05 week Rajat asked why the previous week still needs a separate finalize. Under engine v6 the record is every earlier `currentWeek` row in its live edited state (`docs/engine.md` §2.1), so finalize feeds nothing the engine reads; it only snapshots the week into `weekArchive` as provenance and flips `status`. Three September weeks are unarchived because nobody ran it.
+**Options considered:** (a) keep running finalize by hand each week; (b) retire the mutation and the archive table; (c) have `generateCurrentWeek` archive every record week that lacks a `weekArchive` row, and retire the manual mutation.
+**Chosen (Rajat):** (c). Provenance keeps accruing with zero manual steps, the archive table and its readers are untouched, and the first run after it ships backfills the missing weeks. Filed in `.maintenance-state` under the health pass's deferred list as a chore-sized `/new-stream`, not an evolution: it changes what is stored beside the record, not what the engine decides.
+**Reversibility:** high; one internal mutation grows a loop, one browser-callable mutation goes, four doc sections reword.
+**Right-size check (per `docs/product.md` §4):** small pattern (a manual step that every week forgets), fixed at the backend-code level, generalizes to every future week.
