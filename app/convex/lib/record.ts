@@ -8,10 +8,9 @@ import type { V6Day as Day, V6Pick as Pick, RecordWeek } from "@plantry/engine";
  * The v6 engine's primary signal is what the household actually ate, not what the
  * engine proposed. That record lives in one place: the live `currentWeek` rows,
  * with every swap, add, and delete already applied to `slots`. `weekArchive` is
- * NOT the source. Finalize snapshots a week at the moment of finalizing and the
- * household keeps editing after that moment, so the archive under-reports as-eaten
- * rows for edited weeks. The archive stays where it is for the picker and Explore
- * surfaces until those move onto the record too (§12).
+ * NOT the source. Generation archives each earlier week the first time it
+ * generates a later one, dropping custom one-offs and skipped days, so the archive
+ * can lag later edits. It is provenance only; nothing reads it.
  */
 
 /**
@@ -80,8 +79,8 @@ export function recordWeekFromDoc(doc: Doc<"currentWeek">): RecordWeek {
  *
  * A record week is any `currentWeek` row whose `weekStart` is earlier than the week
  * being generated, WHATEVER its `status`: a draft week the household has been eating
- * out of all week is as much a record of what was eaten as a finalized one, and
- * waiting for finalize would silently drop the most recent week from the signal.
+ * out of all week is a record of what was eaten, so the most recent week is in the
+ * signal from the next generation on.
  *
  * The `by_weekStart` index range gives the ascending order for free (Convex returns
  * an index range in index order), so no sort is needed and the read touches only the

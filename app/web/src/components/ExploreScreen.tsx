@@ -219,7 +219,7 @@ export function ExploreScreen({ identity }: ExploreScreenProps) {
           // explicitly: a fruit dish belongs in the "fruit" slot, not "lunch".
           // A bare `time === "Breakfast" ? ... : "lunch"` binary would mislabel
           // any non-breakfast dish as lunch (the same latent assumption that
-          // crashed finalizeWeek). `Dish.time` is only Breakfast|Lunch, so the
+          // once crashed the weekArchive write). `Dish.time` is only Breakfast|Lunch, so the
           // remaining branch is a true binary.
           const dish = dishById(overlay.dish.dishId);
           const dishMeal: Meal =

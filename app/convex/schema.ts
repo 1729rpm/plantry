@@ -9,7 +9,8 @@ import { slotMealValidator } from "./lib/meals.js";
 
 export default defineSchema({
   // The live Mon-Sat plan for the current week. Mutated by swaps, custom one-offs,
-  // and finalize. Version increments on every mutation for optimistic concurrency.
+  // adds, deletes, and skips. `status` is "draft" for every generated week (nothing
+  // flips it); seeded record weeks carry "final" (recordSeed.ts). Version increments on every mutation for optimistic concurrency.
   //
   // Schema shape (a): one row per (day, meal). Each row carries `dishes[]`, a
   // position-ordered list of dish picks. Position 0 is the lead (HP for Menu 1,
@@ -108,11 +109,12 @@ export default defineSchema({
     version: v.number(),
   }).index("by_weekStart", ["weekStart"]),
 
-  // Finalized past weeks. Append-only. Mirrors the menu_history.md row format
-  // exactly, so the engine's recency rule can query against it without translation.
+  // Past weeks archived by generation, kept as provenance. Append-only; nothing
+  // reads it. `generateCurrentWeek` writes one row per record week the first time it
+  // generates a later week (`lib/archive.ts`), in the menu_history.md row format.
   weekArchive: defineTable({
     weekStart: v.string(),
-    finalizedAt: v.number(),
+    finalizedAt: v.number(), // "archived at"; the field name stays for existing rows
     rows: v.array(
       v.object({
         day: v.union(
