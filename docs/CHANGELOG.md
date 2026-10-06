@@ -15,6 +15,12 @@ work queue for /reconcile-docs and /reconcile-ops; or "none".
 
 ---
 
+## 2026-10-05  Auto-archive-on-generation queued; the manual finalize is retired by decision
+
+`.maintenance-state` carries a seventh deferred item under the health pass: `generateCurrentWeek` is to write a `weekArchive` row for every record week that lacks one (finalize's row shape and exclusions), `finalizeWeek` and the `status` flip are retired, and four doc sections are reworded. Chore-sized, routed through `/new-stream` rather than the next sitting. `DECISIONS.md` records the decision and the three options weighed. (#279)
+Why: under engine v6 the record is every earlier `currentWeek` row in its live state, so finalize feeds nothing the engine reads; nobody runs it and three September weeks sit unarchived.
+Updated: none here (the chore that ships the change carries the doc rewording: `docs/engineering.md` §2, §3, §16; `docs/product.md` §3 item 7; `docs/engine.md` §2.1, §10).
+
 ## 2026-09-16  Product, engineering, development, and the design contract rewritten from scratch
 
 `docs/product.md`, `docs/engineering.md`, `docs/development.md`, and `claude-design.md` are rewritten
