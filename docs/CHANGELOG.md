@@ -15,6 +15,12 @@ work queue for /reconcile-docs and /reconcile-ops; or "none".
 
 ---
 
+## 2026-10-06  Generation archives earlier weeks; the manual finalize is retired
+
+`generateWeek:generateCurrentWeek` writes a `weekArchive` row for every record week (the range `loadRecord` reads) that has no row yet, looked up by the `by_weekStart` index, using finalize's row shape and exclusions (skipped days and custom one-offs contribute nothing; the fruit slot archives as `Fruit`; an empty week still gets a row so it is never rescanned). The derivation is the pure `archiveRowsFromDoc` in `app/convex/lib/archive.ts`, tested in the web vitest run (`app/web/test/archiveRows.test.ts`, six cases). The mutation returns `archivedWeeks` beside the incident count. `weekMutations:finalizeWeek` is deleted with the types and maps only it used; `currentWeek.status` stays in the schema and nothing flips it. Dev smoke: nine record weeks archived on the first run, zero on the second. (#280)
+Why: under engine v6 the record is every earlier `currentWeek` row in its live state, so finalize fed nothing the engine reads; nobody ran it, and three September weeks sat unarchived in prod. The first prod generation after this ships backfills them.
+Updated: `docs/engineering.md` §2 table, §3 `weekArchive` block, §16 (finalize block removed, generation step 6 added); `docs/product.md` §3 item 7; `docs/engine.md` §2.1 and §10 wording; `EVOLVING-THE-ENGINE.md` step 1; `.claude/evolve/roles/recorder.md`; all carried in the PR, so the docs pass owes nothing here.
+
 ## 2026-10-05  Auto-archive-on-generation queued; the manual finalize is retired by decision
 
 `.maintenance-state` carries a seventh deferred item under the health pass: `generateCurrentWeek` is to write a `weekArchive` row for every record week that lacks one (finalize's row shape and exclusions), `finalizeWeek` and the `status` flip are retired, and four doc sections are reworded. Chore-sized, routed through `/new-stream` rather than the next sitting. `DECISIONS.md` records the decision and the three options weighed. (#279)
