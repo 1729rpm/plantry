@@ -20,8 +20,8 @@ import { loadRecord } from "./lib/record.js";
  * §12): every `currentWeek` row before this week, as-eaten, loaded by
  * `loadRecord` and reduced by `deriveRecordStats`. A dish with an as-eaten row in
  * any scope is repertoire, not novelty, so it is out of the candidate pool. The
- * baked seed history and `weekArchive` are NOT read: the archive under-reports
- * weeks the household edited after finalizing, and the seed carries pre-correction
+ * baked seed history and `weekArchive` are NOT read: the archive is written at the
+ * next generation and can lag later edits, and the seed carries pre-correction
  * menu shapes the household has since edited away (§13). `data/menu_history.md`
  * stays in the repo for provenance only.
  *

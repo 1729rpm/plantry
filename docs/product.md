@@ -46,7 +46,7 @@ The Explore tab is a separate surface for browsing dishes the household has not 
 
 6. **Changes log (profile sheet).** A newest-first record of the week: every menu edit (swap, add, custom dish, delete, skip, restore), each with its author, timestamp, a plain-language headline, and the quoted reason when one was given. It is reached from the identity avatar on the Menu header, which carries the unread badge and opens the profile sheet; opening the log marks the week's edits as seen for that identity on that phone. Dish ids resolve to names; no internal label or enum value reaches the screen.
 
-7. **The household record.** Every week the household has been served, counted as it was eaten, is the record the next week is generated from (`docs/engine.md` §2). A hand edit therefore teaches the engine directly: a swapped-in dish counts and a swapped-out one does not. A skipped day contributes nothing, because it was not cooked, and a free-text custom dish contributes nothing until the dish it names becomes a library dish and the slot is re-pointed at it. Finalizing a week also files an archived copy of it, kept as provenance rather than as signal.
+7. **The household record.** Every week the household has been served, counted as it was eaten, is the record the next week is generated from (`docs/engine.md` §2). A hand edit therefore teaches the engine directly: a swapped-in dish counts and a swapped-out one does not. A skipped day contributes nothing, because it was not cooked, and a free-text custom dish contributes nothing until the dish it names becomes a library dish and the slot is re-pointed at it. Generating a week also files an archived copy of every earlier week that lacks one, kept as provenance rather than as signal.
 
 ## 4. Principles
 
