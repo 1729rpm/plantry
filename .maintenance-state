@@ -33,7 +33,6 @@
 - A validator for an Active dish with 0 ingredient rows (the reports cannot see one); a docs-and-engine
   chore, not this pass's.
 
-
 ### docs
 
 - `docs/product.md` line 1 names the fourth tab as Changes; it is Yours (§6 and the app agree). Predates the window.
