@@ -15,6 +15,12 @@ work queue for /reconcile-docs and /reconcile-ops; or "none".
 
 ---
 
+## 2026-10-21  The passcode gate is remembered for good once passed
+
+`isAuthValid` in `app/web/src/lib/storage.ts` accepts any parseable `plantry:auth` record with a numeric `passedAt`; the seven-day expiry is gone, so a phone that has entered the household never sees the keypad again. The record keeps its `{ passedAt }` shape, so the two phones that already hold one stay in without re-entering anything, and the e2e scripts' injected record keeps working. A six-case unit test (`app/web/test/authStorage.test.ts`) covers the empty, fresh, year-old, malformed, and throwing-storage cases. (#282)
+Why: Rajat asked for the pin to stop being asked once a phone is in. Both phones live with their owners and a personal household app needs no session expiry; the weekly re-ask was friction with no security gained. The gate stays so the URL stays private.
+Updated: `docs/engineering.md` §8 URL-gate bullet, `docs/product.md` §6 identity bullet, `app/web/README.md` auth paragraph; all carried in the PR, so the docs pass owes nothing here.
+
 ## 2026-10-06  Generation archives earlier weeks; the manual finalize is retired
 
 `generateWeek:generateCurrentWeek` writes a `weekArchive` row for every record week (the range `loadRecord` reads) that has no row yet, looked up by the `by_weekStart` index, using finalize's row shape and exclusions (skipped days and custom one-offs contribute nothing; the fruit slot archives as `Fruit`; an empty week still gets a row so it is never rescanned). The derivation is the pure `archiveRowsFromDoc` in `app/convex/lib/archive.ts`, tested in the web vitest run (`app/web/test/archiveRows.test.ts`, six cases). The mutation returns `archivedWeeks` beside the incident count. `weekMutations:finalizeWeek` is deleted with the types and maps only it used; `currentWeek.status` stays in the schema and nothing flips it. Dev smoke: nine record weeks archived on the first run, zero on the second. (#280)
