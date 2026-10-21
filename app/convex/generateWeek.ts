@@ -5,6 +5,7 @@ import { dishes, ingredients, catalog } from "@plantry/engine/library";
 import { generateWeekV6, type GeneratedWeekV6, type Season } from "@plantry/engine";
 import type { SlotMeal } from "./lib/meals.js";
 import { loadRecord } from "./lib/record.js";
+import { archiveRowsFromDoc } from "./lib/archive.js";
 
 type ShortDay = "Mon" | "Tue" | "Wed" | "Thu" | "Fri" | "Sat";
 
@@ -52,7 +53,7 @@ export function seasonOf(isoDate: string): Season {
  *     than the week being generated, as-eaten (swaps, adds and deletes applied,
  *     skipped days and custom one-offs removed), read by `loadRecord`. Whatever
  *     its `status`: a draft week the household has been eating out of all week is
- *     as much a record of what was eaten as a finalized one. `weekArchive` and the
+ *     a record of what was eaten. `weekArchive` and the
  *     baked seed history are NOT read; the archive under-reports edited weeks and
  *     the seed carries pre-correction menu shapes the household has since edited
  *     away (§13). `data/menu_history.md` stays in the repo for provenance only.
@@ -87,8 +88,17 @@ export function seasonOf(isoDate: string): Season {
  *     expected, so they read as a trail of what the constraint pass had to move;
  *     only a breach the pass could not clear is a warning (§11 threshold 10).
  *
- * The count is returned so the caller can see at a glance whether the generation
- * produced anything worth inspecting.
+ * Archive. Every record week (the same range `loadRecord` reads) that has no
+ * `weekArchive` row yet gets one, derived by `archiveRowsFromDoc`: long-form day,
+ * capitalised meal, skipped days and custom one-offs excluded. A week with no
+ * eligible picks still gets a row (empty `rows`), so it is never rescanned. A
+ * second generation of the same week therefore archives nothing new, and the week
+ * being generated is never archived by its own run. The archive is provenance
+ * only; nothing reads it. `finalizedAt` keeps its name and means "archived at".
+ *
+ * The incident count and the number of weeks archived by this run are returned so
+ * the caller can see at a glance whether the generation produced anything worth
+ * inspecting.
  */
 export const generateCurrentWeek = internalMutation({
   args: {
@@ -101,6 +111,7 @@ export const generateCurrentWeek = internalMutation({
     weekId: Id<"currentWeek">;
     version: number;
     incidentCount: number;
+    archivedWeeks: number;
   }> => {
     const season = seasonOf(args.weekStart);
 
@@ -127,6 +138,29 @@ export const generateCurrentWeek = internalMutation({
     });
 
     const now = Date.now();
+
+    // Archive every record week that has no archive row yet. Idempotent by the
+    // `by_weekStart` lookup; the week being generated is outside the range.
+    const nameById = new Map<number, string>(dishes.map((d) => [d.id, d.name]));
+    const recordDocs = await ctx.db
+      .query("currentWeek")
+      .withIndex("by_weekStart", (q) => q.lt("weekStart", args.weekStart))
+      .collect();
+    let archivedWeeks = 0;
+    for (const doc of recordDocs) {
+      const archived = await ctx.db
+        .query("weekArchive")
+        .withIndex("by_weekStart", (q) => q.eq("weekStart", doc.weekStart))
+        .first();
+      if (archived) continue;
+      await ctx.db.insert("weekArchive", {
+        weekStart: doc.weekStart,
+        finalizedAt: now,
+        rows: archiveRowsFromDoc(doc, nameById),
+      });
+      archivedWeeks += 1;
+    }
+
     const toDishEntry = (dishId: number) => ({
       dishId: dishId as number | null,
       customLabel: null as string | null,
@@ -188,8 +222,7 @@ export const generateCurrentWeek = internalMutation({
 
     let incidentCount = generated.incidents.length;
 
-    const nameOf = (dishId: number): string =>
-      dishes.find((d) => d.id === dishId)?.name ?? `dish ${dishId}`;
+    const nameOf = (dishId: number): string => nameById.get(dishId) ?? `dish ${dishId}`;
 
     // §8: one warn per week naming the favorites that did not survive into the
     // final week, whether because no slot accepted one, the constraint pass
@@ -258,6 +291,7 @@ export const generateCurrentWeek = internalMutation({
       weekId,
       version: 1,
       incidentCount,
+      archivedWeeks,
     };
   },
 });

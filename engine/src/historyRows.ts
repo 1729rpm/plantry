@@ -8,9 +8,9 @@ import type { Day } from "./eligibility.js";
  * (`deriveHistoryRows`) and the last-cooked map the v3 recency rules read
  * (`lastCookedMap`). v6 retires both: the record is the persisted `currentWeek`
  * rows, derived in `engine/src/v6/record.ts`, and the seed history is no longer
- * a signal (`features/engine-v6.md` §13). The finalize archive append is derived
- * Convex-side from the live slots (`app/convex/weekMutations.ts`), because the
- * live week carries swapped and custom picks a generated week does not.
+ * a signal (`features/engine-v6.md` §13). The `weekArchive` rows generation
+ * writes are derived Convex-side from the live slots (`app/convex/lib/archive.ts`),
+ * because the live week carries swapped and custom picks a generated week does not.
  *
  * What survives is the day-label mapping, which `engine/src/v6/generateWeekV6.ts`
  * uses for its incident messages. It keeps its home here so the mapping has one

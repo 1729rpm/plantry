@@ -29,7 +29,7 @@ Plantry has two stores by design. The split is the load-bearing engineering deci
 | Stays in git markdown                                                                                  | Stays in Convex tables                                                   |
 | ------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------ |
 | `data/dishes/<slug>.md`, one file per dish (frontmatter, ingredient rows, description, recipe)         | `currentWeek`, one row per week: the live Mon to Sat plan with its edits |
-| `data/ingredients.md`, the ingredient catalog (one row per ingredient: group, unit, pack size, macros) | `weekArchive`, finalized past weeks, kept as provenance                  |
+| `data/ingredients.md`, the ingredient catalog (one row per ingredient: group, unit, pack size, macros) | `weekArchive`, past weeks archived by generation, kept as provenance     |
 | `data/dish-photos/`, the dish photos plus the photo style spec and the per-dish detail map             | `manualChanges`, the append-only log of user edits to the week           |
 | `data/menu_history.md`, the pre-app menu record, kept as provenance                                    | `dishDislikes`, the records-only dislike signal from Explore             |
 | `data/changelog.md`, the structural-change audit                                                       | `favorites` and `wishlist`, the household's two shared lists             |
@@ -90,10 +90,11 @@ weekArchive                            # index: by_weekStart
     dishId: number
   }                                    # mirrors the menu_history.md row format
 
-# Provenance, not signal. Finalize snapshots the week at the moment of finalizing
-# and the household edits weeks after that moment, so the archive under-reports
-# as-eaten rows for edited weeks. Nothing in generation, Explore, or the picker
-# reads it; the record comes from currentWeek (docs/engine.md §2.1).
+# Provenance, not signal. Generation writes one row per record week the first
+# time it generates a later week, so a week's archive row is its state as of the
+# next generation and can lag later edits. finalizedAt is the archive time.
+# Nothing in generation, Explore, or the picker reads it; the record comes from
+# currentWeek (docs/engine.md §2.1).
 
 manualChanges                          # indexes: by_status, by_weekStart
   createdAt: number
@@ -269,11 +270,6 @@ Every browser-callable function lives under `app/convex/`; the read-only listing
 1. The frontend calls `dayMutations:setIncludeRecipe({ author, weekStart, day, meal, position, include, version })` from the toggle on the dish detail sheet.
 2. It sets `includeRecipe` on `slot.dishes[position]` and increments `version`. A share preference is not a menu change, so no `manualChanges` row is written. Recoverable reasons: `version-mismatch`, `no-current-week`, `no-such-slot`, `no-such-position`.
 
-**Write (finalize the week):**
-
-1. `weekMutations:finalizeWeek({ author, weekStart, version })` is browser-callable but has no UI affordance; it is run by hand when a week is closed.
-2. It validates `author`, version, that the week exists, and that it is not already `final`. It appends a `weekArchive` row whose `rows` mirror the `menu_history.md` format (long-form day, capitalised meal, dish name from the baked library, dish id), then flips `currentWeek.status` to `"final"` and increments `version`. Skipped days and custom dishes are excluded from the archive; the day's `slots` are untouched. The archive is provenance; `currentWeek` stays the record generation reads. Recoverable reasons: `version-mismatch`, `no-current-week`, `already-final`.
-
 **Generation (generate the week):**
 
 1. `generateWeek:generateCurrentWeek({ weekStart })` is an `internalMutation`, not browser-callable. The EM triggers it by hand (`npx convex run --prod generateWeek:generateCurrentWeek '{"weekStart":"<Monday>"}'`, with Rajat's per-action approval); there is no scheduler. It takes no rng and no requested-dish argument: the engine is deterministic (`docs/engine.md` §14) and nothing supplies a request in production.
@@ -281,6 +277,7 @@ Every browser-callable function lives under `app/convex/`; the read-only listing
 3. The engine replays the ledger from the record (`docs/engine.md` §3.1), pins the favorites, and plans and places the week. A favorite that no slot accepts is left unplaced and named in one `warn` incident, so the run still produces a complete menu. The favorites list is standing state, so nothing is consumed or marked.
 4. If a `currentWeek` row already exists for the same `weekStart` it is deleted and replaced; the new row starts at `version: 1`, `status: "draft"`. The mutation writes the week's slots **and its `generatedPlan`**, the (day, meal, dishId) list the engine placed. Without it the next run cannot separate an engine placement from a hand swap-in, so the write is not optional.
 5. It then writes the run's incidents, all `source: "engine"`: one `warn` per engine incident, one `warn` naming any favorite no slot accepted, one `info` per constraint repair the pass made (the routine trail, in order), and one `warn` per day whose protected items alone exceed the prep ceiling.
+6. It archives the record: every record week (the range `loadRecord` reads) with no `weekArchive` row yet, looked up by the `by_weekStart` index, gets one, built by `archiveRowsFromDoc` in `app/convex/lib/archive.ts`. The rows mirror the `menu_history.md` format (long-form day, capitalised meal with the fruit slot as `"Fruit"`, dish name from the baked library, dish id); skipped days and custom one-offs contribute nothing, and a week with no eligible picks still gets a row with empty `rows` so it is never rescanned. A second generation of the same week archives nothing new, and the week being generated is never archived by its own run. The archive is provenance; `currentWeek` stays the record generation reads. Nothing flips `currentWeek.status`, so generated weeks stay `"draft"`; seeded record weeks carry `"final"`. The mutation returns `{ weekId, version, incidentCount, archivedWeeks }`, where `archivedWeeks` is the number of weeks this run archived.
 
 **Record maintenance (internal functions, no UI):**
 

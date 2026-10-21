@@ -35,7 +35,7 @@ The engine's primary signal is the **household record**: every as-eaten row from
 
 The record is read from the Convex `currentWeek` table, one row per `weekStart`: every row whose `weekStart` is earlier than the week being generated is a **record week**, whatever its `status`. The as-eaten state of a record week is its live slot state (swaps, adds, and deletes applied), minus every day named in its `skippedDays`, minus every pick whose `dishId` is null. A free-text custom one-off has no library identity, so it contributes no row until it is promoted to a library dish and its slot re-pointed at the new id.
 
-`weekArchive` is not the record source: finalize snapshots the week at the moment of finalizing and the household edits weeks after that moment, so the archive under-reports as-eaten rows for edited weeks. It stays as provenance, alongside `data/menu_history.md`, unread by generation, the picker, and Explore, all three of which read the record.
+`weekArchive` is not the record source: generation archives each earlier week the first time it generates a later one, and the household can edit a week after that moment, so the archive can lag as-eaten rows for edited weeks. It stays as provenance, alongside `data/menu_history.md`, unread by generation, the picker, and Explore, all three of which read the record.
 
 ### 2.2 Occasions and rates
 
@@ -278,9 +278,9 @@ One fruit per day, Monday to Saturday, Saturday included even though it has no b
 A skipped day is a fast-loop override applied after generation. Generation itself is untouched: the day keeps its generated dishes in the data so a restore is lossless. What changes is what a skipped day contributes downstream:
 
 - **Grocery list.** A skipped day's dishes contribute nothing to the buy list. The grocery aggregator (whose list shape `docs/product.md` §3 item 3 fixes) accepts an optional set of skipped days and excludes those days' dishes before summing. With no days skipped, the list is exactly as before.
-- **The record.** A skipped day's dishes were not eaten, so they contribute no as-eaten rows and no occasions (§2.1, §2.2). The week still counts as one record week. The same exclusion applies to the provenance rows finalize writes.
+- **The record.** A skipped day's dishes were not eaten, so they contribute no as-eaten rows and no occasions (§2.1, §2.2). The week still counts as one record week. The same exclusion applies to the provenance rows generation archives.
 
-Both are pure, additive functions: the skipped-day input defaults to none, so every existing caller is unchanged. The running app wires the override through the Convex `skippedDays` field, the skip-aware grocery query, the finalize exclusion, and the "Skipped" rendering on the Menu tab and the menu share image.
+Both are pure, additive functions: the skipped-day input defaults to none, so every existing caller is unchanged. The running app wires the override through the Convex `skippedDays` field, the skip-aware grocery query, the archive exclusion at generation, and the "Skipped" rendering on the Menu tab and the menu share image.
 
 ## 11. Item cap
 

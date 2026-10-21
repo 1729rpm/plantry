@@ -39,8 +39,9 @@ Nothing is forbidden to read, because you write no judgment. But:
 - **Never write to production.** No mutation, no generation, no status change, no matter how safe it
   looks. Every command you run is a read. If a re-point of a promoted custom pick is needed, the EM
   has already done it before spawning you.
-- Do not read `weekArchive` as the source of truth. It is provenance only: a finalized week the
-  household kept editing afterwards is stale there, and finalize drops custom one-offs. Use it as a
+- Do not read `weekArchive` as the source of truth. It is provenance only: a week's archive row is
+  written at the next generation and drops custom one-offs and skipped days, so it can lag later
+  edits. Use it as a
   cross-check and report any disagreement.
 
 ## Output artifacts

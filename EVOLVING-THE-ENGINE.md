@@ -77,8 +77,9 @@ A read-only pull of the served weeks from production, written as the record ever
 against. Nothing is written to production at this step or at any step before the cutover.
 
 - The as-eaten state of each week is its live `currentWeek` slot state with every swap, hand
-  addition, and deletion applied. `weekArchive` is provenance and is not the source: a finalized week
-  the household kept editing is stale, and finalize drops custom one-offs.
+  addition, and deletion applied. `weekArchive` is provenance and is not the source: a week's archive
+  row is written at the next generation and drops custom one-offs and skipped days, so it can lag
+  later edits.
 - Skipped days are removed, not backfilled. A missing day is a fact about the household.
 - Custom dishes are carried by their label and marked as custom, because a custom pick has no library
   id and therefore contributes no rows to any rate.
