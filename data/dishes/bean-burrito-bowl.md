@@ -13,6 +13,7 @@ seasons: All
 cuisine: Mexican
 complexity: Easy
 skill: Season the beans and rice well so the bowl is not bland
+prePrep: Soak the kidney beans overnight and boil till tender; the listed weight is dry
 photo: bean-burrito-bowl.jpg
 ---
 

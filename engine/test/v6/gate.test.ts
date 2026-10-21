@@ -10,13 +10,13 @@
  *
  * ## The engine does not pass its gate yet, and this file records exactly that
  *
- * Three of the five thresholds this test measures fail today. They are listed in
+ * Two of the five thresholds this test measures fail today. They are listed in
  * `KNOWN_GATE_FAILURES` with the number measured when this stream landed and the
  * reason as far as the harness can see it. This is not a suppression: the list is
  * asserted in both directions, so a threshold that starts passing fails this test
  * until its entry is deleted, and a listed threshold that collapses further fails
  * on its collapse guard. §11 makes passing the gate the condition for merging the
- * phase to `main`, and the EM owns that decision; the three entries below are the
+ * phase to `main`, and the EM owns that decision; the two entries below are the
  * findings that decision reads.
  *
  * The collapse guards are deliberately generous rather than exact ratchets: the
@@ -69,7 +69,7 @@ const CI_THRESHOLDS = [1, 2, 4, 5, 10] as const;
  *
  * Threshold 1 is the entry stream F4 added, and it is a fixture artifact rather
  * than an engine finding; its own text carries the prod-record numbers that show
- * why. The other two are the entries gate fix cycle 3 left the map with.
+ * why. The other is the entry gate fix cycle 3 left the map with.
  *
  * Threshold 4, slot anti-lock, went to PASS on the self-feeding run
  * in that cycle once §11's arithmetic exemption was amended to the
@@ -78,7 +78,7 @@ const CI_THRESHOLDS = [1, 2, 4, 5, 10] as const;
  * role's days over half the horizon more often than not. Plain roti sits at 0.473
  * of the carb role's occasions and fails the threshold nine times in ten under an
  * assignment with no weekday preference at all, so the two weekdays it holds 23 of
- * 41 weeks are arithmetic and not a lock. Three entries remain.
+ * 41 weeks are arithmetic and not a lock. Two entries remain.
  *
  * The frozen run's own threshold 4 failure went with it in this cycle. It was the
  * artifact the cycle-3 PR called it: `variant.frozenRates` froze the whole
@@ -97,15 +97,6 @@ const KNOWN_GATE_FAILURES = new Map<
       collapseGuard: 3,
       finding:
         "One tracked family of eleven is outside the 25 percent bar: raita/curd at -29.0 percent, served 0.044 against a record rate of 0.063 carried by 5 rows. This is an artifact of the 8-week fixture's small denominators, not an engine finding, and the same change is a net improvement on the real record. Stream F4 moved hummus (174) from Category Accompaniment to Category Dry dish, which is what the household does with it. Because the harness keys the salad family on a Lunch-time Accompaniment, hummus's two record rows leave that family: the fixture's salad denominator falls from 8 rows to 6 and its target rate from 0.100 to 0.075, both correct, since the record now reads those two occasions as mains. The knock-on is that the accompaniment slot loses the same two occasions of record presence, so the optional slot fires less often across the horizon while raita/curd keeps its untouched 5-row target of 0.063. Its rate did not move, only its supply, and on 5 rows the family carries about 45 percent of counting noise, so two occasions are enough to cross a 25 percent bar. On the 10-week prod export, where raita/curd rests on 10 rows, threshold 1 passes both before and after the change on both the frozen and the self-feeding run, 11 of 11 families inside the bar each time, with raita/curd improving from -9.5 to -7.3 percent on both. The one prod-record family that moves toward its bar is salad on the frozen run, -16.3 to -23.7 percent, which is the same denominator drop (10 rows to 8) seen from the other side and is still inside. Delete this entry when the CI fixture is reseeded from a prod export long enough to give every tracked family more than a handful of rows.",
-    },
-  ],
-  [
-    2,
-    {
-      measured: 0.625,
-      collapseGuard: 0.55,
-      finding:
-        "The worst rolling 8-week window is 62.5 percent distinct against a 65 percent floor: 15 repeats in 40 stars where 14 are allowed and about 12 are arithmetically forced by the record's own rates (the ceiling any rate-matching schedule can reach is 69.3 percent). The frozen run passes, at 65.0 percent exactly on the floor (70.0 before this cycle unfroze §6 step 5's placement memories), so this is drift and not engine bias: one weekday-lunch ledger serves both the star position and the companion position, so a high-rate dry protein whose companion turns are metered by §3.2's presence ledger spends the rest of its deficit in the star slot.",
     },
   ],
   [

@@ -26,7 +26,7 @@ Bread and cheese griddled until golden and molten.
 
 ## Recipe
 
-1. Butter the outer faces of the bread.
+1. Butter the outer faces of the bread, about 15 g in all.
 2. Layer cheese between two slices, buttered sides out.
 3. Griddle on low heat, pressing, until golden and the cheese melts.
 4. Cut on the diagonal and serve hot.

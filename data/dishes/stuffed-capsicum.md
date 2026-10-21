@@ -31,7 +31,8 @@ Whole capsicums hollowed out, packed with a spiced potato filling and pan cooked
 ## Recipe
 
 1. Slice the tops off the capsicums, hollow them out and remove the seeds.
-2. Mash the boiled potato with sauteed onion, green chilli, coriander, amchur, turmeric and salt.
-3. Pack the filling firmly into each capsicum.
-4. Set them upright in a wide pan with a little oil, cover and cook on low heat.
-5. Turn them now and then until the skins blister and soften all round, then serve.
+2. Boil, peel and mash the potato.
+3. Mash the potato with sauteed onion, green chilli, coriander, amchur, turmeric and salt.
+4. Pack the filling firmly into each capsicum.
+5. Set them upright in a wide pan with a little oil, cover and cook on low heat.
+6. Turn them now and then until the skins blister and soften all round, then serve.

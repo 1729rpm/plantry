@@ -26,5 +26,5 @@ Soft buttered ladi pav, the simplest bread side for keema or bhaji.
 ## Recipe
 
 1. Slit each pav part way through, keeping the rolls joined.
-2. Warm a little butter on a tawa and toast the pav cut-side down till golden.
+2. Warm 10 g butter on a tawa and toast the pav cut-side down till golden.
 3. Serve hot alongside keema or bhaji.

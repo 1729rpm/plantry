@@ -35,5 +35,5 @@ Pasta in a tomato sauce baked under a blanket of melted mozzarella.
 1. Boil the pasta a couple of minutes under done and drain.
 2. Make a quick tomato sauce with garlic, onion and olive oil and simmer till thick.
 3. Toss the pasta through the sauce with torn basil and tip into a baking dish.
-4. Cover with sliced mozzarella and bake till bubbling and golden.
+4. Cover with sliced mozzarella and bake at 200 C for 15 to 20 minutes till bubbling and golden.
 5. Rest a few minutes and serve.

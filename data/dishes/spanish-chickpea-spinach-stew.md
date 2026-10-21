@@ -13,6 +13,7 @@ seasons: All
 cuisine: Spanish
 complexity: Easy
 skill: Let the tomato base cook down before adding the greens
+prePrep: Soak the chickpeas overnight and boil till tender; the listed weight is dry
 photo: spanish-chickpea-spinach-stew.jpg
 ---
 

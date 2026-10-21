@@ -30,4 +30,4 @@ Smooth slow simmered tomato soup with a touch of garlic.
 1. Simmer chopped tomato, onion and garlic with a bay leaf and water till soft.
 2. Blend smooth and strain back into the pan.
 3. Season with salt, pepper and a pinch of sugar and warm through.
-4. Finish with a swirl of butter or cream.
+4. Finish with 10 g butter.

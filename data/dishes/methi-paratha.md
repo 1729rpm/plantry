@@ -33,6 +33,7 @@ Wheat parathas kneaded with chopped fenugreek leaves and spices, griddled till g
 
 1. For four parathas (two portions), use 160 g whole-wheat atta with the listed potato and fenugreek; add 60 ml water first and up to 30 ml more as needed.
 2. Wash and finely chop the methi, then squeeze out excess water.
-3. Knead a wheat dough with the methi, mashed potato, ginger, green chilli, spices and salt.
-4. Rest the dough 10 minutes, then roll out into parathas.
-5. Griddle on a hot tawa with ghee until golden on both sides.
+3. Boil, peel and mash the potato; finely chop the onion and coriander.
+4. Knead a wheat dough with the methi, mashed potato, onion, coriander, ginger, green chilli, spices and salt.
+5. Rest the dough 10 minutes, then roll out into parathas.
+6. Griddle on a hot tawa with ghee until golden on both sides.

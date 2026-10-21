@@ -21,7 +21,7 @@ Seared chicken tossed with lettuce, cucumber and a lemon dressing.
 
 | Ingredient | Quantity | Unit |
 |------------|----------|------|
-| Chicken | 200 | g |
+| Chicken Breast | 200 | g |
 | Lettuce | 50 | g |
 | Cucumber | 80 | g |
 | Tomato | 80 | g |

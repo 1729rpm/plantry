@@ -34,7 +34,7 @@ Comforting kidney bean curry in an onion-tomato gravy, served over rice.
 
 1. For two portions, use 360 g cooked rice from 120 g dry rice. If starting from dry rice, rinse, cook covered with 240 ml water until absorbed, then rest 10 minutes; cool before any frying or cold assembly.
 2. Pressure cook the soaked kidney beans with salt until soft.
-3. Brown onion, then add ginger garlic paste and tomato puree.
+3. Brown onion, then add ginger garlic paste, slit green chilli and tomato puree.
 4. Cook the masala with spices till the oil separates.
 5. Add the beans with their water and simmer 15 minutes.
 6. Finish with coriander and serve over steamed rice.

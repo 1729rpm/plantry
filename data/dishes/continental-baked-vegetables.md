@@ -37,4 +37,4 @@ Mixed vegetables in a light white sauce baked under a cheese crust.
 3. Make a light white sauce with milk, a little flour, garlic and pepper.
 4. Fold the vegetables through the sauce and tip into a baking dish.
 5. Scatter grated cheese over the top.
-6. Bake till bubbling and golden.
+6. Bake at 200 C for 20 to 25 minutes till bubbling and golden.

@@ -22,7 +22,7 @@ A filling sandwich of seared chicken with lettuce and tomato.
 | Ingredient | Quantity | Unit |
 |------------|----------|------|
 | Bread | 4 | pcs |
-| Chicken | 150 | g |
+| Chicken Breast | 150 | g |
 | Lettuce | 30 | g |
 | Tomato | 50 | g |
 | Onion | 30 | g |

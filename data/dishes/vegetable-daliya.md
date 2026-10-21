@@ -4,7 +4,7 @@ name: Vegetable daliya
 category: Complete meal
 time: Lunch
 tags: [complete_meal]
-primaryIngredient: Bulgur Wheat
+primaryIngredient: Broken Wheat
 preferred: No
 active: Yes
 satiety: Medium
@@ -21,7 +21,7 @@ Savoury broken wheat cooked with vegetables, a light wholesome meal.
 
 | Ingredient | Quantity | Unit |
 |------------|----------|------|
-| Bulgur Wheat | 100 | g |
+| Broken Wheat | 100 | g |
 | Carrot | 50 | g |
 | Green Pea | 50 | g |
 | Tomato | 50 | g |

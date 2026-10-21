@@ -13,6 +13,7 @@ seasons: All
 cuisine: Lebanese
 complexity: Easy
 skill: Blend long with a little iced water so it turns pale and silky
+prePrep: Soak the chickpeas overnight and boil till tender; the listed weight is dry
 photo: hummus.jpg
 ---
 

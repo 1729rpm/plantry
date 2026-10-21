@@ -32,6 +32,6 @@ Spice-marinated fish shallow fried till crisp at the edges.
 ## Recipe
 
 1. Marinate the fish in ginger garlic paste, turmeric, chilli, salt and lemon.
-2. Dust lightly with rice flour or semolina for crispness.
+2. Dust lightly with 20 g rice flour (or semolina) for crispness.
 3. Shallow fry on medium heat until golden on both sides.
 4. Serve hot with sliced onion and lemon wedges.
