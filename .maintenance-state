@@ -1,7 +1,7 @@
 | pass    | last-run   | status  | deferred | note                                    |
 | ------- | ---------- | ------- | -------- | --------------------------------------- |
 | signals | 2026-09-07 | done    | 2        | dislikes listing query owed as a chore  |
-| health  | 2026-09-07 | done    | 7        | exploration pick not persisted          |
+| health  | 2026-09-07 | done    | 6        | exploration pick not persisted          |
 | docs    | 2026-09-07 | done    | 8        | product.md tab list and save action     |
 | retro   | 2026-09-07 | done    | 0        | -                                       |
 | hygiene | 2026-09-07 | done    | 4        | two closed photo branches, Rajat's call |
@@ -32,13 +32,6 @@
   `engine/scripts/gate.ts`) now that an export carries a `generatedPlan`; for the docs pass.
 - A validator for an Active dish with 0 ingredient rows (the reports cannot see one); a docs-and-engine
   chore, not this pass's.
-- Auto-archive the previous week on generation (Rajat, 2026-10-05). `finalizeWeek` is a manual CLI
-  step nobody runs under v6 (the 2026-09-07, 09-14, and 09-28 weeks sit unarchived), and a snapshot
-  taken at finalize time misses later edits. Chore-sized `/new-stream`: `generateCurrentWeek` writes a
-  `weekArchive` row for every record week that lacks one, using finalize's row shape and exclusions
-  (skipped days, null picks), so the first run after it ships backfills September; `finalizeWeek` and
-  the `status` flip are retired, with `docs/engineering.md` §2 and §16, `docs/product.md` §3 item 7,
-  and `docs/engine.md` §2.1 and §10 reworded to match. Provenance only; the record is unchanged.
 
 ### docs
 
