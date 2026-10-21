@@ -24,10 +24,11 @@ const CHANGES_SEEN_AT_PREFIX = "plantry:changesSeenAt:";
 // must not carry forward — the screen falls back to the time-aware default).
 const GROCERY_DAYS_KEY = "plantry:groceryDays";
 
-// Auth timeout: a week. Chosen because both phones live with their owner and
-// a personal household app doesn't need session security beyond that.
-const AUTH_TTL_MS = 7 * 24 * 60 * 60 * 1000;
-
+// Once the passcode passes on a phone, that phone stays in the household for
+// good: the auth record never expires. Both phones live with their owners, a
+// personal household app needs no session expiry, and re-asking every week was
+// friction with no security gained. The record keeps its `{ passedAt }` shape
+// so phones that already hold one stay in without re-entering anything.
 interface AuthRecord {
   passedAt: number;
 }
@@ -60,9 +61,8 @@ export function isAuthValid(): boolean {
   const raw = safeGet(AUTH_KEY);
   if (!raw) return false;
   try {
-    const parsed = JSON.parse(raw) as AuthRecord;
-    if (typeof parsed.passedAt !== "number") return false;
-    return Date.now() - parsed.passedAt < AUTH_TTL_MS;
+    const parsed = JSON.parse(raw) as AuthRecord | null;
+    return typeof parsed?.passedAt === "number";
   } catch {
     return false;
   }
