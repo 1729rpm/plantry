@@ -80,7 +80,7 @@ The user-facing output is plain, readable, and uncluttered. No internal jargon, 
 - The grocery list, grouped (Proteins and Dairy, Fruit, Vegetables, Aromatics and Herbs, Pantry last, no catch-all), day-selected with a time-aware default, and skip-aware.
 - The share image family (menu image and recipe sheets) over the native share sheet, from a "Share this week" preview.
 - A library of about 260 active dishes across thirteen cuisines (Indian baseline plus international and world cuisines), spanning vegetarian, egg, dairy, seafood, and red-meat (mutton) proteins, each carrying a first-class cuisine, a description, a recipe, a complexity marker, a photo, partial tracked-ingredient macro estimates, and special-sourcing metadata. Every active dish has a photo; the no-photo fallback stays the graceful default for a dish added before its photo lands.
-- Identity is light: a device-stored "I am Rajat" or "I am Tuhina" profile attributes edits; a shared six-digit passcode keeps the URL private and is remembered on the phone for seven days. No accounts.
+- Identity is light: a device-stored "I am Rajat" or "I am Tuhina" profile attributes edits; a shared six-digit passcode keeps the URL private and, once entered on a phone, is remembered there for good. No accounts.
 - Offline tolerance: the app shell installs to the home screen, and the last week saved on the phone renders when the backend is unreachable.
 
 ## 7. Out of scope

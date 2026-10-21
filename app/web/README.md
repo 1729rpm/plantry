@@ -26,7 +26,7 @@ against the dev deployment. Do not run this against prod (`disciplined-chameleon
 | `VITE_CONVEX_URL`       | Convex deployment URL the React client subscribes to. Build-time.                                                                  | `https://lovely-curlew-631.convex.cloud` |
 | `VITE_PLANTRY_PASSCODE` | Shared splash-gate passcode. Until this is entered the app stays on the passcode screen. Stored client-side only; no server check. | `plantry`                                |
 
-The auth gate stores `plantry:auth` in localStorage with a one-week timeout, picked because the two phones live with their owners and a personal household app doesn't need anything tighter.
+The auth gate stores `plantry:auth` (`{ passedAt }`) in localStorage once the passcode passes, and that phone is never shown the gate again: the record has no expiry, because the two phones live with their owners and a personal household app needs no session expiry.
 
 ## Identity
 
